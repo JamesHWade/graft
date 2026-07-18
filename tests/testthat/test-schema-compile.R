@@ -22,15 +22,11 @@ test_that("structural digest excludes paths and source-only edits", {
   directory_two <- withr::local_tempdir()
   schema_one <- file.path(directory_one, "tempest.linkml.yaml")
   schema_two <- file.path(directory_two, "tempest.linkml.yaml")
-  core_import <- graft_core_schema_import()
   source <- readLines(tempest_schema_path(), warn = FALSE)
-  source <- sub(
-    "\\.\\./\\.\\./\\.\\./\\.\\./inst/schema/graft-core\\.linkml",
-    core_import,
-    source
-  )
-  writeLines(source, schema_one)
-  writeLines(c(source, "# provenance-only comment"), schema_two)
+  source_one <- stage_test_schema_core(source, directory_one)
+  source_two <- stage_test_schema_core(source, directory_two)
+  writeLines(source_one, schema_one)
+  writeLines(c(source_two, "# provenance-only comment"), schema_two)
 
   first <- kg_compile_schema(schema_one, file.path(directory_one, "one.json"))
   second <- kg_compile_schema(schema_two, file.path(directory_two, "two.json"))
@@ -131,10 +127,15 @@ test_that("snapshot paths are stable in covr's installed test layout", {
   )
 })
 
-test_that("installed core imports use native Windows path syntax", {
-  import <- graft_core_schema_import(windows = TRUE)
+test_that("installed core imports are staged beside test schemas", {
+  directory <- withr::local_tempdir()
+  source <- stage_test_schema_core(
+    c("imports:", "  - /installed/graft-core.linkml"),
+    directory
+  )
 
-  expect_false(grepl("/", import, fixed = TRUE))
-  expect_true(grepl("\\", import, fixed = TRUE))
-  expect_false(grepl("\\.yaml$", import))
+  expect_identical(source, c("imports:", "  - graft-core.linkml"))
+  expect_true(file.exists(
+    file.path(directory, "graft-core.linkml.yaml")
+  ))
 })

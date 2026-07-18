@@ -43,16 +43,6 @@ graft_core_schema_path <- function() {
   normalizePath(installed_path, winslash = "/", mustWork = TRUE)
 }
 
-graft_core_schema_import <- function(
-  windows = identical(.Platform$OS.type, "windows")
-) {
-  path <- sub("\\.yaml$", "", graft_core_schema_path())
-  if (windows) {
-    return(chartr("/", "\\", path))
-  }
-  path
-}
-
 materialize_test_schema_import <- function(path) {
   relative_core <- file.path(
     dirname(path),
@@ -68,16 +58,30 @@ materialize_test_schema_import <- function(path) {
     return(path)
   }
 
-  core_import <- graft_core_schema_import()
   source <- readLines(path, warn = FALSE)
-  source <- sub(
-    "../../../../inst/schema/graft-core.linkml",
-    core_import,
-    source,
-    fixed = TRUE
-  )
+  if (!any(grepl("graft-core.linkml", source, fixed = TRUE))) {
+    return(path)
+  }
+  source <- stage_test_schema_core(source, dirname(path))
   writeLines(source, path)
   path
+}
+
+stage_test_schema_core <- function(source, directory) {
+  import <- grepl("graft-core.linkml", source, fixed = TRUE)
+  if (sum(import) != 1L) {
+    stop("Expected exactly one graft core schema import.", call. = FALSE)
+  }
+  copied <- file.copy(
+    graft_core_schema_path(),
+    file.path(directory, "graft-core.linkml.yaml"),
+    overwrite = TRUE
+  )
+  if (!isTRUE(copied)) {
+    stop("Failed to stage the graft core schema.", call. = FALSE)
+  }
+  source[import] <- "  - graft-core.linkml"
+  source
 }
 
 skip_if_no_linkml_runtime <- function() {
