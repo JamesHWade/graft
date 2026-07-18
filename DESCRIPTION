@@ -22,6 +22,7 @@ Imports:
     rlang
 Suggests:
     ellmer (>= 0.3.0),
+    S7,
     tempest (>= 0.1.0),
     testthat (>= 3.0.0),
     withr,

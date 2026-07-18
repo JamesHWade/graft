@@ -17,7 +17,11 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
     stats::setNames(rep(TRUE, 6L), expected)
   )
   expect_identical(
-    vapply(tools, \(.x) .x@name, character(1)),
+    vapply(
+      tools,
+      \(.x) agent_tool_prop(.x, "name"),
+      character(1)
+    ),
     stats::setNames(expected, expected)
   )
   expected_annotations <- list(
@@ -27,21 +31,25 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
     destructive_hint = FALSE
   )
   expect_identical(
-    lapply(tools, \(.x) .x@annotations),
+    lapply(tools, \(.x) agent_tool_prop(.x, "annotations")),
     rep(list(expected_annotations), 6L) |>
       stats::setNames(expected)
   )
+  arguments <- lapply(
+    tools,
+    \(.x) agent_tool_prop(.x, "arguments")
+  )
   expect_identical(
     vapply(
-      tools,
-      \(.x) .x@arguments@additional_properties,
+      arguments,
+      \(.x) agent_tool_prop(.x, "additional_properties"),
       logical(1)
     ),
     stats::setNames(rep(FALSE, 6L), expected)
   )
   exposed <- unique(unlist(lapply(
-    tools,
-    \(.x) names(.x@arguments@properties)
+    arguments,
+    \(.x) names(agent_tool_prop(.x, "properties"))
   )))
   expect_identical(
     intersect(
@@ -71,25 +79,36 @@ test_that("kg_tools checks its optional ellmer dependency first", {
 test_that("ToolDef schemas encode defaults, enums, and hard caps", {
   fixture <- local_retrieval_store()
   tools <- kg_tools(fixture$store)
-  find <- tools$kg_find@arguments@properties
-  get <- tools$kg_get@arguments@properties
-  neighbors <- tools$kg_neighbors@arguments@properties
-  select <- tools$kg_select@arguments@properties
+  properties <- lapply(
+    tools,
+    \(.x) {
+      arguments <- agent_tool_prop(.x, "arguments")
+      agent_tool_prop(arguments, "properties")
+    }
+  )
+  find <- properties$kg_find
+  get <- properties$kg_get
+  neighbors <- properties$kg_neighbors
+  select <- properties$kg_select
 
   expect_named(find, c("query", "class", "limit"))
-  expect_identical(find$query@required, TRUE)
-  expect_identical(find$class@required, FALSE)
-  expect_identical(find$limit@required, FALSE)
-  expect_identical(find$limit@json$maximum, 1000L)
+  expect_identical(agent_tool_prop(find$query, "required"), TRUE)
+  expect_identical(agent_tool_prop(find$class, "required"), FALSE)
+  expect_identical(agent_tool_prop(find$limit, "required"), FALSE)
+  expect_identical(agent_tool_prop(find$limit, "json")$maximum, 1000L)
 
   expect_named(get, c("id", "include", "limits"))
   expect_identical(
-    get$include@items@values,
+    agent_tool_prop(
+      agent_tool_prop(get$include, "items"),
+      "values"
+    ),
     c("identifiers", "claims", "evidence")
   )
-  expect_identical(get$limits@required, FALSE)
+  expect_identical(agent_tool_prop(get$limits, "required"), FALSE)
+  limit_properties <- agent_tool_prop(get$limits, "properties")
   expect_identical(
-    get$limits@properties$evidence@json$maximum,
+    agent_tool_prop(limit_properties$evidence, "json")$maximum,
     2000L
   )
 
@@ -106,19 +125,31 @@ test_that("ToolDef schemas encode defaults, enums, and hard caps", {
     )
   )
   expect_identical(
-    neighbors$direction@values,
+    agent_tool_prop(neighbors$direction, "values"),
     c("both", "out", "in")
   )
-  expect_identical(neighbors$hops@json$maximum, 2L)
-  expect_identical(neighbors$max_nodes@json$maximum, 500L)
-  expect_identical(neighbors$max_edges@json$maximum, 2000L)
+  expect_identical(agent_tool_prop(neighbors$hops, "json")$maximum, 2L)
+  expect_identical(
+    agent_tool_prop(neighbors$max_nodes, "json")$maximum,
+    500L
+  )
+  expect_identical(
+    agent_tool_prop(neighbors$max_edges, "json")$maximum,
+    2000L
+  )
 
   expect_named(
     select,
     c("class", "fields", "filters", "order_by", "limit")
   )
-  filter_schema <- select$filters@items@json
-  order_schema <- select$order_by@items@json
+  filter_schema <- agent_tool_prop(
+    agent_tool_prop(select$filters, "items"),
+    "json"
+  )
+  order_schema <- agent_tool_prop(
+    agent_tool_prop(select$order_by, "items"),
+    "json"
+  )
   expect_identical(filter_schema$additionalProperties, FALSE)
   expect_identical(
     unlist(filter_schema$required, use.names = FALSE),
@@ -150,7 +181,10 @@ test_that("ToolDef schemas encode defaults, enums, and hard caps", {
     unlist(order_schema$properties$direction$enum),
     c("asc", "desc")
   )
-  expect_identical(select$limit@json$maximum, 1000L)
+  expect_identical(
+    agent_tool_prop(select$limit, "json")$maximum,
+    1000L
+  )
 
   expect_identical(eval(formals(tools$kg_find)$limit), 20)
   expect_identical(
