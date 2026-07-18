@@ -263,7 +263,7 @@ find_committed_replay <- function(connection, batch) {
 
 result_counts <- function(x) {
   if (is.null(x)) {
-    return(setNames(integer(), character()))
+    return(stats::setNames(integer(), character()))
   }
   stats::setNames(
     as.integer(unlist(x, use.names = FALSE)),

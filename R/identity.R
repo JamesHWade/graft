@@ -146,7 +146,7 @@ normalize_url_authority <- function(authority, scheme) {
     userinfo <- ""
     host_port <- authority
   } else {
-    split_at <- tail(at, 1L)
+    split_at <- utils::tail(at, 1L)
     userinfo <- substr(authority, 1L, split_at)
     host_port <- substr(authority, split_at + 1L, nchar(authority))
   }
