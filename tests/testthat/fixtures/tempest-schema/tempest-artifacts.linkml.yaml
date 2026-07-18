@@ -44,6 +44,10 @@ slots:
         value: cas
   uri:
     range: uri
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: canonical_url
   title:
     range: string
   content_hash:

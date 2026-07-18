@@ -108,7 +108,76 @@ normalize_external_identifier <- function(namespace, value) {
       sub("^cas\\s*:\\s*", "", value, ignore.case = TRUE)
     )),
     content_hash = tolower(gsub("\\s+", "", value)),
+    canonical_url = normalize_canonical_url(value),
     value
+  )
+}
+
+normalize_canonical_url <- function(value) {
+  # v1 preserves path/query bytes and canonicalizes only HTTP URL structure.
+  match <- regexec(
+    "^(https?)://([^/?#]*)([^?#]*)(\\?[^#]*)?(?:#.*)?$",
+    value,
+    ignore.case = TRUE,
+    perl = TRUE
+  )
+  parts <- regmatches(value, match)[[1L]]
+  if (length(parts) == 0L || !nzchar(parts[[3L]])) {
+    return(value)
+  }
+  scheme <- tolower(parts[[2L]])
+  authority <- normalize_url_authority(parts[[3L]], scheme)
+  if (is.na(authority)) {
+    return(value)
+  }
+  path <- parts[[4L]]
+  query <- if (length(parts) >= 5L) parts[[5L]] else ""
+  if (!nzchar(path)) {
+    path <- "/"
+  } else if (!identical(path, "/") && endsWith(path, "/")) {
+    path <- substr(path, 1L, nchar(path) - 1L)
+  }
+  paste0(scheme, "://", authority, path, query)
+}
+
+normalize_url_authority <- function(authority, scheme) {
+  at <- gregexpr("@", authority, fixed = TRUE)[[1L]]
+  if (identical(at, -1L)) {
+    userinfo <- ""
+    host_port <- authority
+  } else {
+    split_at <- tail(at, 1L)
+    userinfo <- substr(authority, 1L, split_at)
+    host_port <- substr(authority, split_at + 1L, nchar(authority))
+  }
+  if (startsWith(host_port, "[")) {
+    match <- regexec(
+      "^(\\[[^]]+\\])(?::([0-9]+))?$",
+      host_port,
+      perl = TRUE
+    )
+  } else {
+    match <- regexec("^([^:]+)(?::([0-9]+))?$", host_port, perl = TRUE)
+  }
+  parts <- regmatches(host_port, match)[[1L]]
+  if (length(parts) == 0L || !nzchar(parts[[2L]])) {
+    return(NA_character_)
+  }
+  host <- tolower(parts[[2L]])
+  if (!startsWith(host, "[") && startsWith(host, "www.")) {
+    host <- substring(host, 5L)
+  }
+  port <- if (length(parts) >= 3L) parts[[3L]] else ""
+  default_port <- identical(port, "80") &&
+    identical(scheme, "http") ||
+    identical(port, "443") && identical(scheme, "https")
+  if (isTRUE(default_port)) {
+    port <- ""
+  }
+  paste0(
+    userinfo,
+    host,
+    if (nzchar(port)) paste0(":", port) else ""
   )
 }
 

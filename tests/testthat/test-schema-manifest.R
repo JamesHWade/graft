@@ -28,6 +28,14 @@ test_that("schema inspection exposes roles, slots, and enums", {
   expect_in("about", slots$slot)
   expect_identical(slots$required[slots$slot == "about"], TRUE)
   expect_in("supports", enums$value[enums$enum == "EvidenceSupportType"])
+  expect_identical(
+    schema$manifest$classes$Source$slots$uri$external_identifier,
+    "canonical_url"
+  )
+  expect_identical(
+    schema$manifest$identifier_normalization_versions$canonical_url,
+    "1"
+  )
 })
 
 test_that("narrative claims do not require artificial predicates", {

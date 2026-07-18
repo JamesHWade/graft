@@ -48,6 +48,74 @@ test_that("entity and source identifiers reconcile exactly", {
   )
 })
 
+test_that("Source canonical URLs reconcile superficial HTTP variants", {
+  store <- local_ingest_store()
+  first <- kg_write(
+    store,
+    kg_batch("tempest", idempotency_key = "canonical-url-1"),
+    "Source",
+    data.frame(
+      title = "First title",
+      uri = paste0(
+        "HTTPS://WWW.Example.COM:443/reports/Result/",
+        "?Study=ABC#overview"
+      )
+    )
+  )
+  source_id <- DBI::dbReadTable(store$connection, "source")$id
+
+  second <- kg_write(
+    store,
+    kg_batch("tempest", idempotency_key = "canonical-url-2"),
+    "Source",
+    data.frame(
+      title = "Updated title",
+      uri = "https://example.com/reports/Result?Study=ABC#details"
+    )
+  )
+  registry <- DBI::dbReadTable(store$connection, "_graft_identifiers")
+
+  expect_identical(first$inserted[["Source"]], 1L)
+  expect_identical(second$updated[["Source"]], 1L)
+  expect_identical(DBI::dbReadTable(store$connection, "source")$id, source_id)
+  expect_identical(
+    registry$normalized_value,
+    "https://example.com/reports/Result?Study=ABC"
+  )
+
+  kg_write(
+    store,
+    kg_batch("tempest", idempotency_key = "canonical-url-path"),
+    "Source",
+    data.frame(
+      title = "Distinct path",
+      uri = "https://example.com/reports/result?Study=ABC"
+    )
+  )
+  kg_write(
+    store,
+    kg_batch("tempest", idempotency_key = "canonical-url-query"),
+    "Source",
+    data.frame(
+      title = "Distinct query",
+      uri = "https://example.com/reports/Result?Study=abc"
+    )
+  )
+
+  expect_equal(nrow(DBI::dbReadTable(store$connection, "source")), 3L)
+  expect_identical(
+    normalize_external_identifier(
+      "canonical_url",
+      " HTTP://WWW.Example.COM:80#fragment "
+    ),
+    "http://example.com/"
+  )
+  expect_identical(
+    normalize_external_identifier("canonical_url", " urn:Example#Fragment "),
+    "urn:Example#Fragment"
+  )
+})
+
 test_that("conflicting exact identifiers fail without mutation", {
   store <- local_ingest_store()
   id_one <- test_graft_id("conflict-one")
