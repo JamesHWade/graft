@@ -222,6 +222,49 @@ new_kg_context <- function(
   )
 }
 
+new_kg_subgraph <- function(
+  nodes,
+  edges,
+  roots,
+  path,
+  predicate,
+  direction,
+  hops,
+  projection,
+  truncated,
+  limits,
+  store_schema_digest,
+  request_kind
+) {
+  request <- list(
+    kind = request_kind,
+    roots = roots,
+    path = path,
+    predicate = predicate,
+    direction = direction,
+    hops = as.integer(hops),
+    projection = projection
+  )
+  structure(
+    list(
+      nodes = nodes,
+      edges = edges,
+      roots = roots,
+      requested_roots = roots,
+      path = path,
+      predicate = predicate,
+      direction = direction,
+      hops = as.integer(hops),
+      projection = projection,
+      request = request,
+      truncated = isTRUE(truncated),
+      limits = limits,
+      store_schema_digest = store_schema_digest
+    ),
+    class = "kg_subgraph"
+  )
+}
+
 is_kg_schema <- function(x) {
   inherits(x, "kg_schema")
 }

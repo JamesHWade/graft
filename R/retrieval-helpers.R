@@ -8,7 +8,10 @@ graft_retrieval_limits <- list(
   select = 1000L,
   competing_claims = 1000L,
   unresolved = 5000L,
-  context_tokens = 10000L
+  context_tokens = 10000L,
+  graph_nodes = 500L,
+  graph_edges = 2000L,
+  graph_hops = 2L
 )
 
 validate_retrieval_store <- function(store) {

@@ -151,8 +151,9 @@ validate_store_writable <- function(store, operation = "write") {
 #' Initialize or verify a graft store
 #'
 #' Initialization creates client tables from the compiled manifest plus the
-#' five package-owned metadata tables. It is atomic and idempotent. Existing
-#' stores must have the same structural digest as the active schema.
+#' five package-owned metadata tables and three generated graph views. It is
+#' atomic and idempotent. Existing stores must have the same structural digest
+#' as the active schema.
 #'
 #' @param store A `kg_store` object.
 #'
@@ -164,6 +165,16 @@ kg_init <- function(store) {
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
     verify_initialized_store(store)
+    if (isTRUE(store$read_only)) {
+      verify_graph_views(store$connection)
+    } else {
+      with_duckdb_error(
+        "initialize_graph_views",
+        DBI::dbWithTransaction(store$connection, {
+          create_graph_views(store$connection, store$schema)
+        })
+      )
+    }
     return(invisible(store))
   }
   if (isTRUE(store$read_only)) {
@@ -195,6 +206,7 @@ kg_init <- function(store) {
     DBI::dbWithTransaction(store$connection, {
       create_metadata_tables(store$connection)
       create_manifest_tables(store$connection, store$schema)
+      create_graph_views(store$connection, store$schema)
       insert_store_metadata(store)
     })
   )

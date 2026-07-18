@@ -41,7 +41,8 @@ test_that("in-memory initialization creates metadata and manifest tables", {
 
   expected <- c(
     metadata_table_names(),
-    schema_physical_table_names(schema)
+    schema_physical_table_names(schema),
+    graft:::graft_graph_view_names
   )
   expect_setequal(DBI::dbListTables(store$connection), expected)
 

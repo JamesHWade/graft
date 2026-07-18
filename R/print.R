@@ -124,3 +124,13 @@ print.kg_context <- function(x, ...) {
   cat(x$text, "\n", sep = "")
   invisible(x)
 }
+
+#' @export
+print.kg_subgraph <- function(x, ...) {
+  cat("<kg_subgraph> ", x$request$kind, "\n", sep = "")
+  cat("  nodes:      ", nrow(x$nodes), "\n", sep = "")
+  cat("  edges:      ", nrow(x$edges), "\n", sep = "")
+  cat("  projection: ", x$projection, "\n", sep = "")
+  cat("  truncated:  ", x$truncated, "\n", sep = "")
+  invisible(x)
+}
