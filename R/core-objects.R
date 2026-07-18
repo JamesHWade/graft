@@ -52,6 +52,118 @@ new_kg_store <- function(
   store
 }
 
+new_kg_batch <- function(
+  batch_id,
+  producer,
+  producer_version,
+  source_run_id,
+  idempotency_key,
+  metadata
+) {
+  structure(
+    list(
+      batch_id = batch_id,
+      producer = producer,
+      producer_version = producer_version,
+      source_run_id = source_run_id,
+      idempotency_key = idempotency_key,
+      metadata = metadata
+    ),
+    class = "kg_batch"
+  )
+}
+
+new_kg_ingest_result <- function(
+  batch_id,
+  inserted,
+  updated,
+  matched,
+  observed,
+  warnings = character(),
+  duration = 0,
+  replay = FALSE
+) {
+  structure(
+    list(
+      batch_id = batch_id,
+      inserted = inserted,
+      updated = updated,
+      matched = matched,
+      observed = observed,
+      warnings = warnings,
+      duration = duration,
+      replay = replay
+    ),
+    class = "kg_ingest_result"
+  )
+}
+
+new_kg_validation_report <- function(failures = list()) {
+  if (length(failures) == 0L) {
+    table <- data.frame(
+      class = character(),
+      input_row = integer(),
+      record_id = character(),
+      field = character(),
+      rule = character(),
+      observed_value = I(list()),
+      message = character(),
+      condition_class = character(),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    table <- data.frame(
+      class = vapply(
+        failures,
+        \(.x) scalar_character(.x$record_class, ""),
+        character(1)
+      ),
+      input_row = vapply(
+        failures,
+        \(.x) {
+          if (is.null(.x$input_row)) {
+            NA_integer_
+          } else {
+            as.integer(.x$input_row)
+          }
+        },
+        integer(1)
+      ),
+      record_id = vapply(
+        failures,
+        \(.x) scalar_character(.x$record_id, ""),
+        character(1)
+      ),
+      field = vapply(
+        failures,
+        \(.x) scalar_character(.x$field, ""),
+        character(1)
+      ),
+      rule = vapply(
+        failures,
+        \(.x) scalar_character(.x$rule, ""),
+        character(1)
+      ),
+      observed_value = I(lapply(failures, \(.x) .x$observed_value)),
+      message = vapply(failures, \(.x) conditionMessage(.x), character(1)),
+      condition_class = vapply(
+        failures,
+        \(.x) class(.x)[[1L]],
+        character(1)
+      ),
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  }
+  structure(
+    list(
+      valid = nrow(table) == 0L,
+      failures = table
+    ),
+    class = "kg_validation_report"
+  )
+}
+
 is_kg_schema <- function(x) {
   inherits(x, "kg_schema")
 }
@@ -71,6 +183,21 @@ as_kg_schema <- function(x, arg = rlang::caller_arg(x)) {
 
 is_kg_store <- function(x) {
   inherits(x, "kg_store") && is.environment(x)
+}
+
+is_kg_batch <- function(x) {
+  inherits(x, "kg_batch")
+}
+
+as_kg_batch <- function(x, arg = rlang::caller_arg(x)) {
+  if (is_kg_batch(x)) {
+    return(x)
+  }
+  abort_validation_error(
+    paste0("`", arg, "` must be a kg_batch object."),
+    field = arg,
+    rule = "kg_batch"
+  )
 }
 
 validate_kg_store <- function(

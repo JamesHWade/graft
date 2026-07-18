@@ -59,3 +59,47 @@ print.kg_store <- function(x, ...) {
   cat("  structural: ", info$structural_digest, "\n", sep = "")
   invisible(x)
 }
+
+#' @export
+print.kg_batch <- function(x, ...) {
+  cat("<kg_batch> ", x$batch_id, "\n", sep = "")
+  cat("  producer:    ", x$producer, "\n", sep = "")
+  cat(
+    "  source run:  ",
+    scalar_character(x$source_run_id, "<none>"),
+    "\n",
+    sep = ""
+  )
+  cat(
+    "  idempotency: ",
+    scalar_character(x$idempotency_key, "<none>"),
+    "\n",
+    sep = ""
+  )
+  invisible(x)
+}
+
+#' @export
+print.kg_ingest_result <- function(x, ...) {
+  status <- if (isTRUE(x$replay)) "replay" else "committed"
+  cat("<kg_ingest_result> ", status, " ", x$batch_id, "\n", sep = "")
+  cat("  inserted: ", sum(x$inserted), "\n", sep = "")
+  cat("  updated:  ", sum(x$updated), "\n", sep = "")
+  cat("  matched:  ", sum(x$matched), "\n", sep = "")
+  cat("  observed: ", sum(x$observed), "\n", sep = "")
+  invisible(x)
+}
+
+#' @export
+print.kg_validation_report <- function(x, ...) {
+  status <- if (isTRUE(x$valid)) "valid" else "invalid"
+  cat("<kg_validation_report> ", status, "\n", sep = "")
+  cat("  failures: ", nrow(x$failures), "\n", sep = "")
+  if (!isTRUE(x$valid)) {
+    summary <- table(x$failures$condition_class)
+    for (name in names(summary)) {
+      cat("  ", name, ": ", unname(summary[[name]]), "\n", sep = "")
+    }
+  }
+  invisible(x)
+}
