@@ -53,17 +53,18 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
 })
 
 test_that("kg_tools checks its optional ellmer dependency first", {
-  first_expression <- body(kg_tools)[[2L]]
-
-  expect_identical(
-    deparse(first_expression[[1L]]),
-    "rlang::check_installed"
+  local_mocked_bindings(
+    check_agent_tools_dependency = function() {
+      rlang::abort(
+        "ellmer is unavailable",
+        class = "graft_test_dependency_error"
+      )
+    }
   )
-  expect_identical(first_expression[[2L]], "ellmer")
-  expect_match(
-    first_expression$reason,
-    "kg_tools",
-    fixed = TRUE
+
+  expect_error(
+    kg_tools(NULL),
+    class = "graft_test_dependency_error"
   )
 })
 

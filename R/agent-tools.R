@@ -12,10 +12,7 @@
 #' @return A named list of six `ellmer::ToolDef` objects.
 #' @export
 kg_tools <- function(store) {
-  rlang::check_installed(
-    "ellmer",
-    reason = "to create bounded graft tools with `kg_tools()`"
-  )
+  check_agent_tools_dependency()
   validate_retrieval_store(store)
   annotations <- agent_tool_annotations()
 
@@ -310,6 +307,13 @@ kg_tools <- function(store) {
       ),
       annotations = annotations
     )
+  )
+}
+
+check_agent_tools_dependency <- function() {
+  rlang::check_installed(
+    "ellmer",
+    reason = "to create bounded graft tools with `kg_tools()`"
   )
 }
 
