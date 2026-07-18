@@ -1,0 +1,6 @@
+id: graft:01J00000000000000000000002
+subject: graft:entity-lldpe
+predicate: graft:hasCrystallinity
+object_entity: graft:entity-low-crystallinity
+measurement_method: DSC
+status: active

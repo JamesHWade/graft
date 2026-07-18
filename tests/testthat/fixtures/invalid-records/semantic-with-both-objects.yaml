@@ -1,0 +1,5 @@
+id: graft:01J00000000000000000000005
+subject: graft:entity-lldpe
+predicate: graft:crystallinity
+object_entity: graft:entity-low-crystallinity
+object_value: "42.0"

@@ -1,0 +1,174 @@
+id: https://w3id.org/graft/tempest
+name: tempest-artifacts
+title: Tempest artifact schema
+version: 0.1.0
+prefixes:
+  graft: https://w3id.org/graft/
+  tempest: https://w3id.org/tempest/
+  linkml: https://w3id.org/linkml/
+default_prefix: tempest
+default_range: string
+imports:
+  - ../../../../inst/schema/graft-core.linkml
+
+enums:
+  ClaimType:
+    permissible_values:
+      finding:
+      observation:
+      recommendation:
+  Importance:
+    permissible_values:
+      low:
+      medium:
+      high:
+
+slots:
+  preferred_name:
+    range: string
+    required: true
+  description:
+    range: string
+  inchikey:
+    range: string
+    pattern: "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: inchikey
+  cas_number:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: cas
+  uri:
+    range: uri
+  title:
+    range: string
+  content_hash:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: content_hash
+  doi:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: doi
+  claim_type:
+    range: ClaimType
+  importance:
+    range: Importance
+  measurement_method:
+    range: string
+  temperature:
+    range: float
+    unit:
+      ucum_code: Cel
+  run_identifier:
+    range: string
+    required: true
+  name:
+    range: string
+  text:
+    range: string
+
+classes:
+  Entity:
+    is_a: GraftNode
+    slots:
+      - preferred_name
+      - description
+      - inchikey
+      - cas_number
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.label_slot:
+        tag: graft.label_slot
+        value: preferred_name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "preferred_name, description"
+
+  Source:
+    is_a: GraftSource
+    slots:
+      - uri
+      - title
+      - content_hash
+      - doi
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, uri"
+
+  Claim:
+    is_a: GraftNarrativeStatement
+    slots:
+      - claim_type
+      - importance
+    slot_usage:
+      about:
+        required: true
+        multivalued: true
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_text, about"
+
+  SemanticClaim:
+    is_a: GraftSemanticStatement
+    slots:
+      - measurement_method
+      - temperature
+    annotations:
+      graft.qualifier_slots:
+        tag: graft.qualifier_slots
+        value: "measurement_method, temperature"
+
+  ClaimEvidence:
+    is_a: GraftEvidence
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_id, source_id, locator_type, locator_value"
+
+  EntityMention:
+    is_a: GraftMention
+
+  Run:
+    is_a: GraftMetadata
+    slots:
+      - run_identifier
+      - name
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: deterministic
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: run_identifier
+
+  Activity:
+    is_a: GraftMetadata
+    slots:
+      - name
+
+  Question:
+    is_a: GraftMetadata
+    slots:
+      - text
+
+  Section:
+    is_a: GraftMetadata
+    slots:
+      - title
+      - text

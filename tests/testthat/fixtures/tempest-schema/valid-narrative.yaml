@@ -1,0 +1,10 @@
+id: graft:01J00000000000000000000001
+statement_text: Increasing short-chain branching lowers the crystallinity of LLDPE.
+primary_subject: graft:entity-lldpe
+about:
+  - graft:entity-lldpe
+  - graft:entity-short-chain-branching
+  - graft:entity-crystallinity
+claim_type: finding
+importance: high
+status: active

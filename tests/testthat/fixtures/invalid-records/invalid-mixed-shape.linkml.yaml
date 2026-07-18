@@ -1,0 +1,13 @@
+id: https://w3id.org/graft/invalid-mixed-shape
+name: invalid-mixed-shape
+prefixes:
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: graft
+imports:
+  - ../../../../inst/schema/graft-core.linkml
+classes:
+  MixedClaim:
+    is_a: GraftNarrativeStatement
+    mixins:
+      - GraftSemanticStatement

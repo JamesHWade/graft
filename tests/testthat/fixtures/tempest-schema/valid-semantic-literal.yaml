@@ -1,0 +1,8 @@
+id: graft:01J00000000000000000000003
+subject: graft:entity-lldpe
+predicate: graft:crystallinityPercent
+object_value: "42.0"
+object_datatype: xsd:float
+measurement_method: DSC
+temperature: 25
+status: active

@@ -1,0 +1,296 @@
+id: https://w3id.org/graft/core
+name: graft-core
+title: graft core semantic contract
+description: Abstract record roles and statement shapes for graft schemas.
+version: 0.3.1
+license: MIT
+prefixes:
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: graft
+default_range: string
+imports:
+  - linkml:types
+
+enums:
+  StatementPolarity:
+    permissible_values:
+      positive:
+      negative:
+      uncertain:
+  StatementStatus:
+    permissible_values:
+      active:
+      superseded:
+      retracted:
+  EvidenceSupportType:
+    permissible_values:
+      supports:
+      contradicts:
+      mentions:
+      derived_from:
+  LocatorType:
+    permissible_values:
+      page:
+      section:
+      paragraph:
+      line:
+      timestamp:
+      xpath:
+      json_pointer:
+      other:
+
+slots:
+  id:
+    identifier: true
+    required: true
+    range: uriorcurie
+    description: Immutable graft internal identifier.
+  created_at:
+    range: datetime
+    description: Time graft first stored the record.
+  updated_at:
+    range: datetime
+    description: Time graft last updated the record.
+  label:
+    range: string
+    description: Optional human-readable display label.
+  subject:
+    range: GraftNode
+    required: true
+    description: Subject node of a direct edge or semantic statement.
+  object:
+    range: GraftNode
+    required: true
+    description: Object node of a direct edge.
+  predicate:
+    range: uriorcurie
+    required: true
+    description: Intentionally modeled semantic predicate.
+  polarity:
+    range: StatementPolarity
+  confidence:
+    range: float
+    minimum_value: 0
+    maximum_value: 1
+  status:
+    range: StatementStatus
+    ifabsent: string(active)
+  valid_from:
+    range: datetime
+  valid_to:
+    range: datetime
+  asserted_at:
+    range: datetime
+  superseded_by:
+    range: GraftStatement
+  derived_from_statement:
+    range: GraftNarrativeStatement
+  statement_text:
+    range: string
+    required: true
+    description: Source-faithful narrative assertion.
+  primary_subject:
+    range: GraftNode
+  about:
+    range: GraftNode
+    multivalued: true
+    inlined: false
+  object_entity:
+    range: GraftNode
+  object_value:
+    range: string
+  object_datatype:
+    range: uriorcurie
+  statement_id:
+    range: GraftStatement
+    required: true
+  source_id:
+    range: GraftSource
+    required: true
+  support_type:
+    range: EvidenceSupportType
+    required: true
+  locator_type:
+    range: LocatorType
+  locator_value:
+    range: string
+  page_start:
+    range: integer
+    minimum_value: 1
+  page_end:
+    range: integer
+    minimum_value: 1
+  excerpt:
+    range: string
+  source_content_hash:
+    range: string
+  extraction_method:
+    range: string
+  extraction_version:
+    range: string
+  surface_form:
+    range: string
+    required: true
+  entity_id:
+    range: GraftNode
+
+classes:
+  GraftRecord:
+    abstract: true
+    slots:
+      - id
+      - created_at
+      - updated_at
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: metadata
+      graft.id_policy:
+        tag: graft.id_policy
+        value: require
+
+  GraftNode:
+    is_a: GraftRecord
+    abstract: true
+    slots:
+      - label
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: node
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.label_slot:
+        tag: graft.label_slot
+        value: label
+      graft.search_slots:
+        tag: graft.search_slots
+        value: label
+
+  GraftEdge:
+    is_a: GraftRecord
+    abstract: true
+    slots:
+      - subject
+      - predicate
+      - object
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: edge
+      graft.id_policy:
+        tag: graft.id_policy
+        value: mint
+
+  GraftStatement:
+    is_a: GraftRecord
+    abstract: true
+    slots:
+      - polarity
+      - confidence
+      - status
+      - valid_from
+      - valid_to
+      - asserted_at
+      - superseded_by
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: statement
+      graft.id_policy:
+        tag: graft.id_policy
+        value: mint
+
+  GraftNarrativeStatement:
+    is_a: GraftStatement
+    abstract: true
+    slots:
+      - statement_text
+      - primary_subject
+      - about
+    annotations:
+      graft.statement_shape:
+        tag: graft.statement_shape
+        value: narrative
+      graft.search_slots:
+        tag: graft.search_slots
+        value: statement_text
+
+  GraftSemanticStatement:
+    is_a: GraftStatement
+    abstract: true
+    slots:
+      - subject
+      - predicate
+      - object_entity
+      - object_value
+      - object_datatype
+      - derived_from_statement
+    annotations:
+      graft.statement_shape:
+        tag: graft.statement_shape
+        value: semantic
+
+  GraftEvidence:
+    is_a: GraftRecord
+    abstract: true
+    slots:
+      - statement_id
+      - source_id
+      - support_type
+      - locator_type
+      - locator_value
+      - page_start
+      - page_end
+      - excerpt
+      - source_content_hash
+      - extraction_method
+      - extraction_version
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: evidence
+      graft.id_policy:
+        tag: graft.id_policy
+        value: mint
+
+  GraftSource:
+    is_a: GraftRecord
+    abstract: true
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: source
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+
+  GraftMention:
+    is_a: GraftRecord
+    abstract: true
+    slots:
+      - source_id
+      - surface_form
+      - locator_type
+      - locator_value
+      - entity_id
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: mention
+      graft.id_policy:
+        tag: graft.id_policy
+        value: mint
+
+  GraftMetadata:
+    is_a: GraftRecord
+    abstract: true
+    annotations:
+      graft.role:
+        tag: graft.role
+        value: metadata
+      graft.id_policy:
+        tag: graft.id_policy
+        value: mint

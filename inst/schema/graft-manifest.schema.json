@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://w3id.org/graft/manifest/1.0.0",
+  "title": "graft compiled schema manifest",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "relational_mapping_version",
+    "schema",
+    "classes",
+    "slots",
+    "enums",
+    "tables",
+    "relations",
+    "graph_projections",
+    "validation_invariants",
+    "compiler",
+    "fingerprints"
+  ],
+  "properties": {
+    "manifest_version": {
+      "const": "1.0.0"
+    },
+    "relational_mapping_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "type": "object",
+      "required": ["id", "name", "source_files"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"]},
+        "source_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "content_digest", "root"],
+            "properties": {
+              "schema_id": {"type": ["string", "null"]},
+              "name": {"type": "string"},
+              "version": {"type": ["string", "null"]},
+              "content_digest": {"$ref": "#/$defs/digest"},
+              "root": {"type": "boolean"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "classes": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/class"}
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/slot"}
+    },
+    "enums": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/enum"}
+    },
+    "tables": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/table"}
+    },
+    "relations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/relation"}
+    },
+    "graph_projections": {"type": "object"},
+    "validation_invariants": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "identifier_normalization_versions": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "compiler": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "script_digest",
+        "python_version",
+        "linkml_runtime_version"
+      ],
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"},
+        "script_digest": {"$ref": "#/$defs/digest"},
+        "python_version": {"type": "string"},
+        "linkml_runtime_version": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "fingerprints": {
+      "type": "object",
+      "required": ["structural_digest", "source_digest", "build_digest"],
+      "properties": {
+        "structural_digest": {"$ref": "#/$defs/digest"},
+        "source_digest": {"$ref": "#/$defs/digest"},
+        "build_digest": {"$ref": "#/$defs/digest"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "class": {
+      "type": "object",
+      "required": [
+        "name",
+        "role",
+        "table",
+        "id_policy",
+        "slots",
+        "relations"
+      ],
+      "properties": {
+        "name": {"type": "string"},
+        "is_a": {"type": ["string", "null"]},
+        "ancestors": {"type": "array", "items": {"type": "string"}},
+        "type_uri": {"type": "string"},
+        "role": {
+          "enum": [
+            "node",
+            "edge",
+            "statement",
+            "evidence",
+            "source",
+            "mention",
+            "metadata"
+          ]
+        },
+        "statement_shape": {
+          "type": ["string", "null"],
+          "enum": ["narrative", "semantic", null]
+        },
+        "table": {"type": "string"},
+        "id_policy": {
+          "enum": ["require", "mint", "resolve_exact", "deterministic"]
+        },
+        "label_slot": {"type": ["string", "null"]},
+        "search_slots": {"type": "array", "items": {"type": "string"}},
+        "origin_key_slots": {"type": "array", "items": {"type": "string"}},
+        "qualifier_slots": {"type": "array", "items": {"type": "string"}},
+        "fixed_predicate": {"type": ["string", "null"]},
+        "slots": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/slot"}
+        },
+        "relations": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "slot": {
+      "type": "object",
+      "required": [
+        "name",
+        "range",
+        "relational_type",
+        "required",
+        "multivalued",
+        "identifier",
+        "object_reference"
+      ],
+      "properties": {
+        "name": {"type": "string"},
+        "column": {"type": ["string", "null"]},
+        "range": {"type": "string"},
+        "relational_type": {"type": "string"},
+        "required": {"type": "boolean"},
+        "multivalued": {"type": "boolean"},
+        "ordered": {"type": "boolean"},
+        "identifier": {"type": "boolean"},
+        "object_reference": {"type": "boolean"},
+        "enum": {"type": ["string", "null"]},
+        "meaning": {"type": ["string", "null"]},
+        "pattern": {"type": ["string", "null"]},
+        "minimum_value": {},
+        "maximum_value": {},
+        "foreign_key": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["class", "slot"],
+              "properties": {
+                "class": {"type": "string"},
+                "slot": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "external_identifier": {"type": ["string", "null"]},
+        "search_weight": {"type": ["number", "null"]},
+        "sensitive": {"type": "boolean"}
+      }
+    },
+    "enum": {
+      "type": "object",
+      "required": ["name", "permissible_values"],
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": ["string", "null"]},
+        "permissible_values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value"],
+            "properties": {
+              "value": {"type": "string"},
+              "meaning": {"type": ["string", "null"]},
+              "description": {"type": ["string", "null"]}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "table": {
+      "type": "object",
+      "required": ["name", "class", "role", "columns"],
+      "properties": {
+        "name": {"type": "string"},
+        "class": {"type": "string"},
+        "role": {"type": "string"},
+        "columns": {
+          "type": "array",
+          "items": {"type": "object"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "required": [
+        "name",
+        "table",
+        "owner_class",
+        "owner_table",
+        "slot",
+        "kind",
+        "ordered",
+        "columns"
+      ],
+      "properties": {
+        "name": {"type": "string"},
+        "table": {"type": "string"},
+        "owner_class": {"type": "string"},
+        "owner_table": {"type": "string"},
+        "slot": {"type": "string"},
+        "kind": {"enum": ["object", "value"]},
+        "ordered": {"type": "boolean"},
+        "predicate": {"type": "string"},
+        "columns": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

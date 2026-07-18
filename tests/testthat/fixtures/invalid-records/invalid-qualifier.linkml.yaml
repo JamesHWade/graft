@@ -1,0 +1,15 @@
+id: https://w3id.org/graft/invalid-qualifier
+name: invalid-qualifier
+prefixes:
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: graft
+imports:
+  - ../../../../inst/schema/graft-core.linkml
+classes:
+  BadSemanticClaim:
+    is_a: GraftSemanticStatement
+    annotations:
+      graft.qualifier_slots:
+        tag: graft.qualifier_slots
+        value: "confidence, missing_slot"

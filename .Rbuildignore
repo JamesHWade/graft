@@ -1,0 +1,7 @@
+^\.git$
+^\.github$
+^graft\.Rproj$
+^\.Rproj\.user$
+^\.DS_Store$
+^\.venv$
+^\.openai$
