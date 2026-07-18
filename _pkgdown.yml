@@ -1,0 +1,55 @@
+template:
+  bootstrap: 5
+
+reference:
+  - title: Schema
+    contents:
+      - kg_compile_schema
+      - kg_schema
+      - kg_schema_diff
+      - kg_classes
+      - kg_slots
+      - kg_enums
+      - kg_schema_info
+  - title: Store lifecycle
+    contents:
+      - kg_connect_duckdb
+      - kg_init
+      - kg_disconnect
+      - kg_store_info
+      - kg_capabilities
+  - title: Ingestion and validation
+    contents:
+      - kg_batch
+      - kg_ingest
+      - kg_ingest_tempest_records
+      - kg_write
+      - kg_validate_data
+  - title: Records and identity
+    contents:
+      - kg_records
+      - kg_find
+      - kg_get
+      - kg_lookup
+      - kg_identifiers
+      - kg_unresolved
+  - title: Claims and evidence
+    contents:
+      - kg_claims
+      - kg_evidence
+      - kg_competing_claims
+  - title: Graph projections
+    contents:
+      - kg_nodes
+      - kg_edges
+      - kg_neighbors
+      - kg_traverse
+      - kg_subgraph
+  - title: Structured access
+    contents:
+      - kg_context
+      - kg_select
+      - kg_tools
+  - title: Tempest artifact integration
+    contents:
+      - tempest_artifact_store_graft

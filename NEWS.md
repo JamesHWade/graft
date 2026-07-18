@@ -19,6 +19,9 @@
   provenance.
 * `kg_get()` hydrates exactly one public record with bounded related
   identifiers, claims, and evidence.
+* `kg_ingest_tempest_records()` commits mapped Tempest domain records with
+  run- and stage-stable idempotency keys, independently of Tempest deliverable
+  persistence.
 * `kg_records()` returns lazy typed dbplyr tables for public concrete classes.
 * `kg_schema()`, `kg_classes()`, `kg_slots()`, `kg_enums()`, and
   `kg_schema_info()` load and inspect manifests without Python.
@@ -27,7 +30,12 @@
   with manifest validation and no arbitrary SQL.
 * `kg_store_info()` and `kg_capabilities()` inspect DuckDB stores without
   requiring Python.
+* `kg_tools()` creates six read-only ellmer tools over bounded Graft retrieval
+  APIs, with structured results and no arbitrary SQL surface.
 * `kg_unresolved()` returns bounded unresolved mention records.
 * `kg_validate_data()` preflights the same staged identity, shape, and
   reference checks as ingestion without mutating the store.
 * `kg_write()` provides a one-class convenience wrapper over `kg_ingest()`.
+* `tempest_artifact_store_graft()` explicitly reports the upstream Tempest
+  serialization contract required before durable typed-artifact persistence
+  can be supported.

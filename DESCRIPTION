@@ -21,6 +21,8 @@ Imports:
     reticulate,
     rlang
 Suggests:
+    ellmer (>= 0.3.0),
+    tempest,
     testthat (>= 3.0.0),
     withr,
     yaml
