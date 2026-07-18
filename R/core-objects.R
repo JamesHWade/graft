@@ -164,6 +164,64 @@ new_kg_validation_report <- function(failures = list()) {
   )
 }
 
+new_kg_record <- function(
+  id,
+  record_class,
+  record,
+  related,
+  limits,
+  truncated,
+  store_schema_digest
+) {
+  structure(
+    c(
+      list(
+        id = id,
+        class = record_class,
+        record = record
+      ),
+      related,
+      list(
+        truncated = truncated,
+        limits = limits,
+        store_schema_digest = store_schema_digest
+      )
+    ),
+    class = "kg_record"
+  )
+}
+
+new_kg_context <- function(
+  text,
+  classes,
+  identity_namespaces,
+  relationships,
+  evidence_expectations,
+  query_limits,
+  duckdb_ownership,
+  token_budget,
+  estimated_tokens,
+  truncated,
+  store_schema_digest
+) {
+  structure(
+    list(
+      text = text,
+      classes = classes,
+      identity_namespaces = identity_namespaces,
+      relationships = relationships,
+      evidence_expectations = evidence_expectations,
+      query_limits = query_limits,
+      duckdb_ownership = duckdb_ownership,
+      token_budget = token_budget,
+      estimated_tokens = estimated_tokens,
+      truncated = truncated,
+      store_schema_digest = store_schema_digest
+    ),
+    class = "kg_context"
+  )
+}
+
 is_kg_schema <- function(x) {
   inherits(x, "kg_schema")
 }

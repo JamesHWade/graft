@@ -103,3 +103,24 @@ print.kg_validation_report <- function(x, ...) {
   }
   invisible(x)
 }
+
+#' @export
+print.kg_record <- function(x, ...) {
+  cat("<kg_record> ", x$class, " ", x$id, "\n", sep = "")
+  related <- intersect(
+    c("identifiers", "claims", "evidence"),
+    names(x)
+  )
+  for (name in related) {
+    value <- x[[name]]
+    count <- if (is.data.frame(value)) nrow(value) else length(value)
+    cat("  ", name, ": ", count, "\n", sep = "")
+  }
+  invisible(x)
+}
+
+#' @export
+print.kg_context <- function(x, ...) {
+  cat(x$text, "\n", sep = "")
+  invisible(x)
+}

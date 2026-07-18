@@ -44,6 +44,25 @@ abort_backend_error <- function(
   )
 }
 
+abort_limit_error <- function(
+  message,
+  ...,
+  argument = NULL,
+  requested_limit = NULL,
+  hard_limit = NULL,
+  call = rlang::caller_env()
+) {
+  graft_abort(
+    "graft_limit_error",
+    message,
+    ...,
+    argument = argument,
+    requested_limit = requested_limit,
+    hard_limit = hard_limit,
+    call = call
+  )
+}
+
 abort_record_condition <- function(
   subclass,
   message,
