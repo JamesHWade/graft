@@ -25,3 +25,21 @@ abort_schema_mismatch <- function(diff, call = rlang::caller_env()) {
     call = call
   )
 }
+
+abort_backend_error <- function(
+  message,
+  ...,
+  operation = NULL,
+  parent = NULL,
+  call = rlang::caller_env()
+) {
+  graft_abort(
+    "graft_backend_error",
+    message,
+    ...,
+    backend = "duckdb",
+    operation = operation,
+    parent = parent,
+    call = call
+  )
+}

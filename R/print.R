@@ -42,3 +42,20 @@ print.kg_schema_diff <- function(x, ...) {
   print_change_summary("relations", x$relations)
   invisible(x)
 }
+
+#' @export
+print.kg_store <- function(x, ...) {
+  info <- kg_store_info(x)
+  status <- if (isTRUE(info$closed)) {
+    "closed"
+  } else if (isTRUE(info$initialized)) {
+    "initialized"
+  } else {
+    "uninitialized"
+  }
+  mode <- if (isTRUE(info$read_only)) "read-only" else "read-write"
+  cat("<kg_store> DuckDB ", status, " (", mode, ")\n", sep = "")
+  cat("  path:       ", info$path, "\n", sep = "")
+  cat("  structural: ", info$structural_digest, "\n", sep = "")
+  invisible(x)
+}
