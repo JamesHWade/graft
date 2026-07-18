@@ -5,3 +5,5 @@
 ^\.DS_Store$
 ^\.venv$
 ^\.openai$
+^AGENTS\.md$
+^\.claude$
