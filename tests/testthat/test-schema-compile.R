@@ -115,3 +115,22 @@ test_that("invalid statement shapes and qualifiers fail clearly", {
     )
   )
 })
+
+test_that("snapshot paths are stable in covr's installed test layout", {
+  installed_path <- file.path(
+    normalizePath(test_path("..", ".."), winslash = "/"),
+    "graft-tests",
+    "testthat",
+    "fixtures",
+    "invalid-records",
+    "invalid-qualifier.linkml.yaml"
+  )
+
+  expect_identical(
+    redact_repo_path(installed_path),
+    paste0(
+      "<repo>/tests/testthat/fixtures/invalid-records/",
+      "invalid-qualifier.linkml.yaml"
+    )
+  )
+})

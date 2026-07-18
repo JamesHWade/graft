@@ -87,10 +87,16 @@ skip_if_no_linkml_runtime <- function() {
 }
 
 redact_repo_path <- function(x) {
-  gsub(
+  redacted <- gsub(
     normalizePath(test_path("..", ".."), winslash = "/"),
     "<repo>",
     x,
+    fixed = TRUE
+  )
+  sub(
+    "<repo>/graft-tests/",
+    "<repo>/tests/",
+    redacted,
     fixed = TRUE
   )
 }
