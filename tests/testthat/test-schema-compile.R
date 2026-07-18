@@ -22,11 +22,7 @@ test_that("structural digest excludes paths and source-only edits", {
   directory_two <- withr::local_tempdir()
   schema_one <- file.path(directory_one, "tempest.linkml.yaml")
   schema_two <- file.path(directory_two, "tempest.linkml.yaml")
-  core_import <- sub(
-    "\\.yaml$",
-    "",
-    graft_core_schema_path()
-  )
+  core_import <- graft_core_schema_import()
   source <- readLines(tempest_schema_path(), warn = FALSE)
   source <- sub(
     "\\.\\./\\.\\./\\.\\./\\.\\./inst/schema/graft-core\\.linkml",
@@ -133,4 +129,12 @@ test_that("snapshot paths are stable in covr's installed test layout", {
       "invalid-qualifier.linkml.yaml"
     )
   )
+})
+
+test_that("installed core imports use native Windows path syntax", {
+  import <- graft_core_schema_import(windows = TRUE)
+
+  expect_false(grepl("/", import, fixed = TRUE))
+  expect_true(grepl("\\", import, fixed = TRUE))
+  expect_false(grepl("\\.yaml$", import))
 })

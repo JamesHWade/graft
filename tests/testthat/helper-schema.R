@@ -43,6 +43,16 @@ graft_core_schema_path <- function() {
   normalizePath(installed_path, winslash = "/", mustWork = TRUE)
 }
 
+graft_core_schema_import <- function(
+  windows = identical(.Platform$OS.type, "windows")
+) {
+  path <- sub("\\.yaml$", "", graft_core_schema_path())
+  if (windows) {
+    return(chartr("/", "\\", path))
+  }
+  path
+}
+
 materialize_test_schema_import <- function(path) {
   relative_core <- file.path(
     dirname(path),
@@ -58,7 +68,7 @@ materialize_test_schema_import <- function(path) {
     return(path)
   }
 
-  core_import <- sub("\\.yaml$", "", graft_core_schema_path())
+  core_import <- graft_core_schema_import()
   source <- readLines(path, warn = FALSE)
   source <- sub(
     "../../../../inst/schema/graft-core.linkml",
