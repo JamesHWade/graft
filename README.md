@@ -1,5 +1,10 @@
 # graft
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
+<!-- badges: end -->
+
 graft is a table-native knowledge layer for R. It compiles a LinkML semantic
 contract into a portable JSON manifest that describes concrete record classes,
 relational tables, identity policies, validation invariants, and graph

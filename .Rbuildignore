@@ -7,3 +7,8 @@
 ^\.openai$
 ^AGENTS\.md$
 ^\.claude$
+^[.]?air[.]toml$
+^codecov\.yml$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

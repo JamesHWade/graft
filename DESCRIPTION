@@ -22,9 +22,12 @@ Imports:
     rlang
 Suggests:
     ellmer (>= 0.3.0),
-    tempest,
+    tempest (>= 0.1.0),
     testthat (>= 3.0.0),
     withr,
     yaml
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
+URL: https://jameshwade.github.io/graft/
+Remotes:
+    JamesHWade/tempest
