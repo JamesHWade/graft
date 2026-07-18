@@ -25,10 +25,7 @@ test_that("structural digest excludes paths and source-only edits", {
   core_import <- sub(
     "\\.yaml$",
     "",
-    normalizePath(
-      test_path("..", "..", "inst", "schema", "graft-core.linkml.yaml"),
-      winslash = "/"
-    )
+    graft_core_schema_path()
   )
   source <- readLines(tempest_schema_path(), warn = FALSE)
   source <- sub(
