@@ -5,22 +5,17 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft is for R workflows where knowledge needs more structure than rows but
-should still behave like data. It keeps domain records, claims, sources, and
-evidence in ordinary relational tables while enforcing a versioned semantic
-contract around identity, validation, provenance, and retrieval.
+graft is an R package for storing schema-defined knowledge in DuckDB. A store
+can contain domain records, claims about those records, sources, and evidence
+that links a claim to a specific source location.
 
-Use graft when knowledge accumulates across research or agentic runs and you
-need to answer not only *which records match?*, but also *which claim is this,
-what supports or challenges it, and which schema gave it meaning?*
+A LinkML schema defines the record classes, fields, identifiers, validation
+rules, and graph projections. `kg_compile_schema()` resolves that schema into a
+`.graft.json` manifest, which graft uses to initialize and query the database.
 
 Start with the [getting started
-guide](https://jameshwade.github.io/graft/articles/getting-started.html) for the
-package's motivation, mental model, and a complete source-backed workflow.
-
-graft compiles a LinkML semantic contract into a portable JSON manifest that
-describes concrete record classes, relational tables, identity policies,
-validation invariants, and graph projections.
+guide](https://jameshwade.github.io/graft/articles/getting-started.html) to
+build a small store and query its records, claims, and evidence.
 
 Python and `linkml-runtime` are required only to compile a schema. Loading and
 inspecting a committed manifest is pure R/JSON. The manifest drives DuckDB
@@ -46,9 +41,9 @@ graph <- kg_neighbors(
 )
 ```
 
-All collected retrieval and graph operations are bounded and report
-truncation. For model-assisted retrieval, `kg_tools()` exposes six read-only
-structured tools over the same bounded APIs:
+Functions that collect records or graph results require a limit and report
+whether the result was truncated. `kg_tools()` exposes six of the same
+read-only queries as ellmer tools:
 
 ```r
 chat <- ellmer::chat_anthropic()
