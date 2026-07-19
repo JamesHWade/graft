@@ -569,6 +569,40 @@ test_that("scheduled signals promote through approval into accepted history", {
     conditionMessage(contradictory_result),
     "independent negative limitation"
   )
+  zero_duration_context <- accepted_context
+  zero_duration_context$claims[[
+    torque_index
+  ]]$record$observed_duration <- 0
+  zero_duration_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      zero_duration_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(zero_duration_result, "error")
+  expect_match(
+    conditionMessage(zero_duration_result),
+    "test duration must be strictly positive"
+  )
+  negative_duration_context <- accepted_context
+  negative_duration_context$claims[[
+    thermal_index
+  ]]$record$observed_duration <- -1
+  negative_duration_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      negative_duration_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(negative_duration_result, "error")
+  expect_match(
+    conditionMessage(negative_duration_result),
+    "test duration must be strictly positive"
+  )
   vendor_evidence <- accepted_evidence
   vendor_evidence[[1L]]$source$record$source_quality <- "vendor"
   vendor_source_result <- tryCatch(

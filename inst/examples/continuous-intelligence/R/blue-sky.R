@@ -98,12 +98,14 @@ blue_sky_result_builder <- function(
     length(torque_threshold) != 1L ||
       is.na(torque_threshold) ||
       !is.finite(torque_threshold) ||
+      torque_threshold <= 0 ||
       length(torque_unit) != 1L ||
       is.na(torque_unit) ||
       !nzchar(torque_unit) ||
       length(duty_threshold) != 1L ||
       is.na(duty_threshold) ||
       !is.finite(duty_threshold) ||
+      duty_threshold <= 0 ||
       length(duty_unit) != 1L ||
       is.na(duty_unit) ||
       !nzchar(duty_unit)
@@ -256,9 +258,11 @@ blue_sky_result_builder <- function(
     length(validated_duration) != 1L ||
       is.na(validated_duration) ||
       !is.finite(validated_duration) ||
+      validated_duration <= 0 ||
       length(thermal_duration) != 1L ||
       is.na(thermal_duration) ||
       !is.finite(thermal_duration) ||
+      thermal_duration <= 0 ||
       length(validated_duration_unit) != 1L ||
       is.na(validated_duration_unit) ||
       !nzchar(validated_duration_unit) ||
@@ -272,8 +276,8 @@ blue_sky_result_builder <- function(
   ) {
     stop(
       paste(
-        "The accepted test duration must be finite, consistent across",
-        "observations, and shorter than the duty-cycle requirement."
+        "The accepted test duration must be strictly positive, consistent",
+        "across observations, and shorter than the duty-cycle requirement."
       )
     )
   }

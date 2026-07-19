@@ -71,6 +71,7 @@ slots:
     range: Technology
   threshold:
     range: float
+    minimum_value: 0.000001
   unit:
     range: string
   finding_kind:
@@ -84,6 +85,7 @@ slots:
     range: string
   observed_duration:
     range: float
+    minimum_value: 0.000001
   duration_unit:
     range: string
   observed_torque:
