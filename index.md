@@ -1,93 +1,106 @@
 # graft
 
-Table-native knowledge for R
+An R package for LinkML and DuckDB
 
-## Keep knowledge connected to its evidence.
+## Schema-defined knowledge in DuckDB.
 
-graft turns a LinkML contract into a portable DuckDB knowledge layer
-where records, claims, identity, and citations remain inspectable from R
-and model-assisted workflows.
+graft compiles a LinkML schema into a JSON manifest. The manifest
+defines records, tables, identifiers, validation rules, and graph
+projections. graft uses it to create and query a DuckDB database from R.
 
 [Get
 started](https://jameshwade.github.io/graft/articles/getting-started.md)
-[View on GitHub](https://github.com/JamesHWade/graft)
+[View source](https://github.com/JamesHWade/graft)
 
-LinkML contract DuckDB runtime Evidence-backed claims Bounded retrieval
+LinkML schemas DuckDB storage DBI and dbplyr Optional ellmer tools
 
-## Why graft?
+## What graft adds
 
-Research and agentic systems rarely need only another table. They need
-to know whether two observations refer to the same thing, which source
-supports a claim, what changed between runs, and whether a query stayed
-inside the active semantic contract.
+A database schema describes columns and types. It does not usually say
+which fields identify the same record across runs, how a claim relates
+to its evidence, or which relationships belong in a graph. graft records
+those decisions in a LinkML schema and applies them when data are
+written and read.
 
 01
 
-### Contract first
+### Define the domain
 
-Compile a LinkML domain schema into a portable, fingerprinted manifest
-that drives tables, validation, identity, and graph projections.
+Describe materials, sources, claims, evidence, or other project-specific
+records as LinkML classes.
 
 02
 
-### Evidence stays attached
+### Generate the manifest
 
-Keep narrative and semantic claims distinct, then connect them to exact
-stored sources, locators, excerpts, and support relationships.
+Resolve the schema once with
+[`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md).
+Commit the generated `.graft.json` file with the project.
 
 03
 
-### Retrieval stays bounded
+### Use the store from R
 
-Give analysts and language models structured access without arbitrary
-SQL or silent unbounded collection.
+Write validated records to DuckDB, query lazy dbplyr tables, and inspect
+claims, evidence, identifiers, and graph neighborhoods.
 
-## From schema to answer
+## The basic workflow
 
-01 **Model the domain** Extend graft’s core LinkML record roles.
+01 **Write a schema** Extend the core LinkML record classes.
 
-02 **Compile the contract** Commit the resolved `.graft.json` manifest.
+02 **Compile it** Create a resolved `.graft.json` manifest.
 
-03 **Ingest atomically** Reconcile identity and preserve batch
-provenance.
+03 **Initialize a store** Create the declared tables and graph views in
+DuckDB.
 
-04 **Retrieve safely** Use lazy tables, bounded APIs, graphs, or ellmer
-tools.
+04 **Read and write records** Use dbplyr tables or graft’s collected
+query functions.
 
-## A familiar R workflow
+## A small example
 
 ``` r
 
 library(graft)
 
-schema <- kg_schema("materials.graft.json")
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+manifest <- system.file(
+  "extdata",
+  "materials.graft.json",
+  package = "graft"
+)
+schema <- kg_schema(manifest)
+store <- kg_connect_duckdb(schema, ":memory:")
 kg_init(store)
 
-matches <- kg_find(store, "LLDPE crystallinity", limit = 10)
-record <- kg_get(store, matches$id[[1]])
-claims <- kg_claims(store, record$id)
+kg_classes(schema)
+kg_slots(schema, "Claim")
 ```
 
-The manifest is compiled once. Loading it, managing DuckDB, and
-retrieving knowledge run entirely in R.
+Python and `linkml-runtime` are needed to compile a schema. Loading a
+compiled manifest and using a store run entirely in R.
 
-### For R users
+## Query interfaces
 
-Work with DBI and lazy dbplyr tables, exact identifier lookup, hydrated
-records, stored citations, and bounded graph neighborhoods.
+### R and dbplyr
 
-### For model-assisted workflows
+[`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
+returns a lazy dbplyr table.
+[`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md),
+[`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md),
+and the graph helpers return collected results with explicit limits.
 
-Expose six read-only ellmer tools over the same manifest-controlled
-APIs, with limits, truncation state, and schema digests in every result.
+### ellmer tools
 
-## Build the first complete workflow
+[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
+creates six read-only tools for one store. The tools accept structured
+arguments rather than SQL and report truncation state and the active
+schema digest.
 
-The getting-started guide follows a material from its schema through
-identity resolution, a source-backed claim, and bounded retrieval.
+## Next steps
 
-[Read the
-guide](https://jameshwade.github.io/graft/articles/getting-started.md)
-[Browse the
-reference](https://jameshwade.github.io/graft/reference/index.md)
+The getting-started guide builds a small materials store, then adds
+records, a claim, a source, and evidence.
+
+[Read getting
+started](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Browse
+functions](https://jameshwade.github.io/graft/reference/index.md)

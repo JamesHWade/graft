@@ -2,12 +2,11 @@
 
 ### Start here
 
-Learn why graft exists and follow a complete source-backed workflow from
-a compiled domain contract to bounded retrieval.
+Build a small materials store from an included schema, then add records,
+a claim, a source, and evidence and query them from R.
 
 - [Getting started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-  Understand why graft exists and follow a complete materials example
-  from a compiled LinkML contract to a source-backed claim and bounded
-  retrieval.
+  Build a small materials store from a compiled LinkML schema, add a
+  source-backed claim, and query it from R.

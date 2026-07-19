@@ -1,32 +1,33 @@
 # Getting started with graft
 
-graft is for R workflows in which knowledge must remain inspectable
-after it has been collected, reconciled, and reused. It keeps domain
-records, claims, sources, and evidence in ordinary relational tables
-while enforcing a semantic contract around them.
+graft stores schema-defined knowledge in DuckDB. A store can contain
+domain records, claims about those records, sources, and evidence that
+links a claim to a location in a source.
 
-This matters when a workflow needs to answer more than “which rows
-match?” For example:
+The schema records decisions that are otherwise easy to spread across
+application code:
 
-- Is this material the same one observed in an earlier run?
-- Is a statement a source-faithful narrative claim or a normalized
-  semantic assertion?
-- Which stored source and exact locator support or challenge the claim?
-- Can an analyst or language model retrieve the answer without accessing
-  arbitrary SQL or silently collecting an unbounded result?
+- which fields identify the same record across runs;
+- which fields are required and how they are validated;
+- whether a statement is narrative or semantic;
+- how claims, sources, and evidence are related; and
+- which relationships are available as graph projections.
 
-graft addresses these questions without requiring a separate graph
-database. It compiles a [LinkML](https://linkml.io/) domain schema into
-a portable manifest, uses that manifest to create and protect a DuckDB
-store, and exposes the stored knowledge through R, dbplyr, bounded graph
-projections, and optional ellmer tools.
+graft expresses these decisions in [LinkML](https://linkml.io/) and
+compiles the schema into a JSON manifest. At runtime, the manifest
+defines the DuckDB tables and the behavior of graft’s read and write
+functions.
 
-## The mental model
+This guide uses the materials schema included with the package. It
+creates an in-memory store, writes a material and a source, adds a claim
+and its evidence, and then queries the result.
+
+## How the pieces fit together
 
 The main workflow is:
 
 > LinkML schema -\> compiled `.graft.json` manifest -\> DuckDB store -\>
-> bounded R and agent-facing retrieval
+> R queries
 
 Each part has one job:
 
@@ -35,13 +36,13 @@ Each part has one job:
     extending graft’s core record roles.
 2.  **The compiled manifest is the runtime contract.** It contains the
     resolved classes, fields, relational mapping, identity rules,
-    validation invariants, graph projections, and schema fingerprints.
-    Commit it with your project.
+    validation rules, graph projections, and schema fingerprints. Commit
+    it with your project.
 3.  **DuckDB stores the records.** The database remains table-native,
     portable, and available to familiar DBI and dbplyr workflows.
-4.  **graft controls knowledge access.** Retrieval is limited to
-    manifest-declared classes and fields. Collected results are
-    explicitly bounded and carry the active schema digest.
+4.  **graft applies the contract.** Read and write functions accept only
+    manifest-declared classes and fields. Functions that collect results
+    require explicit limits and report the active schema digest.
 
 Python and `linkml-runtime` are used only for step 2. Loading an
 existing manifest and performing normal storage or retrieval both run
@@ -145,7 +146,7 @@ replace `":memory:"` with a file path.
 
 store <- kg_connect_duckdb(schema, ":memory:")
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmppmTM6b/duckdb/extensions
+#> ℹ /tmp/RtmpJNzr8N/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 kg_init(store)
@@ -194,7 +195,7 @@ kg_ingest(
   ),
   foundations
 )
-#> <kg_ingest_result> committed graft:01KXVZ1JYFKQNY051JD0REH470
+#> <kg_ingest_result> committed graft:01KXW2MG8GKQNY051JD0REH470
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0
@@ -246,7 +247,7 @@ kg_write(
     about = I(list(material_id))
   )
 )
-#> <kg_ingest_result> committed graft:01KXVZ1KDRQ9QP8ZR98JRJEWGE
+#> <kg_ingest_result> committed graft:01KXW2MGHCQ9QP8ZR98JRJEWGE
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -283,7 +284,7 @@ kg_write(
     excerpt = "Crystallinity (%) for the LLDPE sample: 37."
   )
 )
-#> <kg_ingest_result> committed graft:01KXVZ1KQNSE4FJ30WRC1PCJYS
+#> <kg_ingest_result> committed graft:01KXW2MGQ3SE4FJ30WRC1PCJYS
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -304,9 +305,9 @@ Search is useful for discovery:
 
 kg_find(store, "LLDPE", limit = 5)
 #>                                 id    class
-#> 1 graft:01KXVZ1JZSBN89156BSVND46JB   Source
-#> 2 graft:01KXVZ1JZB539065NJR1Z70V06 Material
-#> 3 graft:01KXVZ1KEFV7B2F7BQ16HSZV0M    Claim
+#> 1 graft:01KXW2MG99BN89156BSVND46JB   Source
+#> 2 graft:01KXW2MG8Z539065NJR1Z70V06 Material
+#> 3 graft:01KXW2MGHTV7B2F7BQ16HSZV0M    Claim
 #>                                                                          label
 #> 1                                  Controlled DSC study of LLDPE crystallinity
 #> 2                                      Linear low-density polyethylene (LLDPE)
@@ -323,7 +324,7 @@ Hydration starts from one stable ID and returns bounded related records:
 
 material <- kg_get(store, material_id)
 material
-#> <kg_record> Material graft:01KXVZ1JZB539065NJR1Z70V06
+#> <kg_record> Material graft:01KXW2MG8Z539065NJR1Z70V06
 #>   identifiers: 1
 #>   claims: 1
 #>   evidence: 1
@@ -393,7 +394,7 @@ kg_records(store, "Claim") |>
 #> # A tibble: 1 × 3
 #>   id                               statement_text                     confidence
 #>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KXVZ1KEFV7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
+#> 1 graft:01KXW2MGHTV7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
 ```
 
 [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -414,14 +415,14 @@ kg_select(
   limit = 10
 )
 #>                                 id
-#> 1 graft:01KXVZ1KEFV7B2F7BQ16HSZV0M
+#> 1 graft:01KXW2MGHTV7B2F7BQ16HSZV0M
 #>                                                                 statement_text
 #> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
 #>   confidence
 #> 1       0.95
 ```
 
-## Use graft with a language model
+## Use graft with ellmer
 
 If the `ellmer` package is installed,
 [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
@@ -433,15 +434,13 @@ chat <- ellmer::chat_anthropic()
 chat$set_tools(kg_tools(store))
 ```
 
-The tools expose the same manifest-controlled, bounded retrieval
-surfaces used above. They do not accept SQL, file paths, URLs, or
-network options. Their results include truncation metadata and the
-store’s schema digest, so a caller can tell whether an answer was based
-on a complete bounded result and which contract shaped it.
+The tools call the same query functions shown above. They do not accept
+SQL, file paths, URLs, or network options. Each result reports its
+limit, whether it was truncated, and the store’s schema digest.
 
-graft does not make model output trustworthy by itself. It supplies the
-mechanics for retrieving stored claims and citation material without
-inventing sources or bypassing the domain contract.
+[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
+does not validate model output. It gives a model read-only access to
+records and evidence that are already present in the store.
 
 ## Bring your own domain
 
@@ -490,15 +489,13 @@ store <- kg_connect_duckdb(schema, "knowledge.duckdb")
 kg_init(store)
 ```
 
-## When graft is a good fit
+## When to use graft
 
-Use graft when domain knowledge accumulates across runs and must
-preserve identity, claims, evidence, and a versioned semantic contract
-while remaining comfortable to query from R.
+Use graft when a project needs to preserve record identity, claims,
+sources, and evidence across runs while keeping the data available
+through R, DBI, and dbplyr.
 
-graft is not a replacement for LinkML schema design, a general-purpose
-graph database, vector similarity search, or source collection. It sits
-between those concerns: producers supply domain records and evidence,
-LinkML defines their meaning, DuckDB stores them as tables, and graft
-keeps identity, provenance, graph projection, and retrieval behavior
-aligned with the compiled contract.
+graft does not design the LinkML schema, collect source material,
+provide vector similarity search, or replace a general-purpose graph
+database. It manages the boundary between schema-defined records and
+their representation in DuckDB.
