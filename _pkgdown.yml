@@ -24,11 +24,10 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Schema-defined knowledge stores for R"
+  title: "graft: Traceable knowledge for R workflows"
   description: >
-    Compile LinkML schemas into manifests that define DuckDB tables,
-    identifiers, validation rules, claims, evidence, and graph projections,
-    then read and write those stores from R.
+    Keep records consistent across runs, preserve claims with exact evidence,
+    and provide bounded, schema-aware retrieval to analysts and AI tools.
   sidebar:
     structure: [links, license, authors, dev]
 
@@ -58,8 +57,8 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Build a small knowledge store, or start from an ordinary LinkML schema
-      and see how its classes and slots map to DuckDB.
+      Follow one workflow from domain contract to traceable retrieval, or start
+      from an ordinary LinkML schema and see how graft applies it in R.
     contents:
       - getting-started
       - linkml-schema
