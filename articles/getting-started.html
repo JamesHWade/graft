@@ -13,9 +13,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Getting started with graft">
-<meta name="description" content="Build a small materials store from a compiled LinkML schema, add a source-backed claim, and query it from R.
+<meta name="description" content="Keep records consistent across workflow runs, add a source-backed claim, and retrieve its evidence from R.
 ">
-<meta property="og:description" content="Build a small materials store from a compiled LinkML schema, add a source-backed claim, and query it from R.
+<meta property="og:description" content="Keep records consistent across workflow runs, add a source-backed claim, and retrieve its evidence from R.
 ">
 </head>
 <body>
@@ -75,11 +75,13 @@
 
     
     
-<p>graft stores schema-defined knowledge in DuckDB. A store can contain
-domain records, claims about those records, sources, and evidence that
-links a claim to a location in a source.</p>
-<p>The schema records decisions that are otherwise easy to spread across
-application code:</p>
+<p>An R workflow can end with well-formed data frames and still leave
+important questions unresolved. Is this the same material seen in an
+earlier run? Which source supports a claim? Is a relationship stated by
+the source or inferred by the application? What can another analyst or
+an AI tool safely retrieve?</p>
+<p>graft records those decisions in one versioned contract and applies
+the contract whenever data are written or read. It covers:</p>
 <ul>
 <li>which fields identify the same record across runs;</li>
 <li>which fields are required and how they are validated;</li>
@@ -87,41 +89,48 @@ application code:</p>
 <li>how claims, sources, and evidence are related; and</li>
 <li>which relationships are available as graph projections.</li>
 </ul>
-<p>graft expresses these decisions in <a href="https://linkml.io/" class="external-link">LinkML</a> and compiles the schema into a JSON
-manifest. At runtime, the manifest defines the DuckDB tables and the
-behavior of graft’s read and write functions.</p>
+<p>With the contract in place, repeated workflow runs can recognize the
+same record, claims remain separate from adjudicated truth, and
+retrieval can return the exact source location stored with an
+assertion.</p>
+<p>graft expresses the contract in <a href="https://linkml.io/" class="external-link">LinkML</a> and compiles it into a portable
+JSON manifest. At runtime, the manifest governs identity, validation,
+storage, and retrieval.</p>
 <p>This guide uses the materials schema included with the package. It
 creates an in-memory store, writes a material and a source, adds a claim
 and its evidence, and then queries the result.</p>
 <div class="section level2">
 <h2 id="how-the-pieces-fit-together">How the pieces fit together<a class="anchor" aria-label="anchor" href="#how-the-pieces-fit-together"></a>
 </h2>
-<p>The main workflow is:</p>
+<p>From a package user’s perspective, the main workflow is:</p>
 <blockquote>
-<p>LinkML schema -&gt; compiled <code>.graft.json</code> manifest -&gt;
-DuckDB store -&gt; R queries</p>
+<p>domain contract -&gt; validated workflow results -&gt; connected
+records -&gt; bounded R retrieval</p>
 </blockquote>
 <p>Each part has one job:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>The LinkML schema describes your domain.</strong> You define
-concrete classes such as materials, sources, claims, and evidence by
-extending graft’s core record roles.</li>
+<strong>Describe the domain.</strong> Use ordinary LinkML classes
+and slots for the records your workflow produces. Add graft’s optional
+roles when you need explicit claims, sources, evidence, or graph
+behavior.</li>
 <li>
-<strong>The compiled manifest is the runtime contract.</strong> It
-contains the resolved classes, fields, relational mapping, identity
-rules, validation rules, graph projections, and schema fingerprints.
-Commit it with your project.</li>
+<strong>Compile the runtime contract.</strong> The generated
+<code>.graft.json</code> manifest resolves fields, identity rules,
+validation, relationships, and schema fingerprints. Commit it with your
+project.</li>
 <li>
-<strong>DuckDB stores the records.</strong> The database remains
-table-native, portable, and available to familiar DBI and dbplyr
-workflows.</li>
+<strong>Ingest workflow results.</strong> graft validates related
+data frames atomically, reconciles declared identifiers, and records the
+producer and replay boundary.</li>
 <li>
-<strong>graft applies the contract.</strong> Read and write
-functions accept only manifest-declared classes and fields. Functions
-that collect results require explicit limits and report the active
-schema digest.</li>
+<strong>Retrieve records with context.</strong> Read one class
+lazily with dbplyr or use bounded functions to inspect records, claims,
+evidence, and graph neighborhoods.</li>
 </ol>
+<p>The current backend is embedded DuckDB. That keeps stores local,
+portable, and available to familiar DBI and dbplyr workflows without
+making the backend the domain model.</p>
 <p>Python and <code>linkml-runtime</code> are used only for step 2.
 Loading an existing manifest and performing normal storage or retrieval
 both run entirely in R.</p>
@@ -212,7 +221,7 @@ store, replace <code>":memory:"</code> with a file path.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">":memory:"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; duckdb is keeping downloaded extensions in a temporary directory:</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpWPdhhy/duckdb/extensions</span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpsQXSaT/duckdb/extensions</span></span>
 <span><span class="co">#&gt; This is removed when the R session ends, so extensions are re-downloaded each session.</span></span>
 <span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.</span></span>
 <span><span class="fu"><a href="../reference/kg_init.html">kg_init</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
@@ -256,7 +265,7 @@ does not duplicate its observations.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="va">foundations</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX4NXYNKQNY051JD0REH470</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX94WEFKQNY051JD0REH470</span></span>
 <span><span class="co">#&gt;   inserted: 2</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -300,7 +309,7 @@ as <code>about</code>, is represented as a list-column:</p>
 <span>    about <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">material_id</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX4NYAEQ9QP8ZR98JRJEWGE</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX94WS6Q9QP8ZR98JRJEWGE</span></span>
 <span><span class="co">#&gt;   inserted: 1</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -333,7 +342,7 @@ as <code>about</code>, is represented as a list-column:</p>
 <span>    excerpt <span class="op">=</span> <span class="st">"Crystallinity (%) for the LLDPE sample: 37."</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX4NYJ7SE4FJ30WRC1PCJYS</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KXX94X0DSE4FJ30WRC1PCJYS</span></span>
 <span><span class="co">#&gt;   inserted: 1</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -350,9 +359,9 @@ graft IDs can submit all related classes in one atomic
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_find.html">kg_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"LLDPE"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                 id    class</span></span>
-<span><span class="co">#&gt; 1 graft:01KXX4NXZNBN89156BSVND46JB   Source</span></span>
-<span><span class="co">#&gt; 2 graft:01KXX4NXZA539065NJR1Z70V06 Material</span></span>
-<span><span class="co">#&gt; 3 graft:01KXX4NYB1V7B2F7BQ16HSZV0M    Claim</span></span>
+<span><span class="co">#&gt; 1 graft:01KXX94WFGBN89156BSVND46JB   Source</span></span>
+<span><span class="co">#&gt; 2 graft:01KXX94WF5539065NJR1Z70V06 Material</span></span>
+<span><span class="co">#&gt; 3 graft:01KXX94WSRV7B2F7BQ16HSZV0M    Claim</span></span>
 <span><span class="co">#&gt;                                                                          label</span></span>
 <span><span class="co">#&gt; 1                                  Controlled DSC study of LLDPE crystallinity</span></span>
 <span><span class="co">#&gt; 2                                      Linear low-density polyethylene (LLDPE)</span></span>
@@ -366,7 +375,7 @@ records:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">material</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_get.html">kg_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">material_id</span><span class="op">)</span></span>
 <span><span class="va">material</span></span>
-<span><span class="co">#&gt; &lt;kg_record&gt; Material graft:01KXX4NXZA539065NJR1Z70V06</span></span>
+<span><span class="co">#&gt; &lt;kg_record&gt; Material graft:01KXX94WF5539065NJR1Z70V06</span></span>
 <span><span class="co">#&gt;   identifiers: 1</span></span>
 <span><span class="co">#&gt;   claims: 1</span></span>
 <span><span class="co">#&gt;   evidence: 1</span></span>
@@ -469,7 +478,7 @@ table:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 3</span></span></span>
 <span><span class="co">#&gt;   id                               statement_text                     confidence</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                            <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> graft:01KXX4NYB1V7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> graft:01KXX94WSRV7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95</span></span></code></pre></div>
 <p><code><a href="../reference/kg_select.html">kg_select()</a></code> is the safer collected interface when a
 caller should choose fields and filters but must not provide SQL:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
@@ -485,7 +494,7 @@ caller should choose fields and filters but must not provide SQL:</p>
 <span>  limit <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                 id</span></span>
-<span><span class="co">#&gt; 1 graft:01KXX4NYB1V7B2F7BQ16HSZV0M</span></span>
+<span><span class="co">#&gt; 1 graft:01KXX94WSRV7B2F7BQ16HSZV0M</span></span>
 <span><span class="co">#&gt;                                                                 statement_text</span></span>
 <span><span class="co">#&gt; 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.</span></span>
 <span><span class="co">#&gt;   confidence</span></span>

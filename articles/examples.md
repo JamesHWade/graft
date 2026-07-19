@@ -146,7 +146,7 @@ kg_ingest(
   ),
   chemistry_records
 )
-#> <kg_ingest_result> committed graft:01KXX4NSFYKQNY051JD0REH470
+#> <kg_ingest_result> committed graft:01KXX94R4VKQNY051JD0REH470
 #>   inserted: 4
 #>   updated:  0
 #>   matched:  0
@@ -316,7 +316,7 @@ kg_ingest(
   ),
   biology_records
 )
-#> <kg_ingest_result> committed graft:01KXX4NT9NRA0FPVEAZKT0VRRW
+#> <kg_ingest_result> committed graft:01KXX94RX6RA0FPVEAZKT0VRRW
 #>   inserted: 3
 #>   updated:  0
 #>   matched:  0

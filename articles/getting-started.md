@@ -1,11 +1,13 @@
 # Getting started with graft
 
-graft stores schema-defined knowledge in DuckDB. A store can contain
-domain records, claims about those records, sources, and evidence that
-links a claim to a location in a source.
+An R workflow can end with well-formed data frames and still leave
+important questions unresolved. Is this the same material seen in an
+earlier run? Which source supports a claim? Is a relationship stated by
+the source or inferred by the application? What can another analyst or
+an AI tool safely retrieve?
 
-The schema records decisions that are otherwise easy to spread across
-application code:
+graft records those decisions in one versioned contract and applies the
+contract whenever data are written or read. It covers:
 
 - which fields identify the same record across runs;
 - which fields are required and how they are validated;
@@ -13,10 +15,13 @@ application code:
 - how claims, sources, and evidence are related; and
 - which relationships are available as graph projections.
 
-graft expresses these decisions in [LinkML](https://linkml.io/) and
-compiles the schema into a JSON manifest. At runtime, the manifest
-defines the DuckDB tables and the behavior of graft’s read and write
-functions.
+With the contract in place, repeated workflow runs can recognize the
+same record, claims remain separate from adjudicated truth, and
+retrieval can return the exact source location stored with an assertion.
+
+graft expresses the contract in [LinkML](https://linkml.io/) and
+compiles it into a portable JSON manifest. At runtime, the manifest
+governs identity, validation, storage, and retrieval.
 
 This guide uses the materials schema included with the package. It
 creates an in-memory store, writes a material and a source, adds a claim
@@ -24,25 +29,29 @@ and its evidence, and then queries the result.
 
 ## How the pieces fit together
 
-The main workflow is:
+From a package user’s perspective, the main workflow is:
 
-> LinkML schema -\> compiled `.graft.json` manifest -\> DuckDB store -\>
-> R queries
+> domain contract -\> validated workflow results -\> connected records
+> -\> bounded R retrieval
 
 Each part has one job:
 
-1.  **The LinkML schema describes your domain.** You define concrete
-    classes such as materials, sources, claims, and evidence by
-    extending graft’s core record roles.
-2.  **The compiled manifest is the runtime contract.** It contains the
-    resolved classes, fields, relational mapping, identity rules,
-    validation rules, graph projections, and schema fingerprints. Commit
-    it with your project.
-3.  **DuckDB stores the records.** The database remains table-native,
-    portable, and available to familiar DBI and dbplyr workflows.
-4.  **graft applies the contract.** Read and write functions accept only
-    manifest-declared classes and fields. Functions that collect results
-    require explicit limits and report the active schema digest.
+1.  **Describe the domain.** Use ordinary LinkML classes and slots for
+    the records your workflow produces. Add graft’s optional roles when
+    you need explicit claims, sources, evidence, or graph behavior.
+2.  **Compile the runtime contract.** The generated `.graft.json`
+    manifest resolves fields, identity rules, validation, relationships,
+    and schema fingerprints. Commit it with your project.
+3.  **Ingest workflow results.** graft validates related data frames
+    atomically, reconciles declared identifiers, and records the
+    producer and replay boundary.
+4.  **Retrieve records with context.** Read one class lazily with dbplyr
+    or use bounded functions to inspect records, claims, evidence, and
+    graph neighborhoods.
+
+The current backend is embedded DuckDB. That keeps stores local,
+portable, and available to familiar DBI and dbplyr workflows without
+making the backend the domain model.
 
 Python and `linkml-runtime` are used only for step 2. Loading an
 existing manifest and performing normal storage or retrieval both run
@@ -146,7 +155,7 @@ replace `":memory:"` with a file path.
 
 store <- kg_connect_duckdb(schema, ":memory:")
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpWPdhhy/duckdb/extensions
+#> ℹ /tmp/RtmpsQXSaT/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 kg_init(store)
@@ -195,7 +204,7 @@ kg_ingest(
   ),
   foundations
 )
-#> <kg_ingest_result> committed graft:01KXX4NXYNKQNY051JD0REH470
+#> <kg_ingest_result> committed graft:01KXX94WEFKQNY051JD0REH470
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0
@@ -247,7 +256,7 @@ kg_write(
     about = I(list(material_id))
   )
 )
-#> <kg_ingest_result> committed graft:01KXX4NYAEQ9QP8ZR98JRJEWGE
+#> <kg_ingest_result> committed graft:01KXX94WS6Q9QP8ZR98JRJEWGE
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -284,7 +293,7 @@ kg_write(
     excerpt = "Crystallinity (%) for the LLDPE sample: 37."
   )
 )
-#> <kg_ingest_result> committed graft:01KXX4NYJ7SE4FJ30WRC1PCJYS
+#> <kg_ingest_result> committed graft:01KXX94X0DSE4FJ30WRC1PCJYS
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -305,9 +314,9 @@ Search is useful for discovery:
 
 kg_find(store, "LLDPE", limit = 5)
 #>                                 id    class
-#> 1 graft:01KXX4NXZNBN89156BSVND46JB   Source
-#> 2 graft:01KXX4NXZA539065NJR1Z70V06 Material
-#> 3 graft:01KXX4NYB1V7B2F7BQ16HSZV0M    Claim
+#> 1 graft:01KXX94WFGBN89156BSVND46JB   Source
+#> 2 graft:01KXX94WF5539065NJR1Z70V06 Material
+#> 3 graft:01KXX94WSRV7B2F7BQ16HSZV0M    Claim
 #>                                                                          label
 #> 1                                  Controlled DSC study of LLDPE crystallinity
 #> 2                                      Linear low-density polyethylene (LLDPE)
@@ -324,7 +333,7 @@ Hydration starts from one stable ID and returns bounded related records:
 
 material <- kg_get(store, material_id)
 material
-#> <kg_record> Material graft:01KXX4NXZA539065NJR1Z70V06
+#> <kg_record> Material graft:01KXX94WF5539065NJR1Z70V06
 #>   identifiers: 1
 #>   claims: 1
 #>   evidence: 1
@@ -394,7 +403,7 @@ kg_records(store, "Claim") |>
 #> # A tibble: 1 × 3
 #>   id                               statement_text                     confidence
 #>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KXX4NYB1V7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
+#> 1 graft:01KXX94WSRV7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
 ```
 
 [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -415,7 +424,7 @@ kg_select(
   limit = 10
 )
 #>                                 id
-#> 1 graft:01KXX4NYB1V7B2F7BQ16HSZV0M
+#> 1 graft:01KXX94WSRV7B2F7BQ16HSZV0M
 #>                                                                 statement_text
 #> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
 #>   confidence

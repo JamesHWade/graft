@@ -2,14 +2,14 @@
 
 ### Start here
 
-Build a small knowledge store, or start from an ordinary LinkML schema
-and see how its classes and slots map to DuckDB.
+Follow one workflow from domain contract to traceable retrieval, or
+start from an ordinary LinkML schema and see how graft applies it in R.
 
 - [Getting started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-  Build a small materials store from a compiled LinkML schema, add a
-  source-backed claim, and query it from R.
+  Keep records consistent across workflow runs, add a source-backed
+  claim, and retrieve its evidence from R.
 
 - [Use a LinkML schema with
   graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
