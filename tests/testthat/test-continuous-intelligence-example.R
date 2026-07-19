@@ -494,6 +494,73 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_length(monitor_content$referrals, 1L)
 
   referral <- monitor_content$referrals[[1L]]
+  accepted_context <- environment$ci_accepted_context(
+    store,
+    environment$ci_character(referral$context_record_ids)
+  )
+  accepted_evidence <- environment$ci_accepted_evidence(
+    store,
+    referral$evidence_record_ids,
+    accepted_context
+  )
+  independent_ids <- vapply(
+    accepted_context$claims,
+    `[[`,
+    character(1),
+    "id"
+  )
+  torque_index <- which(
+    independent_ids == "graft:00000000000000000000000118"
+  )
+  insufficient_context <- accepted_context
+  insufficient_context$claims[[
+    torque_index
+  ]]$record$observed_torque <- 95
+  insufficient_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      insufficient_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(insufficient_result, "error")
+  expect_match(
+    conditionMessage(insufficient_result),
+    "does not meet the Project Ember torque requirement"
+  )
+  vendor_context <- accepted_context
+  vendor_context$claims[[
+    torque_index
+  ]]$record$source_quality <- "vendor"
+  vendor_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      vendor_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(vendor_result, "error")
+  expect_match(
+    conditionMessage(vendor_result),
+    "requires independent Observation records"
+  )
+  vendor_evidence <- accepted_evidence
+  vendor_evidence[[1L]]$source$record$source_quality <- "vendor"
+  vendor_source_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      accepted_context,
+      vendor_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(vendor_source_result, "error")
+  expect_match(
+    conditionMessage(vendor_source_result),
+    "does not match its accepted source provenance"
+  )
   promotion_store <- environment$ci_promotion_store()
   promotion_id <- environment$ci_record_promotion(
     promotion_store,
@@ -873,6 +940,10 @@ test_that("scheduled signals promote through approval into accepted history", {
   )
   expect_in(
     "graft:00000000000000000000000125",
+    committed_decision_record$evidence$id
+  )
+  expect_in(
+    "graft:00000000000000000000000127",
     committed_decision_record$evidence$id
   )
   committed_decision_evidence <- committed_decision_record$evidence[

@@ -86,6 +86,10 @@ slots:
     range: float
   duration_unit:
     range: string
+  observed_torque:
+    range: float
+  torque_unit:
+    range: string
   disposition:
     range: DecisionDisposition
     required: true
@@ -182,6 +186,8 @@ classes:
       - test_context
       - observed_duration
       - duration_unit
+      - observed_torque
+      - torque_unit
     slot_usage:
       about:
         required: true

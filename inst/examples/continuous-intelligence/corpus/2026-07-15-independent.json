@@ -43,6 +43,8 @@
         "test_context": "Laboratory bench test at 24 V and 22 C ambient for ten minutes.",
         "observed_duration": 10,
         "duration_unit": "min",
+        "observed_torque": 105,
+        "torque_unit": "Nm",
         "polarity": "positive",
         "confidence": 0.9,
         "status": "active",

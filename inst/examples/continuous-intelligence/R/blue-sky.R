@@ -27,6 +27,31 @@ blue_sky_result_builder <- function(
     accepted_context$claims,
     accepted_ids
   )
+  torque_observation <- accepted_claims[[
+    "graft:00000000000000000000000118"
+  ]]
+  thermal_observation <- accepted_claims[[
+    "graft:00000000000000000000000119"
+  ]]
+  if (
+    !identical(torque_observation$class, "Observation") ||
+      !identical(thermal_observation$class, "Observation") ||
+      !identical(
+        torque_observation$record$source_quality,
+        "independent"
+      ) ||
+      !identical(
+        thermal_observation$record$source_quality,
+        "independent"
+      )
+  ) {
+    stop(
+      paste(
+        "The bounded-test synthesis requires independent Observation",
+        "records."
+      )
+    )
+  }
   accepted_record_ids <- vapply(
     accepted_context$records,
     `[[`,
@@ -152,7 +177,13 @@ blue_sky_result_builder <- function(
   source_matches <- vapply(
     supporting_evidence,
     function(evidence) {
-      is.list(evidence$source) &&
+      identical(evidence$class, "Evidence") &&
+        is.list(evidence$source) &&
+        identical(evidence$source$class, "Source") &&
+        identical(
+          evidence$source$record$source_quality,
+          "independent"
+        ) &&
         identical(
           evidence$source$id,
           evidence$record$source_id
@@ -194,24 +225,16 @@ blue_sky_result_builder <- function(
     )
   }
   validated_duration <- as.numeric(
-    accepted_claims[[
-      "graft:00000000000000000000000118"
-    ]]$record$observed_duration
+    torque_observation$record$observed_duration
   )
   validated_duration_unit <- as.character(
-    accepted_claims[[
-      "graft:00000000000000000000000118"
-    ]]$record$duration_unit
+    torque_observation$record$duration_unit
   )
   thermal_duration <- as.numeric(
-    accepted_claims[[
-      "graft:00000000000000000000000119"
-    ]]$record$observed_duration
+    thermal_observation$record$observed_duration
   )
   thermal_duration_unit <- as.character(
-    accepted_claims[[
-      "graft:00000000000000000000000119"
-    ]]$record$duration_unit
+    thermal_observation$record$duration_unit
   )
   if (
     length(validated_duration) != 1L ||
@@ -239,6 +262,29 @@ blue_sky_result_builder <- function(
     )
   }
   unvalidated_duration <- duty_threshold - validated_duration
+  observed_torque <- as.numeric(
+    torque_observation$record$observed_torque
+  )
+  observed_torque_unit <- as.character(
+    torque_observation$record$torque_unit
+  )
+  if (
+    length(observed_torque) != 1L ||
+      is.na(observed_torque) ||
+      !is.finite(observed_torque) ||
+      length(observed_torque_unit) != 1L ||
+      is.na(observed_torque_unit) ||
+      !nzchar(observed_torque_unit) ||
+      !identical(observed_torque_unit, torque_unit) ||
+      observed_torque < torque_threshold
+  ) {
+    stop(
+      paste(
+        "The accepted independent torque observation does not meet",
+        "the Project Ember torque requirement."
+      )
+    )
+  }
   supporting_evidence_ids <- unname(
     vapply(
       supporting_evidence,
@@ -350,7 +396,9 @@ blue_sky_result_builder <- function(
       "graft:00000000000000000000000122",
       "graft:00000000000000000000000123",
       "graft:00000000000000000000000124",
-      "graft:00000000000000000000000125"
+      "graft:00000000000000000000000125",
+      "graft:00000000000000000000000126",
+      "graft:00000000000000000000000127"
     ),
     knowledge_changes = list(
       Assessment = list(
@@ -421,6 +469,30 @@ blue_sky_result_builder <- function(
           locator_value = thermal_evidence$record$locator_value,
           excerpt = thermal_evidence$record$excerpt,
           source_content_hash = thermal_evidence$record$source_content_hash,
+          extraction_method = "workflow-selected-source-evidence",
+          extraction_version = "1"
+        ),
+        list(
+          id = "graft:00000000000000000000000126",
+          statement_id = "graft:00000000000000000000000122",
+          source_id = thermal_evidence$record$source_id,
+          support_type = "derived_from",
+          locator_type = thermal_evidence$record$locator_type,
+          locator_value = thermal_evidence$record$locator_value,
+          excerpt = thermal_evidence$record$excerpt,
+          source_content_hash = thermal_evidence$record$source_content_hash,
+          extraction_method = "workflow-selected-source-evidence",
+          extraction_version = "1"
+        ),
+        list(
+          id = "graft:00000000000000000000000127",
+          statement_id = "graft:00000000000000000000000123",
+          source_id = torque_evidence$record$source_id,
+          support_type = "derived_from",
+          locator_type = torque_evidence$record$locator_type,
+          locator_value = torque_evidence$record$locator_value,
+          excerpt = torque_evidence$record$excerpt,
+          source_content_hash = torque_evidence$record$source_content_hash,
           extraction_method = "workflow-selected-source-evidence",
           extraction_version = "1"
         )
