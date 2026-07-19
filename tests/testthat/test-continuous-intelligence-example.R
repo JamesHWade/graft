@@ -167,6 +167,24 @@ test_that("scheduled signals promote through approval into accepted history", {
     ),
     "absent"
   )
+  context_precondition_ids <- vapply(
+    review_content$context_preconditions,
+    `[[`,
+    character(1),
+    "id"
+  )
+  expect_in(
+    "graft:00000000000000000000000102",
+    context_precondition_ids
+  )
+  expect_in(
+    "graft:00000000000000000000000103",
+    context_precondition_ids
+  )
+  expect_in(
+    "graft:00000000000000000000000106",
+    context_precondition_ids
+  )
   mismatched_commit <- tryCatch(
     environment$ci_approve_and_commit(
       day_one$review,
@@ -238,6 +256,47 @@ test_that("scheduled signals promote through approval into accepted history", {
       include = character()
     )$record$title,
     "newer accepted revision"
+  )
+  context_store <- local_continuous_intelligence_store(environment)
+  context_content <- review_content
+  context_content$context_preconditions <-
+    environment$ci_accepted_context_preconditions(
+      environment$ci_accepted_context(
+        context_store,
+        environment$ci_character(
+          profile$monitor_scope$record_ids
+        )
+      )
+    )
+  changed_requirement <- kg_get(
+    context_store,
+    "graft:00000000000000000000000102",
+    include = character()
+  )$record
+  changed_requirement$threshold <- 101
+  kg_ingest(
+    context_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "review-context-conflict"
+    ),
+    environment$ci_rows_to_records(
+      list(ProjectRequirement = list(changed_requirement)),
+      context_store$schema
+    )
+  )
+  context_mapping <- tryCatch(
+    environment$ci_default_record_mapper(
+      context_content,
+      list(decision = "approved"),
+      context_store
+    ),
+    error = identity
+  )
+  expect_s3_class(context_mapping, "error")
+  expect_match(
+    conditionMessage(context_mapping),
+    "relied-upon knowledge changed before commit"
   )
   mapping_failure <- tryCatch(
     environment$ci_approve_and_commit(
@@ -562,6 +621,13 @@ test_that("scheduled signals promote through approval into accepted history", {
     )@content$promotion,
     promotion
   )
+  expect_identical(
+    tempest::tempest_run_artifact(
+      decision,
+      "workflow-referral-result-json"
+    )@content$workflow_lineage$run_id,
+    "blue-sky-decision-2026-07-15"
+  )
   expect_setequal(
     tempest::tempest_run_artifact(
       decision,
@@ -758,6 +824,25 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_identical(
     committed_decision_evidence$source_content_hash,
     "sha256:independent-test-v1"
+  )
+  expect_identical(
+    committed_decision_evidence$excerpt,
+    paste(
+      "Thermal protection reduced output after ten minutes of",
+      "continuous operation."
+    )
+  )
+  expect_identical(
+    committed_decision_record$record$workflow_run_id,
+    "blue-sky-decision-2026-07-15"
+  )
+  expect_identical(
+    committed_decision_record$record$approval_id,
+    decision_commit$approval$approval_id
+  )
+  expect_identical(
+    committed_decision_record$record$synthesis_method,
+    "approved-workflow-synthesis"
   )
 
   day_three <- environment$ci_run_monitor(

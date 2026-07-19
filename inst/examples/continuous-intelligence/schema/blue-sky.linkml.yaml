@@ -93,6 +93,12 @@ slots:
     range: string
   review_outcome:
     range: ReviewOutcome
+  workflow_run_id:
+    range: string
+  approval_id:
+    range: string
+  synthesis_method:
+    range: string
 
 classes:
   Project:
@@ -199,6 +205,9 @@ classes:
       - disposition
       - reviewer_role
       - review_outcome
+      - workflow_run_id
+      - approval_id
+      - synthesis_method
     slot_usage:
       about:
         required: true

@@ -310,13 +310,12 @@ blue_sky_result_builder <- function(
           source_id = decision_source_id,
           support_type = "derived_from",
           locator_type = "other",
-          locator_value = "table 2 and Thermal behavior",
+          locator_value = "table 2",
           excerpt = paste(
-            "The test sustained 105 Nm through minute ten and then",
-            "required thermal derating."
+            "At 24 V, sustained torque was 105 Nm through minute ten."
           ),
           source_content_hash = decision_source_hash,
-          extraction_method = "approved-workflow-synthesis",
+          extraction_method = "workflow-selected-source-evidence",
           extraction_version = "1"
         ),
         list(
@@ -325,13 +324,13 @@ blue_sky_result_builder <- function(
           source_id = decision_source_id,
           support_type = "derived_from",
           locator_type = "other",
-          locator_value = "table 2 and Thermal behavior",
+          locator_value = "Thermal behavior",
           excerpt = paste(
-            "The approved bounded test decision derives from the independent",
-            "torque and thermal findings."
+            "Thermal protection reduced output after ten minutes of",
+            "continuous operation."
           ),
           source_content_hash = decision_source_hash,
-          extraction_method = "approved-workflow-synthesis",
+          extraction_method = "workflow-selected-source-evidence",
           extraction_version = "1"
         )
       )
@@ -353,6 +352,11 @@ blue_sky_decision_record_mapper <- function(content, approval, store) {
     store$schema
   )
   records$ReviewDecision$review_outcome <- approval$decision
+  records$ReviewDecision$workflow_run_id <-
+    content$workflow_lineage$run_id
+  records$ReviewDecision$approval_id <- approval$approval_id
+  records$ReviewDecision$synthesis_method <-
+    content$workflow_lineage$synthesis_method
   for (precondition in content$supersession_preconditions) {
     current <- graft::kg_get(
       store,

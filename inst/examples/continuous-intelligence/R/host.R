@@ -417,6 +417,24 @@ ci_accepted_context <- function(store, record_ids) {
   )
 }
 
+ci_accepted_context_preconditions <- function(accepted_context) {
+  c(
+    lapply(
+      accepted_context$records,
+      ci_record_precondition
+    ),
+    lapply(
+      accepted_context$claims,
+      function(claim) {
+        ci_record_precondition(
+          claim,
+          expected_status = claim$status
+        )
+      }
+    )
+  )
+}
+
 ci_accepted_evidence <- function(store, record_ids, accepted_context) {
   record_ids <- ci_character(record_ids)
   if (length(record_ids) == 0L) {
@@ -833,7 +851,8 @@ ci_review_spec <- function() {
       "scan_date",
       "source_monitor_run_id",
       "knowledge_changes",
-      "target_preconditions"
+      "target_preconditions",
+      "context_preconditions"
     ),
     "example.ci.renderer.json",
     "knowledge-change-set",
@@ -868,6 +887,9 @@ ci_review_registry <- function() {
         target_preconditions = ci_target_state_preconditions(
           knowledge_store,
           monitor_content$proposals
+        ),
+        context_preconditions = ci_accepted_context_preconditions(
+          monitor_content$accepted_context
         )
       )
       ci_generate(
@@ -959,7 +981,8 @@ ci_referral_spec <- function() {
       "decision",
       "recommendation",
       "evidence_record_ids",
-      "knowledge_changes"
+      "knowledge_changes",
+      "workflow_lineage"
     ),
     "example.ci.renderer.json",
     "workflow-referral-result",
@@ -994,6 +1017,12 @@ ci_referral_registry <- function() {
         accepted_evidence
       )
       content$promotion <- promotion
+      content$workflow_lineage <- list(
+        run_id = run_id,
+        workflow_id = referral$workflow_id,
+        evidence_record_ids = names(accepted_evidence),
+        synthesis_method = "approved-workflow-synthesis"
+      )
       ci_generate(
         deliverable,
         content,
@@ -1103,6 +1132,10 @@ ci_run_referral <- function(
 }
 
 ci_default_record_mapper <- function(content, approval, store) {
+  ci_validate_record_preconditions(
+    store,
+    content$context_preconditions
+  )
   ci_validate_target_state_preconditions(
     store,
     content$target_preconditions
