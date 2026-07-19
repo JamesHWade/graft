@@ -62,6 +62,18 @@ test_that("scheduled signals promote through approval into accepted history", {
     )
   )
   store <- local_continuous_intelligence_store(environment)
+  missing_context <- tryCatch(
+    environment$ci_accepted_context(
+      store,
+      "graft:00000000000000000000000999"
+    ),
+    graft_error = identity
+  )
+  expect_s3_class(missing_context, "graft_error")
+  expect_match(
+    conditionMessage(missing_context),
+    "was not found"
+  )
 
   day_one <- continuous_intelligence_run_signal_day(
     environment,
@@ -77,6 +89,38 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_identical(
     tempest::tempest_run_status(day_one$review),
     "awaiting_approval"
+  )
+  expect_equal(
+    nrow(dplyr::collect(kg_records(store, "Observation"))),
+    0L
+  )
+  mapping_failure <- tryCatch(
+    environment$ci_approve_and_commit(
+      day_one$review,
+      "knowledge-change-set-json",
+      store,
+      day_one$review_id,
+      "approved-observations",
+      "Approved source-faithful vendor observation.",
+      record_mapper = \(
+        ...
+      ) {
+        stop("Synthetic mapping failure.")
+      }
+    ),
+    error = identity
+  )
+  expect_s3_class(mapping_failure, "error")
+  expect_match(
+    conditionMessage(mapping_failure),
+    "Synthetic mapping failure"
+  )
+  expect_identical(
+    tempest::tempest_run_artifact(
+      day_one$review,
+      "knowledge-change-set-json"
+    )@status,
+    "approved"
   )
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "Observation"))),
@@ -149,16 +193,45 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_length(monitor_content$referrals, 1L)
 
   referral <- monitor_content$referrals[[1L]]
+  unpromoted <- tryCatch(
+    environment$ci_run_referral(
+      referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-2026-07-15"
+    ),
+    error = identity
+  )
+  expect_s3_class(unpromoted, "error")
+  expect_match(
+    conditionMessage(unpromoted),
+    "requires an approved human-promotion"
+  )
+  promotion <- list(
+    decision = "approved",
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:30:00Z",
+    note = "Open the prototype-gate decision workflow."
+  )
   decision <- environment$ci_run_referral(
     referral,
     profile,
     store,
     environment$blue_sky_result_builder,
-    "blue-sky-decision-2026-07-15"
+    "blue-sky-decision-2026-07-15",
+    promotion = promotion
   )
   expect_identical(
     tempest::tempest_run_status(decision),
     "awaiting_approval"
+  )
+  expect_identical(
+    tempest::tempest_run_artifact(
+      decision,
+      "workflow-referral-result-json"
+    )@content$promotion,
+    promotion
   )
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "ReviewDecision"))),

@@ -35,21 +35,17 @@ ci_iso_time <- function(x) {
 
 ci_accepted_context <- function(store, record_ids) {
   hydrated <- lapply(record_ids, function(id) {
-    tryCatch(
-      graft::kg_get(
-        store,
-        id,
-        include = c("claims", "evidence"),
-        limits = list(
-          identifiers = 10L,
-          claims = 50L,
-          evidence = 100L
-        )
-      ),
-      graft_error = function(error) NULL
+    graft::kg_get(
+      store,
+      id,
+      include = c("claims", "evidence"),
+      limits = list(
+        identifiers = 10L,
+        claims = 50L,
+        evidence = 100L
+      )
     )
   })
-  hydrated <- Filter(\(record) !is.null(record), hydrated)
 
   records <- lapply(hydrated, function(record) {
     values <- record$record
@@ -595,6 +591,7 @@ ci_referral_registry <- function() {
       referral,
       knowledge_store,
       context_record_ids,
+      promotion,
       result_builder,
       deliverable,
       artifact_catalog,
@@ -608,6 +605,7 @@ ci_referral_registry <- function() {
         context_record_ids
       )
       content <- result_builder(referral, accepted_context)
+      content$promotion <- promotion
       ci_generate(
         deliverable,
         content,
@@ -628,7 +626,8 @@ ci_run_referral <- function(
   profile,
   store,
   result_builder,
-  run_id
+  run_id,
+  promotion = NULL
 ) {
   workflow_id <- referral$workflow_id
   allowed <- vapply(
@@ -638,6 +637,31 @@ ci_run_referral <- function(
   )
   if (!workflow_id %in% allowed) {
     stop("The referral workflow is not allowed by the active profile.")
+  }
+  promotion_required <- isTRUE(
+    profile$routing_policy$human_promotion_required
+  )
+  if (promotion_required) {
+    if (
+      !is.list(promotion) ||
+        is.data.frame(promotion) ||
+        !identical(promotion$decision, "approved") ||
+        !is.character(promotion$reviewer) ||
+        length(promotion$reviewer) != 1L ||
+        is.na(promotion$reviewer) ||
+        !nzchar(trimws(promotion$reviewer)) ||
+        !is.character(promotion$decided_at) ||
+        length(promotion$decided_at) != 1L ||
+        is.na(promotion$decided_at) ||
+        !nzchar(trimws(promotion$decided_at))
+    ) {
+      stop(
+        paste(
+          "The active profile requires an approved human-promotion",
+          "record with one reviewer and decision time."
+        )
+      )
+    }
   }
   deliverable <- ci_referral_spec()
   registry <- ci_referral_registry()
@@ -661,7 +685,8 @@ ci_run_referral <- function(
     title = referral$objective,
     context = list(
       workflow_id = workflow_id,
-      priority = referral$priority
+      priority = referral$priority,
+      promotion = promotion
     ),
     constraints = c(
       "Use only accepted knowledge and the cited referral evidence.",
@@ -683,6 +708,7 @@ ci_run_referral <- function(
       referral = referral,
       knowledge_store = store,
       context_record_ids = ci_character(referral$context_record_ids),
+      promotion = promotion,
       result_builder = result_builder,
       deliverable = deliverable
     ),
@@ -694,6 +720,17 @@ ci_default_record_mapper <- function(content, approval) {
   ci_rows_to_records(content$knowledge_changes)
 }
 
+ci_artifact_approvals <- function(run, artifact_id, status) {
+  approvals <- tempest::tempest_run_approvals(run, status = status)
+  Filter(
+    function(approval) {
+      identical(approval$approval_kind, "artifact") &&
+        identical(approval$artifact_ids, artifact_id)
+    },
+    approvals
+  )
+}
+
 ci_approve_and_commit <- function(
   run,
   artifact_id,
@@ -703,25 +740,61 @@ ci_approve_and_commit <- function(
   note,
   record_mapper = ci_default_record_mapper
 ) {
-  pending <- tempest::tempest_run_approvals(run, status = "pending")
-  if (length(pending) != 1L) {
-    stop("Exactly one pending artifact approval is required.")
-  }
-  approval_id <- names(pending)[[1L]]
-  tempest::tempest_run_record_approval(
-    run,
-    approval_id,
-    decision = "approved",
-    note = note
-  )
   artifact <- tempest::tempest_run_artifact(run, artifact_id)
+  if (identical(artifact@status, "awaiting_approval")) {
+    approvals <- ci_artifact_approvals(run, artifact_id, "pending")
+    if (length(approvals) != 1L) {
+      stop(
+        paste(
+          "Exactly one pending approval for the target artifact",
+          "is required."
+        )
+      )
+    }
+    approval_id <- names(approvals)[[1L]]
+    tempest::tempest_run_record_approval(
+      run,
+      approval_id,
+      decision = "approved",
+      note = note
+    )
+    artifact <- tempest::tempest_run_artifact(run, artifact_id)
+    approvals <- ci_artifact_approvals(run, artifact_id, "approved")
+    if (length(approvals) != 1L) {
+      stop(
+        paste(
+          "The approval decision did not produce exactly one approved",
+          "record for the target artifact."
+        )
+      )
+    }
+  } else if (identical(artifact@status, "approved")) {
+    approvals <- ci_artifact_approvals(run, artifact_id, "approved")
+    if (length(approvals) != 1L) {
+      stop(
+        paste(
+          "The approved artifact does not have exactly one matching",
+          "approval record."
+        )
+      )
+    }
+    approval_id <- names(approvals)[[1L]]
+  } else {
+    stop(
+      paste(
+        "The target artifact must be awaiting approval or already",
+        "approved before a Graft write is attempted."
+      )
+    )
+  }
   if (!identical(artifact@status, "approved")) {
     stop("The artifact was not approved; no Graft write was attempted.")
   }
+  approval_record <- approvals[[1L]]
   approval <- list(
     approval_id = approval_id,
     decision = "approved",
-    note = note
+    note = approval_record$note
   )
   records <- record_mapper(artifact@content, approval)
   result <- graft::kg_ingest_tempest_records(

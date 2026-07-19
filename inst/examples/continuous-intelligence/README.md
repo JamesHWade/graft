@@ -21,7 +21,8 @@ operation without changing those contracts.
 5. Graft remains unchanged while that workflow awaits approval.
 6. After approval, the host maps the artifact to record data frames and calls
    `kg_ingest_tempest_records()`.
-7. A workflow referral is resolved only against the profile's allowlist.
+7. A workflow referral requires explicit human promotion and is resolved only
+   against the profile's allowlist.
 8. The promoted workflow uses approved history and produces another
    approval-gated result.
 9. The following briefing can retrieve the accepted decision history.

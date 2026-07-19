@@ -104,7 +104,13 @@ run_continuous_intelligence_demo <- function(example_dir) {
     profile,
     store,
     blue_sky_result_builder,
-    "blue-sky-decision-2026-07-15"
+    "blue-sky-decision-2026-07-15",
+    promotion = list(
+      decision = "approved",
+      reviewer = "technology portfolio owner",
+      decided_at = "2026-07-15T13:30:00Z",
+      note = "Open the prototype-gate decision workflow."
+    )
   )
   decision_content <- tempest::tempest_run_artifact(
     decision,
