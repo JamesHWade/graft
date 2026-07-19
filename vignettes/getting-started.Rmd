@@ -1,8 +1,8 @@
 ---
 title: "Getting started with graft"
 description: >
-  Build a small materials store from a compiled LinkML schema, add a
-  source-backed claim, and query it from R.
+  Keep records consistent across workflow runs, add a source-backed claim,
+  and retrieve its evidence from R.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Getting started with graft}
@@ -17,12 +17,13 @@ knitr::opts_chunk$set(
 )
 ```
 
-graft stores schema-defined knowledge in DuckDB. A store can contain domain
-records, claims about those records, sources, and evidence that links a claim
-to a location in a source.
+An R workflow can end with well-formed data frames and still leave important
+questions unresolved. Is this the same material seen in an earlier run? Which
+source supports a claim? Is a relationship stated by the source or inferred by
+the application? What can another analyst or an AI tool safely retrieve?
 
-The schema records decisions that are otherwise easy to spread across
-application code:
+graft records those decisions in one versioned contract and applies the
+contract whenever data are written or read. It covers:
 
 - which fields identify the same record across runs;
 - which fields are required and how they are validated;
@@ -30,9 +31,13 @@ application code:
 - how claims, sources, and evidence are related; and
 - which relationships are available as graph projections.
 
-graft expresses these decisions in [LinkML](https://linkml.io/) and compiles
-the schema into a JSON manifest. At runtime, the manifest defines the DuckDB
-tables and the behavior of graft's read and write functions.
+With the contract in place, repeated workflow runs can recognize the same
+record, claims remain separate from adjudicated truth, and retrieval can return
+the exact source location stored with an assertion.
+
+graft expresses the contract in [LinkML](https://linkml.io/) and compiles it
+into a portable JSON manifest. At runtime, the manifest governs identity,
+validation, storage, and retrieval.
 
 This guide uses the materials schema included with the package. It creates an
 in-memory store, writes a material and a source, adds a claim and its evidence,
@@ -40,23 +45,28 @@ and then queries the result.
 
 ## How the pieces fit together
 
-The main workflow is:
+From a package user's perspective, the main workflow is:
 
-> LinkML schema -> compiled `.graft.json` manifest -> DuckDB store -> R queries
+> domain contract -> validated workflow results -> connected records -> bounded R retrieval
 
 Each part has one job:
 
-1. **The LinkML schema describes your domain.** You define concrete classes
-   such as materials, sources, claims, and evidence by extending graft's core
-   record roles.
-2. **The compiled manifest is the runtime contract.** It contains the resolved
-   classes, fields, relational mapping, identity rules, validation rules, graph
-   projections, and schema fingerprints. Commit it with your project.
-3. **DuckDB stores the records.** The database remains table-native, portable,
-   and available to familiar DBI and dbplyr workflows.
-4. **graft applies the contract.** Read and write functions accept only
-   manifest-declared classes and fields. Functions that collect results require
-   explicit limits and report the active schema digest.
+1. **Describe the domain.** Use ordinary LinkML classes and slots for the
+   records your workflow produces. Add graft's optional roles when you need
+   explicit claims, sources, evidence, or graph behavior.
+2. **Compile the runtime contract.** The generated `.graft.json` manifest
+   resolves fields, identity rules, validation, relationships, and schema
+   fingerprints. Commit it with your project.
+3. **Ingest workflow results.** graft validates related data frames atomically,
+   reconciles declared identifiers, and records the producer and replay
+   boundary.
+4. **Retrieve records with context.** Read one class lazily with dbplyr or use
+   bounded functions to inspect records, claims, evidence, and graph
+   neighborhoods.
+
+The current backend is embedded DuckDB. That keeps stores local, portable, and
+available to familiar DBI and dbplyr workflows without making the backend the
+domain model.
 
 Python and `linkml-runtime` are used only for step 2. Loading an existing
 manifest and performing normal storage or retrieval both run entirely in R.

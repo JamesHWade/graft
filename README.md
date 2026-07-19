@@ -5,13 +5,15 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft is an R package for storing schema-defined knowledge in DuckDB. A store
-can contain domain records, claims about those records, sources, and evidence
-that links a claim to a specific source location.
+graft keeps records produced by R workflows consistent, connected, and
+traceable across runs. It reconciles identities, validates related data as they
+are written, preserves claims with exact source evidence, and provides bounded
+retrieval for analysts, applications, and AI tools.
 
-A LinkML schema defines the record classes, fields, identifiers, validation
-rules, and graph projections. `kg_compile_schema()` resolves that schema into a
-`.graft.json` manifest, which graft uses to initialize and query the database.
+The package puts decisions that often drift across scripts into one versioned
+contract: what each record means, how it is identified, which relationships are
+valid, and what may be retrieved. The contract begins as an ordinary LinkML
+schema and compiles to a portable `.graft.json` manifest.
 
 Start with the [getting started
 guide](https://jameshwade.github.io/graft/articles/getting-started.html) to
@@ -23,9 +25,10 @@ The [examples
 page](https://jameshwade.github.io/graft/articles/examples.html) applies the
 same workflow to chemistry and environmental biology.
 
-Python and `linkml-runtime` are required only to compile a schema. Loading and
-inspecting a committed manifest is pure R/JSON. The manifest drives DuckDB
-storage, validation, identity, retrieval, and graph projections:
+The current storage backend is embedded DuckDB, which keeps a graft store local
+and available through DBI and dbplyr. Python and `linkml-runtime` are required
+only to compile a schema; loading a committed manifest and using a store run in
+R:
 
 ```r
 library(graft)
@@ -39,13 +42,34 @@ schema <- kg_schema(manifest)
 store <- kg_connect_duckdb(schema, ":memory:")
 kg_init(store)
 
-kg_classes(schema)
-kg_slots(schema, "Person")
+kg_ingest(
+  store,
+  kg_batch(
+    producer = "directory-import",
+    source_run_id = "run-42",
+    idempotency_key = "daily-planet-v1"
+  ),
+  list(
+    Organization = data.frame(
+      id = "org:daily-planet",
+      name = "Daily Planet"
+    ),
+    Person = data.frame(
+      id = "person:clark-kent",
+      full_name = "Clark Kent",
+      employed_by = I(list("org:daily-planet"))
+    )
+  )
+)
+
+kg_get(store, "person:clark-kent")
 ```
 
-Functions that collect records or graph results require a limit and report
-whether the result was truncated. `kg_tools()` exposes six of the same
-read-only queries as ellmer tools:
+The batch is atomic, its relationship is validated, and reusing the same
+producer and idempotency key does not create another observation. Functions
+that collect records or graph results require a limit and report whether the
+result was truncated. `kg_tools()` exposes six of the same read-only queries as
+ellmer tools:
 
 ```r
 chat <- ellmer::chat_anthropic()
