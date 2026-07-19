@@ -1,0 +1,31 @@
+id: https://w3id.org/graft/tests/abstract-reference
+name: abstract_reference
+prefixes:
+  linkml: https://w3id.org/linkml/
+  abstract_reference: https://w3id.org/graft/tests/abstract-reference/
+imports:
+  - linkml:types
+default_prefix: abstract_reference
+default_range: string
+
+classes:
+  NamedThing:
+    abstract: true
+    attributes:
+      id:
+        identifier: true
+        required: true
+        range: uriorcurie
+      name:
+        required: true
+
+  Person:
+    is_a: NamedThing
+
+  Activity:
+    is_a: NamedThing
+    attributes:
+      participants:
+        range: NamedThing
+        multivalued: true
+        inlined: false

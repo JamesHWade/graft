@@ -5,6 +5,12 @@
 #' closure and writes a canonical JSON manifest. Loading the result with
 #' [kg_schema()] does not require Python.
 #'
+#' Ordinary LinkML schemas do not need to import graft's core schema or use
+#' graft annotations. Concrete classes receive conservative node, identity,
+#' label, search, and timestamp defaults in the compiled manifest. Import
+#' `graft-core.linkml` only when a schema needs graft-specific statement,
+#' evidence, source, mention, edge, or metadata behavior.
+#'
 #' @param schema Path to a root LinkML YAML schema.
 #' @param output Output path for the compiled `.graft.json` manifest. If
 #'   `NULL`, the path is derived from `schema`.

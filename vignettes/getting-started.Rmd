@@ -331,7 +331,11 @@ to records and evidence that are already present in the store.
 
 ## Bring your own domain
 
-The installed example's LinkML source is available as a starting point:
+The [LinkML schema article](linkml-schema.html) starts with an ordinary
+PersonInfo-style schema. It compiles without graft annotations or an import of
+graft's core schema.
+
+The installed materials example shows the optional enriched form:
 
 ```{r example-schema-path}
 system.file(
@@ -341,7 +345,8 @@ system.file(
 )
 ```
 
-Your concrete classes extend graft's core roles:
+Extend graft's core roles only when the domain needs package-specific behavior
+for claims, evidence, sources, mentions, or graph edges:
 
 - `GraftNode`
 - `GraftEdge`
@@ -352,9 +357,9 @@ Your concrete classes extend graft's core roles:
 - `GraftMention`
 - `GraftMetadata`
 
-Use annotations in your LinkML schema to declare identity policies, external
-identifier namespaces, search fields, label fields, origin keys, and semantic
-qualifiers. Compile the schema once:
+Annotations can then declare identity policies, external identifier namespaces,
+search fields, label fields, origin keys, and semantic qualifiers. Compile the
+schema once:
 
 ```{r, eval = FALSE}
 kg_compile_schema(

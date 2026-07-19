@@ -147,6 +147,9 @@
         "id_policy": {
           "enum": ["require", "mint", "resolve_exact", "deterministic"]
         },
+        "id_format": {
+          "enum": ["graft", "linkml"]
+        },
         "label_slot": {"type": ["string", "null"]},
         "search_slots": {"type": "array", "items": {"type": "string"}},
         "origin_key_slots": {"type": "array", "items": {"type": "string"}},

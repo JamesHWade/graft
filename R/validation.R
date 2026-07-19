@@ -951,9 +951,46 @@ validate_reference_target <- function(
   target,
   expected
 ) {
-  if (!is_graft_id(target)) {
+  expected_contract <- store$schema$manifest$classes[[expected]]
+  expected_id_formats <- if (is.null(expected_contract)) {
+    unique(unlist(
+      lapply(
+        store$schema$manifest$classes,
+        function(contract) {
+          if (!expected %in% empty_character(contract$ancestors)) {
+            return(NULL)
+          }
+          scalar_character(contract$id_format, "graft")
+        }
+      ),
+      use.names = FALSE
+    ))
+  } else {
+    scalar_character(expected_contract$id_format, "graft")
+  }
+  expected_id_format <- if (length(expected_id_formats) == 1L) {
+    expected_id_formats[[1L]]
+  } else {
+    "mixed"
+  }
+  invalid_id <- if (!identical(expected_id_format, "graft")) {
+    !is.character(target) ||
+      length(target) != 1L ||
+      is.na(target) ||
+      !nzchar(trimws(target))
+  } else {
+    !is_graft_id(target)
+  }
+  if (invalid_id) {
+    id_description <- if (identical(expected_id_format, "linkml")) {
+      "a non-empty LinkML identifier"
+    } else if (identical(expected_id_format, "mixed")) {
+      "a non-empty identifier"
+    } else {
+      "an internal graft ID"
+    }
     abort_reference_error(
-      paste0("Reference `", target, "` is not an internal graft ID."),
+      paste0("Reference `", target, "` is not ", id_description, "."),
       record_class = record_class,
       input_row = input_row,
       record_id = record_id,

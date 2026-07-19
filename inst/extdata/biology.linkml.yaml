@@ -1,0 +1,97 @@
+id: https://w3id.org/graft/examples/biology
+name: biology
+title: Environmental biosamples and sequencing
+description: A small biology schema adapted from NMDC concepts.
+version: 0.1.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  biology: https://w3id.org/graft/examples/biology/
+  nmdc: https://w3id.org/nmdc/
+imports:
+  - linkml:types
+default_prefix: biology
+default_range: string
+
+enums:
+  AnalyteCategoryEnum:
+    description: Material characterized by an omics process.
+    permissible_values:
+      metagenome:
+        description: Community DNA.
+      metatranscriptome:
+        description: Community RNA.
+      amplicon:
+        description: Targeted marker-gene sequence.
+
+classes:
+  NamedThing:
+    abstract: true
+    attributes:
+      id:
+        identifier: true
+        required: true
+        range: uriorcurie
+      name:
+        required: true
+      description:
+      alternative_names:
+        multivalued: true
+
+  Study:
+    is_a: NamedThing
+    class_uri: nmdc:Study
+    attributes:
+      objective:
+        slot_uri: nmdc:objective
+      ecosystem:
+        slot_uri: nmdc:ecosystem
+
+  Biosample:
+    is_a: NamedThing
+    class_uri: nmdc:Biosample
+    attributes:
+      associated_studies:
+        range: Study
+        required: true
+        multivalued: true
+        inlined: false
+        slot_uri: nmdc:associated_studies
+      ecosystem:
+        slot_uri: nmdc:ecosystem
+      collection_site:
+        slot_uri: nmdc:sample_collection_site
+      latitude:
+        range: float
+      longitude:
+        range: float
+
+  DataGeneration:
+    abstract: true
+    is_a: NamedThing
+    class_uri: nmdc:DataGeneration
+    attributes:
+      associated_studies:
+        range: Study
+        required: true
+        multivalued: true
+        inlined: false
+        slot_uri: nmdc:associated_studies
+      has_input:
+        range: Biosample
+        required: true
+        multivalued: true
+        inlined: false
+        slot_uri: nmdc:has_input
+
+  NucleotideSequencing:
+    is_a: DataGeneration
+    class_uri: nmdc:NucleotideSequencing
+    attributes:
+      analyte_category:
+        range: AnalyteCategoryEnum
+        required: true
+        slot_uri: nmdc:analyte_category
+      instrument_name:
+        slot_uri: nmdc:instrument_name
+      processing_institution:
+        slot_uri: nmdc:processing_institution

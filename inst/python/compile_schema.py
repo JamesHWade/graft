@@ -22,7 +22,7 @@ from linkml_runtime.utils.schemaview import SchemaView
 MANIFEST_VERSION = "1.0.0"
 RELATIONAL_MAPPING_VERSION = "1"
 COMPILER_NAME = "graft-linkml-compiler"
-COMPILER_VERSION = "0.1.0"
+COMPILER_VERSION = "0.2.0"
 CORE_STATEMENT_FIELDS = {
     "id",
     "created_at",
@@ -274,6 +274,129 @@ def _slot_contract(
     return contract
 
 
+def _runtime_slot_contract(
+    name: str,
+    range_name: str,
+    relational_type: str,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "column": name,
+        "range": range_name,
+        "relational_type": relational_type,
+        "required": name == "id",
+        "multivalued": False,
+        "ordered": False,
+        "identifier": name == "id",
+        "object_reference": False,
+        "enum": None,
+        "meaning": None,
+        "pattern": None,
+        "minimum_value": None,
+        "maximum_value": None,
+        "foreign_key": None,
+        "external_identifier": None,
+        "search_weight": None,
+        "sensitive": False,
+    }
+
+
+def _linkml_identifier_namespace(class_name: str, slot_name: str) -> str:
+    return f"linkml_{_snake_case(class_name)}_{_snake_case(slot_name)}"
+
+
+def _prepare_plain_linkml_slots(
+    class_name: str,
+    induced_slots: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], str, str]:
+    declared_id = next(
+        (slot for slot in induced_slots if slot["name"] == "id"),
+        None,
+    )
+    identifier_slots = [slot for slot in induced_slots if slot["identifier"]]
+
+    if declared_id is not None:
+        if (
+            declared_id["multivalued"]
+            or declared_id["object_reference"]
+            or declared_id["relational_type"] != "VARCHAR"
+        ):
+            raise GraftCompilerError(
+                f"Plain LinkML class {class_name} must use a scalar string-like "
+                "'id' slot when one is declared."
+            )
+        declared_id["required"] = True
+        declared_id["identifier"] = True
+        declared_id["column"] = "id"
+        for slot in identifier_slots:
+            if slot["name"] == "id":
+                continue
+            slot["identifier"] = False
+            if not slot["external_identifier"]:
+                slot["external_identifier"] = _linkml_identifier_namespace(
+                    class_name, slot["name"]
+                )
+        id_policy = "require"
+        id_format = "linkml"
+    else:
+        for slot in identifier_slots:
+            slot["identifier"] = False
+            if not slot["external_identifier"]:
+                slot["external_identifier"] = _linkml_identifier_namespace(
+                    class_name, slot["name"]
+                )
+        induced_slots.append(
+            _runtime_slot_contract("id", "uriorcurie", "VARCHAR")
+        )
+        id_policy = "resolve_exact" if identifier_slots else "mint"
+        id_format = "graft"
+
+    slot_names = {slot["name"] for slot in induced_slots}
+    if "created_at" not in slot_names:
+        induced_slots.append(
+            _runtime_slot_contract("created_at", "datetime", "TIMESTAMP")
+        )
+    if "updated_at" not in slot_names:
+        induced_slots.append(
+            _runtime_slot_contract("updated_at", "datetime", "TIMESTAMP")
+        )
+    induced_slots.sort(key=lambda item: item["name"])
+    return induced_slots, id_policy, id_format
+
+
+def _inferred_label_slot(slots: list[dict[str, Any]]) -> str | None:
+    candidates = (
+        "label",
+        "name",
+        "full_name",
+        "title",
+        "preferred_name",
+        "description",
+    )
+    available = {
+        slot["name"]
+        for slot in slots
+        if not slot["multivalued"]
+        and not slot["object_reference"]
+        and slot["relational_type"] == "VARCHAR"
+        and not slot["sensitive"]
+    }
+    return next((candidate for candidate in candidates if candidate in available), None)
+
+
+def _inferred_search_slots(slots: list[dict[str, Any]]) -> list[str]:
+    excluded = {"id", "created_at", "updated_at"}
+    return sorted(
+        slot["name"]
+        for slot in slots
+        if slot["name"] not in excluded
+        and not slot["multivalued"]
+        and not slot["object_reference"]
+        and slot["relational_type"] == "VARCHAR"
+        and not slot["sensitive"]
+    )
+
+
 def _enum_contract(schema_view: SchemaView) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for name, enum_definition in sorted(schema_view.all_enums().items()):
@@ -437,7 +560,10 @@ def _class_contracts(
                 f"Class {name} declares statement shape {annotated_shape!r}, "
                 f"but inheritance resolves to {statement_shape!r}."
             )
+        plain_linkml = "GraftRecord" not in ancestors
         role = annotations.get("graft.role")
+        if plain_linkml and role is None:
+            role = "node"
         if role not in ROLE_VALUES:
             raise GraftCompilerError(
                 f"Concrete class {name} must resolve one graft role; got {role!r}."
@@ -446,12 +572,6 @@ def _class_contracts(
             raise GraftCompilerError(
                 f"Statement class {name} resolves role {role!r}, not 'statement'."
             )
-        id_policy = annotations.get("graft.id_policy")
-        if id_policy not in ID_POLICY_VALUES:
-            raise GraftCompilerError(
-                f"Class {name} has invalid graft.id_policy {id_policy!r}."
-            )
-
         induced_slots = [
             _slot_contract(
                 schema_view, name, slot, class_names=class_names, enum_names=enum_names
@@ -459,6 +579,17 @@ def _class_contracts(
             for slot in schema_view.class_induced_slots(name, imports=True)
         ]
         induced_slots.sort(key=lambda item: item["name"])
+        inferred_id_policy = None
+        id_format = "graft"
+        if plain_linkml:
+            induced_slots, inferred_id_policy, id_format = (
+                _prepare_plain_linkml_slots(name, induced_slots)
+            )
+        id_policy = annotations.get("graft.id_policy") or inferred_id_policy
+        if id_policy not in ID_POLICY_VALUES:
+            raise GraftCompilerError(
+                f"Class {name} has invalid graft.id_policy {id_policy!r}."
+            )
         slot_names = {slot["name"] for slot in induced_slots}
         local_slots = {
             str(slot_name)
@@ -469,12 +600,16 @@ def _class_contracts(
         }
 
         label_slot = annotations.get("graft.label_slot")
+        if plain_linkml and label_slot is None:
+            label_slot = _inferred_label_slot(induced_slots)
         if label_slot and str(label_slot) not in slot_names:
             raise GraftCompilerError(
                 f"Class {name} graft.label_slot references missing slot "
                 f"{label_slot!r}."
             )
         search_slots = _as_names(annotations.get("graft.search_slots"))
+        if plain_linkml and not search_slots:
+            search_slots = _inferred_search_slots(induced_slots)
         origin_key_slots = _as_names(annotations.get("graft.origin_key_slots"))
         qualifier_slots = _as_names(annotations.get("graft.qualifier_slots"))
         for annotation_name, declared_slots in (
@@ -532,6 +667,7 @@ def _class_contracts(
             "statement_shape": statement_shape,
             "table": table_name,
             "id_policy": str(id_policy),
+            "id_format": id_format,
             "label_slot": str(label_slot) if label_slot else None,
             "search_slots": search_slots,
             "origin_key_slots": origin_key_slots,

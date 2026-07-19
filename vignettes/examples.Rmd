@@ -1,0 +1,315 @@
+---
+title: "Examples"
+description: >
+  See how ordinary LinkML schemas can describe chemical entities, biological
+  samples, and the relationships between them.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Examples}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE
+)
+```
+
+A useful schema does more than name columns. It distinguishes things that
+should not be conflated and makes important relationships explicit.
+
+This page contains two small examples:
+
+- a chemistry model for a molecule, its stereoisomers, and a racemic mixture;
+  and
+- a biology model connecting a study, a biosample, and a sequencing process.
+
+Both are ordinary LinkML schemas. Neither imports graft's core schema or uses
+graft annotations. See [Use a LinkML schema with
+graft](linkml-schema.html) for a slower introduction to compiling a schema.
+
+The examples are deliberately smaller than the models that inspired them.
+They preserve the useful modeling pattern without claiming conformance to the
+full upstream standard.
+
+## Chemistry: distinguish a molecule from its forms
+
+[CHEMROF](https://chemkg.github.io/chemrof/home/) is a LinkML model for
+chemical entities, mixtures, and related concepts. One of its examples models
+thalidomide as two enantiomers and a racemic mixture.
+
+That distinction matters. A name such as "thalidomide" is not enough to tell
+us whether a record means the chirality-agnostic molecule, one stereoisomer,
+or a mixture.
+
+The example schema uses inheritance and typed references:
+
+```yaml
+classes:
+  ChemicalEntity:
+    abstract: true
+    attributes:
+      id:
+        identifier: true
+        required: true
+        range: uriorcurie
+      name:
+        required: true
+
+  Enantiomer:
+    is_a: Molecule
+    attributes:
+      chirality:
+        range: ChiralityEnum
+        required: true
+      chirality_agnostic_form:
+        range: Molecule
+        required: true
+        inlined: false
+
+  RacemicMixture:
+    is_a: ChemicalEntity
+    attributes:
+      has_left_enantiomer:
+        range: Enantiomer
+        required: true
+        inlined: false
+      has_right_enantiomer:
+        range: Enantiomer
+        required: true
+        inlined: false
+```
+
+The [complete chemistry
+schema](https://github.com/JamesHWade/graft/blob/main/inst/extdata/chemistry.linkml.yaml)
+also declares molecular formulae, aliases, semantic mappings, and an enum for
+chirality.
+
+Load the compiled manifest and inspect the concrete classes:
+
+```{r chemistry-schema}
+library(graft)
+
+chemistry_schema <- kg_schema(system.file(
+  "extdata",
+  "chemistry.graft.json",
+  package = "graft"
+))
+
+kg_classes(chemistry_schema)
+kg_enums(chemistry_schema)
+```
+
+The data use CURIEs as their identifiers. References contain the identifier of
+the target record.
+
+```{r chemistry-data}
+chemistry_records <- list(
+  Molecule = data.frame(
+    id = "chemistry:thalidomide",
+    name = "thalidomide",
+    molecular_formula = "C13H10N2O4"
+  ),
+  Enantiomer = data.frame(
+    id = c("chemistry:S-thalidomide", "chemistry:R-thalidomide"),
+    name = c("S-thalidomide", "R-thalidomide"),
+    molecular_formula = c("C13H10N2O4", "C13H10N2O4"),
+    chirality = c("left", "right"),
+    chirality_agnostic_form = c(
+      "chemistry:thalidomide",
+      "chemistry:thalidomide"
+    )
+  ),
+  RacemicMixture = data.frame(
+    id = "CHEBI:9513",
+    name = "racemic thalidomide",
+    aliases = I(list(c("thalidomide", "thalidomide racemate"))),
+    has_left_enantiomer = "chemistry:S-thalidomide",
+    has_right_enantiomer = "chemistry:R-thalidomide",
+    chirality_agnostic_form = "chemistry:thalidomide"
+  )
+)
+```
+
+Write all three classes in one batch. graft checks the references against both
+the existing store and the other records staged in the batch.
+
+```{r chemistry-ingest}
+chemistry_store <- suppressMessages(
+  kg_connect_duckdb(chemistry_schema, ":memory:")
+)
+kg_init(chemistry_store)
+
+kg_ingest(
+  chemistry_store,
+  kg_batch(
+    producer = "chemistry-example",
+    idempotency_key = "thalidomide-v1"
+  ),
+  chemistry_records
+)
+```
+
+The mixture can then be retrieved without flattening away the distinction
+between the molecule and its stereoisomers:
+
+```{r chemistry-query}
+mixture <- kg_get(chemistry_store, "CHEBI:9513")
+
+mixture$record[c("id", "name")]
+mixture$record[c(
+  "has_left_enantiomer",
+  "has_right_enantiomer",
+  "chirality_agnostic_form"
+)]
+```
+
+This pattern also works for salts, isotopes, mixtures, reaction participants,
+or any other case where chemistry-specific identity matters.
+
+## Biology: connect samples to the work performed on them
+
+The [National Microbiome Data Collaborative
+schema](https://microbiomedata.github.io/nmdc-schema/) uses LinkML to describe
+environmental omics data. Its model separates studies, biosamples, data
+generation, workflow executions, and data objects.
+
+The smaller schema here keeps three of those ideas:
+
+```yaml
+classes:
+  Study:
+    is_a: NamedThing
+
+  Biosample:
+    is_a: NamedThing
+    attributes:
+      associated_studies:
+        range: Study
+        required: true
+        multivalued: true
+        inlined: false
+      ecosystem:
+      collection_site:
+
+  NucleotideSequencing:
+    is_a: DataGeneration
+    attributes:
+      has_input:
+        range: Biosample
+        required: true
+        multivalued: true
+        inlined: false
+      analyte_category:
+        range: AnalyteCategoryEnum
+        required: true
+```
+
+The [complete biology
+schema](https://github.com/JamesHWade/graft/blob/main/inst/extdata/biology.linkml.yaml)
+adds semantic mappings, coordinates, instrument details, and a controlled
+vocabulary for the analyte.
+
+```{r biology-schema}
+biology_schema <- kg_schema(system.file(
+  "extdata",
+  "biology.graft.json",
+  package = "graft"
+))
+
+kg_classes(biology_schema)
+kg_slots(biology_schema, "Biosample")
+```
+
+The records make the provenance chain explicit: the sequencing process belongs
+to a study and takes a particular biosample as input.
+
+```{r biology-data}
+biology_records <- list(
+  Study = data.frame(
+    id = "nmdc:sty-11",
+    name = "Forest soil carbon study",
+    objective = "Relate soil conditions to microbial carbon cycling.",
+    ecosystem = "Environmental"
+  ),
+  Biosample = data.frame(
+    id = "nmdc:bsm-11",
+    name = "Forest soil core 11",
+    associated_studies = I(list("nmdc:sty-11")),
+    ecosystem = "Environmental",
+    collection_site = "Example forest plot",
+    latitude = 44.57,
+    longitude = -85.61
+  ),
+  NucleotideSequencing = data.frame(
+    id = "nmdc:dg-11",
+    name = "Soil metagenome sequencing",
+    associated_studies = I(list("nmdc:sty-11")),
+    has_input = I(list("nmdc:bsm-11")),
+    analyte_category = "metagenome",
+    instrument_name = "Illumina NovaSeq",
+    processing_institution = "Example sequencing center"
+  )
+)
+```
+
+```{r biology-ingest}
+biology_store <- suppressMessages(
+  kg_connect_duckdb(biology_schema, ":memory:")
+)
+kg_init(biology_store)
+
+kg_ingest(
+  biology_store,
+  kg_batch(
+    producer = "biology-example",
+    idempotency_key = "soil-v1"
+  ),
+  biology_records
+)
+```
+
+The tabular and hydrated interfaces answer different questions:
+
+```{r biology-query}
+kg_records(biology_store, "Biosample") |>
+  dplyr::select(id, name, ecosystem, collection_site) |>
+  dplyr::collect()
+
+sequencing <- kg_get(biology_store, "nmdc:dg-11")
+sequencing$record[c(
+  "name",
+  "analyte_category",
+  "has_input",
+  "associated_studies"
+)]
+```
+
+The same pattern can connect specimens to assays, genes to phenotypes, or
+organisms to observations. LinkML supplies the domain vocabulary and
+constraints; graft supplies the local storage and retrieval layer.
+
+## Use the upstream model when it fits
+
+These examples are adaptations, not replacements for CHEMROF or NMDC. A
+production project should first ask whether an established model already
+describes its data.
+
+Compile the upstream schema directly when it uses the LinkML constructs graft
+supports and its classes match the records you need. Use a smaller schema when
+you need only a well-defined subset, and retain upstream `class_uri`,
+`slot_uri`, and identifier mappings so that the relationship remains visible.
+
+The official [LinkML examples
+page](https://linkml.io/linkml/examples.html) also points to Biolink, NMDC, and
+other production models. The [LinkML Schema
+Registry](https://linkml.io/linkml-registry/registry/) is useful when looking
+for an existing model in another domain.
+
+```{r cleanup, include = FALSE}
+kg_disconnect(chemistry_store)
+kg_disconnect(biology_store)
+```

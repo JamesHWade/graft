@@ -49,8 +49,8 @@ test_that("structural digest excludes compiler provenance", {
   variant_script <- file.path(directory, "compile_schema_variant.py")
   script <- readLines(graft:::graft_compiler_path(), warn = FALSE)
   script <- sub(
-    'COMPILER_VERSION = "0.1.0"',
-    'COMPILER_VERSION = "0.1.1"',
+    'COMPILER_VERSION = "0.2.0"',
+    'COMPILER_VERSION = "0.2.1"',
     script,
     fixed = TRUE
   )
@@ -83,7 +83,7 @@ test_that("structural digest excludes compiler provenance", {
   )
   expect_identical(
     variant_schema$manifest$compiler$version,
-    "0.1.1"
+    "0.2.1"
   )
 })
 
@@ -138,4 +138,65 @@ test_that("installed core imports are staged beside test schemas", {
   expect_true(file.exists(
     file.path(directory, "graft-core.linkml.yaml")
   ))
+})
+
+test_that("plain LinkML schemas compile without graft annotations", {
+  skip_if_no_linkml_runtime()
+  manifest_path <- withr::local_tempfile(fileext = ".graft.json")
+
+  schema <- kg_compile_schema(
+    plain_linkml_schema_path(),
+    manifest_path
+  )
+  classes <- kg_classes(schema)
+  person <- schema$manifest$classes$Person
+
+  expect_setequal(classes$class, c("Organization", "Person"))
+  expect_identical(person$role, "node")
+  expect_identical(person$id_policy, "require")
+  expect_identical(person$id_format, "linkml")
+  expect_identical(person$label_slot, "full_name")
+  expect_setequal(person$search_slots, c("full_name"))
+  expect_in("created_at", names(person$slots))
+  expect_in("updated_at", names(person$slots))
+})
+
+test_that("plain LinkML identifiers work throughout the store", {
+  skip_if_no_linkml_runtime()
+  manifest_path <- withr::local_tempfile(fileext = ".graft.json")
+  schema <- kg_compile_schema(
+    plain_linkml_schema_path(),
+    manifest_path
+  )
+  store <- kg_connect_duckdb(schema, ":memory:")
+  withr::defer(kg_disconnect(store))
+  kg_init(store)
+
+  kg_ingest(
+    store,
+    kg_batch("plain-linkml", idempotency_key = "personinfo-v1"),
+    list(
+      Organization = data.frame(
+        id = "org:daily-planet",
+        name = "Daily Planet"
+      ),
+      Person = data.frame(
+        id = "person:clark-kent",
+        full_name = "Clark Kent",
+        aliases = I(list(c("Superman", "Kal-El"))),
+        age = 35L,
+        employed_by = I(list("org:daily-planet"))
+      )
+    )
+  )
+
+  person <- kg_get(store, "person:clark-kent")
+
+  expect_identical(person$class, "Person")
+  expect_identical(person$record$full_name[[1]], "Clark Kent")
+  expect_setequal(person$record$aliases, c("Superman", "Kal-El"))
+  expect_identical(
+    kg_find(store, "Clark", class = "Person", limit = 5)$id,
+    "person:clark-kent"
+  )
 })
