@@ -1,0 +1,127 @@
+{
+  "Source": [
+    {
+      "id": "graft:00000000000000000000000105",
+      "uri": "https://example.internal/project-ember/gate-review-001",
+      "title": "Project Ember actuator gate review",
+      "content_hash": "sha256:ember-gate-review-v1",
+      "published_at": "2026-07-10T15:00:00Z",
+      "source_quality": "internal"
+    }
+  ],
+  "Project": [
+    {
+      "id": "graft:00000000000000000000000101",
+      "name": "Project Ember",
+      "description": "Synthetic free-roaming robotic character prototype."
+    }
+  ],
+  "ProjectRequirement": [
+    {
+      "id": "graft:00000000000000000000000102",
+      "name": "Representative sustained torque",
+      "description": "The actuator must sustain at least 100 Nm in a representative bench configuration.",
+      "project": "graft:00000000000000000000000101",
+      "threshold": 100,
+      "unit": "Nm"
+    },
+    {
+      "id": "graft:00000000000000000000000103",
+      "name": "Representative duty cycle",
+      "description": "The actuator must complete a twelve-minute representative operating cycle without thermal derating.",
+      "project": "graft:00000000000000000000000101",
+      "threshold": 12,
+      "unit": "min"
+    }
+  ],
+  "Technology": [
+    {
+      "id": "graft:00000000000000000000000104",
+      "name": "Nova compact actuator",
+      "description": "Synthetic actuator candidate monitored for Project Ember."
+    }
+  ],
+  "Relation": [
+    {
+      "id": "graft:00000000000000000000000110",
+      "subject": "graft:00000000000000000000000101",
+      "predicate": "blue:hasRequirement",
+      "object": "graft:00000000000000000000000102"
+    },
+    {
+      "id": "graft:00000000000000000000000111",
+      "subject": "graft:00000000000000000000000101",
+      "predicate": "blue:hasRequirement",
+      "object": "graft:00000000000000000000000103"
+    },
+    {
+      "id": "graft:00000000000000000000000112",
+      "subject": "graft:00000000000000000000000101",
+      "predicate": "blue:evaluates",
+      "object": "graft:00000000000000000000000104"
+    }
+  ],
+  "Assessment": [
+    {
+      "id": "graft:00000000000000000000000106",
+      "statement_text": "The Nova compact actuator is not ready for a Project Ember prototype because no independent evidence demonstrates the required torque and duty cycle.",
+      "primary_subject": "graft:00000000000000000000000101",
+      "about": [
+        "graft:00000000000000000000000101",
+        "graft:00000000000000000000000104",
+        "graft:00000000000000000000000102",
+        "graft:00000000000000000000000103"
+      ],
+      "disposition": "hold",
+      "decision_confidence": 0.88,
+      "polarity": "negative",
+      "confidence": 0.88,
+      "status": "active",
+      "asserted_at": "2026-07-10T15:00:00Z"
+    }
+  ],
+  "ReviewDecision": [
+    {
+      "id": "graft:00000000000000000000000107",
+      "statement_text": "Hold the actuator prototype gate until comparable independent evidence is available.",
+      "primary_subject": "graft:00000000000000000000000101",
+      "about": [
+        "graft:00000000000000000000000101",
+        "graft:00000000000000000000000104"
+      ],
+      "disposition": "hold",
+      "reviewer_role": "technology portfolio owner",
+      "review_outcome": "approved",
+      "polarity": "negative",
+      "confidence": 1,
+      "status": "active",
+      "asserted_at": "2026-07-10T16:00:00Z"
+    }
+  ],
+  "Evidence": [
+    {
+      "id": "graft:00000000000000000000000108",
+      "statement_id": "graft:00000000000000000000000106",
+      "source_id": "graft:00000000000000000000000105",
+      "support_type": "supports",
+      "locator_type": "section",
+      "locator_value": "Decision rationale",
+      "excerpt": "Comparable independent torque and duty-cycle evidence is not yet available.",
+      "source_content_hash": "sha256:ember-gate-review-v1",
+      "extraction_method": "approved-internal-record",
+      "extraction_version": "1"
+    },
+    {
+      "id": "graft:00000000000000000000000109",
+      "statement_id": "graft:00000000000000000000000107",
+      "source_id": "graft:00000000000000000000000105",
+      "support_type": "derived_from",
+      "locator_type": "section",
+      "locator_value": "Decision",
+      "excerpt": "Decision: hold the prototype gate pending independent evidence.",
+      "source_content_hash": "sha256:ember-gate-review-v1",
+      "extraction_method": "approved-internal-record",
+      "extraction_version": "1"
+    }
+  ]
+}

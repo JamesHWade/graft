@@ -1,0 +1,18 @@
+{
+  "scan_date": "2026-07-16",
+  "status": "no_material_change",
+  "headline": "No material change to the Project Ember recommendation",
+  "summary": "The scheduled scan found no new evidence that changes the actuator prototype question.",
+  "checked": [
+    "Allowlisted supplier announcements",
+    "Independent engineering publications",
+    "Open Project Ember decision context"
+  ],
+  "changes": [],
+  "unchanged": [
+    "A bounded bench test remains the evidence-supported next step.",
+    "The twelve-minute duty-cycle limitation remains unresolved."
+  ],
+  "proposals": {},
+  "referrals": []
+}

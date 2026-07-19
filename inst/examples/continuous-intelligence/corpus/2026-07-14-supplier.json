@@ -1,0 +1,72 @@
+{
+  "scan_date": "2026-07-14",
+  "status": "signal",
+  "headline": "A promising actuator claim is relevant but not decision-ready",
+  "summary": "Nova Motion reports a compact actuator that may satisfy Project Ember's peak-torque requirement. The claim is vendor supplied and omits a comparable duty-cycle test.",
+  "checked": [
+    "Allowlisted supplier announcements",
+    "Accepted Project Ember requirements",
+    "Previously approved prototype-gate rationale"
+  ],
+  "changes": [
+    "A new actuator is claimed to deliver 120 Nm peak torque at 24 V."
+  ],
+  "unchanged": [
+    "Independent evidence remains required before changing the prototype decision.",
+    "The twelve-minute duty-cycle requirement remains unresolved."
+  ],
+  "proposals": {
+    "Source": [
+      {
+        "id": "graft:00000000000000000000000114",
+        "uri": "https://example.com/nova-motion/actuator-specification",
+        "title": "Nova compact actuator specification",
+        "content_hash": "sha256:nova-spec-v1",
+        "published_at": "2026-07-14T09:00:00Z",
+        "source_quality": "vendor"
+      }
+    ],
+    "Organization": [
+      {
+        "id": "graft:00000000000000000000000113",
+        "name": "Nova Motion",
+        "description": "Synthetic actuator supplier used by the demonstration."
+      }
+    ],
+    "Observation": [
+      {
+        "id": "graft:00000000000000000000000115",
+        "statement_text": "Nova Motion reports that its compact actuator delivers 120 Nm peak torque at 24 V.",
+        "primary_subject": "graft:00000000000000000000000104",
+        "about": [
+          "graft:00000000000000000000000104",
+          "graft:00000000000000000000000102",
+          "graft:00000000000000000000000113"
+        ],
+        "finding_kind": "capability",
+        "source_quality": "vendor",
+        "extraction_confidence": 0.98,
+        "test_context": "Supplier bench specification; duty cycle not reported.",
+        "polarity": "positive",
+        "confidence": 0.72,
+        "status": "active",
+        "asserted_at": "2026-07-14T09:00:00Z"
+      }
+    ],
+    "Evidence": [
+      {
+        "id": "graft:00000000000000000000000116",
+        "statement_id": "graft:00000000000000000000000115",
+        "source_id": "graft:00000000000000000000000114",
+        "support_type": "supports",
+        "locator_type": "section",
+        "locator_value": "Performance",
+        "excerpt": "Peak torque: 120 Nm at 24 V. Continuous duty-cycle performance not specified.",
+        "source_content_hash": "sha256:nova-spec-v1",
+        "extraction_method": "frozen-demo-corpus",
+        "extraction_version": "1"
+      }
+    ]
+  },
+  "referrals": []
+}

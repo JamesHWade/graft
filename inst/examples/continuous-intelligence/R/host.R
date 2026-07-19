@@ -1,0 +1,740 @@
+ci_read_json <- function(path) {
+  jsonlite::fromJSON(path, simplifyVector = FALSE)
+}
+
+ci_character <- function(x) {
+  unname(unlist(x, use.names = FALSE))
+}
+
+ci_rows_to_records <- function(rows) {
+  if (length(rows) == 0L) {
+    return(list())
+  }
+  jsonlite::fromJSON(
+    jsonlite::toJSON(rows, auto_unbox = TRUE, null = "null"),
+    simplifyVector = TRUE
+  )
+}
+
+ci_proposal_count <- function(proposals) {
+  if (length(proposals) == 0L) {
+    return(0L)
+  }
+  as.integer(sum(vapply(proposals, length, integer(1))))
+}
+
+ci_iso_time <- function(x) {
+  if (length(x) == 0L || is.na(x[[1L]])) {
+    return(NULL)
+  }
+  if (inherits(x, "POSIXt")) {
+    return(format(x[[1L]], "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"))
+  }
+  as.character(x[[1L]])
+}
+
+ci_accepted_context <- function(store, record_ids) {
+  hydrated <- lapply(record_ids, function(id) {
+    tryCatch(
+      graft::kg_get(
+        store,
+        id,
+        include = c("claims", "evidence"),
+        limits = list(
+          identifiers = 10L,
+          claims = 50L,
+          evidence = 100L
+        )
+      ),
+      graft_error = function(error) NULL
+    )
+  })
+  hydrated <- Filter(\(record) !is.null(record), hydrated)
+
+  records <- lapply(hydrated, function(record) {
+    values <- record$record
+    display <- values$name
+    if (is.null(display) || is.na(display)) {
+      display <- values$title
+    }
+    if (is.null(display) || is.na(display)) {
+      display <- values$label
+    }
+    list(
+      id = record$id,
+      class = record$class,
+      display = if (is.null(display) || is.na(display)) {
+        record$id
+      } else {
+        display
+      }
+    )
+  })
+
+  claims <- list()
+  for (record in hydrated) {
+    if (nrow(record$claims) == 0L) {
+      next
+    }
+    for (index in seq_len(nrow(record$claims))) {
+      claim <- record$claims[index, , drop = FALSE]
+      evidence <- claim$evidence[[1L]]
+      claims[[claim$id[[1L]]]] <- list(
+        id = claim$id[[1L]],
+        class = claim$class[[1L]],
+        statement_text = claim$statement_text[[1L]],
+        status = claim$status[[1L]],
+        polarity = claim$polarity[[1L]],
+        confidence = claim$confidence[[1L]],
+        asserted_at = ci_iso_time(claim$asserted_at),
+        evidence_ids = if (nrow(evidence) == 0L) {
+          character()
+        } else {
+          evidence$id
+        }
+      )
+    }
+  }
+
+  list(
+    records = unname(records),
+    claims = unname(claims)
+  )
+}
+
+ci_monitor_content <- function(profile, daily_bundle, store) {
+  record_ids <- ci_character(profile$monitor_scope$record_ids)
+  proposals <- daily_bundle$proposals
+  referrals <- daily_bundle$referrals
+  list(
+    profile_id = profile$profile_id,
+    profile_version = profile$version,
+    title = profile$title,
+    audience = profile$audience,
+    cadence = profile$cadence,
+    scan_date = daily_bundle$scan_date,
+    status = daily_bundle$status,
+    headline = daily_bundle$headline,
+    summary = daily_bundle$summary,
+    checked = ci_character(daily_bundle$checked),
+    changes = ci_character(daily_bundle$changes),
+    unchanged = ci_character(daily_bundle$unchanged),
+    proposals = proposals,
+    proposal_count = ci_proposal_count(proposals),
+    referrals = referrals,
+    accepted_context = ci_accepted_context(store, record_ids)
+  )
+}
+
+ci_markdown_items <- function(values, empty = "None.") {
+  values <- ci_character(values)
+  if (length(values) == 0L) {
+    return(empty)
+  }
+  paste0("- ", values, collapse = "\n")
+}
+
+ci_markdown_referrals <- function(referrals) {
+  if (length(referrals) == 0L) {
+    return("None.")
+  }
+  paste0(
+    "- **",
+    vapply(referrals, `[[`, character(1), "workflow_id"),
+    "** — ",
+    vapply(referrals, `[[`, character(1), "reason"),
+    collapse = "\n"
+  )
+}
+
+ci_render_section <- function(section, content) {
+  field <- section$field
+  title <- section$title
+  body <- switch(
+    field,
+    changes = ci_markdown_items(content$changes),
+    unchanged = ci_markdown_items(content$unchanged),
+    referrals = ci_markdown_referrals(content$referrals),
+    proposals = if (content$proposal_count == 0L) {
+      "No knowledge changes require review."
+    } else {
+      paste(
+        content$proposal_count,
+        "candidate records await host review."
+      )
+    },
+    "Section is not configured."
+  )
+  paste0("## ", title, "\n\n", body)
+}
+
+ci_render_briefing <- function(content, profile) {
+  sections <- vapply(
+    profile$briefing_sections,
+    ci_render_section,
+    character(1),
+    content = content
+  )
+  paste(
+    paste0("# ", content$title),
+    paste0("**", content$scan_date, " · ", content$status, "**"),
+    paste0("## ", content$headline),
+    content$summary,
+    paste(sections, collapse = "\n\n"),
+    paste0(
+      "## What was checked\n\n",
+      ci_markdown_items(content$checked)
+    ),
+    sep = "\n\n"
+  )
+}
+
+ci_register_renderers <- function(registry) {
+  registry$register(
+    "example.ci.renderer.json",
+    kind = "renderer",
+    version = "1",
+    implementation = function(content) {
+      tempest::tempest_artifact_representation(
+        content = content,
+        artifact_kind = "structured-data",
+        media_type = "application/json"
+      )
+    }
+  )
+  registry$register(
+    "example.ci.renderer.markdown",
+    kind = "renderer",
+    version = "1",
+    implementation = function(content, runtime) {
+      tempest::tempest_artifact_representation(
+        content = ci_render_briefing(content, runtime$profile),
+        artifact_kind = "briefing",
+        media_type = "text/markdown"
+      )
+    }
+  )
+  invisible(registry)
+}
+
+ci_deliverable <- function(
+  deliverable_id,
+  title,
+  purpose,
+  required_fields,
+  renderer_id,
+  content_type,
+  media_type,
+  requires_approval = FALSE
+) {
+  tempest::tempest_deliverable_spec(
+    deliverable_id,
+    version = "1",
+    title = title,
+    purpose = purpose,
+    instructions = purpose,
+    content_schema = list(
+      type = "object",
+      required = required_fields
+    ),
+    required_fields = required_fields,
+    evidence_policy = "source_attributed",
+    generator_id = "tempest.generator.provided_content",
+    validator_ids = "tempest.validator.required_fields",
+    renderer_ids = renderer_id,
+    content_type = content_type,
+    media_types = media_type,
+    operation_versions = c(
+      "tempest.generator.provided_content" = "1",
+      "tempest.validator.required_fields" = "1",
+      stats::setNames("1", renderer_id)
+    ),
+    requires_approval = requires_approval
+  )
+}
+
+ci_monitor_specs <- function() {
+  list(
+    briefing = ci_deliverable(
+      "continuous-briefing",
+      "Continuous intelligence briefing",
+      "Summarize the scheduled scan for the configured audience.",
+      c(
+        "profile_id",
+        "scan_date",
+        "status",
+        "headline",
+        "summary"
+      ),
+      "example.ci.renderer.markdown",
+      "continuous-briefing",
+      "text/markdown"
+    ),
+    result = ci_deliverable(
+      "monitor-result",
+      "Monitor result",
+      "Preserve findings, proposals, referrals, and accepted context.",
+      c(
+        "profile_id",
+        "scan_date",
+        "status",
+        "accepted_context"
+      ),
+      "example.ci.renderer.json",
+      "monitor-result",
+      "application/json"
+    )
+  )
+}
+
+ci_generate <- function(
+  spec,
+  content,
+  registry,
+  artifact_catalog,
+  run_id,
+  step,
+  expert_id,
+  artifact_id,
+  runtime = list()
+) {
+  tempest::tempest_generate_deliverable(
+    spec,
+    context = list(content = content),
+    registry = registry,
+    catalog = artifact_catalog,
+    runtime = runtime,
+    provenance = list(
+      artifact_id = artifact_id,
+      run_id = run_id,
+      step_id = step@step_id,
+      expert_id = expert_id
+    )
+  )
+}
+
+ci_monitor_registry <- function() {
+  registry <- tempest::tempest_builtin_operation_registry()
+  ci_register_renderers(registry)
+  registry$register(
+    "example.ci.step.monitor",
+    kind = "step",
+    version = "1",
+    implementation = function(
+      profile,
+      daily_bundle,
+      knowledge_store,
+      deliverables,
+      artifact_catalog,
+      run_id,
+      step,
+      expert_id,
+      runtime
+    ) {
+      content <- ci_monitor_content(
+        profile,
+        daily_bundle,
+        knowledge_store
+      )
+      briefing <- ci_generate(
+        deliverables$briefing,
+        content,
+        runtime,
+        artifact_catalog,
+        run_id,
+        step,
+        expert_id,
+        "daily-briefing-md",
+        runtime = list(profile = profile)
+      )
+      result <- ci_generate(
+        deliverables$result,
+        content,
+        runtime,
+        artifact_catalog,
+        run_id,
+        step,
+        expert_id,
+        "monitor-result-json"
+      )
+      list(artifacts = c(briefing$artifacts, result$artifacts))
+    }
+  )
+  registry
+}
+
+ci_monitor_workflow <- function() {
+  tempest::tempest_workflow_spec(
+    "continuous-intelligence.monitor",
+    version = "1",
+    title = "Continuous intelligence monitor",
+    purpose = paste(
+      "Reconcile a scheduled signal bundle with accepted knowledge and",
+      "produce a briefing, knowledge proposals, and workflow referrals."
+    ),
+    supported_deliverable_types = c(
+      "continuous-briefing",
+      "monitor-result"
+    ),
+    steps = list(tempest::tempest_workflow_step(
+      "monitor",
+      title = "Monitor",
+      purpose = "Prepare the scheduled intelligence result.",
+      operation_id = "example.ci.step.monitor",
+      produced_artifact_ids = c(
+        "daily-briefing-md",
+        "monitor-result-json"
+      ),
+      assignment_rule = "expert.continuous-intelligence"
+    ))
+  )
+}
+
+ci_expert <- function() {
+  tempest::tempest_expert(
+    expert_id = "expert.continuous-intelligence",
+    name = "Continuous Intelligence Analyst",
+    title = "Evidence reconciliation specialist",
+    description = paste(
+      "Reconciles scheduled signals with accepted organizational",
+      "knowledge."
+    ),
+    instructions = paste(
+      "Keep unreviewed evidence separate from accepted knowledge.",
+      "Prefer an explicit no-material-change result to manufactured urgency."
+    ),
+    focus_areas = c(
+      "evidence reconciliation",
+      "materiality",
+      "workflow routing"
+    )
+  )
+}
+
+ci_run_monitor <- function(
+  profile,
+  daily_bundle,
+  store,
+  run_id
+) {
+  registry <- ci_monitor_registry()
+  deliverables <- ci_monitor_specs()
+  objective <- tempest::tempest_objective(
+    paste(
+      "Run the scheduled monitor for",
+      profile$title,
+      "on",
+      daily_bundle$scan_date
+    ),
+    title = daily_bundle$headline,
+    context = list(
+      profile_id = profile$profile_id,
+      scan_date = daily_bundle$scan_date
+    ),
+    constraints = c(
+      "Do not commit unreviewed knowledge.",
+      "Do not manufacture materiality."
+    ),
+    acceptance_criteria = c(
+      "The briefing reports what changed and what remained true.",
+      "Candidate records and workflow referrals are explicit."
+    ),
+    deliverable_ids = c("continuous-briefing", "monitor-result")
+  )
+  tempest::tempest_run_workflow(
+    objective,
+    ci_monitor_workflow(),
+    runtime = registry,
+    experts = list(ci_expert()),
+    deliverables = deliverables,
+    runtime_context = list(
+      profile = profile,
+      daily_bundle = daily_bundle,
+      knowledge_store = store,
+      deliverables = deliverables
+    ),
+    run_id = run_id
+  )
+}
+
+ci_review_spec <- function() {
+  ci_deliverable(
+    "knowledge-change-set",
+    "Knowledge change set",
+    "Present candidate records for explicit host review.",
+    c(
+      "profile_id",
+      "scan_date",
+      "source_monitor_run_id",
+      "knowledge_changes"
+    ),
+    "example.ci.renderer.json",
+    "knowledge-change-set",
+    "application/json",
+    requires_approval = TRUE
+  )
+}
+
+ci_review_registry <- function() {
+  registry <- tempest::tempest_builtin_operation_registry()
+  ci_register_renderers(registry)
+  registry$register(
+    "example.ci.step.review-knowledge",
+    kind = "step",
+    version = "1",
+    implementation = function(
+      monitor_content,
+      source_monitor_run_id,
+      deliverable,
+      artifact_catalog,
+      run_id,
+      step,
+      expert_id,
+      runtime
+    ) {
+      content <- list(
+        profile_id = monitor_content$profile_id,
+        scan_date = monitor_content$scan_date,
+        source_monitor_run_id = source_monitor_run_id,
+        knowledge_changes = monitor_content$proposals
+      )
+      ci_generate(
+        deliverable,
+        content,
+        runtime,
+        artifact_catalog,
+        run_id,
+        step,
+        expert_id,
+        "knowledge-change-set-json"
+      )
+    }
+  )
+  registry
+}
+
+ci_run_knowledge_review <- function(
+  monitor_run,
+  source_monitor_run_id,
+  run_id
+) {
+  monitor <- tempest::tempest_run_artifact(
+    monitor_run,
+    "monitor-result-json"
+  )@content
+  if (ci_proposal_count(monitor$proposals) == 0L) {
+    stop("The monitor result has no knowledge changes to review.")
+  }
+  deliverable <- ci_review_spec()
+  registry <- ci_review_registry()
+  workflow <- tempest::tempest_workflow_spec(
+    "continuous-intelligence.review-knowledge",
+    version = "1",
+    title = "Review proposed knowledge",
+    purpose = "Place candidate records behind an approval boundary.",
+    supported_deliverable_types = "knowledge-change-set",
+    steps = list(tempest::tempest_workflow_step(
+      "review-knowledge",
+      title = "Review knowledge",
+      purpose = "Prepare a validated knowledge change set.",
+      operation_id = "example.ci.step.review-knowledge",
+      produced_artifact_ids = "knowledge-change-set-json",
+      assignment_rule = "expert.continuous-intelligence"
+    ))
+  )
+  objective <- tempest::tempest_objective(
+    "Review candidate knowledge from a scheduled monitor run.",
+    title = paste("Review", monitor$scan_date, "knowledge changes"),
+    context = list(source_monitor_run_id = source_monitor_run_id),
+    constraints = "Do not write to the knowledge store.",
+    acceptance_criteria = "Every candidate record remains inspectable.",
+    deliverable_ids = "knowledge-change-set"
+  )
+  tempest::tempest_run_workflow(
+    objective,
+    workflow,
+    runtime = registry,
+    experts = list(ci_expert()),
+    deliverables = list(deliverable),
+    runtime_context = list(
+      monitor_content = monitor,
+      source_monitor_run_id = source_monitor_run_id,
+      deliverable = deliverable
+    ),
+    run_id = run_id
+  )
+}
+
+ci_referral_spec <- function() {
+  ci_deliverable(
+    "workflow-referral-result",
+    "Workflow referral result",
+    "Prepare an evidence-backed result for a promoted workflow referral.",
+    c(
+      "workflow_id",
+      "decision",
+      "recommendation",
+      "evidence_record_ids",
+      "knowledge_changes"
+    ),
+    "example.ci.renderer.json",
+    "workflow-referral-result",
+    "application/json",
+    requires_approval = TRUE
+  )
+}
+
+ci_referral_registry <- function() {
+  registry <- tempest::tempest_builtin_operation_registry()
+  ci_register_renderers(registry)
+  registry$register(
+    "example.ci.step.run-referral",
+    kind = "step",
+    version = "1",
+    implementation = function(
+      referral,
+      knowledge_store,
+      context_record_ids,
+      result_builder,
+      deliverable,
+      artifact_catalog,
+      run_id,
+      step,
+      expert_id,
+      runtime
+    ) {
+      accepted_context <- ci_accepted_context(
+        knowledge_store,
+        context_record_ids
+      )
+      content <- result_builder(referral, accepted_context)
+      ci_generate(
+        deliverable,
+        content,
+        runtime,
+        artifact_catalog,
+        run_id,
+        step,
+        expert_id,
+        "workflow-referral-result-json"
+      )
+    }
+  )
+  registry
+}
+
+ci_run_referral <- function(
+  referral,
+  profile,
+  store,
+  result_builder,
+  run_id
+) {
+  workflow_id <- referral$workflow_id
+  allowed <- vapply(
+    profile$routing_policy$allowed_workflow_ids,
+    as.character,
+    character(1)
+  )
+  if (!workflow_id %in% allowed) {
+    stop("The referral workflow is not allowed by the active profile.")
+  }
+  deliverable <- ci_referral_spec()
+  registry <- ci_referral_registry()
+  workflow <- tempest::tempest_workflow_spec(
+    workflow_id,
+    version = "1",
+    title = "Promoted continuous-intelligence referral",
+    purpose = referral$objective,
+    supported_deliverable_types = "workflow-referral-result",
+    steps = list(tempest::tempest_workflow_step(
+      "run-referral",
+      title = "Run referral",
+      purpose = referral$reason,
+      operation_id = "example.ci.step.run-referral",
+      produced_artifact_ids = "workflow-referral-result-json",
+      assignment_rule = "expert.continuous-intelligence"
+    ))
+  )
+  objective <- tempest::tempest_objective(
+    referral$objective,
+    title = referral$objective,
+    context = list(
+      workflow_id = workflow_id,
+      priority = referral$priority
+    ),
+    constraints = c(
+      "Use only accepted knowledge and the cited referral evidence.",
+      "Do not commit a recommendation without host approval."
+    ),
+    acceptance_criteria = c(
+      "The result explains why the prior position changed or remained.",
+      "The recommendation is bounded by unresolved uncertainty."
+    ),
+    deliverable_ids = "workflow-referral-result"
+  )
+  tempest::tempest_run_workflow(
+    objective,
+    workflow,
+    runtime = registry,
+    experts = list(ci_expert()),
+    deliverables = list(deliverable),
+    runtime_context = list(
+      referral = referral,
+      knowledge_store = store,
+      context_record_ids = ci_character(referral$context_record_ids),
+      result_builder = result_builder,
+      deliverable = deliverable
+    ),
+    run_id = run_id
+  )
+}
+
+ci_default_record_mapper <- function(content, approval) {
+  ci_rows_to_records(content$knowledge_changes)
+}
+
+ci_approve_and_commit <- function(
+  run,
+  artifact_id,
+  store,
+  run_id,
+  stage,
+  note,
+  record_mapper = ci_default_record_mapper
+) {
+  pending <- tempest::tempest_run_approvals(run, status = "pending")
+  if (length(pending) != 1L) {
+    stop("Exactly one pending artifact approval is required.")
+  }
+  approval_id <- names(pending)[[1L]]
+  tempest::tempest_run_record_approval(
+    run,
+    approval_id,
+    decision = "approved",
+    note = note
+  )
+  artifact <- tempest::tempest_run_artifact(run, artifact_id)
+  if (!identical(artifact@status, "approved")) {
+    stop("The artifact was not approved; no Graft write was attempted.")
+  }
+  approval <- list(
+    approval_id = approval_id,
+    decision = "approved",
+    note = note
+  )
+  records <- record_mapper(artifact@content, approval)
+  result <- graft::kg_ingest_tempest_records(
+    store,
+    run_id = run_id,
+    records = records,
+    stage = stage,
+    producer_version = as.character(utils::packageVersion("tempest"))
+  )
+  list(
+    run = run,
+    artifact = artifact,
+    approval = approval,
+    ingest = result
+  )
+}
