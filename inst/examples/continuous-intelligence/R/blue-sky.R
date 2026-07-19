@@ -78,6 +78,12 @@ blue_sky_result_builder <- function(
     accepted_context$records,
     accepted_record_ids
   )
+  project <- accepted_records[[
+    "graft:00000000000000000000000101"
+  ]]
+  technology <- accepted_records[[
+    "graft:00000000000000000000000104"
+  ]]
   torque_requirement <- accepted_records[[
     "graft:00000000000000000000000102"
   ]]
@@ -85,10 +91,52 @@ blue_sky_result_builder <- function(
     "graft:00000000000000000000000103"
   ]]
   if (
-    !identical(torque_requirement$class, "ProjectRequirement") ||
+    !identical(project$class, "Project") ||
+      !identical(technology$class, "Technology") ||
+      !identical(torque_requirement$class, "ProjectRequirement") ||
       !identical(duty_requirement$class, "ProjectRequirement")
   ) {
-    stop("The Project Ember requirements are not accepted records.")
+    stop("The Project Ember graph records are not accepted context.")
+  }
+  project_id <- project$id
+  technology_id <- technology$id
+  torque_requirement_id <- torque_requirement$id
+  duty_requirement_id <- duty_requirement$id
+  torque_about <- ci_character(torque_observation$record$about)
+  thermal_about <- ci_character(thermal_observation$record$about)
+  if (
+    !identical(torque_requirement$record$project, project_id) ||
+      !identical(duty_requirement$record$project, project_id) ||
+      !identical(
+        torque_observation$record$primary_subject,
+        technology_id
+      ) ||
+      !identical(
+        thermal_observation$record$primary_subject,
+        technology_id
+      ) ||
+      !all(
+        c(
+          technology_id,
+          torque_requirement_id,
+          duty_requirement_id
+        ) %in%
+          torque_about
+      ) ||
+      !all(
+        c(
+          technology_id,
+          duty_requirement_id
+        ) %in%
+          thermal_about
+      )
+  ) {
+    stop(
+      paste(
+        "The accepted requirements and observations do not match",
+        "the Project Ember and Nova relationship graph."
+      )
+    )
   }
   torque_threshold <- as.numeric(torque_requirement$record$threshold)
   torque_unit <- as.character(torque_requirement$record$unit)
@@ -121,10 +169,35 @@ blue_sky_result_builder <- function(
   if (
     !identical(prior_assessment$class, "Assessment") ||
       !identical(prior_assessment$record$status, "active") ||
+      !identical(prior_assessment$record$disposition, "hold") ||
+      !identical(
+        prior_assessment$record$primary_subject,
+        project_id
+      ) ||
+      !all(
+        c(
+          project_id,
+          technology_id,
+          torque_requirement_id,
+          duty_requirement_id
+        ) %in%
+          ci_character(prior_assessment$record$about)
+      ) ||
       !identical(prior_decision$class, "ReviewDecision") ||
-      !identical(prior_decision$record$status, "active")
+      !identical(prior_decision$record$status, "active") ||
+      !identical(prior_decision$record$disposition, "hold") ||
+      !identical(prior_decision$record$primary_subject, project_id) ||
+      !all(
+        c(project_id, technology_id) %in%
+          ci_character(prior_decision$record$about)
+      )
   ) {
-    stop("The prior Blue-Sky decision is no longer active.")
+    stop(
+      paste(
+        "The prior Blue-Sky hold is no longer active or does not",
+        "match the Project Ember and Nova relationship graph."
+      )
+    )
   }
   supersession_preconditions <- list(
     list(
@@ -332,7 +405,12 @@ blue_sky_result_builder <- function(
   ]
   knowledge_preconditions <- c(
     lapply(
-      list(torque_requirement, duty_requirement),
+      list(
+        project,
+        technology,
+        torque_requirement,
+        duty_requirement
+      ),
       ci_record_precondition
     ),
     lapply(

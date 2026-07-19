@@ -515,6 +515,18 @@ test_that("scheduled signals promote through approval into accepted history", {
   thermal_index <- which(
     independent_ids == "graft:00000000000000000000000119"
   )
+  prior_decision_index <- which(
+    independent_ids == "graft:00000000000000000000000107"
+  )
+  accepted_record_ids <- vapply(
+    accepted_context$records,
+    `[[`,
+    character(1),
+    "id"
+  )
+  torque_requirement_index <- which(
+    accepted_record_ids == "graft:00000000000000000000000102"
+  )
   insufficient_context <- accepted_context
   insufficient_context$claims[[
     torque_index
@@ -617,6 +629,57 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_match(
     conditionMessage(vendor_source_result),
     "does not match its accepted source provenance"
+  )
+  mismatched_observation_context <- accepted_context
+  mismatched_observation_context$claims[[
+    torque_index
+  ]]$record$primary_subject <- "graft:00000000000000000000000101"
+  mismatched_observation_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      mismatched_observation_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(mismatched_observation_result, "error")
+  expect_match(
+    conditionMessage(mismatched_observation_result),
+    "do not match the Project Ember and Nova relationship graph"
+  )
+  mismatched_requirement_context <- accepted_context
+  mismatched_requirement_context$records[[
+    torque_requirement_index
+  ]]$record$project <- "graft:00000000000000000000000104"
+  mismatched_requirement_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      mismatched_requirement_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(mismatched_requirement_result, "error")
+  expect_match(
+    conditionMessage(mismatched_requirement_result),
+    "do not match the Project Ember and Nova relationship graph"
+  )
+  changed_prior_context <- accepted_context
+  changed_prior_context$claims[[
+    prior_decision_index
+  ]]$record$disposition <- "proceed"
+  changed_prior_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      changed_prior_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(changed_prior_result, "error")
+  expect_match(
+    conditionMessage(changed_prior_result),
+    "prior Blue-Sky hold is no longer active"
   )
   promotion_store <- environment$ci_promotion_store()
   promotion_id <- environment$ci_record_promotion(
@@ -838,6 +901,14 @@ test_that("scheduled signals promote through approval into accepted history", {
     knowledge_precondition_ids
   )
   expect_in(
+    "graft:00000000000000000000000101",
+    knowledge_precondition_ids
+  )
+  expect_in(
+    "graft:00000000000000000000000104",
+    knowledge_precondition_ids
+  )
+  expect_in(
     "graft:00000000000000000000000103",
     knowledge_precondition_ids
   )
@@ -849,6 +920,42 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_match(decision_content$recommendation, "100 Nm")
   expect_match(decision_content$uncertainty, "10 min")
   expect_match(decision_content$uncertainty, "final 2 min")
+  for (target in list(
+    list(
+      id = "graft:00000000000000000000000101",
+      table = "project"
+    ),
+    list(
+      id = "graft:00000000000000000000000104",
+      table = "technology"
+    )
+  )) {
+    DBI::dbBegin(store$connection)
+    DBI::dbExecute(
+      store$connection,
+      paste0(
+        "UPDATE ",
+        target$table,
+        " SET description = description || ' changed after synthesis'",
+        " WHERE id = ?"
+      ),
+      params = list(target$id)
+    )
+    changed_context_mapping <- tryCatch(
+      environment$blue_sky_decision_record_mapper(
+        decision_content,
+        list(decision = "approved"),
+        store
+      ),
+      error = identity
+    )
+    DBI::dbRollback(store$connection)
+    expect_s3_class(changed_context_mapping, "error")
+    expect_match(
+      conditionMessage(changed_context_mapping),
+      "relied-upon knowledge changed before commit"
+    )
+  }
   stale_store <- local_continuous_intelligence_store(environment)
   stale_evidence <- kg_get(
     stale_store,
