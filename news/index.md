@@ -2,6 +2,10 @@
 
 ## graft 0.0.0.9000
 
+- A provider-free continuous-intelligence example and staged operator
+  walkthrough demonstrate scheduled Tempest briefings, host-bound
+  promotion and approval, evidence-checked decisions, and governed Graft
+  ingestion.
 - [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
   creates stable producer batches, and
   [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
