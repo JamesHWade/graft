@@ -20,6 +20,9 @@ continuous_intelligence_example_path <- function(...) {
 }
 
 continuous_intelligence_tempest_available <- function() {
+  if (getRversion() < "4.3.0") {
+    return(FALSE)
+  }
   if (!requireNamespace("tempest", quietly = TRUE)) {
     return(FALSE)
   }

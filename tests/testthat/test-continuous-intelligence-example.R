@@ -52,7 +52,9 @@ test_that("continuous-intelligence host stays domain neutral", {
 
 test_that("scheduled signals promote through approval into accepted history", {
   if (!continuous_intelligence_tempest_available()) {
-    testthat::skip("The current Tempest workflow API is not installed.")
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
   }
   environment <- local_continuous_intelligence_environment()
   profile <- environment$ci_read_json(
