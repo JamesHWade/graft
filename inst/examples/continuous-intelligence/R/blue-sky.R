@@ -23,6 +23,37 @@ blue_sky_result_builder <- function(
       )
     )
   }
+  required_evidence_claim_ids <- c(
+    "graft:00000000000000000000000118",
+    "graft:00000000000000000000000119"
+  )
+  supporting_evidence <- Filter(
+    function(evidence) {
+      identical(evidence$record$support_type, "supports") &&
+        evidence$record$statement_id %in% required_evidence_claim_ids
+    },
+    accepted_evidence
+  )
+  supported_claim_ids <- vapply(
+    supporting_evidence,
+    \(evidence) evidence$record$statement_id,
+    character(1)
+  )
+  if (!all(required_evidence_claim_ids %in% supported_claim_ids)) {
+    stop(
+      paste(
+        "The promoted referral requires cited supporting evidence for",
+        "both independent observations."
+      )
+    )
+  }
+  supporting_evidence_ids <- unname(
+    vapply(
+      supporting_evidence,
+      \(evidence) evidence$id,
+      character(1)
+    )
+  )
   list(
     workflow_id = referral$workflow_id,
     decision = paste(
@@ -67,49 +98,97 @@ blue_sky_result_builder <- function(
       "Publish the bench protocol and acceptance criteria before",
       "procuring test hardware."
     ),
-    evidence_record_ids = names(accepted_evidence),
+    evidence_record_ids = supporting_evidence_ids,
     accepted_claim_ids = accepted_ids,
     knowledge_changes = list(
-      Assessment = list(list(
-        id = "graft:00000000000000000000000122",
-        statement_text = paste(
-          "Accepted evidence supports a bounded Project Ember bench test",
-          "but does not support deployment."
+      Assessment = list(
+        list(
+          id = "graft:00000000000000000000000106",
+          statement_text = paste(
+            "The Nova compact actuator is not ready for a Project Ember",
+            "prototype because no independent evidence demonstrates the",
+            "required torque and duty cycle."
+          ),
+          primary_subject = "graft:00000000000000000000000101",
+          about = c(
+            "graft:00000000000000000000000101",
+            "graft:00000000000000000000000104",
+            "graft:00000000000000000000000102",
+            "graft:00000000000000000000000103"
+          ),
+          disposition = "hold",
+          decision_confidence = 0.88,
+          polarity = "negative",
+          confidence = 0.88,
+          status = "superseded",
+          superseded_by = "graft:00000000000000000000000122",
+          asserted_at = "2026-07-10T15:00:00Z",
+          valid_to = "2026-07-15T14:00:00Z"
         ),
-        primary_subject = "graft:00000000000000000000000101",
-        about = c(
-          "graft:00000000000000000000000101",
-          "graft:00000000000000000000000104",
-          "graft:00000000000000000000000102",
-          "graft:00000000000000000000000103"
+        list(
+          id = "graft:00000000000000000000000122",
+          statement_text = paste(
+            "Accepted evidence supports a bounded Project Ember bench test",
+            "but does not support deployment."
+          ),
+          primary_subject = "graft:00000000000000000000000101",
+          about = c(
+            "graft:00000000000000000000000101",
+            "graft:00000000000000000000000104",
+            "graft:00000000000000000000000102",
+            "graft:00000000000000000000000103"
+          ),
+          disposition = "prototype",
+          decision_confidence = 0.86,
+          polarity = "positive",
+          confidence = 0.86,
+          status = "active",
+          asserted_at = "2026-07-15T14:00:00Z"
+        )
+      ),
+      ReviewDecision = list(
+        list(
+          id = "graft:00000000000000000000000107",
+          statement_text = paste(
+            "Hold the actuator prototype gate until comparable independent",
+            "evidence is available."
+          ),
+          primary_subject = "graft:00000000000000000000000101",
+          about = c(
+            "graft:00000000000000000000000101",
+            "graft:00000000000000000000000104"
+          ),
+          disposition = "hold",
+          reviewer_role = "technology portfolio owner",
+          review_outcome = "approved",
+          polarity = "negative",
+          confidence = 1,
+          status = "superseded",
+          superseded_by = "graft:00000000000000000000000123",
+          asserted_at = "2026-07-10T16:00:00Z",
+          valid_to = "2026-07-15T14:30:00Z"
         ),
-        disposition = "prototype",
-        decision_confidence = 0.86,
-        polarity = "positive",
-        confidence = 0.86,
-        status = "active",
-        asserted_at = "2026-07-15T14:00:00Z"
-      )),
-      ReviewDecision = list(list(
-        id = "graft:00000000000000000000000123",
-        statement_text = paste(
-          "Authorize a bounded twelve-minute Project Ember actuator bench",
-          "test; do not authorize deployment."
-        ),
-        primary_subject = "graft:00000000000000000000000101",
-        about = c(
-          "graft:00000000000000000000000101",
-          "graft:00000000000000000000000104",
-          "graft:00000000000000000000000102",
-          "graft:00000000000000000000000103"
-        ),
-        disposition = "prototype",
-        reviewer_role = "technology portfolio owner",
-        polarity = "positive",
-        confidence = 1,
-        status = "active",
-        asserted_at = "2026-07-15T14:30:00Z"
-      )),
+        list(
+          id = "graft:00000000000000000000000123",
+          statement_text = paste(
+            "Authorize a bounded twelve-minute Project Ember actuator bench",
+            "test; do not authorize deployment."
+          ),
+          primary_subject = "graft:00000000000000000000000101",
+          about = c(
+            "graft:00000000000000000000000101",
+            "graft:00000000000000000000000104",
+            "graft:00000000000000000000000102",
+            "graft:00000000000000000000000103"
+          ),
+          disposition = "prototype",
+          reviewer_role = "technology portfolio owner",
+          polarity = "positive",
+          confidence = 1,
+          status = "active",
+          asserted_at = "2026-07-15T14:30:00Z"
+        )
+      ),
       Evidence = list(list(
         id = "graft:00000000000000000000000124",
         statement_id = "graft:00000000000000000000000122",

@@ -23,9 +23,11 @@ operation without changing those contracts.
    `kg_ingest_tempest_records()`.
 7. A workflow referral requires explicit human promotion and is resolved only
    against the profile's allowlist.
-8. The promoted workflow uses approved history and produces another
-   approval-gated result.
-9. The following briefing can retrieve the accepted decision history.
+8. The promoted workflow validates cited evidence against the claims used for
+   its decision and produces another approval-gated result.
+9. The approved decision supersedes the prior active position instead of
+   leaving conflicting current decisions.
+10. The following briefing retrieves the accepted current decision history.
 
 The host never uses `tempest_artifact_store_graft()`. Tempest artifacts remain
 Tempest artifacts; only approved, schema-mapped knowledge records are handed

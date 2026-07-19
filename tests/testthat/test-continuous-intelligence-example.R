@@ -307,6 +307,27 @@ test_that("scheduled signals promote through approval into accepted history", {
     conditionMessage(unrelated_evidence),
     "is not attached to an accepted claim"
   )
+  irrelevant_evidence_referral <- referral
+  irrelevant_evidence_referral$evidence_record_ids <- c(
+    "graft:00000000000000000000000108",
+    "graft:00000000000000000000000109"
+  )
+  irrelevant_evidence <- tryCatch(
+    environment$ci_run_referral(
+      irrelevant_evidence_referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-irrelevant-evidence",
+      promotion = evidence_promotion
+    ),
+    error = identity
+  )
+  expect_s3_class(irrelevant_evidence, "tempest_step_execution_error")
+  expect_match(
+    conditionMessage(irrelevant_evidence),
+    "requires cited supporting evidence"
+  )
   unpromoted <- tryCatch(
     environment$ci_run_referral(
       referral,
@@ -347,6 +368,16 @@ test_that("scheduled signals promote through approval into accepted history", {
     )@content$promotion,
     promotion
   )
+  expect_setequal(
+    tempest::tempest_run_artifact(
+      decision,
+      "workflow-referral-result-json"
+    )@content$evidence_record_ids,
+    c(
+      "graft:00000000000000000000000120",
+      "graft:00000000000000000000000121"
+    )
+  )
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "ReviewDecision"))),
     1L
@@ -370,6 +401,26 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "ReviewDecision"))),
     2L
+  )
+  prior_assessment <- kg_get(
+    store,
+    "graft:00000000000000000000000106",
+    include = character()
+  )$record
+  prior_decision <- kg_get(
+    store,
+    "graft:00000000000000000000000107",
+    include = character()
+  )$record
+  expect_identical(prior_assessment$status, "superseded")
+  expect_identical(
+    prior_assessment$superseded_by,
+    "graft:00000000000000000000000122"
+  )
+  expect_identical(prior_decision$status, "superseded")
+  expect_identical(
+    prior_decision$superseded_by,
+    "graft:00000000000000000000000123"
   )
 
   day_three <- environment$ci_run_monitor(
@@ -414,6 +465,16 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_in(
     "graft:00000000000000000000000123",
     accepted_claim_ids
+  )
+  expect_length(
+    intersect(
+      c(
+        "graft:00000000000000000000000106",
+        "graft:00000000000000000000000107"
+      ),
+      accepted_claim_ids
+    ),
+    0L
   )
 
   replay_condition <- NULL
