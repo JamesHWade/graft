@@ -75,7 +75,6 @@ run_continuous_intelligence_demo <- function(example_dir) {
       "knowledge-change-set-json",
       store,
       review_id,
-      "approved-observations",
       "Approved source-faithful observations from the frozen corpus."
     )
     list(
@@ -127,7 +126,6 @@ run_continuous_intelligence_demo <- function(example_dir) {
     "workflow-referral-result-json",
     store,
     "blue-sky-decision-2026-07-15",
-    "approved-decision",
     "Approved a bounded bench test; deployment remains unauthorized.",
     record_mapper = blue_sky_decision_record_mapper
   )

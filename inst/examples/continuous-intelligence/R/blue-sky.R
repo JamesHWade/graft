@@ -1,4 +1,8 @@
-blue_sky_result_builder <- function(referral, accepted_context) {
+blue_sky_result_builder <- function(
+  referral,
+  accepted_context,
+  accepted_evidence
+) {
   accepted_ids <- vapply(
     accepted_context$claims,
     `[[`,
@@ -63,7 +67,7 @@ blue_sky_result_builder <- function(referral, accepted_context) {
       "Publish the bench protocol and acceptance criteria before",
       "procuring test hardware."
     ),
-    evidence_record_ids = ci_character(referral$evidence_record_ids),
+    evidence_record_ids = names(accepted_evidence),
     accepted_claim_ids = accepted_ids,
     knowledge_changes = list(
       Assessment = list(list(

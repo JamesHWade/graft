@@ -94,13 +94,58 @@ test_that("scheduled signals promote through approval into accepted history", {
     nrow(dplyr::collect(kg_records(store, "Observation"))),
     0L
   )
+  mismatched_review <- tryCatch(
+    environment$ci_run_knowledge_review(
+      day_one$monitor,
+      "not-the-monitor-run",
+      "blue-sky-review-mismatch"
+    ),
+    error = identity
+  )
+  expect_s3_class(mismatched_review, "error")
+  expect_match(
+    conditionMessage(mismatched_review),
+    "does not match the monitor artifact provenance"
+  )
+  review_content <- tempest::tempest_run_artifact(
+    day_one$review,
+    "knowledge-change-set-json"
+  )@content
+  expect_identical(
+    review_content$source_monitor_run_id,
+    tempest::tempest_run_artifact(
+      day_one$monitor,
+      "monitor-result-json"
+    )@run_id
+  )
+  mismatched_commit <- tryCatch(
+    environment$ci_approve_and_commit(
+      day_one$review,
+      "knowledge-change-set-json",
+      store,
+      "not-the-review-run",
+      "Should not approve or commit."
+    ),
+    error = identity
+  )
+  expect_s3_class(mismatched_commit, "error")
+  expect_match(
+    conditionMessage(mismatched_commit),
+    "does not match the approved artifact provenance"
+  )
+  expect_identical(
+    tempest::tempest_run_artifact(
+      day_one$review,
+      "knowledge-change-set-json"
+    )@status,
+    "awaiting_approval"
+  )
   mapping_failure <- tryCatch(
     environment$ci_approve_and_commit(
       day_one$review,
       "knowledge-change-set-json",
       store,
       day_one$review_id,
-      "approved-observations",
       "Approved source-faithful vendor observation.",
       record_mapper = \(
         ...
@@ -131,7 +176,6 @@ test_that("scheduled signals promote through approval into accepted history", {
     "knowledge-change-set-json",
     store,
     day_one$review_id,
-    "approved-observations",
     "Approved source-faithful vendor observation."
   )
   expect_identical(
@@ -142,6 +186,7 @@ test_that("scheduled signals promote through approval into accepted history", {
     nrow(dplyr::collect(kg_records(store, "Observation"))),
     1L
   )
+  expect_identical(day_one_commit$ingest$replay, FALSE)
   independent_bundle <- environment$ci_read_json(
     continuous_intelligence_example_path(
       "corpus",
@@ -157,7 +202,8 @@ test_that("scheduled signals promote through approval into accepted history", {
   premature_referral <- tryCatch(
     environment$blue_sky_result_builder(
       independent_bundle$referrals[[1L]],
-      premature_context
+      premature_context,
+      list()
     ),
     error = identity
   )
@@ -179,12 +225,35 @@ test_that("scheduled signals promote through approval into accepted history", {
     "knowledge-change-set-json",
     store,
     day_two$review_id,
-    "approved-observations",
     "Approved source-faithful independent observations."
   )
   expect_identical(
     tempest::tempest_run_status(day_two_commit$run),
     "succeeded"
+  )
+  expect_identical(day_two_commit$ingest$replay, FALSE)
+  knowledge_batches <- DBI::dbReadTable(
+    store$connection,
+    "_graft_batches"
+  )
+  knowledge_batches <- knowledge_batches[
+    knowledge_batches$source_run_id %in%
+      c(
+        day_one$review_id,
+        day_two$review_id
+      ),
+    ,
+    drop = FALSE
+  ]
+  expect_setequal(
+    knowledge_batches$idempotency_key,
+    paste0(
+      c(day_one$review_id, day_two$review_id),
+      ":",
+      environment$ci_artifact_ingest_stage(
+        "knowledge-change-set-json"
+      )
+    )
   )
   monitor_content <- tempest::tempest_run_artifact(
     day_two$monitor,
@@ -193,6 +262,51 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_length(monitor_content$referrals, 1L)
 
   referral <- monitor_content$referrals[[1L]]
+  evidence_promotion <- list(
+    decision = "approved",
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:30:00Z"
+  )
+  missing_evidence_referral <- referral
+  missing_evidence_referral$evidence_record_ids <- c(
+    "graft:00000000000000000000000999"
+  )
+  missing_evidence <- tryCatch(
+    environment$ci_run_referral(
+      missing_evidence_referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-missing-evidence",
+      promotion = evidence_promotion
+    ),
+    graft_error = identity
+  )
+  expect_s3_class(missing_evidence, "graft_error")
+  expect_match(conditionMessage(missing_evidence), "was not found")
+  unrelated_evidence_referral <- referral
+  unrelated_evidence_referral$context_record_ids <- c(
+    "graft:00000000000000000000000102"
+  )
+  unrelated_evidence_referral$evidence_record_ids <- c(
+    "graft:00000000000000000000000121"
+  )
+  unrelated_evidence <- tryCatch(
+    environment$ci_run_referral(
+      unrelated_evidence_referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-unrelated-evidence",
+      promotion = evidence_promotion
+    ),
+    error = identity
+  )
+  expect_s3_class(unrelated_evidence, "error")
+  expect_match(
+    conditionMessage(unrelated_evidence),
+    "is not attached to an accepted claim"
+  )
   unpromoted <- tryCatch(
     environment$ci_run_referral(
       referral,
@@ -242,7 +356,6 @@ test_that("scheduled signals promote through approval into accepted history", {
     "workflow-referral-result-json",
     store,
     "blue-sky-decision-2026-07-15",
-    "approved-decision",
     "Approved bounded bench test only.",
     record_mapper = environment$blue_sky_decision_record_mapper
   )
@@ -321,7 +434,9 @@ test_that("scheduled signals promote through approval into accepted history", {
       store,
       "blue-sky-decision-2026-07-15",
       decision_records,
-      stage = "approved-decision"
+      stage = environment$ci_artifact_ingest_stage(
+        "workflow-referral-result-json"
+      )
     ),
     graft_batch_replay = function(condition) {
       replay_condition <<- condition

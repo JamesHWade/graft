@@ -98,6 +98,52 @@ ci_accepted_context <- function(store, record_ids) {
   )
 }
 
+ci_accepted_evidence <- function(store, record_ids, accepted_context) {
+  record_ids <- ci_character(record_ids)
+  if (length(record_ids) == 0L) {
+    stop("A promoted referral must cite at least one evidence record.")
+  }
+  accepted_claims <- accepted_context$claims
+  hydrated <- lapply(record_ids, function(id) {
+    evidence <- graft::kg_get(store, id, include = character())
+    statement_id <- evidence$record$statement_id
+    if (
+      is.null(statement_id) ||
+        !is.character(statement_id) ||
+        length(statement_id) != 1L ||
+        is.na(statement_id) ||
+        !nzchar(statement_id)
+    ) {
+      stop(
+        paste0(
+          "Referral evidence record `",
+          id,
+          "` does not identify a supported statement."
+        )
+      )
+    }
+    matching_claims <- Filter(
+      function(claim) {
+        identical(claim$id, statement_id) &&
+          id %in% claim$evidence_ids
+      },
+      accepted_claims
+    )
+    if (length(matching_claims) != 1L) {
+      stop(
+        paste0(
+          "Referral evidence record `",
+          id,
+          "` is not attached to an accepted claim in the referral context."
+        )
+      )
+    }
+    evidence
+  })
+  names(hydrated) <- record_ids
+  hydrated
+}
+
 ci_monitor_content <- function(profile, daily_bundle, store) {
   record_ids <- ci_character(profile$monitor_scope$record_ids)
   proposals <- daily_bundle$proposals
@@ -514,10 +560,20 @@ ci_run_knowledge_review <- function(
   source_monitor_run_id,
   run_id
 ) {
-  monitor <- tempest::tempest_run_artifact(
+  monitor_artifact <- tempest::tempest_run_artifact(
     monitor_run,
     "monitor-result-json"
-  )@content
+  )
+  if (!identical(source_monitor_run_id, monitor_artifact@run_id)) {
+    stop(
+      paste(
+        "The supplied source monitor run identifier does not match",
+        "the monitor artifact provenance."
+      )
+    )
+  }
+  source_monitor_run_id <- monitor_artifact@run_id
+  monitor <- monitor_artifact@content
   if (ci_proposal_count(monitor$proposals) == 0L) {
     stop("The monitor result has no knowledge changes to review.")
   }
@@ -589,8 +645,8 @@ ci_referral_registry <- function() {
     version = "1",
     implementation = function(
       referral,
-      knowledge_store,
-      context_record_ids,
+      accepted_context,
+      accepted_evidence,
       promotion,
       result_builder,
       deliverable,
@@ -600,11 +656,11 @@ ci_referral_registry <- function() {
       expert_id,
       runtime
     ) {
-      accepted_context <- ci_accepted_context(
-        knowledge_store,
-        context_record_ids
+      content <- result_builder(
+        referral,
+        accepted_context,
+        accepted_evidence
       )
-      content <- result_builder(referral, accepted_context)
       content$promotion <- promotion
       ci_generate(
         deliverable,
@@ -663,6 +719,16 @@ ci_run_referral <- function(
       )
     }
   }
+  accepted_context <- ci_accepted_context(
+    store,
+    ci_character(referral$context_record_ids)
+  )
+  accepted_evidence <- ci_accepted_evidence(
+    store,
+    referral$evidence_record_ids,
+    accepted_context
+  )
+  referral$evidence_record_ids <- names(accepted_evidence)
   deliverable <- ci_referral_spec()
   registry <- ci_referral_registry()
   workflow <- tempest::tempest_workflow_spec(
@@ -686,6 +752,7 @@ ci_run_referral <- function(
     context = list(
       workflow_id = workflow_id,
       priority = referral$priority,
+      evidence_record_ids = names(accepted_evidence),
       promotion = promotion
     ),
     constraints = c(
@@ -706,8 +773,8 @@ ci_run_referral <- function(
     deliverables = list(deliverable),
     runtime_context = list(
       referral = referral,
-      knowledge_store = store,
-      context_record_ids = ci_character(referral$context_record_ids),
+      accepted_context = accepted_context,
+      accepted_evidence = accepted_evidence,
       promotion = promotion,
       result_builder = result_builder,
       deliverable = deliverable
@@ -731,16 +798,29 @@ ci_artifact_approvals <- function(run, artifact_id, status) {
   )
 }
 
+ci_artifact_ingest_stage <- function(artifact_id) {
+  paste0("approved-artifact:", artifact_id)
+}
+
 ci_approve_and_commit <- function(
   run,
   artifact_id,
   store,
   run_id,
-  stage,
   note,
   record_mapper = ci_default_record_mapper
 ) {
   artifact <- tempest::tempest_run_artifact(run, artifact_id)
+  if (!identical(run_id, artifact@run_id)) {
+    stop(
+      paste(
+        "The supplied commit run identifier does not match",
+        "the approved artifact provenance."
+      )
+    )
+  }
+  run_id <- artifact@run_id
+  stage <- ci_artifact_ingest_stage(artifact_id)
   if (identical(artifact@status, "awaiting_approval")) {
     approvals <- ci_artifact_approvals(run, artifact_id, "pending")
     if (length(approvals) != 1L) {
