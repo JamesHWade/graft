@@ -485,6 +485,14 @@ test_that("scheduled signals promote through approval into accepted history", {
     )
   )
   stale_store <- local_continuous_intelligence_store(environment)
+  stale_evidence <- kg_get(
+    stale_store,
+    "graft:00000000000000000000000108",
+    include = character()
+  )
+  evidence_precondition <- environment$ci_record_precondition(
+    stale_evidence
+  )
   stale_assessment <- kg_get(
     stale_store,
     "graft:00000000000000000000000106",
@@ -502,12 +510,42 @@ test_that("scheduled signals promote through approval into accepted history", {
       stale_store$schema
     )
   )
+  changed_evidence <- stale_evidence$record
+  changed_evidence$excerpt <- paste(
+    changed_evidence$excerpt,
+    "This record changed after workflow execution."
+  )
+  kg_ingest(
+    stale_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "stale-evidence"
+    ),
+    environment$ci_rows_to_records(
+      list(Evidence = list(changed_evidence)),
+      stale_store$schema
+    )
+  )
+  stale_evidence_condition <- tryCatch(
+    environment$ci_validate_record_preconditions(
+      stale_store,
+      list(evidence_precondition)
+    ),
+    error = identity
+  )
+  expect_s3_class(stale_evidence_condition, "error")
+  expect_match(
+    conditionMessage(stale_evidence_condition),
+    "relied-upon knowledge changed before commit"
+  )
+  stale_content <- tempest::tempest_run_artifact(
+    decision,
+    "workflow-referral-result-json"
+  )@content
+  stale_content$knowledge_preconditions <- list()
   stale_mapping <- tryCatch(
     environment$blue_sky_decision_record_mapper(
-      tempest::tempest_run_artifact(
-        decision,
-        "workflow-referral-result-json"
-      )@content,
+      stale_content,
       list(decision = "approved"),
       stale_store
     ),

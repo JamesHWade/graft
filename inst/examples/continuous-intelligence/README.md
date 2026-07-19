@@ -48,6 +48,10 @@ runs, two knowledge-review runs, the promoted decision run, and final record
 counts. All storage is temporary and the run requires no API key or network
 connection.
 
+The example promotion store is process-local and represents a host-owned
+approval boundary. A production host must persist those records and authorize
+who can create them.
+
 ## Layout
 
 - `schema/blue-sky.linkml.yaml` is the application-owned Graft schema.
@@ -71,4 +75,8 @@ observe -> reconcile -> brief -> propose -> route -> review -> learn
 
 Scheduling, authenticated connections, authorization, materiality policy,
 workflow registration, and approved writes remain host responsibilities.
-Schema evolution is intentionally outside this first slice.
+The reference host also assumes one serialized writer between its commit-time
+precondition checks and Graft ingestion. A multi-writer deployment needs a
+generic transaction-scoped conditional-ingest capability in Graft; this
+example does not add one specifically for this workflow. Schema evolution is
+intentionally outside this first slice.

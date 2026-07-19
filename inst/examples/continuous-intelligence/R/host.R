@@ -80,6 +80,47 @@ ci_record_digest <- function(record) {
   digest::digest(payload, algo = "sha256", serialize = FALSE)
 }
 
+ci_record_precondition <- function(record, expected_status = NULL) {
+  list(
+    id = record$id,
+    class = record$class,
+    record_digest = ci_record_digest(record$record),
+    expected_status = expected_status
+  )
+}
+
+ci_validate_record_preconditions <- function(store, preconditions) {
+  for (precondition in preconditions) {
+    current <- graft::kg_get(
+      store,
+      precondition$id,
+      include = character()
+    )
+    status_matches <- is.null(precondition$expected_status) ||
+      identical(
+        current$record$status,
+        precondition$expected_status
+      )
+    if (
+      !identical(current$class, precondition$class) ||
+        !status_matches ||
+        !identical(
+          ci_record_digest(current$record),
+          precondition$record_digest
+        )
+    ) {
+      stop(
+        paste0(
+          "Knowledge precondition failed for `",
+          precondition$id,
+          "`; relied-upon knowledge changed before commit."
+        )
+      )
+    }
+  }
+  invisible(TRUE)
+}
+
 ci_require_text <- function(value, field) {
   if (
     !is.character(value) ||

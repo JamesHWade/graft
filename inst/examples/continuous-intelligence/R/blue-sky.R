@@ -88,6 +88,22 @@ blue_sky_result_builder <- function(
       character(1)
     )
   )
+  relied_claims <- unname(accepted_claims[c(
+    "graft:00000000000000000000000115",
+    "graft:00000000000000000000000118",
+    "graft:00000000000000000000000119"
+  )])
+  knowledge_preconditions <- c(
+    lapply(
+      relied_claims,
+      ci_record_precondition,
+      expected_status = "active"
+    ),
+    lapply(
+      unname(supporting_evidence),
+      ci_record_precondition
+    )
+  )
   list(
     workflow_id = referral$workflow_id,
     decision = paste(
@@ -134,6 +150,7 @@ blue_sky_result_builder <- function(
     ),
     evidence_record_ids = supporting_evidence_ids,
     accepted_claim_ids = accepted_ids,
+    knowledge_preconditions = knowledge_preconditions,
     supersession_preconditions = supersession_preconditions,
     knowledge_changes = list(
       Assessment = list(
@@ -217,6 +234,10 @@ blue_sky_result_builder <- function(
 }
 
 blue_sky_decision_record_mapper <- function(content, approval, store) {
+  ci_validate_record_preconditions(
+    store,
+    content$knowledge_preconditions
+  )
   records <- ci_rows_to_records(
     content$knowledge_changes,
     store$schema
