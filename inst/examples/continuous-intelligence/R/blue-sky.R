@@ -180,21 +180,38 @@ blue_sky_result_builder <- function(
           asserted_at = "2026-07-15T14:30:00Z"
         )
       ),
-      Evidence = list(list(
-        id = "graft:00000000000000000000000124",
-        statement_id = "graft:00000000000000000000000122",
-        source_id = "graft:00000000000000000000000117",
-        support_type = "derived_from",
-        locator_type = "other",
-        locator_value = "table 2 and Thermal behavior",
-        excerpt = paste(
-          "The test sustained 105 Nm through minute ten and then",
-          "required thermal derating."
+      Evidence = list(
+        list(
+          id = "graft:00000000000000000000000124",
+          statement_id = "graft:00000000000000000000000122",
+          source_id = "graft:00000000000000000000000117",
+          support_type = "derived_from",
+          locator_type = "other",
+          locator_value = "table 2 and Thermal behavior",
+          excerpt = paste(
+            "The test sustained 105 Nm through minute ten and then",
+            "required thermal derating."
+          ),
+          source_content_hash = "sha256:independent-test-v1",
+          extraction_method = "approved-workflow-synthesis",
+          extraction_version = "1"
         ),
-        source_content_hash = "sha256:independent-test-v1",
-        extraction_method = "approved-workflow-synthesis",
-        extraction_version = "1"
-      ))
+        list(
+          id = "graft:00000000000000000000000125",
+          statement_id = "graft:00000000000000000000000123",
+          source_id = "graft:00000000000000000000000117",
+          support_type = "derived_from",
+          locator_type = "other",
+          locator_value = "table 2 and Thermal behavior",
+          excerpt = paste(
+            "The approved bounded test decision derives from the independent",
+            "torque and thermal findings."
+          ),
+          source_content_hash = "sha256:independent-test-v1",
+          extraction_method = "approved-workflow-synthesis",
+          extraction_version = "1"
+        )
+      )
     )
   )
 }
@@ -211,14 +228,19 @@ blue_sky_decision_record_mapper <- function(content, approval, store) {
       precondition$id,
       include = character()
     )
-    if (
-      !identical(current$class, precondition$class) ||
-        !identical(current$record$status, "active") ||
-        !identical(
-          ci_record_digest(current$record),
-          precondition$record_digest
-        )
-    ) {
+    first_commit <- identical(current$class, precondition$class) &&
+      identical(current$record$status, "active") &&
+      identical(
+        ci_record_digest(current$record),
+        precondition$record_digest
+      )
+    replay <- identical(current$class, precondition$class) &&
+      identical(current$record$status, "superseded") &&
+      identical(
+        current$record$superseded_by,
+        precondition$superseded_by
+      )
+    if (!first_commit && !replay) {
       stop(
         paste0(
           "Supersession precondition failed for `",
@@ -226,6 +248,9 @@ blue_sky_decision_record_mapper <- function(content, approval, store) {
           "`; the accepted decision changed before commit."
         )
       )
+    }
+    if (replay) {
+      next
     }
     superseded <- ci_plain_record(current$record)
     superseded$status <- "superseded"

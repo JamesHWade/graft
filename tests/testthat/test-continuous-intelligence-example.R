@@ -300,6 +300,13 @@ test_that("scheduled signals promote through approval into accepted history", {
   missing_evidence_referral$evidence_record_ids <- c(
     "graft:00000000000000000000000999"
   )
+  missing_promotion_id <- environment$ci_record_promotion(
+    promotion_store,
+    "blue-sky:promotion:missing-evidence",
+    missing_evidence_referral,
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:31:00Z"
+  )
   missing_evidence <- tryCatch(
     environment$ci_run_referral(
       missing_evidence_referral,
@@ -308,7 +315,7 @@ test_that("scheduled signals promote through approval into accepted history", {
       environment$blue_sky_result_builder,
       "blue-sky-decision-missing-evidence",
       promotion_store = promotion_store,
-      promotion_id = promotion_id
+      promotion_id = missing_promotion_id
     ),
     graft_error = identity
   )
@@ -321,6 +328,13 @@ test_that("scheduled signals promote through approval into accepted history", {
   unrelated_evidence_referral$evidence_record_ids <- c(
     "graft:00000000000000000000000121"
   )
+  unrelated_evidence_promotion_id <- environment$ci_record_promotion(
+    promotion_store,
+    "blue-sky:promotion:unrelated-evidence",
+    unrelated_evidence_referral,
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:32:00Z"
+  )
   unrelated_evidence <- tryCatch(
     environment$ci_run_referral(
       unrelated_evidence_referral,
@@ -329,7 +343,7 @@ test_that("scheduled signals promote through approval into accepted history", {
       environment$blue_sky_result_builder,
       "blue-sky-decision-unrelated-evidence",
       promotion_store = promotion_store,
-      promotion_id = promotion_id
+      promotion_id = unrelated_evidence_promotion_id
     ),
     error = identity
   )
@@ -343,6 +357,13 @@ test_that("scheduled signals promote through approval into accepted history", {
     "graft:00000000000000000000000108",
     "graft:00000000000000000000000109"
   )
+  irrelevant_evidence_promotion_id <- environment$ci_record_promotion(
+    promotion_store,
+    "blue-sky:promotion:irrelevant-evidence",
+    irrelevant_evidence_referral,
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:33:00Z"
+  )
   irrelevant_evidence <- tryCatch(
     environment$ci_run_referral(
       irrelevant_evidence_referral,
@@ -351,7 +372,7 @@ test_that("scheduled signals promote through approval into accepted history", {
       environment$blue_sky_result_builder,
       "blue-sky-decision-irrelevant-evidence",
       promotion_store = promotion_store,
-      promotion_id = promotion_id
+      promotion_id = irrelevant_evidence_promotion_id
     ),
     error = identity
   )
@@ -409,7 +430,29 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_s3_class(unrelated_promotion, "error")
   expect_match(
     conditionMessage(unrelated_promotion),
-    "is not bound to this referral"
+    "does not match the approved"
+  )
+  changed_referral <- referral
+  changed_referral$objective <- paste(
+    changed_referral$objective,
+    "Authorize deployment as well."
+  )
+  changed_promotion <- tryCatch(
+    environment$ci_run_referral(
+      changed_referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-changed-referral",
+      promotion_store = promotion_store,
+      promotion_id = promotion_id
+    ),
+    error = identity
+  )
+  expect_s3_class(changed_promotion, "error")
+  expect_match(
+    conditionMessage(changed_promotion),
+    "does not match the approved"
   )
   decision <- environment$ci_run_referral(
     referral,
@@ -519,6 +562,15 @@ test_that("scheduled signals promote through approval into accepted history", {
     prior_decision$superseded_by,
     "graft:00000000000000000000000123"
   )
+  committed_decision_record <- kg_get(
+    store,
+    "graft:00000000000000000000000123",
+    include = "evidence"
+  )
+  expect_in(
+    "graft:00000000000000000000000125",
+    committed_decision_record$evidence$id
+  )
 
   day_three <- environment$ci_run_monitor(
     profile,
@@ -575,20 +627,19 @@ test_that("scheduled signals promote through approval into accepted history", {
   )
 
   replay_condition <- NULL
-  decision_records <- decision_commit$records
   before_replay <- vapply(
     DBI::dbListTables(store$connection),
     \(table) nrow(DBI::dbReadTable(store$connection, table)),
     integer(1)
   )
   replay <- withCallingHandlers(
-    kg_ingest_tempest_records(
+    environment$ci_approve_and_commit(
+      decision,
+      "workflow-referral-result-json",
       store,
       "blue-sky-decision-2026-07-15",
-      decision_records,
-      stage = environment$ci_artifact_ingest_stage(
-        "workflow-referral-result-json"
-      )
+      "Approved bounded bench test only.",
+      record_mapper = environment$blue_sky_decision_record_mapper
     ),
     graft_batch_replay = function(condition) {
       replay_condition <<- condition
@@ -600,6 +651,6 @@ test_that("scheduled signals promote through approval into accepted history", {
     integer(1)
   )
   expect_s3_class(replay_condition, "graft_batch_replay")
-  expect_identical(replay$replay, TRUE)
+  expect_identical(replay$ingest$replay, TRUE)
   expect_identical(after_replay, before_replay)
 })

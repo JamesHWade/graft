@@ -124,6 +124,7 @@ ci_record_promotion <- function(
     promotion_id = promotion_id,
     referral_id = referral_id,
     workflow_id = workflow_id,
+    referral_digest = ci_record_digest(referral),
     decision = decision,
     reviewer = reviewer,
     decided_at = decided_at,
@@ -151,12 +152,16 @@ ci_resolve_promotion <- function(store, promotion_id, referral) {
   }
   if (
     !identical(promotion$referral_id, referral$referral_id) ||
-      !identical(promotion$workflow_id, referral$workflow_id)
+      !identical(promotion$workflow_id, referral$workflow_id) ||
+      !identical(
+        promotion$referral_digest,
+        ci_record_digest(referral)
+      )
   ) {
     stop(
       paste(
-        "The host promotion record is not bound to this referral",
-        "and workflow."
+        "The host promotion record does not match the approved",
+        "referral content and workflow."
       )
     )
   }
@@ -1030,7 +1035,6 @@ ci_approve_and_commit <- function(
     run = run,
     artifact = artifact,
     approval = approval,
-    records = records,
     ingest = result
   )
 }
