@@ -93,6 +93,16 @@ example <- system.file(
 file.show(file.path(example, "README.md"))
 ```
 
+To take the operator's seat:
+
+```r
+source(file.path(example, "walkthrough.R"))
+walkthrough <- run_continuous_intelligence_walkthrough()
+```
+
+The walkthrough pauses at the knowledge, promotion, and decision boundaries
+instead of approving the complete story automatically.
+
 The example keeps scheduling, workflow routing, approval, and writes in the
 host application. A contrasting package-maintainer profile exercises the same
 host contract with different domain configuration.

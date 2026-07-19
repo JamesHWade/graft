@@ -50,6 +50,115 @@ test_that("continuous-intelligence host stays domain neutral", {
   )
 })
 
+test_that("staged walkthrough console gates require explicit decisions", {
+  environment <- new.env(parent = globalenv())
+  sys.source(
+    continuous_intelligence_example_path("walkthrough.R"),
+    envir = environment
+  )
+
+  approved <- environment$ci_walkthrough_console_gate(
+    "knowledge",
+    "approve",
+    "Knowledge boundary",
+    "Candidate records remain outside Graft.",
+    read_input = \(prompt) " approve "
+  )
+  stopped <- environment$ci_walkthrough_console_gate(
+    "promotion",
+    "promote",
+    "Promotion boundary",
+    "The referral remains inactive.",
+    read_input = \(prompt) "stop"
+  )
+
+  expect_identical(approved, TRUE)
+  expect_identical(stopped, FALSE)
+})
+
+test_that("staged walkthrough exercises each operator boundary", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  environment <- new.env(parent = globalenv())
+  sys.source(
+    continuous_intelligence_example_path("walkthrough.R"),
+    envir = environment
+  )
+  events <- new.env(parent = emptyenv())
+  events$stages <- character()
+  events$actions <- character()
+  approve_all <- function(stage, action, ...) {
+    events$stages <- c(events$stages, stage)
+    events$actions <- c(events$actions, action)
+    TRUE
+  }
+  stop_at_supplier_knowledge <- function(stage, ...) {
+    !identical(stage, "supplier-knowledge")
+  }
+
+  result <- environment$run_continuous_intelligence_walkthrough(
+    example_dir = continuous_intelligence_example_path(),
+    gate = approve_all
+  )
+  stopped_result <- environment$run_continuous_intelligence_walkthrough(
+    example_dir = continuous_intelligence_example_path(),
+    gate = stop_at_supplier_knowledge
+  )
+
+  expect_identical(
+    events$stages,
+    c(
+      "welcome",
+      "supplier-briefing",
+      "supplier-knowledge",
+      "independent-briefing",
+      "independent-knowledge",
+      "workflow-promotion",
+      "decision-approval",
+      "no-change-briefing"
+    )
+  )
+  expect_identical(
+    events$actions,
+    c(
+      "continue",
+      "continue",
+      "approve",
+      "continue",
+      "approve",
+      "promote",
+      "approve",
+      "continue"
+    )
+  )
+  expect_identical(result$status, "completed")
+  expect_null(result$stopped_at)
+  expect_length(result$monitor_runs, 3L)
+  expect_length(result$review_runs, 2L)
+  expect_length(result$ingests, 3L)
+  expect_identical(
+    result$promotion_record$decision,
+    "approved"
+  )
+  expect_equal(result$assessment_count, 2L)
+  expect_equal(result$decision_count, 2L)
+  expect_identical(stopped_result$status, "stopped")
+  expect_identical(
+    stopped_result$stopped_at,
+    "supplier-knowledge"
+  )
+  expect_length(stopped_result$ingests, 0L)
+  expect_identical(stopped_result$assessment_count, 1L)
+  expect_identical(stopped_result$decision_count, 1L)
+  expect_identical(
+    tempest::tempest_run_status(stopped_result$review_runs[[1L]]),
+    "awaiting_approval"
+  )
+})
+
 test_that("scheduled signals promote through approval into accepted history", {
   if (!continuous_intelligence_tempest_available()) {
     testthat::skip(

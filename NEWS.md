@@ -1,6 +1,6 @@
 # graft 0.0.0.9000
 
-* A provider-free continuous-intelligence example demonstrates scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
+* A provider-free continuous-intelligence example and staged operator walkthrough demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
 * `kg_batch()` creates stable producer batches, and `kg_ingest()` atomically
   reconciles, validates, and upserts multiple record classes with identifier,
   origin, observation, and replay lineage.

@@ -52,6 +52,40 @@ The example promotion store is process-local and represents a host-owned
 approval boundary. A production host must persist those records and authorize
 who can create them.
 
+## Take the operator's seat
+
+The staged walkthrough presents the same scenario one boundary at a time.
+It pauses after each briefing and requires the operator to type `approve` or
+`promote` before governed work can continue:
+
+```r
+source("inst/examples/continuous-intelligence/walkthrough.R")
+continuous_intelligence_walkthrough <-
+  run_continuous_intelligence_walkthrough()
+```
+
+Stopping at a boundary returns the runs produced so far and does not perform
+the pending write or promotion. The complete result reports `status`,
+`stopped_at`, monitor and review runs, the decision run, the promotion record,
+ingest results, and final record counts.
+
+The default console gate is only a demonstration interface. Applications
+should supply a host-owned gate that authenticates the operator, records the
+decision, and returns one logical value. A noninteractive rehearsal can use a
+callback such as:
+
+```r
+recorded_stages <- character()
+record_gate <- function(stage, action, title, detail) {
+  recorded_stages <<- c(recorded_stages, stage)
+  TRUE
+}
+
+rehearsal <- run_continuous_intelligence_walkthrough(
+  gate = record_gate
+)
+```
+
 ## Layout
 
 - `schema/blue-sky.linkml.yaml` is the application-owned Graft schema.
@@ -63,6 +97,7 @@ who can create them.
 - `R/host.R` is the domain-neutral reference host.
 - `R/blue-sky.R` maps the promoted referral into the application-specific
   decision result and approved Graft records.
+- `walkthrough.R` is the staged operator experience.
 
 ## Reconfigure the loop
 
