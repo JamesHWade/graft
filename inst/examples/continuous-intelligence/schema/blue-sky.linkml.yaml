@@ -1,0 +1,246 @@
+id: https://w3id.org/graft/examples/blue-sky
+name: blue-sky
+title: Blue-Sky continuous intelligence profile
+version: 0.1.0
+prefixes:
+  blue: https://w3id.org/graft/examples/blue-sky/
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: blue
+default_range: string
+imports:
+  - ../../../schema/graft-core.linkml
+
+enums:
+  FindingKind:
+    permissible_values:
+      capability:
+      limitation:
+      status:
+      recommendation:
+  SourceQuality:
+    permissible_values:
+      vendor:
+      independent:
+      internal:
+      unknown:
+  DecisionDisposition:
+    permissible_values:
+      hold:
+      investigate:
+      prototype:
+      proceed:
+  ReviewOutcome:
+    permissible_values:
+      approved:
+      rejected:
+      revised:
+
+slots:
+  name:
+    range: string
+    required: true
+  description:
+    range: string
+  uri:
+    range: uri
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: canonical_url
+  title:
+    range: string
+    required: true
+  content_hash:
+    range: string
+    required: true
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: content_hash
+  published_at:
+    range: datetime
+  source_quality:
+    range: SourceQuality
+    required: true
+  project:
+    range: Project
+  requirement:
+    range: ProjectRequirement
+  technology:
+    range: Technology
+  threshold:
+    range: float
+    minimum_value: 0.000001
+  unit:
+    range: string
+  finding_kind:
+    range: FindingKind
+    required: true
+  extraction_confidence:
+    range: float
+    minimum_value: 0
+    maximum_value: 1
+  test_context:
+    range: string
+  observed_duration:
+    range: float
+    minimum_value: 0.000001
+  duration_unit:
+    range: string
+  observed_torque:
+    range: float
+  torque_unit:
+    range: string
+  disposition:
+    range: DecisionDisposition
+    required: true
+  decision_confidence:
+    range: float
+    minimum_value: 0
+    maximum_value: 1
+  reviewer_role:
+    range: string
+  review_outcome:
+    range: ReviewOutcome
+  workflow_run_id:
+    range: string
+  approval_id:
+    range: string
+  synthesis_method:
+    range: string
+
+classes:
+  Project:
+    is_a: GraftNode
+    slots:
+      - name
+      - description
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "name, description"
+
+  ProjectRequirement:
+    is_a: GraftNode
+    slots:
+      - name
+      - description
+      - project
+      - threshold
+      - unit
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "name, description"
+
+  Technology:
+    is_a: GraftNode
+    slots:
+      - name
+      - description
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "name, description"
+
+  Organization:
+    is_a: GraftNode
+    slots:
+      - name
+      - description
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "name, description"
+
+  Source:
+    is_a: GraftSource
+    slots:
+      - uri
+      - title
+      - content_hash
+      - published_at
+      - source_quality
+    annotations:
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, uri"
+
+  Observation:
+    is_a: GraftNarrativeStatement
+    slots:
+      - finding_kind
+      - source_quality
+      - extraction_confidence
+      - test_context
+      - observed_duration
+      - duration_unit
+      - observed_torque
+      - torque_unit
+    slot_usage:
+      about:
+        required: true
+        multivalued: true
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_text, about"
+
+  Assessment:
+    is_a: GraftNarrativeStatement
+    slots:
+      - disposition
+      - decision_confidence
+    slot_usage:
+      about:
+        required: true
+        multivalued: true
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_text, about"
+
+  ReviewDecision:
+    is_a: GraftNarrativeStatement
+    slots:
+      - disposition
+      - reviewer_role
+      - review_outcome
+      - workflow_run_id
+      - approval_id
+      - synthesis_method
+    slot_usage:
+      about:
+        required: true
+        multivalued: true
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_text, about, asserted_at"
+
+  Evidence:
+    is_a: GraftEvidence
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_id, source_id, locator_type, locator_value"
+
+  Relation:
+    is_a: GraftEdge
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "subject, predicate, object"

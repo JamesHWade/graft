@@ -75,3 +75,35 @@ ellmer tools:
 chat <- ellmer::chat_anthropic()
 chat$set_tools(kg_tools(store))
 ```
+
+## Continuous intelligence example
+
+The installable `continuous-intelligence` example combines Graft with
+Tempest's generic workflow kernel without adding application-specific package
+functions. A frozen three-day corpus drives a passive briefing, an
+approval-gated knowledge handoff, a promoted decision workflow, and a
+no-material-change day:
+
+```r
+example <- system.file(
+  "examples",
+  "continuous-intelligence",
+  package = "graft",
+  mustWork = TRUE
+)
+file.show(file.path(example, "README.md"))
+```
+
+To take the operator's seat:
+
+```r
+source(file.path(example, "walkthrough.R"))
+walkthrough <- run_continuous_intelligence_walkthrough()
+```
+
+The walkthrough pauses at the knowledge, promotion, and decision boundaries
+instead of approving the complete story automatically.
+
+The example keeps scheduling, workflow routing, approval, and writes in the
+host application. A contrasting package-maintainer profile exercises the same
+host contract with different domain configuration.

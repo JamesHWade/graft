@@ -1,0 +1,119 @@
+{
+  "scan_date": "2026-07-15",
+  "status": "decision_trigger",
+  "headline": "Independent testing supports a bounded Project Ember bench test",
+  "summary": "An independent laboratory reproduced sufficient torque in a comparable configuration and identified thermal derating after ten minutes. The evidence changes the prototype question, but does not support deployment.",
+  "checked": [
+    "Independent engineering publications",
+    "The accepted Nova Motion observation",
+    "Project Ember torque and duty-cycle requirements"
+  ],
+  "changes": [
+    "Independent testing measured 105 Nm sustained torque for ten minutes at 24 V.",
+    "The test reports thermal derating beyond ten minutes."
+  ],
+  "unchanged": [
+    "Project Ember requires a twelve-minute representative duty cycle.",
+    "Deployment remains outside the evidence-supported scope."
+  ],
+  "proposals": {
+    "Source": [
+      {
+        "id": "graft:00000000000000000000000117",
+        "uri": "https://example.org/robotics-lab/nova-actuator-test",
+        "title": "Independent evaluation of the Nova compact actuator",
+        "content_hash": "sha256:independent-test-v1",
+        "published_at": "2026-07-15T08:30:00Z",
+        "source_quality": "independent"
+      }
+    ],
+    "Observation": [
+      {
+        "id": "graft:00000000000000000000000118",
+        "statement_text": "Independent testing measured 105 Nm sustained torque for ten minutes at 24 V.",
+        "primary_subject": "graft:00000000000000000000000104",
+        "about": [
+          "graft:00000000000000000000000104",
+          "graft:00000000000000000000000102",
+          "graft:00000000000000000000000103"
+        ],
+        "finding_kind": "capability",
+        "source_quality": "independent",
+        "extraction_confidence": 0.96,
+        "test_context": "Laboratory bench test at 24 V and 22 C ambient for ten minutes.",
+        "observed_duration": 10,
+        "duration_unit": "min",
+        "observed_torque": 105,
+        "torque_unit": "Nm",
+        "polarity": "positive",
+        "confidence": 0.9,
+        "status": "active",
+        "asserted_at": "2026-07-15T08:30:00Z"
+      },
+      {
+        "id": "graft:00000000000000000000000119",
+        "statement_text": "The actuator required thermal derating after ten minutes in the independent test.",
+        "primary_subject": "graft:00000000000000000000000104",
+        "about": [
+          "graft:00000000000000000000000104",
+          "graft:00000000000000000000000103"
+        ],
+        "finding_kind": "limitation",
+        "source_quality": "independent",
+        "extraction_confidence": 0.97,
+        "test_context": "Laboratory bench test at 24 V and 22 C ambient; derating began after ten minutes.",
+        "observed_duration": 10,
+        "duration_unit": "min",
+        "polarity": "negative",
+        "confidence": 0.92,
+        "status": "active",
+        "asserted_at": "2026-07-15T08:30:00Z"
+      }
+    ],
+    "Evidence": [
+      {
+        "id": "graft:00000000000000000000000120",
+        "statement_id": "graft:00000000000000000000000118",
+        "source_id": "graft:00000000000000000000000117",
+        "support_type": "supports",
+        "locator_type": "other",
+        "locator_value": "table 2",
+        "excerpt": "At 24 V, sustained torque was 105 Nm through minute ten.",
+        "source_content_hash": "sha256:independent-test-v1",
+        "extraction_method": "frozen-demo-corpus",
+        "extraction_version": "1"
+      },
+      {
+        "id": "graft:00000000000000000000000121",
+        "statement_id": "graft:00000000000000000000000119",
+        "source_id": "graft:00000000000000000000000117",
+        "support_type": "supports",
+        "locator_type": "section",
+        "locator_value": "Thermal behavior",
+        "excerpt": "Thermal protection reduced output after ten minutes of continuous operation.",
+        "source_content_hash": "sha256:independent-test-v1",
+        "extraction_method": "frozen-demo-corpus",
+        "extraction_version": "1"
+      }
+    ]
+  },
+  "referrals": [
+    {
+      "referral_id": "blue-sky:referral:prototype-gate:2026-07-15",
+      "workflow_id": "blue-sky.prototype-gate",
+      "objective": "Reassess whether Project Ember should authorize a bounded actuator bench test.",
+      "reason": "Independent evidence now supports the torque requirement while exposing a duty-cycle limitation.",
+      "priority": "high",
+      "context_record_ids": [
+        "graft:00000000000000000000000101",
+        "graft:00000000000000000000000102",
+        "graft:00000000000000000000000103",
+        "graft:00000000000000000000000104"
+      ],
+      "evidence_record_ids": [
+        "graft:00000000000000000000000120",
+        "graft:00000000000000000000000121"
+      ]
+    }
+  ]
+}

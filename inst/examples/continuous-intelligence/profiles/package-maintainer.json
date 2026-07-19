@@ -1,0 +1,39 @@
+{
+  "profile_id": "package-maintainer",
+  "version": "1",
+  "title": "Package Maintainer Brief",
+  "audience": "Maintainer of a public R package",
+  "cadence": "daily",
+  "briefing_sections": [
+    {
+      "field": "changes",
+      "title": "Build health and dependency movement"
+    },
+    {
+      "field": "unchanged",
+      "title": "Release posture unchanged"
+    },
+    {
+      "field": "referrals",
+      "title": "Issues requiring attention"
+    },
+    {
+      "field": "proposals",
+      "title": "Review queue"
+    }
+  ],
+  "monitor_scope": {
+    "record_ids": [
+      "package:current-release",
+      "package:ci-main",
+      "package:dependency-watchlist"
+    ]
+  },
+  "routing_policy": {
+    "allowed_workflow_ids": [
+      "package.release-review",
+      "package.ci-investigation"
+    ],
+    "human_promotion_required": true
+  }
+}

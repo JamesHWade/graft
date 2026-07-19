@@ -1,0 +1,39 @@
+{
+  "profile_id": "blue-sky",
+  "version": "1",
+  "title": "The Blue-Sky Brief",
+  "audience": "Technology executive for a themed-experience organization",
+  "cadence": "daily",
+  "briefing_sections": [
+    {
+      "field": "changes",
+      "title": "What changed"
+    },
+    {
+      "field": "unchanged",
+      "title": "What remains true"
+    },
+    {
+      "field": "referrals",
+      "title": "Decisions approaching"
+    },
+    {
+      "field": "proposals",
+      "title": "Review queue"
+    }
+  ],
+  "monitor_scope": {
+    "record_ids": [
+      "graft:00000000000000000000000101",
+      "graft:00000000000000000000000102",
+      "graft:00000000000000000000000103",
+      "graft:00000000000000000000000104"
+    ]
+  },
+  "routing_policy": {
+    "allowed_workflow_ids": [
+      "blue-sky.prototype-gate"
+    ],
+    "human_promotion_required": true
+  }
+}
