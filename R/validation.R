@@ -952,12 +952,28 @@ validate_reference_target <- function(
   expected
 ) {
   expected_contract <- store$schema$manifest$classes[[expected]]
-  expected_id_format <- if (is.null(expected_contract)) {
-    "graft"
+  expected_id_formats <- if (is.null(expected_contract)) {
+    unique(unlist(
+      lapply(
+        store$schema$manifest$classes,
+        function(contract) {
+          if (!expected %in% empty_character(contract$ancestors)) {
+            return(NULL)
+          }
+          scalar_character(contract$id_format, "graft")
+        }
+      ),
+      use.names = FALSE
+    ))
   } else {
     scalar_character(expected_contract$id_format, "graft")
   }
-  invalid_id <- if (identical(expected_id_format, "linkml")) {
+  expected_id_format <- if (length(expected_id_formats) == 1L) {
+    expected_id_formats[[1L]]
+  } else {
+    "mixed"
+  }
+  invalid_id <- if (!identical(expected_id_format, "graft")) {
     !is.character(target) ||
       length(target) != 1L ||
       is.na(target) ||
@@ -968,6 +984,8 @@ validate_reference_target <- function(
   if (invalid_id) {
     id_description <- if (identical(expected_id_format, "linkml")) {
       "a non-empty LinkML identifier"
+    } else if (identical(expected_id_format, "mixed")) {
+      "a non-empty identifier"
     } else {
       "an internal graft ID"
     }

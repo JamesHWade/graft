@@ -14,11 +14,11 @@ tempest_manifest_path <- function() {
   )
 }
 
-plain_linkml_schema_path <- function() {
+plain_linkml_schema_path <- function(name = "personinfo.linkml.yaml") {
   test_path(
     "fixtures",
     "plain-linkml",
-    "personinfo.linkml.yaml"
+    name
   )
 }
 

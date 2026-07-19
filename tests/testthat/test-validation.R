@@ -31,6 +31,36 @@ test_that("references resolve across staged and existing records", {
   expect_identical(existing$inserted[["Claim"]], 1L)
 })
 
+test_that("abstract LinkML reference ranges use descendant ID formats", {
+  skip_if_no_linkml_runtime()
+  schema <- kg_compile_schema(
+    plain_linkml_schema_path("abstract-reference.linkml.yaml"),
+    withr::local_tempfile(fileext = ".graft.json")
+  )
+  store <- kg_connect_duckdb(schema, ":memory:")
+  withr::defer(kg_disconnect(store))
+  kg_init(store)
+
+  result <- kg_ingest(
+    store,
+    kg_batch("abstract-reference", idempotency_key = "activity-v1"),
+    list(
+      Person = data.frame(id = "person:ada", name = "Ada"),
+      Activity = data.frame(
+        id = "activity:review",
+        name = "Schema review",
+        participants = I(list("person:ada"))
+      )
+    )
+  )
+
+  expect_identical(sum(result$inserted), 2L)
+  expect_identical(
+    kg_get(store, "activity:review")$record$participants,
+    "person:ada"
+  )
+})
+
 test_that("wrong and missing reference targets are classed", {
   store <- local_ingest_store()
   records <- valid_atomic_records()
@@ -45,6 +75,20 @@ test_that("wrong and missing reference targets are classed", {
   )
   expect_s3_class(wrong, "graft_reference_error")
   expect_identical(wrong$rule, "reference_class")
+
+  invalid_id <- catch_graft_ingest_condition(
+    kg_write(
+      store,
+      kg_batch("tempest", idempotency_key = "invalid-reference-id"),
+      "Claim",
+      data.frame(
+        statement_text = "Invalid reference ID",
+        about = I(list("person:ada"))
+      )
+    )
+  )
+  expect_s3_class(invalid_id, "graft_reference_error")
+  expect_identical(invalid_id$rule, "internal_reference_id")
 
   missing <- catch_graft_ingest_condition(
     kg_write(
