@@ -1,70 +1,93 @@
 # graft
 
-graft is a table-native knowledge layer for R. It compiles a LinkML
-semantic contract into a portable JSON manifest that describes concrete
-record classes, relational tables, identity policies, validation
-invariants, and graph projections.
+Table-native knowledge for R
 
-Python and `linkml-runtime` are required only to compile a schema.
-Loading and inspecting a committed manifest is pure R/JSON. The manifest
-drives DuckDB storage, validation, identity, retrieval, and graph
-projections:
+## Keep knowledge connected to its evidence.
+
+graft turns a LinkML contract into a portable DuckDB knowledge layer
+where records, claims, identity, and citations remain inspectable from R
+and model-assisted workflows.
+
+[Get
+started](https://jameshwade.github.io/graft/articles/getting-started.md)
+[View on GitHub](https://github.com/JamesHWade/graft)
+
+LinkML contract DuckDB runtime Evidence-backed claims Bounded retrieval
+
+## Why graft?
+
+Research and agentic systems rarely need only another table. They need
+to know whether two observations refer to the same thing, which source
+supports a claim, what changed between runs, and whether a query stayed
+inside the active semantic contract.
+
+01
+
+### Contract first
+
+Compile a LinkML domain schema into a portable, fingerprinted manifest
+that drives tables, validation, identity, and graph projections.
+
+02
+
+### Evidence stays attached
+
+Keep narrative and semantic claims distinct, then connect them to exact
+stored sources, locators, excerpts, and support relationships.
+
+03
+
+### Retrieval stays bounded
+
+Give analysts and language models structured access without arbitrary
+SQL or silent unbounded collection.
+
+## From schema to answer
+
+01 **Model the domain** Extend graft’s core LinkML record roles.
+
+02 **Compile the contract** Commit the resolved `.graft.json` manifest.
+
+03 **Ingest atomically** Reconcile identity and preserve batch
+provenance.
+
+04 **Retrieve safely** Use lazy tables, bounded APIs, graphs, or ellmer
+tools.
+
+## A familiar R workflow
 
 ``` r
 
 library(graft)
 
-schema <- kg_schema("tempest-artifacts.graft.json")
+schema <- kg_schema("materials.graft.json")
 store <- kg_connect_duckdb(schema, "knowledge.duckdb")
 kg_init(store)
 
-kg_classes(schema)
-kg_slots(schema, "Claim")
-
-matches <- kg_find(store, "LLDPE crystallinity", class = "Entity")
+matches <- kg_find(store, "LLDPE crystallinity", limit = 10)
 record <- kg_get(store, matches$id[[1]])
-graph <- kg_neighbors(
-  store,
-  record$id,
-  projection = "combined",
-  hops = 2
-)
+claims <- kg_claims(store, record$id)
 ```
 
-All collected retrieval and graph operations are bounded and report
-truncation. For model-assisted retrieval,
-[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-exposes six read-only structured tools over the same bounded APIs:
+The manifest is compiled once. Loading it, managing DuckDB, and
+retrieving knowledge run entirely in R.
 
-``` r
+### For R users
 
-chat <- ellmer::chat_anthropic()
-chat$set_tools(kg_tools(store))
-```
+Work with DBI and lazy dbplyr tables, exact identifier lookup, hydrated
+records, stored citations, and bounded graph neighborhoods.
 
-## Tempest integration
+### For model-assisted workflows
 
-Tempest domain objects are mapped to concrete Graft record data frames
-before handoff.
-[`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-commits those records atomically and uses the run ID, or
-`<run_id>:<stage>`, as the idempotency boundary:
+Expose six read-only ellmer tools over the same manifest-controlled
+APIs, with limits, truncation state, and schema digests in every result.
 
-``` r
+## Build the first complete workflow
 
-result <- kg_ingest_tempest_records(
-  store,
-  run_id = "tempest-run-42",
-  records = mapped_records,
-  stage = "search"
-)
-```
+The getting-started guide follows a material from its schema through
+identity resolution, a source-backed claim, and bounded retrieval.
 
-Typed Tempest deliverable persistence is not currently available.
-Tempest’s artifact-store write callback supplies a `TempestArtifact`
-without the `TempestDeliverableSpec` needed for validated
-reconstruction, and Tempest does not yet export a complete durable
-envelope/restore contract.
-[`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
-therefore fails with an actionable classed condition instead of storing
-an opaque R serialization or claiming that typed persistence works.
+[Read the
+guide](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Browse the
+reference](https://jameshwade.github.io/graft/reference/index.md)

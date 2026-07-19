@@ -6,6 +6,9 @@
 
 ## Citation
 
+Source:
+[`DESCRIPTION`](https://github.com/JamesHWade/graft/blob/main/DESCRIPTION)
+
 James (2026). *graft: A Table-Native Knowledge Layer*. R package version
 0.0.0.9000, <https://jameshwade.github.io/graft/>.
 

@@ -2,6 +2,9 @@
 
 ## Schema
 
+Compile, load, compare, and inspect the semantic contract that drives a
+graft store.
+
 - [`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md)
   : Compile a LinkML schema into a graft manifest
 - [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md)
@@ -19,6 +22,9 @@
 
 ## Store lifecycle
 
+Create and inspect ownership-aware DuckDB stores protected by structural
+schema fingerprints.
+
 - [`kg_connect_duckdb()`](https://jameshwade.github.io/graft/reference/kg_connect_duckdb.md)
   : Connect to a DuckDB knowledge store
 - [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
@@ -32,6 +38,9 @@
 
 ## Ingestion and validation
 
+Validate and atomically reconcile typed records with batch provenance
+and idempotent replay.
+
 - [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
   : Describe one atomic ingestion batch
 - [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
@@ -44,6 +53,9 @@
   : Validate records without writing them
 
 ## Records and identity
+
+Retrieve lazy class tables, hydrate records, and resolve exact external
+identifiers.
 
 - [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
   : Read records from one concrete class
@@ -60,6 +72,9 @@
 
 ## Claims and evidence
 
+Inspect narrative and semantic assertions together with their stored
+supporting or challenging evidence.
+
 - [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md)
   : Retrieve narrative and semantic claims about an entity
 - [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md)
@@ -68,6 +83,9 @@
   : Group candidate competing claims
 
 ## Graph projections
+
+Traverse deterministic, bounded semantic and provenance projections over
+the relational store.
 
 - [`kg_nodes()`](https://jameshwade.github.io/graft/reference/kg_nodes.md)
   : Access the graph node projection
@@ -82,6 +100,9 @@
 
 ## Structured access
 
+Describe the active knowledge contract and expose validated, bounded
+access to applications and language models.
+
 - [`kg_context()`](https://jameshwade.github.io/graft/reference/kg_context.md)
   : Describe the active knowledge contract
 - [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -89,7 +110,10 @@
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   : Create bounded ellmer tools for a graft store
 
-## Tempest artifact integration
+## Tempest integration
+
+Connect mapped Tempest domain records while preserving the current typed
+artifact-store boundary.
 
 - [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
   : Create a Graft-backed Tempest artifact-store adapter

@@ -5,24 +5,28 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>A Table-Native Knowledge Layer • graft</title>
-<script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>graft: Evidence-backed knowledge for R • graft</title>
+<script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/Source_Sans_3-0.4.10/font.css" rel="stylesheet">
+<link href="deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
+<link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="A Table-Native Knowledge Layer">
-<meta name="description" content="Compiles LinkML schemas into portable relational manifests for typed, citation-backed knowledge records. Runtime schema inspection is implemented entirely in R; Python is used only during schema compilation.">
-<meta property="og:description" content="Compiles LinkML schemas into portable relational manifests for typed, citation-backed knowledge records. Runtime schema inspection is implemented entirely in R; Python is used only during schema compilation.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Evidence-backed knowledge for R">
+<meta name="description" content="A table-native R knowledge layer that compiles LinkML contracts into portable DuckDB stores for typed records, claims, citations, identity, graph projections, and bounded model-assisted retrieval.
+">
+<meta property="og:description" content="A table-native R knowledge layer that compiles LinkML contracts into portable DuckDB stores for typed records, claims, citations, identity, graph projections, and bounded model-assisted retrieval.
+">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top " aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="index.html">graft</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-warning me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +35,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
@@ -38,6 +43,15 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/graft/" aria-label="View graft on GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch">
+<li><button class="dropdown-item" data-bs-theme-value="light"><span class="fa fa-sun"></span> Light</button></li>
+    <li><button class="dropdown-item" data-bs-theme-value="dark"><span class="fa fa-moon"></span> Dark</button></li>
+    <li><button class="dropdown-item" data-bs-theme-value="auto"><span class="fa fa-adjust"></span> Auto</button></li>
+  </ul>
+</li>
       </ul>
 </div>
 
@@ -48,60 +62,142 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="graft">graft<a class="anchor" aria-label="anchor" href="#graft"></a>
 </h1></div>
-<!-- badges: start -->
-
-<p>graft is a table-native knowledge layer for R. It compiles a LinkML semantic contract into a portable JSON manifest that describes concrete record classes, relational tables, identity policies, validation invariants, and graph projections.</p>
-<p>Python and <code>linkml-runtime</code> are required only to compile a schema. Loading and inspecting a committed manifest is pure R/JSON. The manifest drives DuckDB storage, validation, identity, retrieval, and graph projections:</p>
+<div class="graft-hero">
+<p class="graft-eyebrow">
+Table-native knowledge for R
+</p>
+<h2 data-toc-skip>
+Keep knowledge connected to its evidence.
+</h2>
+<p class="graft-hero-copy">
+graft turns a LinkML contract into a portable DuckDB knowledge layer where records, claims, identity, and citations remain inspectable from R and model-assisted workflows.
+</p>
+<div class="graft-actions">
+<p><a class="btn btn-primary" href="articles/getting-started.html">Get started</a> <a class="external-link btn btn-outline-secondary" href="https://github.com/JamesHWade/graft"> View on GitHub </a></p>
+</div>
+<div class="graft-tags" aria-label="Core package characteristics">
+<p><span class="graft-tag">LinkML contract</span> <span class="graft-tag">DuckDB runtime</span> <span class="graft-tag">Evidence-backed claims</span> <span class="graft-tag">Bounded retrieval</span></p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="why-graft">Why graft?<a class="anchor" aria-label="anchor" href="#why-graft"></a>
+</h2>
+<p class="graft-section-lead">
+Research and agentic systems rarely need only another table. They need to know whether two observations refer to the same thing, which source supports a claim, what changed between runs, and whether a query stayed inside the active semantic contract.
+</p>
+<div class="graft-card-grid">
+<div class="graft-card">
+<div class="graft-card-mark" aria-hidden="true">
+01
+</div>
+<h3>
+Contract first
+</h3>
+<p>
+Compile a LinkML domain schema into a portable, fingerprinted manifest that drives tables, validation, identity, and graph projections.
+</p>
+</div>
+<div class="graft-card">
+<div class="graft-card-mark" aria-hidden="true">
+02
+</div>
+<h3>
+Evidence stays attached
+</h3>
+<p>
+Keep narrative and semantic claims distinct, then connect them to exact stored sources, locators, excerpts, and support relationships.
+</p>
+</div>
+<div class="graft-card">
+<div class="graft-card-mark" aria-hidden="true">
+03
+</div>
+<h3>
+Retrieval stays bounded
+</h3>
+<p>
+Give analysts and language models structured access without arbitrary SQL or silent unbounded collection.
+</p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="from-schema-to-answer">From schema to answer<a class="anchor" aria-label="anchor" href="#from-schema-to-answer"></a>
+</h2>
+<div class="graft-flow" aria-label="The four-stage graft workflow">
+<div class="graft-flow-step">
+<p><span class="graft-flow-number">01</span> <strong>Model the domain</strong> <span>Extend graft’s core LinkML record roles.</span></p>
+</div>
+<div class="graft-flow-step">
+<p><span class="graft-flow-number">02</span> <strong>Compile the contract</strong> <span>Commit the resolved <code>.graft.json</code> manifest.</span></p>
+</div>
+<div class="graft-flow-step">
+<p><span class="graft-flow-number">03</span> <strong>Ingest atomically</strong> <span>Reconcile identity and preserve batch provenance.</span></p>
+</div>
+<div class="graft-flow-step">
+<p><span class="graft-flow-number">04</span> <strong>Retrieve safely</strong> <span>Use lazy tables, bounded APIs, graphs, or ellmer tools.</span></p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="a-familiar-r-workflow">A familiar R workflow<a class="anchor" aria-label="anchor" href="#a-familiar-r-workflow"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_schema.html">kg_schema</a></span><span class="op">(</span><span class="st">"tempest-artifacts.graft.json"</span><span class="op">)</span></span>
+<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_schema.html">kg_schema</a></span><span class="op">(</span><span class="st">"materials.graft.json"</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_connect_duckdb.html">kg_connect_duckdb</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">"knowledge.duckdb"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/kg_init.html">kg_init</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/kg_classes.html">kg_classes</a></span><span class="op">(</span><span class="va">schema</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/kg_slots.html">kg_slots</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">"Claim"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">matches</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_find.html">kg_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"LLDPE crystallinity"</span>, class <span class="op">=</span> <span class="st">"Entity"</span><span class="op">)</span></span>
+<span><span class="va">matches</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_find.html">kg_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"LLDPE crystallinity"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="va">record</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_get.html">kg_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">matches</span><span class="op">$</span><span class="va">id</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="va">graph</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_neighbors.html">kg_neighbors</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="va">record</span><span class="op">$</span><span class="va">id</span>,</span>
-<span>  projection <span class="op">=</span> <span class="st">"combined"</span>,</span>
-<span>  hops <span class="op">=</span> <span class="fl">2</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>All collected retrieval and graph operations are bounded and report truncation. For model-assisted retrieval, <code><a href="reference/kg_tools.html">kg_tools()</a></code> exposes six read-only structured tools over the same bounded APIs:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">chat</span><span class="op">$</span><span class="fu">set_tools</span><span class="op">(</span><span class="fu"><a href="reference/kg_tools.html">kg_tools</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="tempest-integration">Tempest integration<a class="anchor" aria-label="anchor" href="#tempest-integration"></a>
+<span><span class="va">claims</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_claims.html">kg_claims</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">record</span><span class="op">$</span><span class="va">id</span><span class="op">)</span></span></code></pre></div>
+<p>The manifest is compiled once. Loading it, managing DuckDB, and retrieving knowledge run entirely in R.</p>
+<div class="graft-audience-grid">
+<div class="graft-audience">
+<h3>
+For R users
+</h3>
+<p>
+Work with DBI and lazy dbplyr tables, exact identifier lookup, hydrated records, stored citations, and bounded graph neighborhoods.
+</p>
+</div>
+<div class="graft-audience">
+<h3>
+For model-assisted workflows
+</h3>
+<p>
+Expose six read-only ellmer tools over the same manifest-controlled APIs, with limits, truncation state, and schema digests in every result.
+</p>
+</div>
+</div>
+<div class="graft-cta">
+<h2 data-toc-skip>
+Build the first complete workflow
 </h2>
-<p>Tempest domain objects are mapped to concrete Graft record data frames before handoff. <code><a href="reference/kg_ingest_tempest_records.html">kg_ingest_tempest_records()</a></code> commits those records atomically and uses the run ID, or <code>&lt;run_id&gt;:&lt;stage&gt;</code>, as the idempotency boundary:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/kg_ingest_tempest_records.html">kg_ingest_tempest_records</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  run_id <span class="op">=</span> <span class="st">"tempest-run-42"</span>,</span>
-<span>  records <span class="op">=</span> <span class="va">mapped_records</span>,</span>
-<span>  stage <span class="op">=</span> <span class="st">"search"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Typed Tempest deliverable persistence is not currently available. Tempest’s artifact-store write callback supplies a <code>TempestArtifact</code> without the <code>TempestDeliverableSpec</code> needed for validated reconstruction, and Tempest does not yet export a complete durable envelope/restore contract. <code><a href="reference/tempest_artifact_store_graft.html">tempest_artifact_store_graft()</a></code> therefore fails with an actionable classed condition instead of storing an opaque R serialization or claiming that typed persistence works.</p>
+<p>
+The getting-started guide follows a material from its schema through identity resolution, a source-backed claim, and bounded retrieval.
+</p>
+<div class="graft-actions justify-content-center">
+<p><a class="btn btn-primary" href="articles/getting-started.html"> Read the guide </a> <a class="btn btn-outline-secondary" href="reference/index.html"> Browse the reference </a></p>
 </div>
 </div>
-  </main><aside class="col-md-3"><div class="license">
+</div>
+</div>
+  </main><aside class="col-md-3"><div class="links">
+<h2 data-toc-skip>Links</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/JamesHWade/graft/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/JamesHWade/graft/issues" class="external-link">Report a bug</a></li>
+</ul>
+</div>
+
+<div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
 <li>
 <a href="https://opensource.org/licenses/mit-license.php" class="external-link">MIT</a> + file <a href="LICENSE-text.html">LICENSE</a>
 </li>
-</ul>
-</div>
-
-
-<div class="citation">
-<h2 data-toc-skip>Citation</h2>
-<ul class="list-unstyled">
-<li><a href="authors.html#citation">Citing graft</a></li>
 </ul>
 </div>
 
@@ -112,13 +208,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://app.codecov.io/gh/JamesHWade/graft" class="external-link"><img src="https://codecov.io/gh/JamesHWade/graft/graph/badge.svg" alt="Codecov test coverage"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>
@@ -129,7 +219,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
+  <p>Source and issues are available on <a href="https://github.com/JamesHWade/graft" class="external-link">GitHub</a>. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
