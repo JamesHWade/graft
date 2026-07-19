@@ -328,7 +328,7 @@ ci_proposal_count <- function(proposals) {
   if (length(proposals) == 0L) {
     return(0L)
   }
-  as.integer(sum(vapply(proposals, length, integer(1))))
+  as.integer(sum(lengths(proposals)))
 }
 
 ci_iso_time <- function(x) {
