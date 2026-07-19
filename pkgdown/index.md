@@ -1,134 +1,142 @@
 # graft
 
 <div class="graft-hero">
-<p class="graft-eyebrow">Table-native knowledge for R</p>
-<h2 data-toc-skip>Keep knowledge connected to its evidence.</h2>
+<p class="graft-eyebrow">An R package for LinkML and DuckDB</p>
+<h2 data-toc-skip>Schema-defined knowledge in DuckDB.</h2>
 <p class="graft-hero-copy">
-    graft turns a LinkML contract into a portable DuckDB knowledge layer where
-    records, claims, identity, and citations remain inspectable from R and
-    model-assisted workflows.
+    graft compiles a LinkML schema into a JSON manifest. The manifest defines
+    records, tables, identifiers, validation rules, and graph projections.
+    graft uses it to create and query a DuckDB database from R.
 </p>
 <div class="graft-actions">
 <a class="btn btn-primary" href="articles/getting-started.html">Get started</a>
 <a class="btn btn-outline-secondary" href="https://github.com/JamesHWade/graft">
-      View on GitHub
+      View source
 </a>
 </div>
 <div class="graft-tags" aria-label="Core package characteristics">
-<span class="graft-tag">LinkML contract</span>
-<span class="graft-tag">DuckDB runtime</span>
-<span class="graft-tag">Evidence-backed claims</span>
-<span class="graft-tag">Bounded retrieval</span>
+<span class="graft-tag">LinkML schemas</span>
+<span class="graft-tag">DuckDB storage</span>
+<span class="graft-tag">DBI and dbplyr</span>
+<span class="graft-tag">Optional ellmer tools</span>
 </div>
 </div>
 
-## Why graft?
+## What graft adds
 
 <p class="graft-section-lead">
-Research and agentic systems rarely need only another table. They need to know
-whether two observations refer to the same thing, which source supports a
-claim, what changed between runs, and whether a query stayed inside the active
-semantic contract.
+A database schema describes columns and types. It does not usually say which
+fields identify the same record across runs, how a claim relates to its
+evidence, or which relationships belong in a graph. graft records those
+decisions in a LinkML schema and applies them when data are written and read.
 </p>
 
 <div class="graft-card-grid">
 <div class="graft-card">
 <div class="graft-card-mark" aria-hidden="true">01</div>
-<h3>Contract first</h3>
+<h3>Define the domain</h3>
 <p>
-      Compile a LinkML domain schema into a portable, fingerprinted manifest
-      that drives tables, validation, identity, and graph projections.
+      Describe materials, sources, claims, evidence, or other project-specific
+      records as LinkML classes.
 </p>
 </div>
 <div class="graft-card">
 <div class="graft-card-mark" aria-hidden="true">02</div>
-<h3>Evidence stays attached</h3>
+<h3>Generate the manifest</h3>
 <p>
-      Keep narrative and semantic claims distinct, then connect them to exact
-      stored sources, locators, excerpts, and support relationships.
+      Resolve the schema once with <code>kg_compile_schema()</code>. Commit the
+      generated <code>.graft.json</code> file with the project.
 </p>
 </div>
 <div class="graft-card">
 <div class="graft-card-mark" aria-hidden="true">03</div>
-<h3>Retrieval stays bounded</h3>
+<h3>Use the store from R</h3>
 <p>
-      Give analysts and language models structured access without arbitrary SQL
-      or silent unbounded collection.
+      Write validated records to DuckDB, query lazy dbplyr tables, and inspect
+      claims, evidence, identifiers, and graph neighborhoods.
 </p>
 </div>
 </div>
 
-## From schema to answer
+## The basic workflow
 
 <div class="graft-flow" aria-label="The four-stage graft workflow">
 <div class="graft-flow-step">
 <span class="graft-flow-number">01</span>
-<strong>Model the domain</strong>
-<span>Extend graft's core LinkML record roles.</span>
+<strong>Write a schema</strong>
+<span>Extend the core LinkML record classes.</span>
 </div>
 <div class="graft-flow-step">
 <span class="graft-flow-number">02</span>
-<strong>Compile the contract</strong>
-<span>Commit the resolved <code>.graft.json</code> manifest.</span>
+<strong>Compile it</strong>
+<span>Create a resolved <code>.graft.json</code> manifest.</span>
 </div>
 <div class="graft-flow-step">
 <span class="graft-flow-number">03</span>
-<strong>Ingest atomically</strong>
-<span>Reconcile identity and preserve batch provenance.</span>
+<strong>Initialize a store</strong>
+<span>Create the declared tables and graph views in DuckDB.</span>
 </div>
 <div class="graft-flow-step">
 <span class="graft-flow-number">04</span>
-<strong>Retrieve safely</strong>
-<span>Use lazy tables, bounded APIs, graphs, or ellmer tools.</span>
+<strong>Read and write records</strong>
+<span>Use dbplyr tables or graft's collected query functions.</span>
 </div>
 </div>
 
-## A familiar R workflow
+## A small example
 
 ```r
 library(graft)
 
-schema <- kg_schema("materials.graft.json")
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+manifest <- system.file(
+  "extdata",
+  "materials.graft.json",
+  package = "graft"
+)
+schema <- kg_schema(manifest)
+store <- kg_connect_duckdb(schema, ":memory:")
 kg_init(store)
 
-matches <- kg_find(store, "LLDPE crystallinity", limit = 10)
-record <- kg_get(store, matches$id[[1]])
-claims <- kg_claims(store, record$id)
+kg_classes(schema)
+kg_slots(schema, "Claim")
 ```
 
-The manifest is compiled once. Loading it, managing DuckDB, and retrieving
-knowledge run entirely in R.
+Python and `linkml-runtime` are needed to compile a schema. Loading a compiled
+manifest and using a store run entirely in R.
+
+## Query interfaces
 
 <div class="graft-audience-grid">
 <div class="graft-audience">
-<h3>For R users</h3>
+<h3>R and dbplyr</h3>
 <p>
-      Work with DBI and lazy dbplyr tables, exact identifier lookup, hydrated
-      records, stored citations, and bounded graph neighborhoods.
+      <code>kg_records()</code> returns a lazy dbplyr table.
+      <code>kg_find()</code>, <code>kg_get()</code>, and the graph helpers
+      return collected results with explicit limits.
 </p>
 </div>
 <div class="graft-audience">
-<h3>For model-assisted workflows</h3>
+<h3>ellmer tools</h3>
 <p>
-      Expose six read-only ellmer tools over the same manifest-controlled APIs,
-      with limits, truncation state, and schema digests in every result.
+      <code>kg_tools()</code> creates six read-only tools for one store. The
+      tools accept structured arguments rather than SQL and report truncation
+      state and the active schema digest.
 </p>
 </div>
 </div>
 
 <div class="graft-cta">
-<h2 data-toc-skip>Build the first complete workflow</h2>
+<h2 data-toc-skip>Next steps</h2>
 <p>
-    The getting-started guide follows a material from its schema through
-    identity resolution, a source-backed claim, and bounded retrieval.
+    The getting-started guide builds a small materials store, then adds records,
+    a claim, a source, and evidence.
 </p>
 <div class="graft-actions justify-content-center">
 <a class="btn btn-primary" href="articles/getting-started.html">
-      Read the guide
+      Read getting started
 </a>
 <a class="btn btn-outline-secondary" href="reference/index.html">
-      Browse the reference
+      Browse functions
 </a>
 </div>
 </div>
