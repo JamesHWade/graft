@@ -68,7 +68,8 @@ run_continuous_intelligence_demo <- function(example_dir) {
     review <- ci_run_knowledge_review(
       monitor,
       monitor_id,
-      review_id
+      review_id,
+      store
     )
     committed <- ci_approve_and_commit(
       review,

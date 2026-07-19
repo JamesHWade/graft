@@ -106,7 +106,8 @@ continuous_intelligence_run_signal_day <- function(
   review <- environment$ci_run_knowledge_review(
     monitor,
     monitor_id,
-    review_id
+    review_id,
+    store
   )
   list(
     monitor_id = monitor_id,

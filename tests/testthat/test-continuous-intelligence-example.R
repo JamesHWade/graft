@@ -122,7 +122,8 @@ test_that("scheduled signals promote through approval into accepted history", {
     environment$ci_run_knowledge_review(
       day_one$monitor,
       "not-the-monitor-run",
-      "blue-sky-review-mismatch"
+      "blue-sky-review-mismatch",
+      store
     ),
     error = identity
   )
@@ -141,6 +142,30 @@ test_that("scheduled signals promote through approval into accepted history", {
       day_one$monitor,
       "monitor-result-json"
     )@run_id
+  )
+  review_target_ids <- vapply(
+    review_content$target_preconditions,
+    `[[`,
+    character(1),
+    "id"
+  )
+  expect_setequal(
+    review_target_ids,
+    c(
+      "graft:00000000000000000000000113",
+      "graft:00000000000000000000000114",
+      "graft:00000000000000000000000115",
+      "graft:00000000000000000000000116"
+    )
+  )
+  expect_setequal(
+    vapply(
+      review_content$target_preconditions,
+      `[[`,
+      character(1),
+      "expected_state"
+    ),
+    "absent"
   )
   mismatched_commit <- tryCatch(
     environment$ci_approve_and_commit(
@@ -163,6 +188,56 @@ test_that("scheduled signals promote through approval into accepted history", {
       "knowledge-change-set-json"
     )@status,
     "awaiting_approval"
+  )
+  conflict_store <- local_continuous_intelligence_store(environment)
+  conflict_day <- continuous_intelligence_run_signal_day(
+    environment,
+    profile,
+    conflict_store,
+    "2026-07-14-conflict",
+    "2026-07-14-supplier.json"
+  )
+  conflicting_source <- tempest::tempest_run_artifact(
+    conflict_day$review,
+    "knowledge-change-set-json"
+  )@content$knowledge_changes$Source[[1L]]
+  conflicting_source$title <- paste(
+    conflicting_source$title,
+    "with a newer accepted revision"
+  )
+  kg_ingest(
+    conflict_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "proposal-target-conflict"
+    ),
+    environment$ci_rows_to_records(
+      list(Source = list(conflicting_source)),
+      conflict_store$schema
+    )
+  )
+  conflict_commit <- tryCatch(
+    environment$ci_approve_and_commit(
+      conflict_day$review,
+      "knowledge-change-set-json",
+      conflict_store,
+      conflict_day$review_id,
+      "This approval must not overwrite newer accepted knowledge."
+    ),
+    error = identity
+  )
+  expect_s3_class(conflict_commit, "error")
+  expect_match(
+    conditionMessage(conflict_commit),
+    "proposal target changed before commit"
+  )
+  expect_match(
+    kg_get(
+      conflict_store,
+      "graft:00000000000000000000000114",
+      include = character()
+    )$record$title,
+    "newer accepted revision"
   )
   mapping_failure <- tryCatch(
     environment$ci_approve_and_commit(

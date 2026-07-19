@@ -156,6 +156,98 @@ ci_require_text <- function(value, field) {
   trimws(value)
 }
 
+ci_knowledge_change_targets <- function(knowledge_changes) {
+  targets <- list()
+  for (record_class in names(knowledge_changes)) {
+    for (record in knowledge_changes[[record_class]]) {
+      targets[[length(targets) + 1L]] <- list(
+        id = ci_require_text(record$id, "knowledge change id"),
+        class = record_class
+      )
+    }
+  }
+  target_ids <- vapply(targets, `[[`, character(1), "id")
+  if (anyDuplicated(target_ids)) {
+    stop("A knowledge change set cannot contain duplicate record targets.")
+  }
+  targets
+}
+
+ci_target_state_preconditions <- function(store, knowledge_changes) {
+  lapply(
+    ci_knowledge_change_targets(knowledge_changes),
+    function(target) {
+      existing <- tryCatch(
+        graft::kg_get(
+          store,
+          target$id,
+          include = character()
+        ),
+        graft_reference_error = function(error) NULL
+      )
+      if (is.null(existing)) {
+        return(list(
+          id = target$id,
+          class = target$class,
+          expected_state = "absent"
+        ))
+      }
+      if (!identical(existing$class, target$class)) {
+        stop(
+          paste0(
+            "Knowledge change target `",
+            target$id,
+            "` already belongs to class `",
+            existing$class,
+            "`."
+          )
+        )
+      }
+      list(
+        id = target$id,
+        class = target$class,
+        expected_state = "present",
+        record_digest = ci_record_digest(existing$record)
+      )
+    }
+  )
+}
+
+ci_validate_target_state_preconditions <- function(store, preconditions) {
+  for (precondition in preconditions) {
+    current <- tryCatch(
+      graft::kg_get(
+        store,
+        precondition$id,
+        include = character()
+      ),
+      graft_reference_error = function(error) NULL
+    )
+    valid <- if (identical(precondition$expected_state, "absent")) {
+      is.null(current)
+    } else if (identical(precondition$expected_state, "present")) {
+      !is.null(current) &&
+        identical(current$class, precondition$class) &&
+        identical(
+          ci_record_digest(current$record),
+          precondition$record_digest
+        )
+    } else {
+      FALSE
+    }
+    if (!valid) {
+      stop(
+        paste0(
+          "Target-state precondition failed for `",
+          precondition$id,
+          "`; the proposal target changed before commit."
+        )
+      )
+    }
+  }
+  invisible(TRUE)
+}
+
 ci_promotion_store <- function() {
   store <- new.env(parent = emptyenv())
   store$records <- list()
@@ -740,7 +832,8 @@ ci_review_spec <- function() {
       "profile_id",
       "scan_date",
       "source_monitor_run_id",
-      "knowledge_changes"
+      "knowledge_changes",
+      "target_preconditions"
     ),
     "example.ci.renderer.json",
     "knowledge-change-set",
@@ -759,6 +852,7 @@ ci_review_registry <- function() {
     implementation = function(
       monitor_content,
       source_monitor_run_id,
+      knowledge_store,
       deliverable,
       artifact_catalog,
       run_id,
@@ -770,7 +864,11 @@ ci_review_registry <- function() {
         profile_id = monitor_content$profile_id,
         scan_date = monitor_content$scan_date,
         source_monitor_run_id = source_monitor_run_id,
-        knowledge_changes = monitor_content$proposals
+        knowledge_changes = monitor_content$proposals,
+        target_preconditions = ci_target_state_preconditions(
+          knowledge_store,
+          monitor_content$proposals
+        )
       )
       ci_generate(
         deliverable,
@@ -790,7 +888,8 @@ ci_review_registry <- function() {
 ci_run_knowledge_review <- function(
   monitor_run,
   source_monitor_run_id,
-  run_id
+  run_id,
+  store
 ) {
   monitor_artifact <- tempest::tempest_run_artifact(
     monitor_run,
@@ -843,6 +942,7 @@ ci_run_knowledge_review <- function(
     runtime_context = list(
       monitor_content = monitor,
       source_monitor_run_id = source_monitor_run_id,
+      knowledge_store = store,
       deliverable = deliverable
     ),
     run_id = run_id
@@ -1003,6 +1103,10 @@ ci_run_referral <- function(
 }
 
 ci_default_record_mapper <- function(content, approval, store) {
+  ci_validate_target_state_preconditions(
+    store,
+    content$target_preconditions
+  )
   ci_rows_to_records(content$knowledge_changes, store$schema)
 }
 
