@@ -27,6 +27,32 @@ blue_sky_result_builder <- function(
     accepted_context$claims,
     accepted_ids
   )
+  accepted_record_ids <- vapply(
+    accepted_context$records,
+    `[[`,
+    character(1),
+    "id"
+  )
+  accepted_records <- stats::setNames(
+    accepted_context$records,
+    accepted_record_ids
+  )
+  torque_requirement <- accepted_records[[
+    "graft:00000000000000000000000102"
+  ]]
+  duty_requirement <- accepted_records[[
+    "graft:00000000000000000000000103"
+  ]]
+  if (
+    !identical(torque_requirement$class, "ProjectRequirement") ||
+      !identical(duty_requirement$class, "ProjectRequirement")
+  ) {
+    stop("The Project Ember requirements are not accepted records.")
+  }
+  torque_threshold <- as.numeric(torque_requirement$record$threshold)
+  torque_unit <- as.character(torque_requirement$record$unit)
+  duty_threshold <- as.numeric(duty_requirement$record$threshold)
+  duty_unit <- as.character(duty_requirement$record$unit)
   prior_assessment <- accepted_claims[[
     "graft:00000000000000000000000106"
   ]]
@@ -95,6 +121,10 @@ blue_sky_result_builder <- function(
   )])
   knowledge_preconditions <- c(
     lapply(
+      list(torque_requirement, duty_requirement),
+      ci_record_precondition
+    ),
+    lapply(
       relied_claims,
       ci_record_precondition,
       expected_status = "active"
@@ -107,8 +137,10 @@ blue_sky_result_builder <- function(
   list(
     workflow_id = referral$workflow_id,
     decision = paste(
-      "Should Project Ember authorize a bounded bench test of the Nova",
-      "compact actuator?"
+      "Should Project Ember authorize a bounded",
+      duty_threshold,
+      duty_unit,
+      "bench test of the Nova compact actuator?"
     ),
     prior_position = paste(
       "Hold the prototype gate until comparable independent evidence",
@@ -136,8 +168,13 @@ blue_sky_result_builder <- function(
       )
     ),
     recommendation = paste(
-      "Authorize a bounded twelve-minute bench test under Project Ember's",
-      "representative load and thermal conditions."
+      "Authorize a bounded",
+      duty_threshold,
+      duty_unit,
+      "bench test that must sustain at least",
+      torque_threshold,
+      torque_unit,
+      "under Project Ember's representative thermal conditions."
     ),
     uncertainty = paste(
       "Independent evidence stops at ten minutes; thermal behavior during",
@@ -255,13 +292,7 @@ blue_sky_decision_record_mapper <- function(content, approval, store) {
         ci_record_digest(current$record),
         precondition$record_digest
       )
-    replay <- identical(current$class, precondition$class) &&
-      identical(current$record$status, "superseded") &&
-      identical(
-        current$record$superseded_by,
-        precondition$superseded_by
-      )
-    if (!first_commit && !replay) {
+    if (!first_commit) {
       stop(
         paste0(
           "Supersession precondition failed for `",
@@ -269,9 +300,6 @@ blue_sky_decision_record_mapper <- function(content, approval, store) {
           "`; the accepted decision changed before commit."
         )
       )
-    }
-    if (replay) {
-      next
     }
     superseded <- ci_plain_record(current$record)
     superseded$status <- "superseded"

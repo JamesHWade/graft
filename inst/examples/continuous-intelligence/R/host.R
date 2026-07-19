@@ -242,6 +242,7 @@ ci_accepted_context <- function(store, record_ids) {
 
   records <- lapply(hydrated, function(record) {
     values <- record$record
+    record_snapshot <- ci_plain_record(values)
     display <- values$name
     if (is.null(display) || is.na(display)) {
       display <- values$title
@@ -256,7 +257,9 @@ ci_accepted_context <- function(store, record_ids) {
         record$id
       } else {
         display
-      }
+      },
+      record = record_snapshot,
+      record_digest = ci_record_digest(record_snapshot)
     )
   })
 
@@ -990,6 +993,20 @@ ci_artifact_ingest_stage <- function(artifact_id) {
   paste0("approved-artifact:", artifact_id)
 }
 
+ci_tempest_ingest_committed <- function(store, run_id, stage) {
+  idempotency_key <- paste0(run_id, ":", stage)
+  committed <- DBI::dbGetQuery(
+    store$connection,
+    paste(
+      "SELECT COUNT(*) AS n FROM _graft_batches",
+      "WHERE producer = ? AND idempotency_key = ?",
+      "AND status = 'committed'"
+    ),
+    params = list("tempest", idempotency_key)
+  )$n[[1L]]
+  identical(as.integer(committed), 1L)
+}
+
 ci_approve_and_commit <- function(
   run,
   artifact_id,
@@ -1064,6 +1081,23 @@ ci_approve_and_commit <- function(
     decision = "approved",
     note = approval_record$note
   )
+  if (ci_tempest_ingest_committed(store, run_id, stage)) {
+    result <- graft::kg_ingest_tempest_records(
+      store,
+      run_id = run_id,
+      records = list(),
+      stage = stage,
+      producer_version = as.character(
+        utils::packageVersion("tempest")
+      )
+    )
+    return(list(
+      run = run,
+      artifact = artifact,
+      approval = approval,
+      ingest = result
+    ))
+  }
   records <- record_mapper(artifact@content, approval, store)
   result <- graft::kg_ingest_tempest_records(
     store,

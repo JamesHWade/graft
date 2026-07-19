@@ -484,6 +484,26 @@ test_that("scheduled signals promote through approval into accepted history", {
       "graft:00000000000000000000000121"
     )
   )
+  decision_content <- tempest::tempest_run_artifact(
+    decision,
+    "workflow-referral-result-json"
+  )@content
+  knowledge_precondition_ids <- vapply(
+    decision_content$knowledge_preconditions,
+    `[[`,
+    character(1),
+    "id"
+  )
+  expect_in(
+    "graft:00000000000000000000000102",
+    knowledge_precondition_ids
+  )
+  expect_in(
+    "graft:00000000000000000000000103",
+    knowledge_precondition_ids
+  )
+  expect_match(decision_content$recommendation, "12 min")
+  expect_match(decision_content$recommendation, "100 Nm")
   stale_store <- local_continuous_intelligence_store(environment)
   stale_evidence <- kg_get(
     stale_store,
@@ -664,6 +684,23 @@ test_that("scheduled signals promote through approval into accepted history", {
     0L
   )
 
+  changed_observation <- kg_get(
+    store,
+    "graft:00000000000000000000000118",
+    include = character()
+  )$record
+  changed_observation$confidence <- 0.89
+  kg_ingest(
+    store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "post-decision-observation-update"
+    ),
+    environment$ci_rows_to_records(
+      list(Observation = list(changed_observation)),
+      store$schema
+    )
+  )
   replay_condition <- NULL
   before_replay <- vapply(
     DBI::dbListTables(store$connection),
