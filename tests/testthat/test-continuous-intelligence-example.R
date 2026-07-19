@@ -114,6 +114,24 @@ test_that("scheduled signals promote through approval into accepted history", {
     tempest::tempest_run_status(day_one$review),
     "awaiting_approval"
   )
+  day_one_monitor_content <- tempest::tempest_run_artifact(
+    day_one$monitor,
+    "monitor-result-json"
+  )@content
+  expect_setequal(
+    vapply(
+      day_one_monitor_content$proposal_target_preconditions,
+      `[[`,
+      character(1),
+      "id"
+    ),
+    c(
+      "graft:00000000000000000000000113",
+      "graft:00000000000000000000000114",
+      "graft:00000000000000000000000115",
+      "graft:00000000000000000000000116"
+    )
+  )
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "Observation"))),
     0L
@@ -206,6 +224,49 @@ test_that("scheduled signals promote through approval into accepted history", {
       "knowledge-change-set-json"
     )@status,
     "awaiting_approval"
+  )
+  interstitial_store <- local_continuous_intelligence_store(environment)
+  interstitial_bundle <- environment$ci_read_json(
+    continuous_intelligence_example_path(
+      "corpus",
+      "2026-07-14-supplier.json"
+    )
+  )
+  interstitial_monitor <- environment$ci_run_monitor(
+    profile,
+    interstitial_bundle,
+    interstitial_store,
+    "blue-sky-monitor-interstitial-conflict"
+  )
+  interstitial_source <- interstitial_bundle$proposals$Source[[1L]]
+  interstitial_source$title <- paste(
+    interstitial_source$title,
+    "accepted after monitoring"
+  )
+  kg_ingest(
+    interstitial_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "monitor-review-target-conflict"
+    ),
+    environment$ci_rows_to_records(
+      list(Source = list(interstitial_source)),
+      interstitial_store$schema
+    )
+  )
+  interstitial_review <- tryCatch(
+    environment$ci_run_knowledge_review(
+      interstitial_monitor,
+      "blue-sky-monitor-interstitial-conflict",
+      "blue-sky-review-interstitial-conflict",
+      interstitial_store
+    ),
+    error = identity
+  )
+  expect_s3_class(interstitial_review, "error")
+  expect_match(
+    conditionMessage(interstitial_review),
+    "proposal target changed before commit"
   )
   conflict_store <- local_continuous_intelligence_store(environment)
   conflict_day <- continuous_intelligence_run_signal_day(
@@ -662,6 +723,8 @@ test_that("scheduled signals promote through approval into accepted history", {
   )
   expect_match(decision_content$recommendation, "12 min")
   expect_match(decision_content$recommendation, "100 Nm")
+  expect_match(decision_content$uncertainty, "10 min")
+  expect_match(decision_content$uncertainty, "final 2 min")
   stale_store <- local_continuous_intelligence_store(environment)
   stale_evidence <- kg_get(
     stale_store,
@@ -831,6 +894,10 @@ test_that("scheduled signals promote through approval into accepted history", {
       "Thermal protection reduced output after ten minutes of",
       "continuous operation."
     )
+  )
+  expect_identical(
+    committed_decision_evidence$locator_type,
+    "section"
   )
   expect_identical(
     committed_decision_record$record$workflow_run_id,

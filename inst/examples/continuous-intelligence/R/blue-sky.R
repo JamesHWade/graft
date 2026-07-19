@@ -53,6 +53,22 @@ blue_sky_result_builder <- function(
   torque_unit <- as.character(torque_requirement$record$unit)
   duty_threshold <- as.numeric(duty_requirement$record$threshold)
   duty_unit <- as.character(duty_requirement$record$unit)
+  if (
+    length(torque_threshold) != 1L ||
+      is.na(torque_threshold) ||
+      !is.finite(torque_threshold) ||
+      length(torque_unit) != 1L ||
+      is.na(torque_unit) ||
+      !nzchar(torque_unit) ||
+      length(duty_threshold) != 1L ||
+      is.na(duty_threshold) ||
+      !is.finite(duty_threshold) ||
+      length(duty_unit) != 1L ||
+      is.na(duty_unit) ||
+      !nzchar(duty_unit)
+  ) {
+    stop("The Project Ember requirements need finite thresholds and units.")
+  }
   prior_assessment <- accepted_claims[[
     "graft:00000000000000000000000106"
   ]]
@@ -107,6 +123,32 @@ blue_sky_result_builder <- function(
       )
     )
   }
+  evidence_by_claim <- lapply(
+    required_evidence_claim_ids,
+    function(claim_id) {
+      Filter(
+        function(evidence) {
+          identical(evidence$record$statement_id, claim_id)
+        },
+        supporting_evidence
+      )
+    }
+  )
+  names(evidence_by_claim) <- required_evidence_claim_ids
+  if (any(lengths(evidence_by_claim) != 1L)) {
+    stop(
+      paste(
+        "The bounded-test synthesis requires exactly one accepted",
+        "evidence record for each independent observation."
+      )
+    )
+  }
+  torque_evidence <- evidence_by_claim[[
+    "graft:00000000000000000000000118"
+  ]][[1L]]
+  thermal_evidence <- evidence_by_claim[[
+    "graft:00000000000000000000000119"
+  ]][[1L]]
   source_matches <- vapply(
     supporting_evidence,
     function(evidence) {
@@ -151,8 +193,52 @@ blue_sky_result_builder <- function(
       )
     )
   }
-  decision_source_id <- unname(source_ids[[1L]])
-  decision_source_hash <- unname(source_hashes[[1L]])
+  validated_duration <- as.numeric(
+    accepted_claims[[
+      "graft:00000000000000000000000118"
+    ]]$record$observed_duration
+  )
+  validated_duration_unit <- as.character(
+    accepted_claims[[
+      "graft:00000000000000000000000118"
+    ]]$record$duration_unit
+  )
+  thermal_duration <- as.numeric(
+    accepted_claims[[
+      "graft:00000000000000000000000119"
+    ]]$record$observed_duration
+  )
+  thermal_duration_unit <- as.character(
+    accepted_claims[[
+      "graft:00000000000000000000000119"
+    ]]$record$duration_unit
+  )
+  if (
+    length(validated_duration) != 1L ||
+      is.na(validated_duration) ||
+      !is.finite(validated_duration) ||
+      length(thermal_duration) != 1L ||
+      is.na(thermal_duration) ||
+      !is.finite(thermal_duration) ||
+      length(validated_duration_unit) != 1L ||
+      is.na(validated_duration_unit) ||
+      !nzchar(validated_duration_unit) ||
+      length(thermal_duration_unit) != 1L ||
+      is.na(thermal_duration_unit) ||
+      !nzchar(thermal_duration_unit) ||
+      !identical(validated_duration, thermal_duration) ||
+      !identical(validated_duration_unit, thermal_duration_unit) ||
+      !identical(duty_unit, validated_duration_unit) ||
+      validated_duration >= duty_threshold
+  ) {
+    stop(
+      paste(
+        "The accepted test duration must be finite, consistent across",
+        "observations, and shorter than the duty-cycle requirement."
+      )
+    )
+  }
+  unvalidated_duration <- duty_threshold - validated_duration
   supporting_evidence_ids <- unname(
     vapply(
       supporting_evidence,
@@ -221,7 +307,10 @@ blue_sky_result_builder <- function(
       list(
         option = "Run a bounded bench test",
         consequence = paste(
-          "Test the representative twelve-minute cycle without",
+          "Test the representative",
+          duty_threshold,
+          duty_unit,
+          "cycle without",
           "authorizing deployment."
         )
       ),
@@ -240,8 +329,13 @@ blue_sky_result_builder <- function(
       "under Project Ember's representative thermal conditions."
     ),
     uncertainty = paste(
-      "Independent evidence stops at ten minutes; thermal behavior during",
-      "the final two minutes remains unresolved."
+      "Independent evidence stops at",
+      validated_duration,
+      validated_duration_unit,
+      "; thermal behavior during the final",
+      unvalidated_duration,
+      duty_unit,
+      "remains unresolved."
     ),
     owner = "Project Ember test lead",
     next_step = paste(
@@ -285,8 +379,10 @@ blue_sky_result_builder <- function(
         list(
           id = "graft:00000000000000000000000123",
           statement_text = paste(
-            "Authorize a bounded twelve-minute Project Ember actuator bench",
-            "test; do not authorize deployment."
+            "Authorize a bounded",
+            duty_threshold,
+            duty_unit,
+            "Project Ember actuator bench test; do not authorize deployment."
           ),
           primary_subject = "graft:00000000000000000000000101",
           about = c(
@@ -307,29 +403,24 @@ blue_sky_result_builder <- function(
         list(
           id = "graft:00000000000000000000000124",
           statement_id = "graft:00000000000000000000000122",
-          source_id = decision_source_id,
+          source_id = torque_evidence$record$source_id,
           support_type = "derived_from",
-          locator_type = "other",
-          locator_value = "table 2",
-          excerpt = paste(
-            "At 24 V, sustained torque was 105 Nm through minute ten."
-          ),
-          source_content_hash = decision_source_hash,
+          locator_type = torque_evidence$record$locator_type,
+          locator_value = torque_evidence$record$locator_value,
+          excerpt = torque_evidence$record$excerpt,
+          source_content_hash = torque_evidence$record$source_content_hash,
           extraction_method = "workflow-selected-source-evidence",
           extraction_version = "1"
         ),
         list(
           id = "graft:00000000000000000000000125",
           statement_id = "graft:00000000000000000000000123",
-          source_id = decision_source_id,
+          source_id = thermal_evidence$record$source_id,
           support_type = "derived_from",
-          locator_type = "other",
-          locator_value = "Thermal behavior",
-          excerpt = paste(
-            "Thermal protection reduced output after ten minutes of",
-            "continuous operation."
-          ),
-          source_content_hash = decision_source_hash,
+          locator_type = thermal_evidence$record$locator_type,
+          locator_value = thermal_evidence$record$locator_value,
+          excerpt = thermal_evidence$record$excerpt,
+          source_content_hash = thermal_evidence$record$source_content_hash,
           extraction_method = "workflow-selected-source-evidence",
           extraction_version = "1"
         )

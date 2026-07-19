@@ -505,6 +505,10 @@ ci_monitor_content <- function(profile, daily_bundle, store) {
     unchanged = ci_character(daily_bundle$unchanged),
     proposals = proposals,
     proposal_count = ci_proposal_count(proposals),
+    proposal_target_preconditions = ci_target_state_preconditions(
+      store,
+      proposals
+    ),
     referrals = referrals,
     accepted_context = ci_accepted_context(store, record_ids)
   )
@@ -662,7 +666,8 @@ ci_monitor_specs <- function() {
         "profile_id",
         "scan_date",
         "status",
-        "accepted_context"
+        "accepted_context",
+        "proposal_target_preconditions"
       ),
       "example.ci.renderer.json",
       "monitor-result",
@@ -871,7 +876,6 @@ ci_review_registry <- function() {
     implementation = function(
       monitor_content,
       source_monitor_run_id,
-      knowledge_store,
       deliverable,
       artifact_catalog,
       run_id,
@@ -884,10 +888,7 @@ ci_review_registry <- function() {
         scan_date = monitor_content$scan_date,
         source_monitor_run_id = source_monitor_run_id,
         knowledge_changes = monitor_content$proposals,
-        target_preconditions = ci_target_state_preconditions(
-          knowledge_store,
-          monitor_content$proposals
-        ),
+        target_preconditions = monitor_content$proposal_target_preconditions,
         context_preconditions = ci_accepted_context_preconditions(
           monitor_content$accepted_context
         )
@@ -930,6 +931,10 @@ ci_run_knowledge_review <- function(
   if (ci_proposal_count(monitor$proposals) == 0L) {
     stop("The monitor result has no knowledge changes to review.")
   }
+  ci_validate_target_state_preconditions(
+    store,
+    monitor$proposal_target_preconditions
+  )
   deliverable <- ci_review_spec()
   registry <- ci_review_registry()
   workflow <- tempest::tempest_workflow_spec(
@@ -964,7 +969,6 @@ ci_run_knowledge_review <- function(
     runtime_context = list(
       monitor_content = monitor,
       source_monitor_run_id = source_monitor_run_id,
-      knowledge_store = store,
       deliverable = deliverable
     ),
     run_id = run_id

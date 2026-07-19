@@ -82,6 +82,10 @@ slots:
     maximum_value: 1
   test_context:
     range: string
+  observed_duration:
+    range: float
+  duration_unit:
+    range: string
   disposition:
     range: DecisionDisposition
     required: true
@@ -176,6 +180,8 @@ classes:
       - source_quality
       - extraction_confidence
       - test_context
+      - observed_duration
+      - duration_unit
     slot_usage:
       about:
         required: true
