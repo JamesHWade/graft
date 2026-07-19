@@ -212,26 +212,6 @@ trim_bounded_rows <- function(data, store, limit) {
   bounded_data_frame(data, store, limit, truncated)
 }
 
-empty_bounded_data_frame <- function(columns, store, limit) {
-  data <- as.data.frame(
-    stats::setNames(
-      rep(list(character()), length(columns)),
-      columns
-    ),
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
-  bounded_data_frame(data, store, limit, FALSE)
-}
-
-combine_truncation <- function(...) {
-  any(vapply(
-    list(...),
-    \(.x) isTRUE(attr(.x, "truncated")),
-    logical(1)
-  ))
-}
-
 manifest_relation_for_slot <- function(store, record_class, slot) {
   matches <- Filter(
     \(.x) {
@@ -335,29 +315,6 @@ record_locations <- function(store, id, classes = NULL) {
   locations
 }
 
-empty_like_slot <- function(slot) {
-  type <- toupper(scalar_character(slot$relational_type, "VARCHAR"))
-  switch(
-    type,
-    BOOLEAN = logical(),
-    BIGINT = numeric(),
-    DOUBLE = numeric(),
-    DATE = as.Date(character()),
-    TIMESTAMP = as.POSIXct(
-      numeric(),
-      origin = "1970-01-01",
-      tz = "UTC"
-    ),
-    character()
-  )
-}
-
-empty_public_class_data <- function(contract) {
-  slots <- public_scalar_slots(contract)
-  data <- lapply(slots, empty_like_slot)
-  as.data.frame(data, stringsAsFactors = FALSE, check.names = FALSE)
-}
-
 bind_public_rows <- function(rows) {
   if (length(rows) == 0L) {
     return(data.frame())
@@ -402,29 +359,4 @@ is_active_statement_sql <- function(store, contract, alias = NULL) {
     )
   }
   paste0("(", column, " IS NULL OR ", column, " = 'active')")
-}
-
-class_label_value <- function(contract, row) {
-  label_slot <- scalar_character(contract$label_slot)
-  candidates <- unique(c(
-    label_slot,
-    "label",
-    "title",
-    "name",
-    "statement_text",
-    "surface_form"
-  ))
-  candidates <- candidates[
-    !is.na(candidates) & candidates %in% names(row)
-  ]
-  for (candidate in candidates) {
-    value <- row[[candidate]][[1L]]
-    if (!is.null(value) && length(value) > 0L && !is.na(value)) {
-      value <- as.character(value)
-      if (nzchar(value)) {
-        return(value)
-      }
-    }
-  }
-  NA_character_
 }

@@ -1,10 +1,71 @@
 url: https://jameshwade.github.io/graft/
+title: graft
+
+repo:
+  branch: main
+  url:
+    home: https://github.com/JamesHWade/graft/
+    source: https://github.com/JamesHWade/graft/blob/main/
+    issue: https://github.com/JamesHWade/graft/issues/
+    user: https://github.com/
+
+development:
+  mode: auto
+  version_label: warning
+  version_tooltip: Development documentation
+
 template:
-  bootstrap: 5
+  light-switch: true
+  bslib:
+    version: 5
+    brand: _brand.yml
+    pkgdown-nav-height: 72px
+    navbar-light-bg: "#EEF7F3"
+    navbar-dark-bg: "#12362D"
+
+home:
+  title: "graft: Evidence-backed knowledge for R"
+  description: >
+    A table-native R knowledge layer that compiles LinkML contracts into
+    portable DuckDB stores for typed records, claims, citations, identity,
+    graph projections, and bounded model-assisted retrieval.
+  sidebar:
+    structure: [links, license, authors, dev]
+
+navbar:
+  structure:
+    left: [intro, reference, news]
+    right: [search, github, lightswitch]
+  components:
+    intro:
+      text: Get started
+      href: articles/getting-started.html
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/JamesHWade/graft/
+      aria-label: View graft on GitHub
+
+footer:
+  structure:
+    left: developed_by
+    right: [github, built_with]
+  components:
+    github: Source and issues are available on [GitHub](https://github.com/JamesHWade/graft).
+
+articles:
+  - title: Start here
+    desc: >
+      Learn why graft exists and follow a complete source-backed workflow from
+      a compiled domain contract to bounded retrieval.
+    contents:
+      - getting-started
 
 reference:
   - title: Schema
-    contents:
+    desc: >
+      Compile, load, compare, and inspect the semantic contract that drives a
+      graft store.
+  - contents:
       - kg_compile_schema
       - kg_schema
       - kg_schema_diff
@@ -13,21 +74,30 @@ reference:
       - kg_enums
       - kg_schema_info
   - title: Store lifecycle
-    contents:
+    desc: >
+      Create and inspect ownership-aware DuckDB stores protected by structural
+      schema fingerprints.
+  - contents:
       - kg_connect_duckdb
       - kg_init
       - kg_disconnect
       - kg_store_info
       - kg_capabilities
   - title: Ingestion and validation
-    contents:
+    desc: >
+      Validate and atomically reconcile typed records with batch provenance and
+      idempotent replay.
+  - contents:
       - kg_batch
       - kg_ingest
       - kg_ingest_tempest_records
       - kg_write
       - kg_validate_data
   - title: Records and identity
-    contents:
+    desc: >
+      Retrieve lazy class tables, hydrate records, and resolve exact external
+      identifiers.
+  - contents:
       - kg_records
       - kg_find
       - kg_get
@@ -35,22 +105,34 @@ reference:
       - kg_identifiers
       - kg_unresolved
   - title: Claims and evidence
-    contents:
+    desc: >
+      Inspect narrative and semantic assertions together with their stored
+      supporting or challenging evidence.
+  - contents:
       - kg_claims
       - kg_evidence
       - kg_competing_claims
   - title: Graph projections
-    contents:
+    desc: >
+      Traverse deterministic, bounded semantic and provenance projections over
+      the relational store.
+  - contents:
       - kg_nodes
       - kg_edges
       - kg_neighbors
       - kg_traverse
       - kg_subgraph
   - title: Structured access
-    contents:
+    desc: >
+      Describe the active knowledge contract and expose validated, bounded
+      access to applications and language models.
+  - contents:
       - kg_context
       - kg_select
       - kg_tools
-  - title: Tempest artifact integration
-    contents:
+  - title: Tempest integration
+    desc: >
+      Connect mapped Tempest domain records while preserving the current typed
+      artifact-store boundary.
+  - contents:
       - tempest_artifact_store_graft

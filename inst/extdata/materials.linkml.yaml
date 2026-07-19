@@ -1,0 +1,116 @@
+id: https://w3id.org/graft/examples/materials
+name: materials
+title: Materials knowledge example
+version: 0.1.0
+prefixes:
+  graft: https://w3id.org/graft/
+  materials: https://w3id.org/graft/examples/materials/
+  linkml: https://w3id.org/linkml/
+default_prefix: materials
+default_range: string
+imports:
+  - ../schema/graft-core.linkml
+
+enums:
+  ClaimType:
+    permissible_values:
+      finding:
+      observation:
+      recommendation:
+
+slots:
+  preferred_name:
+    range: string
+    required: true
+  description:
+    range: string
+  cas_number:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: cas
+  uri:
+    range: uri
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: canonical_url
+  title:
+    range: string
+  doi:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: doi
+  claim_type:
+    range: ClaimType
+  measurement_method:
+    range: string
+  temperature:
+    range: float
+    unit:
+      ucum_code: Cel
+
+classes:
+  Material:
+    is_a: GraftNode
+    slots:
+      - preferred_name
+      - description
+      - cas_number
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.label_slot:
+        tag: graft.label_slot
+        value: preferred_name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "preferred_name, description"
+
+  Source:
+    is_a: GraftSource
+    slots:
+      - uri
+      - title
+      - doi
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, uri"
+
+  Claim:
+    is_a: GraftNarrativeStatement
+    slots:
+      - claim_type
+    slot_usage:
+      about:
+        required: true
+        multivalued: true
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_text, about"
+
+  Measurement:
+    is_a: GraftSemanticStatement
+    slots:
+      - measurement_method
+      - temperature
+    annotations:
+      graft.qualifier_slots:
+        tag: graft.qualifier_slots
+        value: "measurement_method, temperature"
+
+  Evidence:
+    is_a: GraftEvidence
+    annotations:
+      graft.origin_key_slots:
+        tag: graft.origin_key_slots
+        value: "statement_id, source_id, locator_type, locator_value"

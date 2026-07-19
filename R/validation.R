@@ -67,7 +67,7 @@ validate_records_container <- function(store, records) {
   if (
     is.null(record_names) ||
       anyNA(record_names) ||
-      any(!nzchar(record_names)) ||
+      !all(nzchar(record_names)) ||
       anyDuplicated(record_names)
   ) {
     abort_validation_error(
@@ -751,7 +751,7 @@ validate_slot_value <- function(staged, slot, value, index, manifest) {
     }
   }
   pattern <- scalar_character(slot$pattern)
-  if (!is.na(pattern) && any(!grepl(pattern, as.character(value)))) {
+  if (!is.na(pattern) && !all(grepl(pattern, as.character(value)))) {
     abort_validation_error(
       paste0(
         "Field `",
@@ -802,7 +802,7 @@ is_missing_value <- function(value, multivalued = FALSE) {
   if (is.null(value) || length(value) == 0L || all(is.na(value))) {
     return(TRUE)
   }
-  if (!multivalued && is.character(value) && all(!nzchar(trimws(value)))) {
+  if (!multivalued && is.character(value) && !any(nzchar(trimws(value)))) {
     return(TRUE)
   }
   FALSE

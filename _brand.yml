@@ -1,0 +1,51 @@
+meta:
+  name:
+    short: graft
+    full: graft knowledge layer
+  link:
+    home: https://jameshwade.github.io/graft/
+    github: https://github.com/JamesHWade/graft
+
+color:
+  palette:
+    forest: "#176B52"
+    forest-deep: "#12362D"
+    leaf: "#2F8F6B"
+    mint: "#DDF3EB"
+    mist: "#EEF7F3"
+    paper: "#FCFDFB"
+    ink: "#18211E"
+    slate: "#5B6863"
+    amber: "#C98224"
+    red: "#A53F4B"
+  foreground: ink
+  background: paper
+  primary: forest
+  secondary: slate
+  success: leaf
+  info: forest
+  warning: amber
+  danger: red
+  light: mist
+  dark: forest-deep
+
+typography:
+  fonts:
+    - family: Source Sans 3
+      source: google
+      weight: [400, 600, 700]
+      style: [normal, italic]
+    - family: IBM Plex Mono
+      source: google
+      weight: [400, 500]
+  base:
+    family: Source Sans 3
+    size: 17px
+    line-height: 1.6
+  headings:
+    family: Source Sans 3
+    weight: 700
+    line-height: 1.15
+  monospace:
+    family: IBM Plex Mono
+    size: 0.9em

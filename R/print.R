@@ -21,7 +21,7 @@ print.kg_schema_diff <- function(x, ...) {
     cat("  new: ", x$new_structural_digest, "\n", sep = "")
   }
   print_change_summary <- function(name, changes) {
-    counts <- vapply(changes, length, integer(1))
+    counts <- lengths(changes)
     cat(
       "  ",
       name,

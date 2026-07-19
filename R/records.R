@@ -355,7 +355,7 @@ validate_get_include <- function(include) {
   if (
     !is.character(include) ||
       anyNA(include) ||
-      any(!nzchar(include)) ||
+      !all(nzchar(include)) ||
       anyDuplicated(include)
   ) {
     abort_validation_error(
@@ -391,7 +391,7 @@ validate_get_limits <- function(limits) {
     )
   }
   unknown <- setdiff(names(limits), names(defaults))
-  if (length(unknown) > 0L || any(!nzchar(names(limits)))) {
+  if (length(unknown) > 0L || !all(nzchar(names(limits)))) {
     abort_limit_error(
       paste0(
         "Unknown related-data limit(s): ",
@@ -535,7 +535,7 @@ validate_select_fields <- function(contract, fields) {
     !is.character(fields) ||
       length(fields) == 0L ||
       anyNA(fields) ||
-      any(!nzchar(fields)) ||
+      !all(nzchar(fields)) ||
       anyDuplicated(fields)
   ) {
     abort_validation_error(
@@ -580,7 +580,7 @@ normalize_query_clauses <- function(clauses, argument) {
     clauses <- list(clauses)
   }
   valid <- vapply(clauses, is.list, logical(1))
-  if (any(!valid)) {
+  if (!all(valid)) {
     abort_validation_error(
       paste0("Every `", argument, "` clause must be a named list."),
       field = argument,
@@ -773,7 +773,7 @@ validate_filter_value <- function(value, slot, operator, contract, store) {
       \(.x) scalar_character(.x$value),
       character(1)
     )
-    if (length(allowed) > 0L && any(!as.character(value) %in% allowed)) {
+    if (length(allowed) > 0L && !all(as.character(value) %in% allowed)) {
       abort_validation_error(
         "Filter value is not a permissible enum value.",
         record_class = scalar_character(contract$name),

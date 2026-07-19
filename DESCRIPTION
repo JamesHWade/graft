@@ -22,6 +22,8 @@ Imports:
     rlang
 Suggests:
     ellmer (>= 0.3.0),
+    knitr,
+    rmarkdown,
     S7,
     tempest (>= 0.1.0),
     testthat (>= 3.0.0),
@@ -29,6 +31,9 @@ Suggests:
     yaml
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
-URL: https://jameshwade.github.io/graft/
+Config/Needs/website: brand.yml
+URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 Remotes:
     JamesHWade/tempest
+VignetteBuilder: knitr
+BugReports: https://github.com/JamesHWade/graft/issues
