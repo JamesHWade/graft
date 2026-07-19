@@ -107,6 +107,52 @@ blue_sky_result_builder <- function(
       )
     )
   }
+  source_matches <- vapply(
+    supporting_evidence,
+    function(evidence) {
+      is.list(evidence$source) &&
+        identical(
+          evidence$source$id,
+          evidence$record$source_id
+        ) &&
+        identical(
+          evidence$source$record$content_hash,
+          evidence$record$source_content_hash
+        )
+    },
+    logical(1)
+  )
+  if (!all(source_matches)) {
+    stop(
+      paste(
+        "The promoted referral evidence does not match its accepted",
+        "source provenance."
+      )
+    )
+  }
+  source_ids <- vapply(
+    supporting_evidence,
+    \(evidence) evidence$source$id,
+    character(1)
+  )
+  source_hashes <- vapply(
+    supporting_evidence,
+    \(evidence) evidence$source$record$content_hash,
+    character(1)
+  )
+  if (
+    length(unique(source_ids)) != 1L ||
+      length(unique(source_hashes)) != 1L
+  ) {
+    stop(
+      paste(
+        "The bounded-test synthesis requires one accepted source",
+        "provenance."
+      )
+    )
+  }
+  decision_source_id <- unname(source_ids[[1L]])
+  decision_source_hash <- unname(source_hashes[[1L]])
   supporting_evidence_ids <- unname(
     vapply(
       supporting_evidence,
@@ -119,6 +165,19 @@ blue_sky_result_builder <- function(
     "graft:00000000000000000000000118",
     "graft:00000000000000000000000119"
   )])
+  supporting_sources <- lapply(
+    unname(supporting_evidence),
+    `[[`,
+    "source"
+  )
+  supporting_sources <- supporting_sources[
+    !duplicated(vapply(
+      supporting_sources,
+      `[[`,
+      character(1),
+      "id"
+    ))
+  ]
   knowledge_preconditions <- c(
     lapply(
       list(torque_requirement, duty_requirement),
@@ -131,6 +190,10 @@ blue_sky_result_builder <- function(
     ),
     lapply(
       unname(supporting_evidence),
+      ci_record_precondition
+    ),
+    lapply(
+      supporting_sources,
       ci_record_precondition
     )
   )
@@ -189,6 +252,12 @@ blue_sky_result_builder <- function(
     accepted_claim_ids = accepted_ids,
     knowledge_preconditions = knowledge_preconditions,
     supersession_preconditions = supersession_preconditions,
+    new_record_ids = c(
+      "graft:00000000000000000000000122",
+      "graft:00000000000000000000000123",
+      "graft:00000000000000000000000124",
+      "graft:00000000000000000000000125"
+    ),
     knowledge_changes = list(
       Assessment = list(
         list(
@@ -238,7 +307,7 @@ blue_sky_result_builder <- function(
         list(
           id = "graft:00000000000000000000000124",
           statement_id = "graft:00000000000000000000000122",
-          source_id = "graft:00000000000000000000000117",
+          source_id = decision_source_id,
           support_type = "derived_from",
           locator_type = "other",
           locator_value = "table 2 and Thermal behavior",
@@ -246,14 +315,14 @@ blue_sky_result_builder <- function(
             "The test sustained 105 Nm through minute ten and then",
             "required thermal derating."
           ),
-          source_content_hash = "sha256:independent-test-v1",
+          source_content_hash = decision_source_hash,
           extraction_method = "approved-workflow-synthesis",
           extraction_version = "1"
         ),
         list(
           id = "graft:00000000000000000000000125",
           statement_id = "graft:00000000000000000000000123",
-          source_id = "graft:00000000000000000000000117",
+          source_id = decision_source_id,
           support_type = "derived_from",
           locator_type = "other",
           locator_value = "table 2 and Thermal behavior",
@@ -261,7 +330,7 @@ blue_sky_result_builder <- function(
             "The approved bounded test decision derives from the independent",
             "torque and thermal findings."
           ),
-          source_content_hash = "sha256:independent-test-v1",
+          source_content_hash = decision_source_hash,
           extraction_method = "approved-workflow-synthesis",
           extraction_version = "1"
         )
@@ -271,6 +340,10 @@ blue_sky_result_builder <- function(
 }
 
 blue_sky_decision_record_mapper <- function(content, approval, store) {
+  ci_validate_absent_records(
+    store,
+    content$new_record_ids
+  )
   ci_validate_record_preconditions(
     store,
     content$knowledge_preconditions

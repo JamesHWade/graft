@@ -121,6 +121,29 @@ ci_validate_record_preconditions <- function(store, preconditions) {
   invisible(TRUE)
 }
 
+ci_validate_absent_records <- function(store, record_ids) {
+  for (record_id in ci_character(record_ids)) {
+    existing <- tryCatch(
+      graft::kg_get(
+        store,
+        record_id,
+        include = character()
+      ),
+      graft_reference_error = function(error) NULL
+    )
+    if (!is.null(existing)) {
+      stop(
+        paste0(
+          "New record target `",
+          record_id,
+          "` already exists; no knowledge changes were mapped."
+        )
+      )
+    }
+  }
+  invisible(TRUE)
+}
+
 ci_require_text <- function(value, field) {
   if (
     !is.character(value) ||
@@ -342,6 +365,11 @@ ci_accepted_evidence <- function(store, record_ids, accepted_context) {
         )
       )
     }
+    evidence$source <- graft::kg_get(
+      store,
+      evidence$record$source_id,
+      include = character()
+    )
     evidence
   })
   names(hydrated) <- record_ids
@@ -989,8 +1017,19 @@ ci_artifact_approvals <- function(run, artifact_id, status) {
   )
 }
 
-ci_artifact_ingest_stage <- function(artifact_id) {
-  paste0("approved-artifact:", artifact_id)
+ci_artifact_ingest_stage <- function(artifact_id, artifact, approval) {
+  identity <- list(
+    artifact_id = artifact_id,
+    run_id = artifact@run_id,
+    content = artifact@content,
+    approval = approval
+  )
+  paste0(
+    "approved-artifact:",
+    artifact_id,
+    ":",
+    ci_record_digest(identity)
+  )
 }
 
 ci_tempest_ingest_committed <- function(store, run_id, stage) {
@@ -1000,9 +1039,10 @@ ci_tempest_ingest_committed <- function(store, run_id, stage) {
     paste(
       "SELECT COUNT(*) AS n FROM _graft_batches",
       "WHERE producer = ? AND idempotency_key = ?",
+      "AND source_run_id = ?",
       "AND status = 'committed'"
     ),
-    params = list("tempest", idempotency_key)
+    params = list("tempest", idempotency_key, run_id)
   )$n[[1L]]
   identical(as.integer(committed), 1L)
 }
@@ -1025,7 +1065,6 @@ ci_approve_and_commit <- function(
     )
   }
   run_id <- artifact@run_id
-  stage <- ci_artifact_ingest_stage(artifact_id)
   if (identical(artifact@status, "awaiting_approval")) {
     approvals <- ci_artifact_approvals(run, artifact_id, "pending")
     if (length(approvals) != 1L) {
@@ -1080,6 +1119,11 @@ ci_approve_and_commit <- function(
     approval_id = approval_id,
     decision = "approved",
     note = approval_record$note
+  )
+  stage <- ci_artifact_ingest_stage(
+    artifact_id,
+    artifact,
+    approval
   )
   if (ci_tempest_ingest_committed(store, run_id, stage)) {
     result <- graft::kg_ingest_tempest_records(

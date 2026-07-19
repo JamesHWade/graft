@@ -271,11 +271,24 @@ test_that("scheduled signals promote through approval into accepted history", {
   ]
   expect_setequal(
     knowledge_batches$idempotency_key,
-    paste0(
-      c(day_one$review_id, day_two$review_id),
-      ":",
-      environment$ci_artifact_ingest_stage(
-        "knowledge-change-set-json"
+    c(
+      paste0(
+        day_one$review_id,
+        ":",
+        environment$ci_artifact_ingest_stage(
+          "knowledge-change-set-json",
+          day_one_commit$artifact,
+          day_one_commit$approval
+        )
+      ),
+      paste0(
+        day_two$review_id,
+        ":",
+        environment$ci_artifact_ingest_stage(
+          "knowledge-change-set-json",
+          day_two_commit$artifact,
+          day_two_commit$approval
+        )
       )
     )
   )
@@ -502,6 +515,10 @@ test_that("scheduled signals promote through approval into accepted history", {
     "graft:00000000000000000000000103",
     knowledge_precondition_ids
   )
+  expect_in(
+    "graft:00000000000000000000000117",
+    knowledge_precondition_ids
+  )
   expect_match(decision_content$recommendation, "12 min")
   expect_match(decision_content$recommendation, "100 Nm")
   stale_store <- local_continuous_intelligence_store(environment)
@@ -576,6 +593,31 @@ test_that("scheduled signals promote through approval into accepted history", {
     conditionMessage(stale_mapping),
     "accepted decision changed before commit"
   )
+  occupied_content <- stale_content
+  occupied_content$knowledge_preconditions <- list()
+  occupied_record <- occupied_content$knowledge_changes$Assessment[[1L]]
+  occupied_record$statement_text <- "An unrelated assessment owns this ID."
+  kg_ingest(
+    stale_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "occupied-new-record-id"
+    ),
+    environment$ci_rows_to_records(
+      list(Assessment = list(occupied_record)),
+      stale_store$schema
+    )
+  )
+  occupied_mapping <- tryCatch(
+    environment$blue_sky_decision_record_mapper(
+      occupied_content,
+      list(decision = "approved"),
+      stale_store
+    ),
+    error = identity
+  )
+  expect_s3_class(occupied_mapping, "error")
+  expect_match(conditionMessage(occupied_mapping), "already exists")
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "ReviewDecision"))),
     1L
@@ -628,6 +670,19 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_in(
     "graft:00000000000000000000000125",
     committed_decision_record$evidence$id
+  )
+  committed_decision_evidence <- committed_decision_record$evidence[
+    committed_decision_record$evidence$id == "graft:00000000000000000000000125",
+    ,
+    drop = FALSE
+  ]
+  expect_identical(
+    committed_decision_evidence$source_id,
+    "graft:00000000000000000000000117"
+  )
+  expect_identical(
+    committed_decision_evidence$source_content_hash,
+    "sha256:independent-test-v1"
   )
 
   day_three <- environment$ci_run_monitor(
