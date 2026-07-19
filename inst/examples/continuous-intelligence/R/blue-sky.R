@@ -23,6 +23,40 @@ blue_sky_result_builder <- function(
       )
     )
   }
+  accepted_claims <- stats::setNames(
+    accepted_context$claims,
+    accepted_ids
+  )
+  prior_assessment <- accepted_claims[[
+    "graft:00000000000000000000000106"
+  ]]
+  prior_decision <- accepted_claims[[
+    "graft:00000000000000000000000107"
+  ]]
+  if (
+    !identical(prior_assessment$class, "Assessment") ||
+      !identical(prior_assessment$record$status, "active") ||
+      !identical(prior_decision$class, "ReviewDecision") ||
+      !identical(prior_decision$record$status, "active")
+  ) {
+    stop("The prior Blue-Sky decision is no longer active.")
+  }
+  supersession_preconditions <- list(
+    list(
+      class = prior_assessment$class,
+      id = prior_assessment$id,
+      record_digest = prior_assessment$record_digest,
+      superseded_by = "graft:00000000000000000000000122",
+      valid_to = "2026-07-15T14:00:00Z"
+    ),
+    list(
+      class = prior_decision$class,
+      id = prior_decision$id,
+      record_digest = prior_decision$record_digest,
+      superseded_by = "graft:00000000000000000000000123",
+      valid_to = "2026-07-15T14:30:00Z"
+    )
+  )
   required_evidence_claim_ids <- c(
     "graft:00000000000000000000000118",
     "graft:00000000000000000000000119"
@@ -100,31 +134,9 @@ blue_sky_result_builder <- function(
     ),
     evidence_record_ids = supporting_evidence_ids,
     accepted_claim_ids = accepted_ids,
+    supersession_preconditions = supersession_preconditions,
     knowledge_changes = list(
       Assessment = list(
-        list(
-          id = "graft:00000000000000000000000106",
-          statement_text = paste(
-            "The Nova compact actuator is not ready for a Project Ember",
-            "prototype because no independent evidence demonstrates the",
-            "required torque and duty cycle."
-          ),
-          primary_subject = "graft:00000000000000000000000101",
-          about = c(
-            "graft:00000000000000000000000101",
-            "graft:00000000000000000000000104",
-            "graft:00000000000000000000000102",
-            "graft:00000000000000000000000103"
-          ),
-          disposition = "hold",
-          decision_confidence = 0.88,
-          polarity = "negative",
-          confidence = 0.88,
-          status = "superseded",
-          superseded_by = "graft:00000000000000000000000122",
-          asserted_at = "2026-07-10T15:00:00Z",
-          valid_to = "2026-07-15T14:00:00Z"
-        ),
         list(
           id = "graft:00000000000000000000000122",
           statement_text = paste(
@@ -147,27 +159,6 @@ blue_sky_result_builder <- function(
         )
       ),
       ReviewDecision = list(
-        list(
-          id = "graft:00000000000000000000000107",
-          statement_text = paste(
-            "Hold the actuator prototype gate until comparable independent",
-            "evidence is available."
-          ),
-          primary_subject = "graft:00000000000000000000000101",
-          about = c(
-            "graft:00000000000000000000000101",
-            "graft:00000000000000000000000104"
-          ),
-          disposition = "hold",
-          reviewer_role = "technology portfolio owner",
-          review_outcome = "approved",
-          polarity = "negative",
-          confidence = 1,
-          status = "superseded",
-          superseded_by = "graft:00000000000000000000000123",
-          asserted_at = "2026-07-10T16:00:00Z",
-          valid_to = "2026-07-15T14:30:00Z"
-        ),
         list(
           id = "graft:00000000000000000000000123",
           statement_text = paste(
@@ -208,8 +199,49 @@ blue_sky_result_builder <- function(
   )
 }
 
-blue_sky_decision_record_mapper <- function(content, approval) {
-  records <- ci_rows_to_records(content$knowledge_changes)
+blue_sky_decision_record_mapper <- function(content, approval, store) {
+  records <- ci_rows_to_records(
+    content$knowledge_changes,
+    store$schema
+  )
   records$ReviewDecision$review_outcome <- approval$decision
+  for (precondition in content$supersession_preconditions) {
+    current <- graft::kg_get(
+      store,
+      precondition$id,
+      include = character()
+    )
+    if (
+      !identical(current$class, precondition$class) ||
+        !identical(current$record$status, "active") ||
+        !identical(
+          ci_record_digest(current$record),
+          precondition$record_digest
+        )
+    ) {
+      stop(
+        paste0(
+          "Supersession precondition failed for `",
+          precondition$id,
+          "`; the accepted decision changed before commit."
+        )
+      )
+    }
+    superseded <- ci_plain_record(current$record)
+    superseded$status <- "superseded"
+    superseded$superseded_by <- precondition$superseded_by
+    superseded$valid_to <- precondition$valid_to
+    update <- ci_rows_to_records(
+      stats::setNames(
+        list(list(superseded)),
+        precondition$class
+      ),
+      store$schema
+    )
+    records[[precondition$class]] <- dplyr::bind_rows(
+      update[[precondition$class]],
+      records[[precondition$class]]
+    )
+  }
   records
 }

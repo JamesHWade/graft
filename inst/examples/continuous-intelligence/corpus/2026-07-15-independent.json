@@ -93,6 +93,7 @@
   },
   "referrals": [
     {
+      "referral_id": "blue-sky:referral:prototype-gate:2026-07-15",
       "workflow_id": "blue-sky.prototype-gate",
       "objective": "Reassess whether Project Ember should authorize a bounded actuator bench test.",
       "reason": "Independent evidence now supports the torque requirement while exposing a duty-cycle limitation.",

@@ -98,18 +98,23 @@ run_continuous_intelligence_demo <- function(example_dir) {
     "monitor-result-json"
   )@content
   referral <- monitor_content$referrals[[1L]]
+  promotion_store <- ci_promotion_store()
+  promotion_id <- ci_record_promotion(
+    promotion_store,
+    "blue-sky:promotion:prototype-gate:2026-07-15",
+    referral,
+    reviewer = "technology portfolio owner",
+    decided_at = "2026-07-15T13:30:00Z",
+    note = "Open the prototype-gate decision workflow."
+  )
   decision <- ci_run_referral(
     referral,
     profile,
     store,
     blue_sky_result_builder,
     "blue-sky-decision-2026-07-15",
-    promotion = list(
-      decision = "approved",
-      reviewer = "technology portfolio owner",
-      decided_at = "2026-07-15T13:30:00Z",
-      note = "Open the prototype-gate decision workflow."
-    )
+    promotion_store = promotion_store,
+    promotion_id = promotion_id
   )
   decision_content <- tempest::tempest_run_artifact(
     decision,
@@ -156,6 +161,7 @@ run_continuous_intelligence_demo <- function(example_dir) {
     ),
     review_runs = list(day_one$review, day_two$review),
     decision_run = committed_decision$run,
+    promotion_record = promotion_store$records[[promotion_id]],
     assessment_count = nrow(dplyr::collect(
       graft::kg_records(store, "Assessment")
     )),

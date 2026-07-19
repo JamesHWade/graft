@@ -21,8 +21,8 @@ operation without changing those contracts.
 5. Graft remains unchanged while that workflow awaits approval.
 6. After approval, the host maps the artifact to record data frames and calls
    `kg_ingest_tempest_records()`.
-7. A workflow referral requires explicit human promotion and is resolved only
-   against the profile's allowlist.
+7. A workflow referral requires a host-stored human promotion bound to the
+   referral and is resolved only against the profile's allowlist.
 8. The promoted workflow validates cited evidence against the claims used for
    its decision and produces another approval-gated result.
 9. The approved decision supersedes the prior active position instead of
@@ -38,7 +38,7 @@ to Graft.
 From a checkout containing the current development versions of both packages:
 
 ```r
-devtools::load_all("../stormr")
+devtools::load_all("../tempest")
 devtools::load_all(".")
 source("inst/examples/continuous-intelligence/run-demo.R")
 ```

@@ -74,6 +74,30 @@ test_that("scheduled signals promote through approval into accepted history", {
     conditionMessage(missing_context),
     "was not found"
   )
+  single_about <- environment$ci_rows_to_records(
+    list(
+      Observation = list(list(
+        id = "graft:00000000000000000000000199",
+        statement_text = "One technology remains in the monitored scope.",
+        primary_subject = "graft:00000000000000000000000104",
+        about = c("graft:00000000000000000000000104"),
+        finding_kind = "capability",
+        source_quality = "vendor",
+        extraction_confidence = 0.9,
+        polarity = "positive",
+        confidence = 0.9,
+        status = "active",
+        asserted_at = "2026-07-14T08:00:00Z"
+      ))
+    ),
+    store$schema
+  )
+  expect_type(single_about$Observation$about, "list")
+  expect_identical(
+    single_about$Observation$about[[1L]],
+    "graft:00000000000000000000000104"
+  )
+  expect_identical(kg_validate_data(store, single_about)$valid, TRUE)
 
   day_one <- continuous_intelligence_run_signal_day(
     environment,
@@ -262,11 +286,16 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_length(monitor_content$referrals, 1L)
 
   referral <- monitor_content$referrals[[1L]]
-  evidence_promotion <- list(
-    decision = "approved",
+  promotion_store <- environment$ci_promotion_store()
+  promotion_id <- environment$ci_record_promotion(
+    promotion_store,
+    "blue-sky:promotion:prototype-gate:2026-07-15",
+    referral,
     reviewer = "technology portfolio owner",
-    decided_at = "2026-07-15T13:30:00Z"
+    decided_at = "2026-07-15T13:30:00Z",
+    note = "Open the prototype-gate decision workflow."
   )
+  promotion <- promotion_store$records[[promotion_id]]
   missing_evidence_referral <- referral
   missing_evidence_referral$evidence_record_ids <- c(
     "graft:00000000000000000000000999"
@@ -278,7 +307,8 @@ test_that("scheduled signals promote through approval into accepted history", {
       store,
       environment$blue_sky_result_builder,
       "blue-sky-decision-missing-evidence",
-      promotion = evidence_promotion
+      promotion_store = promotion_store,
+      promotion_id = promotion_id
     ),
     graft_error = identity
   )
@@ -298,7 +328,8 @@ test_that("scheduled signals promote through approval into accepted history", {
       store,
       environment$blue_sky_result_builder,
       "blue-sky-decision-unrelated-evidence",
-      promotion = evidence_promotion
+      promotion_store = promotion_store,
+      promotion_id = promotion_id
     ),
     error = identity
   )
@@ -319,7 +350,8 @@ test_that("scheduled signals promote through approval into accepted history", {
       store,
       environment$blue_sky_result_builder,
       "blue-sky-decision-irrelevant-evidence",
-      promotion = evidence_promotion
+      promotion_store = promotion_store,
+      promotion_id = promotion_id
     ),
     error = identity
   )
@@ -343,11 +375,41 @@ test_that("scheduled signals promote through approval into accepted history", {
     conditionMessage(unpromoted),
     "requires an approved human-promotion"
   )
-  promotion <- list(
-    decision = "approved",
-    reviewer = "technology portfolio owner",
-    decided_at = "2026-07-15T13:30:00Z",
-    note = "Open the prototype-gate decision workflow."
+  fabricated_promotion <- tryCatch(
+    environment$ci_run_referral(
+      referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-fabricated-promotion",
+      promotion_store = promotion_store,
+      promotion_id = "blue-sky:promotion:not-recorded"
+    ),
+    error = identity
+  )
+  expect_s3_class(fabricated_promotion, "error")
+  expect_match(
+    conditionMessage(fabricated_promotion),
+    "was not found"
+  )
+  cross_referral <- referral
+  cross_referral$referral_id <- "blue-sky:referral:other"
+  unrelated_promotion <- tryCatch(
+    environment$ci_run_referral(
+      cross_referral,
+      profile,
+      store,
+      environment$blue_sky_result_builder,
+      "blue-sky-decision-unrelated-promotion",
+      promotion_store = promotion_store,
+      promotion_id = promotion_id
+    ),
+    error = identity
+  )
+  expect_s3_class(unrelated_promotion, "error")
+  expect_match(
+    conditionMessage(unrelated_promotion),
+    "is not bound to this referral"
   )
   decision <- environment$ci_run_referral(
     referral,
@@ -355,7 +417,8 @@ test_that("scheduled signals promote through approval into accepted history", {
     store,
     environment$blue_sky_result_builder,
     "blue-sky-decision-2026-07-15",
-    promotion = promotion
+    promotion_store = promotion_store,
+    promotion_id = promotion_id
   )
   expect_identical(
     tempest::tempest_run_status(decision),
@@ -377,6 +440,40 @@ test_that("scheduled signals promote through approval into accepted history", {
       "graft:00000000000000000000000120",
       "graft:00000000000000000000000121"
     )
+  )
+  stale_store <- local_continuous_intelligence_store(environment)
+  stale_assessment <- kg_get(
+    stale_store,
+    "graft:00000000000000000000000106",
+    include = character()
+  )$record
+  stale_assessment$decision_confidence <- 0.8
+  kg_ingest(
+    stale_store,
+    kg_batch(
+      "continuous-intelligence-test",
+      idempotency_key = "stale-prior-decision"
+    ),
+    environment$ci_rows_to_records(
+      list(Assessment = list(stale_assessment)),
+      stale_store$schema
+    )
+  )
+  stale_mapping <- tryCatch(
+    environment$blue_sky_decision_record_mapper(
+      tempest::tempest_run_artifact(
+        decision,
+        "workflow-referral-result-json"
+      )@content,
+      list(decision = "approved"),
+      stale_store
+    ),
+    error = identity
+  )
+  expect_s3_class(stale_mapping, "error")
+  expect_match(
+    conditionMessage(stale_mapping),
+    "accepted decision changed before commit"
   )
   expect_equal(
     nrow(dplyr::collect(kg_records(store, "ReviewDecision"))),
@@ -478,13 +575,7 @@ test_that("scheduled signals promote through approval into accepted history", {
   )
 
   replay_condition <- NULL
-  decision_records <- environment$blue_sky_decision_record_mapper(
-    tempest::tempest_run_artifact(
-      decision,
-      "workflow-referral-result-json"
-    )@content,
-    decision_commit$approval
-  )
+  decision_records <- decision_commit$records
   before_replay <- vapply(
     DBI::dbListTables(store$connection),
     \(table) nrow(DBI::dbReadTable(store$connection, table)),

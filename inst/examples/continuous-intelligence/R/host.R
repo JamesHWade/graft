@@ -6,14 +6,161 @@ ci_character <- function(x) {
   unname(unlist(x, use.names = FALSE))
 }
 
-ci_rows_to_records <- function(rows) {
+ci_rows_to_records <- function(rows, schema) {
   if (length(rows) == 0L) {
     return(list())
   }
-  jsonlite::fromJSON(
+  records <- jsonlite::fromJSON(
     jsonlite::toJSON(rows, auto_unbox = TRUE, null = "null"),
     simplifyVector = TRUE
   )
+  for (record_class in names(rows)) {
+    slots <- graft::kg_slots(schema, record_class)
+    multivalued <- slots$slot[slots$multivalued]
+    scalar <- setdiff(slots$slot, multivalued)
+    for (field in intersect(scalar, names(records[[record_class]]))) {
+      all_missing <- all(vapply(
+        rows[[record_class]],
+        function(row) {
+          value <- row[[field]]
+          is.null(value) ||
+            length(value) == 0L ||
+            (length(value) == 1L && is.na(value))
+        },
+        logical(1)
+      ))
+      if (all_missing) {
+        records[[record_class]][[field]] <- NULL
+      }
+    }
+    for (field in intersect(multivalued, names(records[[record_class]]))) {
+      records[[record_class]][[field]] <- I(lapply(
+        rows[[record_class]],
+        function(row) {
+          value <- row[[field]]
+          if (is.null(value)) {
+            return(logical())
+          }
+          if (is.list(value)) {
+            value <- unlist(value, use.names = FALSE)
+          }
+          unname(value)
+        }
+      ))
+    }
+  }
+  records
+}
+
+ci_plain_record <- function(record) {
+  jsonlite::fromJSON(
+    jsonlite::toJSON(
+      record,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      digits = NA,
+      POSIXt = "ISO8601",
+      UTC = TRUE
+    ),
+    simplifyVector = FALSE
+  )
+}
+
+ci_record_digest <- function(record) {
+  payload <- jsonlite::toJSON(
+    ci_plain_record(record),
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA,
+    POSIXt = "ISO8601",
+    UTC = TRUE
+  )
+  digest::digest(payload, algo = "sha256", serialize = FALSE)
+}
+
+ci_require_text <- function(value, field) {
+  if (
+    !is.character(value) ||
+      length(value) != 1L ||
+      is.na(value) ||
+      !nzchar(trimws(value))
+  ) {
+    stop(paste0("`", field, "` must be one nonempty string."))
+  }
+  trimws(value)
+}
+
+ci_promotion_store <- function() {
+  store <- new.env(parent = emptyenv())
+  store$records <- list()
+  class(store) <- "ci_promotion_store"
+  store
+}
+
+ci_record_promotion <- function(
+  store,
+  promotion_id,
+  referral,
+  reviewer,
+  decided_at,
+  note = NULL,
+  decision = "approved"
+) {
+  if (!inherits(store, "ci_promotion_store")) {
+    stop("`store` must be a continuous-intelligence promotion store.")
+  }
+  promotion_id <- ci_require_text(promotion_id, "promotion_id")
+  referral_id <- ci_require_text(referral$referral_id, "referral$referral_id")
+  workflow_id <- ci_require_text(referral$workflow_id, "referral$workflow_id")
+  reviewer <- ci_require_text(reviewer, "reviewer")
+  decided_at <- ci_require_text(decided_at, "decided_at")
+  decision <- ci_require_text(decision, "decision")
+  if (!is.null(store$records[[promotion_id]])) {
+    stop(paste0("Promotion record `", promotion_id, "` already exists."))
+  }
+  store$records[[promotion_id]] <- list(
+    promotion_id = promotion_id,
+    referral_id = referral_id,
+    workflow_id = workflow_id,
+    decision = decision,
+    reviewer = reviewer,
+    decided_at = decided_at,
+    note = note
+  )
+  promotion_id
+}
+
+ci_resolve_promotion <- function(store, promotion_id, referral) {
+  if (!inherits(store, "ci_promotion_store")) {
+    stop(
+      paste(
+        "The active profile requires an approved human-promotion",
+        "record from the host approval store."
+      )
+    )
+  }
+  promotion_id <- ci_require_text(promotion_id, "promotion_id")
+  promotion <- store$records[[promotion_id]]
+  if (is.null(promotion)) {
+    stop(paste0("Promotion record `", promotion_id, "` was not found."))
+  }
+  if (!identical(promotion$decision, "approved")) {
+    stop("The host promotion record is not approved.")
+  }
+  if (
+    !identical(promotion$referral_id, referral$referral_id) ||
+      !identical(promotion$workflow_id, referral$workflow_id)
+  ) {
+    stop(
+      paste(
+        "The host promotion record is not bound to this referral",
+        "and workflow."
+      )
+    )
+  }
+  promotion
 }
 
 ci_proposal_count <- function(proposals) {
@@ -75,6 +222,12 @@ ci_accepted_context <- function(store, record_ids) {
     for (index in seq_len(nrow(record$claims))) {
       claim <- record$claims[index, , drop = FALSE]
       evidence <- claim$evidence[[1L]]
+      claim_record <- graft::kg_get(
+        store,
+        claim$id[[1L]],
+        include = character()
+      )
+      record_snapshot <- ci_plain_record(claim_record$record)
       claims[[claim$id[[1L]]]] <- list(
         id = claim$id[[1L]],
         class = claim$class[[1L]],
@@ -87,7 +240,9 @@ ci_accepted_context <- function(store, record_ids) {
           character()
         } else {
           evidence$id
-        }
+        },
+        record = record_snapshot,
+        record_digest = ci_record_digest(record_snapshot)
       )
     }
   }
@@ -683,7 +838,8 @@ ci_run_referral <- function(
   store,
   result_builder,
   run_id,
-  promotion = NULL
+  promotion_store = NULL,
+  promotion_id = NULL
 ) {
   workflow_id <- referral$workflow_id
   allowed <- vapply(
@@ -697,27 +853,13 @@ ci_run_referral <- function(
   promotion_required <- isTRUE(
     profile$routing_policy$human_promotion_required
   )
-  if (promotion_required) {
-    if (
-      !is.list(promotion) ||
-        is.data.frame(promotion) ||
-        !identical(promotion$decision, "approved") ||
-        !is.character(promotion$reviewer) ||
-        length(promotion$reviewer) != 1L ||
-        is.na(promotion$reviewer) ||
-        !nzchar(trimws(promotion$reviewer)) ||
-        !is.character(promotion$decided_at) ||
-        length(promotion$decided_at) != 1L ||
-        is.na(promotion$decided_at) ||
-        !nzchar(trimws(promotion$decided_at))
-    ) {
-      stop(
-        paste(
-          "The active profile requires an approved human-promotion",
-          "record with one reviewer and decision time."
-        )
-      )
-    }
+  promotion <- NULL
+  if (promotion_required || !is.null(promotion_id)) {
+    promotion <- ci_resolve_promotion(
+      promotion_store,
+      promotion_id,
+      referral
+    )
   }
   accepted_context <- ci_accepted_context(
     store,
@@ -783,8 +925,8 @@ ci_run_referral <- function(
   )
 }
 
-ci_default_record_mapper <- function(content, approval) {
-  ci_rows_to_records(content$knowledge_changes)
+ci_default_record_mapper <- function(content, approval, store) {
+  ci_rows_to_records(content$knowledge_changes, store$schema)
 }
 
 ci_artifact_approvals <- function(run, artifact_id, status) {
@@ -876,7 +1018,7 @@ ci_approve_and_commit <- function(
     decision = "approved",
     note = approval_record$note
   )
-  records <- record_mapper(artifact@content, approval)
+  records <- record_mapper(artifact@content, approval, store)
   result <- graft::kg_ingest_tempest_records(
     store,
     run_id = run_id,
@@ -888,6 +1030,7 @@ ci_approve_and_commit <- function(
     run = run,
     artifact = artifact,
     approval = approval,
+    records = records,
     ingest = result
   )
 }
