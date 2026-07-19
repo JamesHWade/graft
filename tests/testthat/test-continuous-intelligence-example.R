@@ -48,6 +48,20 @@ test_that("continuous-intelligence host stays domain neutral", {
     maintainer$routing_policy$allowed_workflow_ids,
     2L
   )
+  empty_about <- environment$ci_rows_to_records(
+    list(
+      Observation = list(list(
+        id = "graft:00000000000000000000000999",
+        about = NULL
+      ))
+    ),
+    kg_schema(continuous_intelligence_example_path(
+      "schema",
+      "blue-sky.graft.json"
+    ))
+  )
+  expect_type(empty_about$Observation$about[[1L]], "character")
+  expect_length(empty_about$Observation$about[[1L]], 0L)
 })
 
 test_that("staged walkthrough console gates require explicit decisions", {

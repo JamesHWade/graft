@@ -45,7 +45,7 @@ continuous_intelligence_tempest_available <- function() {
 }
 
 local_continuous_intelligence_environment <- function() {
-  environment <- new.env(parent = globalenv())
+  environment <- new.env(parent = baseenv())
   sys.source(
     continuous_intelligence_example_path("R", "host.R"),
     envir = environment

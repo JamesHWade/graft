@@ -39,7 +39,7 @@ ci_rows_to_records <- function(rows, schema) {
         function(row) {
           value <- row[[field]]
           if (is.null(value)) {
-            return(logical())
+            return(character())
           }
           if (is.list(value)) {
             value <- unlist(value, use.names = FALSE)

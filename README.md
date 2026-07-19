@@ -88,7 +88,8 @@ no-material-change day:
 example <- system.file(
   "examples",
   "continuous-intelligence",
-  package = "graft"
+  package = "graft",
+  mustWork = TRUE
 )
 file.show(file.path(example, "README.md"))
 ```
