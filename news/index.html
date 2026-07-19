@@ -16,6 +16,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -46,7 +47,7 @@
 <li>
 <code><a href="../reference/kg_claims.html">kg_claims()</a></code>, <code><a href="../reference/kg_evidence.html">kg_evidence()</a></code>, and <code><a href="../reference/kg_competing_claims.html">kg_competing_claims()</a></code> retrieve bounded narrative and semantic assertions, stored citations, and non-adjudicated comparison sets while preserving qualifiers and ordinary attributes.</li>
 <li>
-<code><a href="../reference/kg_compile_schema.html">kg_compile_schema()</a></code> compiles LinkML schemas into deterministic, portable graft manifests.</li>
+<code><a href="../reference/kg_compile_schema.html">kg_compile_schema()</a></code> compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.</li>
 <li>
 <code><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb()</a></code>, <code><a href="../reference/kg_init.html">kg_init()</a></code>, and <code><a href="../reference/kg_disconnect.html">kg_disconnect()</a></code> provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization and structural schema protection.</li>
 <li>

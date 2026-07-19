@@ -42,8 +42,6 @@ Validate and write records in batches with provenance and idempotency.
   : Describe one atomic ingestion batch
 - [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
   : Atomically ingest one or more record classes
-- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-  : Ingest records mapped from one Tempest run
 - [`kg_write()`](https://jameshwade.github.io/graft/reference/kg_write.md)
   : Ingest one concrete record class
 - [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
@@ -106,10 +104,11 @@ ellmer tools.
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   : Create bounded ellmer tools for a graft store
 
-## Tempest integration
+## Experimental integrations
 
-Write mapped Tempest records and inspect the current artifact-store
-adapter.
+Package-specific adapters. Most graft users do not need these functions.
 
+- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
+  : Ingest records mapped from one Tempest run
 - [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
   : Create a Graft-backed Tempest artifact-store adapter

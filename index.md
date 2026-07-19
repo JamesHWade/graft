@@ -46,7 +46,8 @@ claims, evidence, identifiers, and graph neighborhoods.
 
 ## The basic workflow
 
-01 **Write a schema** Extend the core LinkML record classes.
+01 **Write a schema** Describe the domain with ordinary LinkML classes
+and slots.
 
 02 **Compile it** Create a resolved `.graft.json` manifest.
 
@@ -102,5 +103,6 @@ records, a claim, a source, and evidence.
 
 [Read getting
 started](https://jameshwade.github.io/graft/articles/getting-started.md)
+[See examples](https://jameshwade.github.io/graft/articles/examples.md)
 [Browse
 functions](https://jameshwade.github.io/graft/reference/index.md)

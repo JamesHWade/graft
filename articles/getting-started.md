@@ -146,7 +146,7 @@ replace `":memory:"` with a file path.
 
 store <- kg_connect_duckdb(schema, ":memory:")
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpJNzr8N/duckdb/extensions
+#> ℹ /tmp/RtmpWPdhhy/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 kg_init(store)
@@ -195,7 +195,7 @@ kg_ingest(
   ),
   foundations
 )
-#> <kg_ingest_result> committed graft:01KXW2MG8GKQNY051JD0REH470
+#> <kg_ingest_result> committed graft:01KXX4NXYNKQNY051JD0REH470
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0
@@ -247,7 +247,7 @@ kg_write(
     about = I(list(material_id))
   )
 )
-#> <kg_ingest_result> committed graft:01KXW2MGHCQ9QP8ZR98JRJEWGE
+#> <kg_ingest_result> committed graft:01KXX4NYAEQ9QP8ZR98JRJEWGE
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -284,7 +284,7 @@ kg_write(
     excerpt = "Crystallinity (%) for the LLDPE sample: 37."
   )
 )
-#> <kg_ingest_result> committed graft:01KXW2MGQ3SE4FJ30WRC1PCJYS
+#> <kg_ingest_result> committed graft:01KXX4NYJ7SE4FJ30WRC1PCJYS
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -305,9 +305,9 @@ Search is useful for discovery:
 
 kg_find(store, "LLDPE", limit = 5)
 #>                                 id    class
-#> 1 graft:01KXW2MG99BN89156BSVND46JB   Source
-#> 2 graft:01KXW2MG8Z539065NJR1Z70V06 Material
-#> 3 graft:01KXW2MGHTV7B2F7BQ16HSZV0M    Claim
+#> 1 graft:01KXX4NXZNBN89156BSVND46JB   Source
+#> 2 graft:01KXX4NXZA539065NJR1Z70V06 Material
+#> 3 graft:01KXX4NYB1V7B2F7BQ16HSZV0M    Claim
 #>                                                                          label
 #> 1                                  Controlled DSC study of LLDPE crystallinity
 #> 2                                      Linear low-density polyethylene (LLDPE)
@@ -324,7 +324,7 @@ Hydration starts from one stable ID and returns bounded related records:
 
 material <- kg_get(store, material_id)
 material
-#> <kg_record> Material graft:01KXW2MG8Z539065NJR1Z70V06
+#> <kg_record> Material graft:01KXX4NXZA539065NJR1Z70V06
 #>   identifiers: 1
 #>   claims: 1
 #>   evidence: 1
@@ -394,7 +394,7 @@ kg_records(store, "Claim") |>
 #> # A tibble: 1 × 3
 #>   id                               statement_text                     confidence
 #>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KXW2MGHTV7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
+#> 1 graft:01KXX4NYB1V7B2F7BQ16HSZV0M A controlled DSC experiment measu…       0.95
 ```
 
 [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -415,7 +415,7 @@ kg_select(
   limit = 10
 )
 #>                                 id
-#> 1 graft:01KXW2MGHTV7B2F7BQ16HSZV0M
+#> 1 graft:01KXX4NYB1V7B2F7BQ16HSZV0M
 #>                                                                 statement_text
 #> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
 #>   confidence
@@ -444,7 +444,12 @@ records and evidence that are already present in the store.
 
 ## Bring your own domain
 
-The installed example’s LinkML source is available as a starting point:
+The [LinkML schema
+article](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+starts with an ordinary PersonInfo-style schema. It compiles without
+graft annotations or an import of graft’s core schema.
+
+The installed materials example shows the optional enriched form:
 
 ``` r
 
@@ -456,7 +461,8 @@ system.file(
 #> [1] "/home/runner/work/_temp/Library/graft/extdata/materials.linkml.yaml"
 ```
 
-Your concrete classes extend graft’s core roles:
+Extend graft’s core roles only when the domain needs package-specific
+behavior for claims, evidence, sources, mentions, or graph edges:
 
 - `GraftNode`
 - `GraftEdge`
@@ -467,9 +473,9 @@ Your concrete classes extend graft’s core roles:
 - `GraftMention`
 - `GraftMetadata`
 
-Use annotations in your LinkML schema to declare identity policies,
-external identifier namespaces, search fields, label fields, origin
-keys, and semantic qualifiers. Compile the schema once:
+Annotations can then declare identity policies, external identifier
+namespaces, search fields, label fields, origin keys, and semantic
+qualifiers. Compile the schema once:
 
 ``` r
 

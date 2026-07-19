@@ -46,7 +46,8 @@ claims, evidence, identifiers, and graph neighborhoods.
 
 ## The basic workflow
 
-01 **Write a schema** Extend the core LinkML record classes.
+01 **Write a schema** Describe the domain with ordinary LinkML classes
+and slots.
 
 02 **Compile it** Create a resolved `.graft.json` manifest.
 
@@ -102,6 +103,7 @@ records, a claim, a source, and evidence.
 
 [Read getting
 started](https://jameshwade.github.io/graft/articles/getting-started.md)
+[See examples](https://jameshwade.github.io/graft/articles/examples.md)
 [Browse
 functions](https://jameshwade.github.io/graft/reference/index.md)
 
@@ -149,8 +151,6 @@ Validate and write records in batches with provenance and idempotency.
   : Describe one atomic ingestion batch
 - [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
   : Atomically ingest one or more record classes
-- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-  : Ingest records mapped from one Tempest run
 - [`kg_write()`](https://jameshwade.github.io/graft/reference/kg_write.md)
   : Ingest one concrete record class
 - [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
@@ -213,11 +213,12 @@ ellmer tools.
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   : Create bounded ellmer tools for a graft store
 
-## Tempest integration
+## Experimental integrations
 
-Write mapped Tempest records and inspect the current artifact-store
-adapter.
+Package-specific adapters. Most graft users do not need these functions.
 
+- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
+  : Ingest records mapped from one Tempest run
 - [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
   : Create a Graft-backed Tempest artifact-store adapter
 
@@ -225,11 +226,26 @@ adapter.
 
 ### Start here
 
-Build a small materials store from an included schema, then add records,
-a claim, a source, and evidence and query them from R.
+Build a small knowledge store, or start from an ordinary LinkML schema
+and see how its classes and slots map to DuckDB.
 
 - [Getting started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
   Build a small materials store from a compiled LinkML schema, add a
   source-backed claim, and query it from R.
+
+- [Use a LinkML schema with
+  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+
+  Compile an ordinary LinkML schema, write schema-shaped records to
+  DuckDB, and query them from R.
+
+### Examples
+
+Small, runnable domain models adapted from established LinkML projects.
+
+- [Examples](https://jameshwade.github.io/graft/articles/examples.md):
+
+  See how ordinary LinkML schemas can describe chemical entities,
+  biological samples, and the relationships between them.

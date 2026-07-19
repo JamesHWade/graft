@@ -15,7 +15,10 @@
   and non-adjudicated comparison sets while preserving qualifiers and
   ordinary attributes.
 - [`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md)
-  compiles LinkML schemas into deterministic, portable graft manifests.
+  compiles ordinary LinkML schemas into deterministic, portable graft
+  manifests without requiring graft-specific imports or annotations;
+  graft core roles remain available for richer claim, evidence, and
+  graph behavior.
 - [`kg_connect_duckdb()`](https://jameshwade.github.io/graft/reference/kg_connect_duckdb.md),
   [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md),
   and
