@@ -5,10 +5,22 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft is a table-native knowledge layer for R. It compiles a LinkML semantic
-contract into a portable JSON manifest that describes concrete record classes,
-relational tables, identity policies, validation invariants, and graph
-projections.
+graft is for R workflows where knowledge needs more structure than rows but
+should still behave like data. It keeps domain records, claims, sources, and
+evidence in ordinary relational tables while enforcing a versioned semantic
+contract around identity, validation, provenance, and retrieval.
+
+Use graft when knowledge accumulates across research or agentic runs and you
+need to answer not only *which records match?*, but also *which claim is this,
+what supports or challenges it, and which schema gave it meaning?*
+
+Start with the [getting started
+guide](https://jameshwade.github.io/graft/articles/getting-started.html) for the
+package's motivation, mental model, and a complete source-backed workflow.
+
+graft compiles a LinkML semantic contract into a portable JSON manifest that
+describes concrete record classes, relational tables, identity policies,
+validation invariants, and graph projections.
 
 Python and `linkml-runtime` are required only to compile a schema. Loading and
 inspecting a committed manifest is pure R/JSON. The manifest drives DuckDB

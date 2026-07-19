@@ -9,6 +9,9 @@
 ^\.claude$
 ^[.]?air[.]toml$
 ^codecov\.yml$
+^_brand\.yml$
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^doc$
+^Meta$

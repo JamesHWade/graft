@@ -1,0 +1,394 @@
+---
+title: "Getting started with graft"
+description: >
+  Understand why graft exists and follow a complete materials example from a
+  compiled LinkML contract to a source-backed claim and bounded retrieval.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with graft}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+graft is for R workflows in which knowledge must remain inspectable after it
+has been collected, reconciled, and reused. It keeps domain records, claims,
+sources, and evidence in ordinary relational tables while enforcing a semantic
+contract around them.
+
+This matters when a workflow needs to answer more than "which rows match?" For
+example:
+
+- Is this material the same one observed in an earlier run?
+- Is a statement a source-faithful narrative claim or a normalized semantic
+  assertion?
+- Which stored source and exact locator support or challenge the claim?
+- Can an analyst or language model retrieve the answer without accessing
+  arbitrary SQL or silently collecting an unbounded result?
+
+graft addresses these questions without requiring a separate graph database.
+It compiles a [LinkML](https://linkml.io/) domain schema into a portable
+manifest, uses that manifest to create and protect a DuckDB store, and exposes
+the stored knowledge through R, dbplyr, bounded graph projections, and optional
+ellmer tools.
+
+## The mental model
+
+The main workflow is:
+
+> LinkML schema -> compiled `.graft.json` manifest -> DuckDB store -> bounded R
+> and agent-facing retrieval
+
+Each part has one job:
+
+1. **The LinkML schema describes your domain.** You define concrete classes
+   such as materials, sources, claims, and evidence by extending graft's core
+   record roles.
+2. **The compiled manifest is the runtime contract.** It contains the resolved
+   classes, fields, relational mapping, identity rules, validation invariants,
+   graph projections, and schema fingerprints. Commit it with your project.
+3. **DuckDB stores the records.** The database remains table-native, portable,
+   and available to familiar DBI and dbplyr workflows.
+4. **graft controls knowledge access.** Retrieval is limited to
+   manifest-declared classes and fields. Collected results are explicitly
+   bounded and carry the active schema digest.
+
+Python and `linkml-runtime` are used only for step 2. Loading an existing
+manifest and performing normal storage or retrieval both run entirely in R.
+
+## Installation
+
+graft is currently available from GitHub:
+
+```{r, eval = FALSE}
+pak::pak("JamesHWade/graft")
+```
+
+## Start from a compiled contract
+
+```{r setup}
+library(graft)
+```
+
+The package includes a small materials contract for this guide. Loading the
+compiled manifest does not initialize Python:
+
+```{r load-schema}
+manifest <- system.file(
+  "extdata",
+  "materials.graft.json",
+  package = "graft"
+)
+schema <- kg_schema(manifest)
+schema
+```
+
+Inspect the contract before creating a store:
+
+```{r inspect-schema}
+kg_classes(schema)
+kg_slots(schema, "Claim")
+```
+
+The `role` and `statement_shape` columns are important. They let graft treat
+domain-specific classes consistently without pretending that every record is
+the same kind of thing:
+
+- nodes are the subjects and objects a workflow reasons about;
+- narrative statements preserve source-faithful language;
+- semantic statements express an intentional subject-predicate-object
+  assertion;
+- sources describe where information came from;
+- evidence connects a statement to a stored source and locator.
+
+## Create a store
+
+For exploration, use an in-memory DuckDB database. For a durable store, replace
+`":memory:"` with a file path.
+
+```{r create-store}
+store <- kg_connect_duckdb(schema, ":memory:")
+kg_init(store)
+store
+```
+
+`kg_init()` creates the tables and graph views declared by the manifest, plus
+graft's private metadata tables. Calling it again is safe. If an existing store
+was initialized with a structurally different manifest, graft reports a schema
+mismatch rather than silently changing the meaning of its data.
+
+## Ingest records with provenance
+
+Ingestion happens in atomic batches. A batch identifies the producer and
+provides an optional idempotency key, so rerunning the same stage does not
+duplicate its observations.
+
+First ingest one material and one source:
+
+```{r ingest-foundations}
+foundations <- list(
+  Material = data.frame(
+    preferred_name = "Linear low-density polyethylene (LLDPE)",
+    description = "A polyethylene with controlled short-chain branching.",
+    cas_number = "9002-88-4"
+  ),
+  Source = data.frame(
+    uri = "https://example.org/lldpe-study",
+    title = "Controlled DSC study of LLDPE crystallinity",
+    doi = "10.1000/lldpe.dsc"
+  )
+)
+
+kg_ingest(
+  store,
+  kg_batch(
+    producer = "getting-started",
+    source_run_id = "materials-demo",
+    idempotency_key = "foundations-v1"
+  ),
+  foundations
+)
+```
+
+graft minted internal IDs and registered the schema-declared external
+identifiers. Exact lookup resolves normalized external values back to the
+stable records:
+
+```{r resolve-identities}
+material_id <- kg_lookup(
+  store,
+  namespace = "cas",
+  value = "CAS: 9002-88-4"
+)$record_id[[1]]
+
+source_id <- kg_lookup(
+  store,
+  namespace = "doi",
+  value = "https://doi.org/10.1000/LLDPE.DSC"
+)$record_id[[1]]
+```
+
+Now add a claim about the material. A multivalued LinkML slot, such as `about`,
+is represented as a list-column:
+
+```{r ingest-claim}
+kg_write(
+  store,
+  kg_batch(
+    producer = "getting-started",
+    source_run_id = "materials-demo",
+    idempotency_key = "claim-v1"
+  ),
+  class = "Claim",
+  records = data.frame(
+    statement_text = paste(
+      "A controlled DSC experiment measured 37% crystallinity",
+      "for the LLDPE sample."
+    ),
+    primary_subject = material_id,
+    claim_type = "finding",
+    polarity = "positive",
+    confidence = 0.95,
+    status = "active",
+    about = I(list(material_id))
+  )
+)
+
+claim_id <- kg_find(
+  store,
+  "crystallinity",
+  class = "Claim",
+  limit = 1
+)$id[[1]]
+```
+
+Finally, connect the claim to the exact source passage:
+
+```{r ingest-evidence}
+kg_write(
+  store,
+  kg_batch(
+    producer = "getting-started",
+    source_run_id = "materials-demo",
+    idempotency_key = "evidence-v1"
+  ),
+  class = "Evidence",
+  records = data.frame(
+    statement_id = claim_id,
+    source_id = source_id,
+    support_type = "supports",
+    locator_type = "other",
+    locator_value = "table 1",
+    page_start = 5L,
+    page_end = 5L,
+    excerpt = "Crystallinity (%) for the LLDPE sample: 37."
+  )
+)
+```
+
+These writes are separate because the example lets graft mint each ID before a
+later record refers to it. Producers that already have stable graft IDs can
+submit all related classes in one atomic `kg_ingest()` call.
+
+## Retrieve an answer and its evidence
+
+Search is useful for discovery:
+
+```{r search}
+kg_find(store, "LLDPE", limit = 5)
+```
+
+Hydration starts from one stable ID and returns bounded related records:
+
+```{r hydrate}
+material <- kg_get(store, material_id)
+material
+
+material$record[c("preferred_name", "cas_number")]
+```
+
+Claims remain assertions rather than being collapsed into a single truth.
+Their status, polarity, qualifiers, and evidence stay available for inspection:
+
+```{r claims}
+claims <- kg_claims(store, material_id)
+claims[c("statement_text", "confidence", "status")]
+
+evidence <- kg_evidence(store, claim_id)
+evidence[c(
+  "support_type",
+  "source_title",
+  "locator_value",
+  "excerpt"
+)]
+```
+
+This distinction is deliberate. A narrative claim records what a source says.
+A semantic statement records an intentional normalized assertion. Evidence can
+support or contradict either statement shape, and graft can return competing
+claims without adjudicating them on the user's behalf.
+
+## Choose the right retrieval surface
+
+graft offers different interfaces for different jobs:
+
+| Need | Interface | Collection behavior |
+|---|---|---|
+| Work with one class using dplyr | `kg_records()` | Lazy |
+| Discover records by declared text fields | `kg_find()` | Bounded |
+| Resolve an external identifier exactly | `kg_lookup()` | Bounded |
+| Hydrate one record and related knowledge | `kg_get()` | Bounded |
+| Inspect claims and stored citations | `kg_claims()`, `kg_evidence()` | Bounded |
+| Run a validated structured query | `kg_select()` | Bounded |
+| Explore a graph neighborhood | `kg_neighbors()` | Bounded |
+
+For example, `kg_records()` returns a lazy dbplyr table:
+
+```{r lazy-table}
+kg_records(store, "Claim") |>
+  dplyr::select(id, statement_text, confidence) |>
+  dplyr::collect()
+```
+
+`kg_select()` is the safer collected interface when a caller should choose
+fields and filters but must not provide SQL:
+
+```{r structured-query}
+kg_select(
+  store,
+  class = "Claim",
+  fields = c("id", "statement_text", "confidence"),
+  filters = list(list(
+    field = "confidence",
+    operator = "gte",
+    value = 0.9
+  )),
+  limit = 10
+)
+```
+
+## Use graft with a language model
+
+If the `ellmer` package is installed, `kg_tools()` creates six read-only tools
+that capture one initialized store:
+
+```{r, eval = FALSE}
+chat <- ellmer::chat_anthropic()
+chat$set_tools(kg_tools(store))
+```
+
+The tools expose the same manifest-controlled, bounded retrieval surfaces used
+above. They do not accept SQL, file paths, URLs, or network options. Their
+results include truncation metadata and the store's schema digest, so a caller
+can tell whether an answer was based on a complete bounded result and which
+contract shaped it.
+
+graft does not make model output trustworthy by itself. It supplies the
+mechanics for retrieving stored claims and citation material without inventing
+sources or bypassing the domain contract.
+
+## Bring your own domain
+
+The installed example's LinkML source is available as a starting point:
+
+```{r example-schema-path}
+system.file(
+  "extdata",
+  "materials.linkml.yaml",
+  package = "graft"
+)
+```
+
+Your concrete classes extend graft's core roles:
+
+- `GraftNode`
+- `GraftEdge`
+- `GraftNarrativeStatement`
+- `GraftSemanticStatement`
+- `GraftSource`
+- `GraftEvidence`
+- `GraftMention`
+- `GraftMetadata`
+
+Use annotations in your LinkML schema to declare identity policies, external
+identifier namespaces, search fields, label fields, origin keys, and semantic
+qualifiers. Compile the schema once:
+
+```{r, eval = FALSE}
+kg_compile_schema(
+  "my-domain.linkml.yaml",
+  "my-domain.graft.json"
+)
+```
+
+Commit both the source schema and compiled manifest. Application and production
+environments can then load the manifest without Python:
+
+```{r, eval = FALSE}
+schema <- kg_schema("my-domain.graft.json")
+store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+kg_init(store)
+```
+
+## When graft is a good fit
+
+Use graft when domain knowledge accumulates across runs and must preserve
+identity, claims, evidence, and a versioned semantic contract while remaining
+comfortable to query from R.
+
+graft is not a replacement for LinkML schema design, a general-purpose graph
+database, vector similarity search, or source collection. It sits between
+those concerns: producers supply domain records and evidence, LinkML defines
+their meaning, DuckDB stores them as tables, and graft keeps identity,
+provenance, graph projection, and retrieval behavior aligned with the compiled
+contract.
+
+```{r cleanup, include = FALSE}
+kg_disconnect(store)
+```
