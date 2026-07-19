@@ -126,8 +126,8 @@ a replay rather than a new observation. The getting-started guide continues
 from this foundation by adding a source-backed claim and retrieving the exact
 evidence stored with it.
 
-Python and `linkml-runtime` are needed only to compile a schema. Loading a
-committed manifest and using a store run entirely in R.
+Python and `linkml-runtime` are needed only to compile a schema. After
+compilation, graft loads committed manifests and operates stores entirely in R.
 
 ## Query interfaces
 
