@@ -43,12 +43,28 @@ blue_sky_result_builder <- function(
       !identical(
         thermal_observation$record$source_quality,
         "independent"
+      ) ||
+      !identical(
+        torque_observation$record$finding_kind,
+        "capability"
+      ) ||
+      !identical(
+        torque_observation$record$polarity,
+        "positive"
+      ) ||
+      !identical(
+        thermal_observation$record$finding_kind,
+        "limitation"
+      ) ||
+      !identical(
+        thermal_observation$record$polarity,
+        "negative"
       )
   ) {
     stop(
       paste(
-        "The bounded-test synthesis requires independent Observation",
-        "records."
+        "The bounded-test synthesis requires an independent positive",
+        "capability observation and an independent negative limitation."
       )
     )
   }

@@ -512,6 +512,9 @@ test_that("scheduled signals promote through approval into accepted history", {
   torque_index <- which(
     independent_ids == "graft:00000000000000000000000118"
   )
+  thermal_index <- which(
+    independent_ids == "graft:00000000000000000000000119"
+  )
   insufficient_context <- accepted_context
   insufficient_context$claims[[
     torque_index
@@ -544,7 +547,27 @@ test_that("scheduled signals promote through approval into accepted history", {
   expect_s3_class(vendor_result, "error")
   expect_match(
     conditionMessage(vendor_result),
-    "requires independent Observation records"
+    "requires an independent positive"
+  )
+  contradictory_context <- accepted_context
+  contradictory_context$claims[[
+    thermal_index
+  ]]$record$finding_kind <- "capability"
+  contradictory_context$claims[[
+    thermal_index
+  ]]$record$polarity <- "positive"
+  contradictory_result <- tryCatch(
+    environment$blue_sky_result_builder(
+      referral,
+      contradictory_context,
+      accepted_evidence
+    ),
+    error = identity
+  )
+  expect_s3_class(contradictory_result, "error")
+  expect_match(
+    conditionMessage(contradictory_result),
+    "independent negative limitation"
   )
   vendor_evidence <- accepted_evidence
   vendor_evidence[[1L]]$source$record$source_quality <- "vendor"
