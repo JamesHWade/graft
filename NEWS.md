@@ -6,8 +6,7 @@
 * `kg_claims()`, `kg_evidence()`, and `kg_competing_claims()` retrieve bounded
   narrative and semantic assertions, stored citations, and non-adjudicated
   comparison sets while preserving qualifiers and ordinary attributes.
-* `kg_compile_schema()` compiles LinkML schemas into deterministic, portable
-  graft manifests.
+* `kg_compile_schema()` compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.
 * `kg_connect_duckdb()`, `kg_init()`, and `kg_disconnect()` provide an
   ownership-aware DuckDB store lifecycle with manifest-driven initialization
   and structural schema protection.

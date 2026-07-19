@@ -1,0 +1,206 @@
+---
+title: "Use a LinkML schema with graft"
+description: >
+  Compile an ordinary LinkML schema, write schema-shaped records to DuckDB,
+  and query them from R.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Use a LinkML schema with graft}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This article starts with an ordinary LinkML schema. It does not import graft's
+core schema or use graft annotations.
+
+The example is based on LinkML's
+[PersonInfo tutorial](https://linkml.io/linkml/intro/tutorial01.html), which
+introduces classes and attributes with a small `Person` model. This version
+adds an `Organization` class and the tutorial's suggested employment
+relationship.
+
+## Write the schema
+
+```{r setup}
+library(graft)
+
+schema_file <- system.file(
+  "extdata",
+  "personinfo.linkml.yaml",
+  package = "graft"
+)
+```
+
+The complete schema is:
+
+```{r show-schema, echo = FALSE, results = "asis"}
+cat(
+  "```yaml\n",
+  paste(readLines(schema_file, warn = FALSE), collapse = "\n"),
+  "\n```\n",
+  sep = ""
+)
+```
+
+These are standard LinkML features:
+
+- `classes` define `Person` and `Organization` records;
+- `attributes` define their fields;
+- `identifier: true` marks each class identifier;
+- `required`, `range`, and `minimum_value` add constraints;
+- `multivalued: true` represents repeated values; and
+- `slot_uri` and `class_uri` connect local names to Schema.org terms.
+
+There is no graft-specific authoring requirement in this file.
+
+## Compile the schema
+
+Compile the LinkML file into a graft manifest:
+
+```{r compile, eval = FALSE}
+kg_compile_schema(
+  "personinfo.linkml.yaml",
+  "personinfo.graft.json"
+)
+```
+
+Compilation is the only step that uses Python and `linkml-runtime`. Commit the
+generated `.graft.json` file with the source schema. Applications can then load
+the manifest without Python.
+
+The package includes a compiled copy so the rest of this article is
+executable:
+
+```{r load-manifest}
+manifest_file <- system.file(
+  "extdata",
+  "personinfo.graft.json",
+  package = "graft"
+)
+schema <- kg_schema(manifest_file)
+
+kg_classes(schema)
+kg_slots(schema, "Person")
+```
+
+For a plain LinkML class, graft supplies conservative storage defaults:
+
+- a concrete class becomes a node table;
+- a scalar string-like `id` remains the record identifier;
+- scalar attributes become columns;
+- multivalued attributes become related tables;
+- class-valued attributes become references;
+- common text fields provide a display label and basic search fields; and
+- `created_at` and `updated_at` are added to the runtime manifest.
+
+These defaults affect the compiled manifest, not the source LinkML file.
+
+## Create the DuckDB store
+
+```{r create-store}
+store <- suppressMessages(kg_connect_duckdb(schema, ":memory:"))
+kg_init(store)
+```
+
+Use a file path instead of `":memory:"` when the store should persist across R
+sessions.
+
+## Write LinkML-shaped records
+
+The input data use the class and attribute names from the LinkML schema. An
+object reference contains the identifier of the referenced record. A
+multivalued attribute uses a list-column.
+
+```{r ingest}
+records <- list(
+  Organization = data.frame(
+    id = "org:daily-planet",
+    name = "Daily Planet"
+  ),
+  Person = data.frame(
+    id = "person:clark-kent",
+    full_name = "Clark Kent",
+    aliases = I(list(c("Superman", "Kal-El"))),
+    age = 35L,
+    employed_by = I(list("org:daily-planet"))
+  )
+)
+
+kg_ingest(
+  store,
+  kg_batch(
+    producer = "linkml-example",
+    idempotency_key = "personinfo-v1"
+  ),
+  records
+)
+```
+
+The two classes are committed in one transaction. The reference from
+`Person.employed_by` is checked against both records already in the store and
+records staged in the same batch.
+
+## Query the records
+
+`kg_records()` returns a lazy dbplyr table:
+
+```{r lazy-query}
+people <- kg_records(store, "Person")
+
+people |>
+  dplyr::select(id, full_name, age) |>
+  dplyr::collect()
+```
+
+The inferred text fields are available to `kg_find()`:
+
+```{r search}
+kg_find(store, "Clark", class = "Person", limit = 5)
+```
+
+`kg_get()` hydrates the record and its multivalued fields:
+
+```{r hydrate}
+person <- kg_get(store, "person:clark-kent")
+
+person$record[c("id", "full_name", "age")]
+person$record$aliases
+person$record$employed_by
+```
+
+## Add graft semantics only when needed
+
+Ordinary LinkML describes record structure, identifiers, ranges, cardinality,
+and semantic mappings. That is enough for baseline storage and querying.
+
+Some knowledge-store decisions are not part of a general LinkML schema. For
+example, a project may want to distinguish narrative claims from normalized
+semantic statements, connect claims to exact evidence locations, normalize
+external identifiers, or choose weighted search fields.
+
+For those cases, import `graft-core.linkml` and extend one of graft's optional
+roles:
+
+- `GraftNarrativeStatement`
+- `GraftSemanticStatement`
+- `GraftSource`
+- `GraftEvidence`
+- `GraftMention`
+- `GraftEdge`
+- `GraftMetadata`
+
+The package's
+[`materials.linkml.yaml`](https://github.com/JamesHWade/graft/blob/main/inst/extdata/materials.linkml.yaml)
+shows that enriched form. Start with ordinary LinkML and add these roles only
+when the application needs their behavior.
+
+```{r cleanup, include = FALSE}
+kg_disconnect(store)
+```

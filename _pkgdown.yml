@@ -34,12 +34,15 @@ home:
 
 navbar:
   structure:
-    left: [intro, reference, news]
+    left: [intro, examples, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
+    examples:
+      text: Examples
+      href: articles/examples.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/JamesHWade/graft/
@@ -55,10 +58,16 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Build a small materials store from an included schema, then add records,
-      a claim, a source, and evidence and query them from R.
+      Build a small knowledge store, or start from an ordinary LinkML schema
+      and see how its classes and slots map to DuckDB.
     contents:
       - getting-started
+      - linkml-schema
+  - title: Examples
+    desc: >
+      Small, runnable domain models adapted from established LinkML projects.
+    contents:
+      - examples
 
 reference:
   - title: Schema
@@ -87,7 +96,6 @@ reference:
   - contents:
       - kg_batch
       - kg_ingest
-      - kg_ingest_tempest_records
       - kg_write
       - kg_validate_data
   - title: Records and identity
@@ -126,9 +134,9 @@ reference:
       - kg_context
       - kg_select
       - kg_tools
-  - title: Tempest integration
+  - title: Experimental integrations
     desc: >
-      Write mapped Tempest records and inspect the current artifact-store
-      adapter.
+      Package-specific adapters. Most graft users do not need these functions.
   - contents:
+      - kg_ingest_tempest_records
       - tempest_artifact_store_graft

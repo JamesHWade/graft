@@ -356,7 +356,8 @@ resolve_record_identity <- function(
     !is.null(supplied_id) && length(supplied_id) > 0L && !is.na(supplied_id)
   ) {
     supplied_id <- as.character(supplied_id)
-    if (!is_graft_id(supplied_id)) {
+    id_format <- scalar_character(class_contract$id_format, "graft")
+    if (identical(id_format, "graft") && !is_graft_id(supplied_id)) {
       abort_identity_error(
         paste0("`", supplied_id, "` is not a valid internal graft ID."),
         record_class = record_class,
@@ -364,6 +365,20 @@ resolve_record_identity <- function(
         record_id = supplied_id,
         field = "id",
         rule = "graft_ulid",
+        observed_value = supplied_id
+      )
+    }
+    if (
+      identical(id_format, "linkml") &&
+        (length(supplied_id) != 1L || !nzchar(trimws(supplied_id)))
+    ) {
+      abort_identity_error(
+        "A LinkML identifier must be one non-empty string.",
+        record_class = record_class,
+        input_row = input_row,
+        record_id = supplied_id,
+        field = "id",
+        rule = "linkml_identifier",
         observed_value = supplied_id
       )
     }

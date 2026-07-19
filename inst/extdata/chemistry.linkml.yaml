@@ -1,0 +1,79 @@
+id: https://w3id.org/graft/examples/chemistry
+name: chemistry
+title: Chemical entities and stereoisomer mixtures
+description: A small chemistry schema adapted from CHEMROF concepts.
+version: 0.1.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  chemistry: https://w3id.org/graft/examples/chemistry/
+  chemrof: https://w3id.org/chemrof/
+  CHEBI: http://purl.obolibrary.org/obo/CHEBI_
+imports:
+  - linkml:types
+default_prefix: chemistry
+default_range: string
+
+enums:
+  ChiralityEnum:
+    description: Handedness of a stereoisomer.
+    permissible_values:
+      left:
+        description: Left-handed stereoisomer.
+      right:
+        description: Right-handed stereoisomer.
+
+classes:
+  ChemicalEntity:
+    abstract: true
+    class_uri: chemrof:ChemicalEntity
+    attributes:
+      id:
+        identifier: true
+        required: true
+        range: uriorcurie
+      name:
+        required: true
+      aliases:
+        multivalued: true
+
+  Molecule:
+    is_a: ChemicalEntity
+    class_uri: chemrof:Molecule
+    attributes:
+      molecular_formula:
+        slot_uri: chemrof:molecular_formula
+      inchi:
+        slot_uri: chemrof:inchi_string
+
+  Enantiomer:
+    is_a: Molecule
+    class_uri: chemrof:Enantiomer
+    attributes:
+      chirality:
+        range: ChiralityEnum
+        required: true
+      chirality_agnostic_form:
+        range: Molecule
+        required: true
+        inlined: false
+        slot_uri: chemrof:chirality_agnostic_form
+
+  RacemicMixture:
+    is_a: ChemicalEntity
+    class_uri: chemrof:RacemicMixture
+    attributes:
+      has_left_enantiomer:
+        range: Enantiomer
+        required: true
+        inlined: false
+        slot_uri: chemrof:has_left_enantiomer
+      has_right_enantiomer:
+        range: Enantiomer
+        required: true
+        inlined: false
+        slot_uri: chemrof:has_right_enantiomer
+      chirality_agnostic_form:
+        range: Molecule
+        required: true
+        inlined: false
+        slot_uri: chemrof:chirality_agnostic_form

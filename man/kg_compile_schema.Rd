@@ -21,3 +21,10 @@ Python. It uses \code{linkml_runtime.SchemaView} to resolve the complete import
 closure and writes a canonical JSON manifest. Loading the result with
 \code{\link[=kg_schema]{kg_schema()}} does not require Python.
 }
+\details{
+Ordinary LinkML schemas do not need to import graft's core schema or use
+graft annotations. Concrete classes receive conservative node, identity,
+label, search, and timestamp defaults in the compiled manifest. Import
+\code{graft-core.linkml} only when a schema needs graft-specific statement,
+evidence, source, mention, edge, or metadata behavior.
+}

@@ -1,0 +1,47 @@
+id: https://w3id.org/graft/examples/personinfo
+name: personinfo
+title: Person information
+description: A small people and organizations schema based on LinkML PersonInfo.
+version: 0.1.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+  personinfo: https://w3id.org/graft/examples/personinfo/
+  sdo: https://schema.org/
+imports:
+  - linkml:types
+default_prefix: personinfo
+default_range: string
+
+classes:
+  Person:
+    class_uri: sdo:Person
+    attributes:
+      id:
+        identifier: true
+        required: true
+        slot_uri: sdo:identifier
+      full_name:
+        required: true
+        slot_uri: sdo:name
+      aliases:
+        multivalued: true
+        slot_uri: sdo:alternateName
+      age:
+        range: integer
+        minimum_value: 0
+      employed_by:
+        range: Organization
+        multivalued: true
+        inlined: false
+        slot_uri: sdo:worksFor
+
+  Organization:
+    class_uri: sdo:Organization
+    attributes:
+      id:
+        identifier: true
+        required: true
+        slot_uri: sdo:identifier
+      name:
+        required: true
+        slot_uri: sdo:name

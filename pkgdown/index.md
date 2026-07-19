@@ -64,7 +64,7 @@ decisions in a LinkML schema and applies them when data are written and read.
 <div class="graft-flow-step">
 <span class="graft-flow-number">01</span>
 <strong>Write a schema</strong>
-<span>Extend the core LinkML record classes.</span>
+<span>Describe the domain with ordinary LinkML classes and slots.</span>
 </div>
 <div class="graft-flow-step">
 <span class="graft-flow-number">02</span>
@@ -134,6 +134,9 @@ manifest and using a store run entirely in R.
 <div class="graft-actions justify-content-center">
 <a class="btn btn-primary" href="articles/getting-started.html">
       Read getting started
+</a>
+<a class="btn btn-outline-secondary" href="articles/examples.html">
+      See examples
 </a>
 <a class="btn btn-outline-secondary" href="reference/index.html">
       Browse functions

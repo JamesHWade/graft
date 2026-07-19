@@ -951,9 +951,28 @@ validate_reference_target <- function(
   target,
   expected
 ) {
-  if (!is_graft_id(target)) {
+  expected_contract <- store$schema$manifest$classes[[expected]]
+  expected_id_format <- if (is.null(expected_contract)) {
+    "graft"
+  } else {
+    scalar_character(expected_contract$id_format, "graft")
+  }
+  invalid_id <- if (identical(expected_id_format, "linkml")) {
+    !is.character(target) ||
+      length(target) != 1L ||
+      is.na(target) ||
+      !nzchar(trimws(target))
+  } else {
+    !is_graft_id(target)
+  }
+  if (invalid_id) {
+    id_description <- if (identical(expected_id_format, "linkml")) {
+      "a non-empty LinkML identifier"
+    } else {
+      "an internal graft ID"
+    }
     abort_reference_error(
-      paste0("Reference `", target, "` is not an internal graft ID."),
+      paste0("Reference `", target, "` is not ", id_description, "."),
       record_class = record_class,
       input_row = input_row,
       record_id = record_id,
