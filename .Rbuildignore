@@ -8,6 +8,7 @@
 ^AGENTS\.md$
 ^\.claude$
 ^[.]?air[.]toml$
+^jarl[.]toml$
 ^codecov\.yml$
 ^_brand\.yml$
 ^_pkgdown\.yml$
