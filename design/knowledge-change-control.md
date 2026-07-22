@@ -131,16 +131,16 @@ safe for sensitive fields.
 
 ### Store-format and revision foundation
 
-- [ ] Cut the store format to version 2 and reject other formats explicitly.
-- [ ] Add schema version and activation metadata.
-- [ ] Add record revision and head metadata.
-- [ ] Add batch schema and commit-order metadata.
-- [ ] Add observation disposition and revision metadata.
-- [ ] Register the initial manifest during store creation.
-- [ ] Create deterministic canonical logical-record payloads and content
+- [x] Cut the store format to version 2 and reject other formats explicitly.
+- [x] Add schema version and activation metadata.
+- [x] Add record revision and head metadata.
+- [x] Add batch schema and commit-order metadata.
+- [x] Add observation disposition and revision metadata.
+- [x] Register the initial manifest during store creation.
+- [x] Create deterministic canonical logical-record payloads and content
   digests.
-- [ ] Capture revisions and update heads within `kg_ingest()` transactions.
-- [ ] Preserve match, replay, rollback, identity, and relation behavior.
+- [x] Capture revisions and update heads within `kg_ingest()` transactions.
+- [x] Preserve match, replay, rollback, identity, and relation behavior.
 
 ### History retrieval and integrity
 
@@ -153,7 +153,7 @@ safe for sensitive fields.
 
 ### Schema migration
 
-- [ ] Enrich schema diffs with deterministic per-change classification.
+- [x] Enrich schema diffs with deterministic per-change classification.
 - [ ] Create immutable migration plans with store preconditions and digests.
 - [ ] Apply supported additive DDL atomically.
 - [ ] Register schema activation and migration history.

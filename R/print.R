@@ -15,7 +15,14 @@ print.kg_schema <- function(x, ...) {
 #' @export
 print.kg_schema_diff <- function(x, ...) {
   status <- if (isTRUE(x$compatible)) "compatible" else "incompatible"
-  cat("<kg_schema_diff> ", status, "\n", sep = "")
+  cat(
+    "<kg_schema_diff> ",
+    status,
+    " (",
+    x$classification,
+    ")\n",
+    sep = ""
+  )
   if (!isTRUE(x$compatible)) {
     cat("  old: ", x$old_structural_digest, "\n", sep = "")
     cat("  new: ", x$new_structural_digest, "\n", sep = "")

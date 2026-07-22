@@ -15,18 +15,22 @@ new_kg_schema_diff <- function(
   slots,
   enums,
   tables,
-  relations
+  relations,
+  classification,
+  details
 ) {
   structure(
     list(
       compatible = identical(old_structural_digest, new_structural_digest),
+      classification = classification,
       old_structural_digest = old_structural_digest,
       new_structural_digest = new_structural_digest,
       classes = classes,
       slots = slots,
       enums = enums,
       tables = tables,
-      relations = relations
+      relations = relations,
+      details = details
     ),
     class = "kg_schema_diff"
   )
