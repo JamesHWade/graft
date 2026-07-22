@@ -491,6 +491,11 @@ test_that("structural mismatches carry a schema diff", {
   expect_s3_class(condition, "graft_schema_mismatch")
   expect_s3_class(condition$schema_diff, "kg_schema_diff")
   expect_identical(condition$schema_diff$compatible, FALSE)
+  expect_match(
+    conditionMessage(condition),
+    condition$schema_diff$classification,
+    fixed = TRUE
+  )
   expect_in("Entity", condition$schema_diff$classes$changed)
 })
 

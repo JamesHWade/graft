@@ -29,7 +29,9 @@ abort_schema_mismatch <- function(diff, call = rlang::caller_env()) {
   graft_abort(
     "graft_schema_mismatch",
     paste0(
-      "The schemas are not structurally compatible: ",
+      "The schemas are not structurally compatible (classification: ",
+      diff$classification,
+      "): ",
       diff$old_structural_digest,
       " versus ",
       diff$new_structural_digest,

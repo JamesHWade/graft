@@ -30,11 +30,11 @@ revision ledger used for these questions. Ingestion batches connect each
 accepted change to its producer, schema, and commit order. Schema evolution is
 a separate plan-review-apply operation.
 
-This guide runs the complete loop with two small contracts included in the
-package. Both are already compiled, so the walkthrough does not require
-Python.
+This guide runs the complete loop with two small contract versions included in
+the package. Both use store format 2 and are already compiled, so the
+walkthrough does not require Python.
 
-## Create a version 1 store
+## Create a store with contract v1
 
 ```{r setup}
 library(graft)
