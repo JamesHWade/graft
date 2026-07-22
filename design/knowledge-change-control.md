@@ -110,19 +110,15 @@ Applying a plan rechecks its preconditions, drops dependent generated views,
 applies DDL, registers and activates the new manifest, recreates views, verifies
 the physical catalog, and records the migration in one transaction.
 
-## Candidate public surface
+## Public surface
 
-Working names may change during implementation when tests reveal a clearer
-contract.
-
-- Extend `kg_store_info()` with format, history, and active-schema information.
+- `kg_store_info()` reports format, history, and active-schema information.
 - `kg_batches()` returns bounded batch provenance.
-- `kg_history()` returns bounded revisions for one record.
+- `kg_history()` returns bounded revisions for one record and hydrates its
+  accepted state at a committed batch or time boundary.
 - `kg_changes()` returns bounded changes by batch, record, class, or time.
-- `kg_plan_migration()` creates an immutable migration plan.
+- `kg_plan_migration()` creates a deterministic, tamper-evident migration plan.
 - `kg_apply_migration()` explicitly applies a reviewed plan.
-- Add point-in-time hydration to `kg_get()`, followed by historical claims and
-  evidence once the record-level contract is stable.
 
 No agent tool is added until its underlying R interface is stable, bounded, and
 safe for sensitive fields.
@@ -144,34 +140,35 @@ safe for sensitive fields.
 
 ### History retrieval and integrity
 
-- [ ] Expose bounded batch provenance.
-- [ ] Expose bounded record history.
-- [ ] Expose bounded changes with manifest-governed sensitivity filtering.
-- [ ] Add point-in-time hydration for one record.
-- [ ] Add shallow and deep store integrity diagnostics.
-- [ ] Expose history and schema capabilities through store metadata.
+- [x] Expose bounded batch provenance.
+- [x] Expose bounded record history.
+- [x] Expose bounded changes with manifest-governed sensitivity filtering.
+- [x] Add point-in-time hydration for one record.
+- [x] Add shallow and deep store integrity diagnostics.
+- [x] Expose history and schema capabilities through store metadata.
 
 ### Schema migration
 
 - [x] Enrich schema diffs with deterministic per-change classification.
-- [ ] Create immutable migration plans with store preconditions and digests.
-- [ ] Apply supported additive DDL atomically.
-- [ ] Register schema activation and migration history.
-- [ ] Recreate and verify generated graph views.
-- [ ] Refuse stale, read-only, destructive, and unsupported plans before
+- [x] Create deterministic, tamper-evident migration plans with store
+  preconditions and digests.
+- [x] Apply supported additive DDL atomically.
+- [x] Register schema activation and migration history.
+- [x] Recreate and verify generated graph views.
+- [x] Refuse stale, read-only, destructive, and unsupported plans before
   mutation.
 
 ### Documentation and release quality
 
-- [ ] Document every public function and add it to the pkgdown reference index.
-- [ ] Add user-facing changes to `NEWS.md`.
-- [ ] Add a runnable history and migration example.
-- [ ] Add tests for new stores, revisions, matches, replays, rollbacks,
+- [x] Document every public function and add it to the pkgdown reference index.
+- [x] Add user-facing changes to `NEWS.md`.
+- [x] Add a runnable history and migration example.
+- [x] Add tests for new stores, revisions, matches, replays, rollbacks,
   multivalues, sensitivity, deterministic ordering, additive migrations,
   migration drift, read-only behavior, and unsupported changes.
-- [ ] Run `air format .`, focused tests, the complete test suite,
+- [x] Run `air format .`, focused tests, the complete test suite,
   `pkgdown::check_pkgdown()`, and `devtools::check()`.
-- [ ] Conduct an adversarial code and test review before creating the pull
+- [x] Conduct an adversarial code and test review before creating the pull
   request.
 
 ## Deferred work
@@ -194,6 +191,8 @@ safe for sensitive fields.
 | Store metadata | `R/metadata.R` | `metadata_table_definitions()`, `verify_initialized_store()` |
 | Store lifecycle | `R/store.R` | `kg_init()`, `kg_store_info()` |
 | Schema comparison | `R/schema-diff.R` | `kg_schema_diff()` |
+| History and integrity | `R/history.R` | `kg_batches()`, `kg_changes()`, `kg_history()`, `kg_check_store()` |
+| Schema migration | `R/migration.R` | `kg_plan_migration()`, `kg_apply_migration()` |
 | Typed DDL | `R/ddl.R` | `create_manifest_tables()`, `create_table()` |
 | Record retrieval | `R/records.R` | `kg_records()`, `kg_get()`, `kg_lookup()` |
 | Claims and evidence | `R/claims.R` | `kg_claims()`, `kg_evidence()` |

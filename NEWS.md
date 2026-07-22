@@ -1,9 +1,13 @@
 # graft 0.0.0.9000
 
 * A provider-free continuous-intelligence example and staged operator walkthrough demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
+* Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
+* `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.
 * `kg_batch()` creates stable producer batches, and `kg_ingest()` atomically
   reconciles, validates, and upserts multiple record classes with identifier,
   origin, observation, and replay lineage.
+* `kg_batches()` and `kg_changes()` provide bounded, newest-first provenance and revision views with historical schema-aware sensitivity filtering.
+* `kg_check_store()` reports bounded revision-ledger and current-state integrity findings, with an optional deep payload and projection check.
 * `kg_claims()`, `kg_evidence()`, and `kg_competing_claims()` retrieve bounded
   narrative and semantic assertions, stored citations, and non-adjudicated
   comparison sets while preserving qualifiers and ordinary attributes.
@@ -19,17 +23,19 @@
   provenance.
 * `kg_get()` hydrates exactly one public record with bounded related
   identifiers, claims, and evidence.
+* `kg_history()` retrieves bounded revisions for one record and recovers its accepted state at a committed batch or time boundary.
+* `kg_init()` verifies structural-digest integrity and compiler-required physical type contracts before creating or changing store objects.
 * `kg_ingest_tempest_records()` commits mapped Tempest domain records with
   run- and stage-stable idempotency keys, independently of Tempest deliverable
   persistence.
+* `kg_plan_migration()` creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.
 * `kg_records()` returns lazy typed dbplyr tables for public concrete classes.
 * `kg_schema()`, `kg_classes()`, `kg_slots()`, `kg_enums()`, and
   `kg_schema_info()` load and inspect manifests without Python.
-* `kg_schema_diff()` reports structural schema changes.
+* `kg_schema_diff()` reports structural schema changes with deterministic per-change and overall compatibility classifications.
 * `kg_select()` provides a collected, hard-capped structured query surface
   with manifest validation and no arbitrary SQL.
-* `kg_store_info()` and `kg_capabilities()` inspect DuckDB stores without
-  requiring Python.
+* `kg_store_info()` reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; `kg_capabilities()` reports static backend capabilities.
 * `kg_tools()` creates six read-only ellmer tools over bounded Graft retrieval
   APIs, with structured results and no arbitrary SQL surface.
 * `kg_unresolved()` returns bounded unresolved mention records.

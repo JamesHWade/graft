@@ -1,0 +1,43 @@
+id: https://w3id.org/graft/examples/change-control
+name: change_control
+title: Knowledge change control example
+version: 1.0.0
+prefixes:
+  change: https://w3id.org/graft/examples/change-control/
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: change
+default_range: string
+imports:
+  - ../schema/graft-core.linkml
+
+slots:
+  preferred_name:
+    range: string
+    required: true
+  status:
+    range: string
+  portfolio_id:
+    range: string
+    annotations:
+      graft.external_identifier:
+        tag: graft.external_identifier
+        value: portfolio
+
+classes:
+  Initiative:
+    is_a: GraftNode
+    slots:
+      - preferred_name
+      - status
+      - portfolio_id
+    annotations:
+      graft.id_policy:
+        tag: graft.id_policy
+        value: resolve_exact
+      graft.label_slot:
+        tag: graft.label_slot
+        value: preferred_name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "preferred_name, status"
