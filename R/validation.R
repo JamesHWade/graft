@@ -157,6 +157,8 @@ normalize_class_records <- function(
     slots
   )
   for (slot_name in names(multivalue_slots)) {
+    slot <- multivalue_slots[[slot_name]]
+    canonical_slot_type(slot, operation = "stage_record")
     if (!slot_name %in% names(data)) {
       data[[slot_name]] <- rep(list(NULL), nrow(data))
     } else if (!is.list(data[[slot_name]])) {
@@ -174,7 +176,6 @@ normalize_class_records <- function(
         observed_value = data[[slot_name]]
       )
     } else {
-      slot <- multivalue_slots[[slot_name]]
       data[[slot_name]] <- lapply(
         seq_along(data[[slot_name]]),
         function(index) {
@@ -303,7 +304,11 @@ normalize_class_records <- function(
         existing = NULL
       )
     } else {
-      changed <- record_has_changes(physical[index, , drop = FALSE], current)
+      changed <- record_has_changes(
+        physical[index, , drop = FALSE],
+        current,
+        scalar_slots
+      )
       disposition[[index]] <- if (changed) "updated" else "matched"
       physical <- set_record_timestamps(
         physical,
@@ -386,17 +391,14 @@ generated_relation_has_changes <- function(
     if ("position" %in% selected) " ORDER BY position" else ""
   )
   existing <- DBI::dbGetQuery(connection, sql, params = list(owner_id))
-  incoming <- if (is.null(values)) character() else as.character(values)
-  stored <- as.character(existing[[value_column]])
-  if (!scalar_logical(relation$ordered)) {
-    incoming <- sort(incoming)
-    stored <- sort(stored)
-  }
-  !identical(incoming, stored)
+  slot <- relation_value_slot(relation)
+  incoming <- canonical_slot_value(values, slot)
+  stored <- canonical_slot_value(existing[[value_column]], slot)
+  !identical(canonical_json(incoming), canonical_json(stored))
 }
 
 missing_slot_vector <- function(slot, n) {
-  type <- toupper(scalar_character(slot$relational_type, "VARCHAR"))
+  type <- canonical_slot_type(slot, operation = "stage_record")
   switch(
     type,
     BOOLEAN = rep(NA, n),
@@ -410,7 +412,7 @@ missing_slot_vector <- function(slot, n) {
 
 coerce_slot_vector <- function(x, slot, record_class) {
   slot_name <- scalar_character(slot$name)
-  type <- toupper(scalar_character(slot$relational_type, "VARCHAR"))
+  type <- canonical_slot_type(slot, operation = "stage_record")
   converted <- switch(
     type,
     VARCHAR = {
@@ -549,15 +551,35 @@ existing_record <- function(connection, table, record_id) {
   DBI::dbGetQuery(connection, sql, params = list(record_id))
 }
 
-record_has_changes <- function(incoming, current) {
+record_has_changes <- function(incoming, current, slots) {
   fields <- setdiff(names(incoming), c("created_at", "updated_at"))
   if (length(fields) == 0L) {
     return(FALSE)
   }
-  !isTRUE(all.equal(
-    incoming[fields],
-    current[fields],
-    check.attributes = FALSE
+  any(vapply(
+    fields,
+    function(field) {
+      matching <- Filter(
+        \(slot) identical(scalar_character(slot$column), field),
+        slots
+      )
+      if (length(matching) != 1L) {
+        abort_backend_error(
+          "A physical record column must map to exactly one scalar slot.",
+          operation = "compare_record",
+          field = field,
+          slot_count = length(matching)
+        )
+      }
+      slot <- matching[[1L]]
+      incoming_value <- canonical_slot_value(incoming[[field]][[1L]], slot)
+      current_value <- canonical_slot_value(current[[field]][[1L]], slot)
+      !identical(
+        canonical_json(incoming_value),
+        canonical_json(current_value)
+      )
+    },
+    logical(1)
   ))
 }
 

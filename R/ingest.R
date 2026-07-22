@@ -35,21 +35,53 @@ kg_ingest <- function(
     return(replay)
   }
 
-  now <- ingest_now()
+  started_at <- ingest_now()
   result <- with_duckdb_error(
     "ingest",
     DBI::dbWithTransaction(store$connection, {
-      insert_started_batch(store$connection, batch, now)
-      staged <- prepare_ingest_records(store, batch, records, now)
-      write_staged_records(store, staged, now)
-      write_staged_identifiers(store, batch, staged, now)
-      write_staged_lineage(store, batch, staged, now)
+      verify_initialized_store(store, activate = TRUE)
+      metadata <- read_store_metadata(store$connection)
+      build_digest <- scalar_character(
+        store$schema$manifest$fingerprints$build_digest
+      )
+      if (!identical(metadata$active_build_digest, build_digest)) {
+        abort_backend_error(
+          "The active store schema does not match the ingestion schema.",
+          operation = "ingest",
+          active_build_digest = metadata$active_build_digest,
+          build_digest = build_digest
+        )
+      }
+      commit_order <- next_metadata_order(
+        store$connection,
+        "_graft_batches",
+        "commit_order"
+      )
+      insert_started_batch(
+        store$connection,
+        batch,
+        started_at,
+        build_digest,
+        commit_order
+      )
+      staged <- prepare_ingest_records(store, batch, records, started_at)
+      staged <- write_staged_revisions(
+        store,
+        batch,
+        staged,
+        started_at,
+        commit_order
+      )
+      write_staged_records(store, staged, started_at)
+      write_staged_identifiers(store, batch, staged, started_at)
+      write_staged_lineage(store, batch, staged, started_at)
       result <- result_from_staged(
         batch$batch_id,
         staged,
         proc.time()[["elapsed"]] - started
       )
-      commit_batch(store$connection, batch, result, now)
+      committed_at <- ingest_now()
+      commit_batch(store$connection, batch, result, committed_at)
       result
     })
   )
@@ -121,8 +153,21 @@ validate_ingest_options <- function(mode, validate) {
   invisible(TRUE)
 }
 
-validate_initialized_store_for_ingest <- function(store, write = FALSE) {
+validate_initialized_store_for_ingest <- function(
+  store,
+  write = FALSE,
+  refresh = FALSE
+) {
   validate_kg_store(store)
+  if (
+    !isTRUE(write) &&
+      !isTRUE(refresh) &&
+      store_schema_is_verified(store) &&
+      store_metadata_is_verified(store)
+  ) {
+    return(invisible(store))
+  }
+  clear_store_verification(store)
   if (!duckdb_table_exists(store$connection, "_graft_store")) {
     abort_backend_error(
       "The kg_store must be initialized with `kg_init()` before ingestion.",
@@ -130,22 +175,25 @@ validate_initialized_store_for_ingest <- function(store, write = FALSE) {
       store_path = store$path
     )
   }
-  metadata <- read_store_metadata(store$connection)
-  stored_schema <- schema_from_manifest_json(metadata$manifest_json)
-  diff <- kg_schema_diff(stored_schema, store$schema)
-  if (!isTRUE(diff$compatible)) {
-    abort_schema_mismatch(diff)
-  }
   if (write) {
     validate_store_writable(store, "ingest")
-    verify_initialized_store(store)
   }
+  verify_initialized_store(store, activate = FALSE)
+  mark_store_verified(store)
   invisible(store)
 }
 
-insert_started_batch <- function(connection, batch, now) {
+insert_started_batch <- function(
+  connection,
+  batch,
+  now,
+  schema_build_digest,
+  commit_order
+) {
   row <- data.frame(
     batch_id = batch$batch_id,
+    schema_build_digest = schema_build_digest,
+    commit_order = commit_order,
     producer = batch$producer,
     producer_version = batch$producer_version,
     source_run_id = batch$source_run_id,
@@ -160,7 +208,7 @@ insert_started_batch <- function(connection, batch, now) {
   invisible(batch)
 }
 
-commit_batch <- function(connection, batch, result, now) {
+commit_batch <- function(connection, batch, result, committed_at) {
   sql <- paste0(
     "UPDATE ",
     quote_identifier(connection, "_graft_batches"),
@@ -179,7 +227,7 @@ commit_batch <- function(connection, batch, result, now) {
     sql,
     params = list(
       batch_metadata_json(batch$metadata, result),
-      now,
+      committed_at,
       batch$batch_id
     )
   )
@@ -399,6 +447,7 @@ synchronize_generated_relation <- function(
   }
   retained <- logical(nrow(existing))
   final <- vector("list", length(values))
+  slot <- relation_value_slot(relation)
   for (index in seq_along(values)) {
     candidates <- which(
       !retained &
@@ -406,7 +455,8 @@ synchronize_generated_relation <- function(
           existing[[value_column]],
           relation_value_equal,
           logical(1),
-          values[[index]]
+          values[[index]],
+          slot
         )
     )
     if (length(candidates) > 0L) {
@@ -429,6 +479,13 @@ synchronize_generated_relation <- function(
   }
   delete_relation_owner(connection, relation, owner_id)
   if (length(final) > 0L) {
+    final <- lapply(final, function(row) {
+      row[[value_column]] <- canonical_slot_scalar(
+        row[[value_column]][[1L]],
+        slot
+      )
+      row
+    })
     rows <- do.call(rbind, final)
     rownames(rows) <- NULL
     DBI::dbAppendTable(connection, table, rows)
@@ -436,8 +493,11 @@ synchronize_generated_relation <- function(
   invisible(connection)
 }
 
-relation_value_equal <- function(existing, incoming) {
-  identical(as.character(existing), as.character(incoming))
+relation_value_equal <- function(existing, incoming, slot) {
+  identical(
+    canonical_json(canonical_slot_scalar(existing, slot)),
+    canonical_json(canonical_slot_scalar(incoming, slot))
+  )
 }
 
 delete_relation_owner <- function(connection, relation, owner_id) {
@@ -653,6 +713,8 @@ write_staged_lineage <- function(store, batch, staged, now) {
         record_id = identity$record_id,
         class = class_staged$class,
         batch_id = batch$batch_id,
+        disposition = class_staged$disposition[[index]],
+        revision_id = class_staged$revision_ids[[index]],
         observed_at = now,
         stringsAsFactors = FALSE
       )

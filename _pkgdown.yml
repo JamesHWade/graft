@@ -33,12 +33,15 @@ home:
 
 navbar:
   structure:
-    left: [intro, examples, reference, news]
+    left: [intro, change_control, examples, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
+    change_control:
+      text: Change control
+      href: articles/knowledge-change-control.html
     examples:
       text: Examples
       href: articles/examples.html
@@ -61,6 +64,7 @@ articles:
       from an ordinary LinkML schema and see how graft applies it in R.
     contents:
       - getting-started
+      - knowledge-change-control
       - linkml-schema
   - title: Examples
     desc: >
@@ -97,6 +101,17 @@ reference:
       - kg_ingest
       - kg_write
       - kg_validate_data
+  - title: History and change control
+    desc: >
+      Inspect accepted revisions and apply explicitly reviewed additive schema
+      migrations.
+  - contents:
+      - kg_batches
+      - kg_changes
+      - kg_history
+      - kg_check_store
+      - kg_plan_migration
+      - kg_apply_migration
   - title: Records and identity
     desc: >
       Read records, search declared text fields, and resolve external

@@ -151,9 +151,11 @@ validate_store_writable <- function(store, operation = "write") {
 #' Initialize or verify a graft store
 #'
 #' Initialization creates client tables from the compiled manifest plus the
-#' five package-owned metadata tables and three generated graph views. It is
-#' atomic and idempotent. Existing stores must have the same structural digest
-#' as the active schema.
+#' package-owned metadata tables and three generated graph views. It is
+#' atomic and idempotent. Before any store mutation, Graft verifies the
+#' manifest's declared structural digest and compiler-required physical type
+#' contracts. Existing stores must also be structurally compatible with the
+#' active schema.
 #'
 #' @param store A `kg_store` object.
 #'
@@ -161,20 +163,23 @@ validate_store_writable <- function(store, operation = "write") {
 #' @export
 kg_init <- function(store) {
   validate_kg_store(store)
+  validate_manifest_integrity(store$schema)
   validate_manifest_physical_names(store$schema)
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
-    verify_initialized_store(store)
     if (isTRUE(store$read_only)) {
+      verify_initialized_store(store)
       verify_graph_views(store$connection)
     } else {
       with_duckdb_error(
-        "initialize_graph_views",
+        "initialize_existing_store",
         DBI::dbWithTransaction(store$connection, {
+          verify_initialized_store(store)
           create_graph_views(store$connection, store$schema)
         })
       )
     }
+    mark_store_verified(store)
     return(invisible(store))
   }
   if (isTRUE(store$read_only)) {
@@ -208,8 +213,10 @@ kg_init <- function(store) {
       create_manifest_tables(store$connection, store$schema)
       create_graph_views(store$connection, store$schema)
       insert_store_metadata(store)
+      register_initial_schema(store)
     })
   )
+  mark_store_verified(store)
   invisible(store)
 }
 
@@ -258,8 +265,10 @@ disconnect_owned_store <- function(store, finalizer = FALSE) {
 #'
 #' @param store A `kg_store` object.
 #'
-#' @return A named list describing the connection, initialization state, and
-#'   active schema fingerprints.
+#' @return A named list describing the connection, initialization state,
+#'   observed and required store formats, active schema fingerprints, and
+#'   revision-history coverage. `store_format_version` is `NA` when no store
+#'   metadata can be observed, including before initialization and after close.
 #' @export
 kg_store_info <- function(store) {
   validate_kg_store(store, require_open = FALSE)
@@ -272,6 +281,7 @@ kg_store_info <- function(store) {
     table_count <- length(duckdb_table_names(store$connection))
     if (initialized) {
       metadata <- read_store_metadata(store$connection)
+      verify_store_format(metadata)
     }
   }
 
@@ -289,6 +299,27 @@ kg_store_info <- function(store) {
     ),
     source_digest = scalar_character(fingerprints$source_digest),
     build_digest = scalar_character(fingerprints$build_digest),
+    store_format_version = if (is.null(metadata)) {
+      NA_character_
+    } else {
+      scalar_character(metadata$store_format_version)
+    },
+    required_store_format_version = graft_store_format_version,
+    active_build_digest = if (is.null(metadata)) {
+      NA_character_
+    } else {
+      scalar_character(metadata$active_build_digest)
+    },
+    history_complete = if (is.null(metadata)) {
+      NA
+    } else {
+      isTRUE(metadata$history_complete)
+    },
+    history_started_at = if (is.null(metadata)) {
+      as.POSIXct(NA_real_, origin = "1970-01-01", tz = "UTC")
+    } else {
+      metadata$history_started_at
+    },
     stored = metadata
   )
 }

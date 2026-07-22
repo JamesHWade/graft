@@ -9,26 +9,66 @@ new_kg_schema <- function(manifest, path = NULL) {
 }
 
 new_kg_schema_diff <- function(
+  compatible,
   old_structural_digest,
   new_structural_digest,
   classes,
   slots,
   enums,
   tables,
-  relations
+  relations,
+  classification,
+  details
 ) {
   structure(
     list(
-      compatible = identical(old_structural_digest, new_structural_digest),
+      compatible = compatible,
+      classification = classification,
       old_structural_digest = old_structural_digest,
       new_structural_digest = new_structural_digest,
       classes = classes,
       slots = slots,
       enums = enums,
       tables = tables,
-      relations = relations
+      relations = relations,
+      details = details
     ),
     class = "kg_schema_diff"
+  )
+}
+
+new_kg_migration_plan <- function(
+  plan_version,
+  store_id,
+  store_format_version,
+  from_build_digest,
+  from_structural_digest,
+  to_build_digest,
+  to_structural_digest,
+  classification,
+  changes,
+  operations,
+  manifest_json,
+  plan_digest,
+  migration_id
+) {
+  structure(
+    list(
+      plan_version = plan_version,
+      store_id = store_id,
+      store_format_version = store_format_version,
+      from_build_digest = from_build_digest,
+      from_structural_digest = from_structural_digest,
+      to_build_digest = to_build_digest,
+      to_structural_digest = to_structural_digest,
+      classification = classification,
+      changes = changes,
+      operations = operations,
+      manifest_json = manifest_json,
+      plan_digest = plan_digest,
+      migration_id = migration_id
+    ),
+    class = "kg_migration_plan"
   )
 }
 
@@ -48,6 +88,7 @@ new_kg_store <- function(
   store$path <- path
   store$closed <- FALSE
   store$capabilities <- capabilities
+  store$verification <- NULL
   class(store) <- "kg_store"
   store
 }

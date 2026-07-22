@@ -10,8 +10,10 @@ kg_store_info(store)
 \item{store}{A \code{kg_store} object.}
 }
 \value{
-A named list describing the connection, initialization state, and
-active schema fingerprints.
+A named list describing the connection, initialization state,
+observed and required store formats, active schema fingerprints, and
+revision-history coverage. \code{store_format_version} is \code{NA} when no store
+metadata can be observed, including before initialization and after close.
 }
 \description{
 Inspect a graft store

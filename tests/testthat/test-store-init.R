@@ -2,8 +2,13 @@ metadata_table_names <- function() {
   c(
     "_graft_batches",
     "_graft_identifiers",
+    "_graft_migrations",
+    "_graft_record_heads",
     "_graft_record_observations",
     "_graft_record_origins",
+    "_graft_record_revisions",
+    "_graft_schema_activations",
+    "_graft_schema_versions",
     "_graft_store"
   )
 }
@@ -52,6 +57,15 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     store_row$active_structural_digest,
     schema$manifest$fingerprints$structural_digest
   )
+  expect_identical(store_row$store_format_version, "2.0.0")
+  info <- kg_store_info(store)
+  expect_identical(info$store_format_version, "2.0.0")
+  expect_identical(info$required_store_format_version, "2.0.0")
+  expect_identical(
+    store_row$active_build_digest,
+    schema$manifest$fingerprints$build_digest
+  )
+  expect_identical(store_row$history_complete, TRUE)
   expect_identical(
     jsonlite::fromJSON(store_row$manifest_json, simplifyVector = FALSE),
     schema$manifest
@@ -68,17 +82,38 @@ test_that("in-memory initialization creates metadata and manifest tables", {
       "store_id",
       "store_format_version",
       "active_structural_digest",
+      "active_build_digest",
       "source_digest",
       "build_digest",
       "manifest_json",
+      "history_started_at",
+      "history_complete",
       "created_at",
       "updated_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_migrations`,
+    c(
+      "migration_id",
+      "plan_digest",
+      "from_build_digest",
+      "to_build_digest",
+      "from_structural_digest",
+      "to_structural_digest",
+      "classification",
+      "changes_json",
+      "operations_json",
+      "application_order",
+      "applied_at"
     )
   )
   expect_identical(
     metadata_columns$`_graft_batches`,
     c(
       "batch_id",
+      "schema_build_digest",
+      "commit_order",
       "producer",
       "producer_version",
       "source_run_id",
@@ -102,7 +137,64 @@ test_that("in-memory initialization creates metadata and manifest tables", {
   )
   expect_identical(
     metadata_columns$`_graft_record_observations`,
-    c("record_id", "class", "batch_id", "observed_at")
+    c(
+      "record_id",
+      "class",
+      "batch_id",
+      "disposition",
+      "revision_id",
+      "observed_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_schema_versions`,
+    c(
+      "build_digest",
+      "structural_digest",
+      "source_digest",
+      "manifest_json",
+      "compiler_json",
+      "registered_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_schema_activations`,
+    c(
+      "activation_id",
+      "build_digest",
+      "previous_build_digest",
+      "reason",
+      "activation_order",
+      "activated_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_record_revisions`,
+    c(
+      "revision_id",
+      "record_id",
+      "class",
+      "batch_id",
+      "schema_build_digest",
+      "revision_number",
+      "operation",
+      "payload_json",
+      "content_digest",
+      "changed_fields_json",
+      "prior_revision_id",
+      "recorded_at",
+      "commit_order"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_record_heads`,
+    c(
+      "record_id",
+      "class",
+      "revision_id",
+      "revision_number",
+      "updated_at"
+    )
   )
   expect_identical(
     metadata_columns$`_graft_identifiers`,
@@ -132,6 +224,24 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     DBI::dbListFields(store$connection, "claim__about"),
     c("id", "subject", "object", "position", "created_at")
   )
+
+  versions <- DBI::dbReadTable(store$connection, "_graft_schema_versions")
+  activations <- DBI::dbReadTable(
+    store$connection,
+    "_graft_schema_activations"
+  )
+  expect_equal(nrow(versions), 1L)
+  expect_identical(
+    versions$build_digest,
+    schema$manifest$fingerprints$build_digest
+  )
+  expect_identical(
+    jsonlite::fromJSON(versions$compiler_json, simplifyVector = FALSE),
+    schema$manifest$compiler
+  )
+  expect_equal(nrow(activations), 1L)
+  expect_identical(activations$reason, "initial")
+  expect_identical(activations$activation_order, 1)
 })
 
 test_that("initialization is idempotent", {
@@ -149,6 +259,122 @@ test_that("initialization is idempotent", {
   expect_identical(after$store_id, before$store_id)
   expect_identical(after$created_at, before$created_at)
   expect_identical(DBI::dbListTables(store$connection), tables_before)
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_schema_activations")),
+    1L
+  )
+})
+
+test_that("live stores reuse verified schemas for ordinary reads", {
+  store <- local_ingest_store()
+  verify <- verify_initialized_store
+  calls <- 0L
+  local_mocked_bindings(
+    verify_initialized_store = function(...) {
+      calls <<- calls + 1L
+      verify(...)
+    }
+  )
+
+  kg_records(store, "Entity")
+  kg_records(store, "Source")
+
+  expect_identical(calls, 0L)
+  kg_check_store(store)
+  expect_identical(calls, 1L)
+
+  changed <- modified_ingest_schema(store$schema)
+  changed$manifest$fingerprints$build_digest <- paste0(
+    "sha256:",
+    strrep("a", 64L)
+  )
+  store$schema <- changed
+  expect_identical(store_schema_is_verified(store), FALSE)
+})
+
+test_that("cached reads reject mutable manifest tampering", {
+  schema <- kg_schema(tempest_manifest_path())
+  schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema <- refresh_schema_structural_digest(schema)
+  store <- local_ingest_store(schema = schema)
+  kg_write(
+    store,
+    kg_batch("cache-test", idempotency_key = "cache-test"),
+    "Entity",
+    data.frame(
+      preferred_name = "Project Firefly",
+      description = "TOP SECRET"
+    )
+  )
+
+  public <- dplyr::collect(kg_records(store, "Entity"))
+  expect_false("description" %in% names(public))
+  store$schema$manifest$classes$Entity$slots$description$sensitive <- FALSE
+
+  condition <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "structural_digest_content_mismatch")
+  expect_null(store$verification)
+})
+
+test_that("cached reads reject persistent metadata tampering", {
+  store <- local_ingest_store()
+  kg_records(store, "Entity")
+  DBI::dbExecute(
+    store$connection,
+    "UPDATE _graft_store SET store_format_version = '1.0.0'"
+  )
+
+  first <- catch_graft_condition(kg_records(store, "Entity"))
+  audit <- catch_graft_condition(kg_check_store(store))
+  second <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(first, "graft_store_format_error")
+  expect_s3_class(audit, "graft_store_format_error")
+  expect_s3_class(second, "graft_store_format_error")
+  expect_null(store$verification)
+})
+
+test_that("cached reads reject active schema registry tampering", {
+  store <- local_ingest_store()
+  kg_records(store, "Entity")
+  tampered <- modified_ingest_schema(store$schema)
+  tampered$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  DBI::dbExecute(
+    store$connection,
+    paste(
+      "UPDATE _graft_schema_versions SET manifest_json = ?",
+      "WHERE build_digest = ?"
+    ),
+    params = list(
+      canonical_manifest_json(tampered$manifest),
+      store$schema$manifest$fingerprints$build_digest
+    )
+  )
+
+  condition <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(condition, "graft_backend_error")
+  expect_match(conditionMessage(condition), "schema registry entry")
+  expect_null(store$verification)
+})
+
+test_that("unsupported store formats are rejected explicitly", {
+  schema <- kg_schema(tempest_manifest_path())
+  store <- kg_connect_duckdb(schema)
+  withr::defer(kg_disconnect(store))
+  kg_init(store)
+  DBI::dbExecute(
+    store$connection,
+    "UPDATE _graft_store SET store_format_version = '1.0.0'"
+  )
+
+  condition <- catch_graft_condition(kg_init(store))
+
+  expect_s3_class(condition, "graft_store_format_error")
+  expect_identical(condition$observed_version, "1.0.0")
+  expect_identical(condition$supported_version, "2.0.0")
 })
 
 test_that("file stores reopen and initialize without Python", {
@@ -238,6 +464,8 @@ test_that("read-only stores verify but never initialize or mutate", {
   )
   withr::defer(kg_disconnect(read_only))
   expect_invisible(kg_init(read_only))
+  expect_identical(store_schema_is_verified(read_only), TRUE)
+  expect_s3_class(kg_records(read_only, "Entity"), "tbl_dbi")
   expect_identical(kg_capabilities(read_only)$writable, FALSE)
   mutation_error <- catch_graft_condition(
     graft:::validate_store_writable(read_only, "test_write")
@@ -253,11 +481,8 @@ test_that("structural mismatches carry a schema diff", {
   kg_disconnect(store)
 
   incompatible <- modified_schema(schema)
-  incompatible$manifest$fingerprints$structural_digest <- paste0(
-    "sha256:",
-    paste(rep("0", 64L), collapse = "")
-  )
-  incompatible$manifest$tables$Entity$columns[[1L]]$type <- "DOUBLE"
+  incompatible$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  incompatible <- refresh_schema_structural_digest(incompatible)
 
   mismatched <- kg_connect_duckdb(incompatible, path)
   withr::defer(kg_disconnect(mismatched))
@@ -266,7 +491,12 @@ test_that("structural mismatches carry a schema diff", {
   expect_s3_class(condition, "graft_schema_mismatch")
   expect_s3_class(condition$schema_diff, "kg_schema_diff")
   expect_identical(condition$schema_diff$compatible, FALSE)
-  expect_in("Entity", condition$schema_diff$tables$changed)
+  expect_match(
+    conditionMessage(condition),
+    condition$schema_diff$classification,
+    fixed = TRUE
+  )
+  expect_in("Entity", condition$schema_diff$classes$changed)
 })
 
 test_that("compiler-only digest changes remain writable", {
@@ -301,6 +531,24 @@ test_that("compiler-only digest changes remain writable", {
     info$stored$build_digest,
     rebuilt$manifest$fingerprints$build_digest
   )
+  expect_identical(
+    info$stored$active_build_digest,
+    rebuilt$manifest$fingerprints$build_digest
+  )
+  versions <- DBI::dbReadTable(
+    compatible$connection,
+    "_graft_schema_versions"
+  )
+  activations <- DBI::dbReadTable(
+    compatible$connection,
+    "_graft_schema_activations"
+  )
+  expect_equal(nrow(versions), 2L)
+  expect_identical(
+    activations$reason,
+    c("initial", "compatible_rebuild")
+  )
+  expect_identical(activations$activation_order, c(1, 2))
   expect_identical(kg_capabilities(compatible)$writable, TRUE)
 })
 
@@ -326,6 +574,36 @@ test_that("reserved client names and failed DDL leave stores blank", {
   expect_length(DBI::dbListTables(invalid_store$connection), 0L)
 })
 
+test_that("fresh initialization refuses invalid manifest integrity atomically", {
+  base <- kg_schema(tempest_manifest_path())
+  stale <- migration_schema_copy(base, "stale-fresh", structural = FALSE)
+  stale$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  stale_store <- kg_connect_duckdb(stale)
+  withr::defer(kg_disconnect(stale_store))
+
+  stale_condition <- catch_graft_condition(kg_init(stale_store))
+
+  expect_s3_class(stale_condition, "graft_schema_integrity_error")
+  expect_identical(
+    stale_condition$rule,
+    "structural_digest_content_mismatch"
+  )
+  expect_length(DBI::dbListTables(stale_store$connection), 0L)
+
+  malformed <- migration_schema_add_object_relation(
+    base,
+    relational_type = "DOUBLE"
+  )
+  malformed_store <- kg_connect_duckdb(malformed)
+  withr::defer(kg_disconnect(malformed_store))
+
+  type_condition <- catch_graft_condition(kg_init(malformed_store))
+
+  expect_s3_class(type_condition, "graft_schema_integrity_error")
+  expect_identical(type_condition$rule, "object_reference_varchar")
+  expect_length(DBI::dbListTables(malformed_store$connection), 0L)
+})
+
 test_that("store info and capabilities describe the lifecycle", {
   schema <- kg_schema(tempest_manifest_path())
   store <- kg_connect_duckdb(schema)
@@ -333,6 +611,8 @@ test_that("store info and capabilities describe the lifecycle", {
   before <- kg_store_info(store)
   expect_identical(before$initialized, FALSE)
   expect_identical(before$closed, FALSE)
+  expect_identical(before$store_format_version, NA_character_)
+  expect_identical(before$required_store_format_version, "2.0.0")
   expect_identical(kg_capabilities(store)$transactions, TRUE)
   expect_identical(kg_capabilities(store)$single_owning_process, TRUE)
 
@@ -340,4 +620,6 @@ test_that("store info and capabilities describe the lifecycle", {
   after <- kg_store_info(store)
   expect_identical(after$closed, TRUE)
   expect_identical(after$initialized, NA)
+  expect_identical(after$store_format_version, NA_character_)
+  expect_identical(after$required_store_format_version, "2.0.0")
 })

@@ -97,6 +97,461 @@ validate_manifest_header <- function(manifest, path) {
   invisible(manifest)
 }
 
+validate_manifest_integrity <- function(schema, subclass = NULL) {
+  if (!inherits(schema, "kg_schema") || !is.list(schema$manifest)) {
+    abort_schema_integrity(
+      "Schema integrity validation requires a kg_schema object.",
+      subclass = subclass
+    )
+  }
+  manifest <- schema$manifest
+  fingerprints <- manifest$fingerprints
+  fingerprint_names <- c(
+    "structural_digest",
+    "source_digest",
+    "build_digest"
+  )
+  invalid_fingerprints <- fingerprint_names[
+    !vapply(
+      fingerprints[fingerprint_names],
+      \(.x) {
+        value <- scalar_character(.x)
+        !is.na(value) && grepl("^sha256:[0-9a-f]{64}$", value)
+      },
+      logical(1)
+    )
+  ]
+  if (length(invalid_fingerprints) > 0L) {
+    abort_schema_integrity(
+      paste0(
+        "Schema fingerprint(s) are not canonical SHA-256 digests: ",
+        paste(invalid_fingerprints, collapse = ", "),
+        "."
+      ),
+      invalid_fingerprints = invalid_fingerprints,
+      rule = "canonical_schema_fingerprints",
+      subclass = subclass
+    )
+  }
+
+  declared_digest <- scalar_character(fingerprints$structural_digest)
+  computed_digest <- manifest_structural_digest(manifest)
+  if (!identical(declared_digest, computed_digest)) {
+    abort_schema_integrity(
+      paste0(
+        "The declared structural digest does not match the manifest ",
+        "content."
+      ),
+      declared_structural_digest = declared_digest,
+      computed_structural_digest = computed_digest,
+      rule = "structural_digest_content_mismatch",
+      subclass = subclass
+    )
+  }
+
+  validate_global_slot_types(manifest, subclass)
+  validate_manifest_physical_contracts(manifest, subclass)
+  invisible(schema)
+}
+
+validate_global_slot_types <- function(manifest, subclass) {
+  for (slot_name in names(manifest$slots)) {
+    validate_compiler_slot_type(
+      manifest$slots[[slot_name]],
+      slot_name = slot_name,
+      subclass = subclass
+    )
+  }
+  invisible(manifest)
+}
+
+validate_compiler_slot_type <- function(
+  slot,
+  slot_name,
+  record_class = NULL,
+  subclass = NULL
+) {
+  range <- scalar_character(slot$range, "string")
+  object_reference <- scalar_logical(slot$object_reference)
+  expected <- if (object_reference) {
+    "VARCHAR"
+  } else {
+    switch(
+      range,
+      boolean = "BOOLEAN",
+      date = "DATE",
+      datetime = "TIMESTAMP",
+      decimal = "DECIMAL",
+      double = "DOUBLE",
+      float = "DOUBLE",
+      integer = "BIGINT",
+      time = "TIME",
+      "VARCHAR"
+    )
+  }
+  observed <- scalar_character(slot$relational_type)
+  if (!identical(observed, expected)) {
+    qualified <- if (is.null(record_class)) {
+      slot_name
+    } else {
+      paste(record_class, slot_name, sep = ".")
+    }
+    abort_schema_integrity(
+      paste0(
+        if (object_reference) "Object-reference slot `" else "Slot `",
+        qualified,
+        "` must use relational type `",
+        expected,
+        "`."
+      ),
+      record_class = record_class,
+      slot = slot_name,
+      range = range,
+      observed_type = observed,
+      expected_type = expected,
+      rule = if (object_reference) {
+        "object_reference_varchar"
+      } else {
+        "slot_relational_type_contract"
+      },
+      subclass = subclass
+    )
+  }
+  invisible(slot)
+}
+
+validate_manifest_physical_contracts <- function(manifest, subclass) {
+  class_names <- names(manifest$classes)
+  if (!setequal(class_names, names(manifest$tables))) {
+    abort_schema_integrity(
+      "Concrete classes and manifest tables must correspond exactly.",
+      classes = sort(class_names),
+      tables = sort(names(manifest$tables)),
+      rule = "class_table_correspondence",
+      subclass = subclass
+    )
+  }
+
+  expected_relations <- character()
+  for (record_class in class_names) {
+    contract <- manifest$classes[[record_class]]
+    table <- manifest$tables[[record_class]]
+    if (
+      !identical(scalar_character(table$class), record_class) ||
+        !identical(
+          scalar_character(table$name),
+          scalar_character(contract$table)
+        ) ||
+        !identical(
+          scalar_character(table$role),
+          scalar_character(contract$role)
+        )
+    ) {
+      abort_schema_integrity(
+        paste0(
+          "Class `",
+          record_class,
+          "` and its physical table metadata disagree."
+        ),
+        record_class = record_class,
+        rule = "class_table_metadata",
+        subclass = subclass
+      )
+    }
+
+    slots <- contract$slots
+    for (slot_name in names(slots)) {
+      validate_compiler_slot_type(
+        slots[[slot_name]],
+        slot_name,
+        record_class,
+        subclass
+      )
+    }
+    scalar_slots <- Filter(
+      \(.x) !scalar_logical(.x$multivalued),
+      slots
+    )
+    columns <- table$columns
+    column_names <- vapply(
+      columns,
+      \(.x) scalar_character(.x$name),
+      character(1)
+    )
+    if (anyNA(column_names) || anyDuplicated(column_names)) {
+      abort_schema_integrity(
+        paste0("Table for class `", record_class, "` has invalid columns."),
+        record_class = record_class,
+        rule = "unique_table_columns",
+        subclass = subclass
+      )
+    }
+    column_map <- stats::setNames(columns, column_names)
+    expected_columns <- vapply(
+      scalar_slots,
+      \(.x) scalar_character(.x$column),
+      character(1)
+    )
+    if (
+      anyNA(expected_columns) ||
+        anyDuplicated(expected_columns) ||
+        !setequal(column_names, expected_columns)
+    ) {
+      abort_schema_integrity(
+        paste0(
+          "Scalar slots for class `",
+          record_class,
+          "` must correspond exactly to physical columns."
+        ),
+        record_class = record_class,
+        rule = "scalar_column_correspondence",
+        subclass = subclass
+      )
+    }
+
+    for (slot_name in names(scalar_slots)) {
+      validate_manifest_scalar_slot(
+        scalar_slots[[slot_name]],
+        column_map[[expected_columns[[slot_name]]]],
+        record_class,
+        slot_name,
+        subclass
+      )
+    }
+
+    multivalue_slots <- Filter(
+      \(.x) scalar_logical(.x$multivalued),
+      slots
+    )
+    relation_names <- character()
+    for (slot_name in names(multivalue_slots)) {
+      relation <- validate_manifest_relation_contract(
+        manifest,
+        record_class,
+        slot_name,
+        subclass
+      )
+      relation_names <- c(relation_names, scalar_character(relation$name))
+    }
+    declared_relations <- empty_character(contract$relations)
+    if (
+      anyDuplicated(declared_relations) ||
+        !setequal(declared_relations, relation_names)
+    ) {
+      abort_schema_integrity(
+        paste0(
+          "Class `",
+          record_class,
+          "` relation metadata does not match its multivalued slots."
+        ),
+        record_class = record_class,
+        rule = "class_relation_correspondence",
+        subclass = subclass
+      )
+    }
+    expected_relations <- c(expected_relations, relation_names)
+  }
+
+  observed_relations <- vapply(
+    manifest$relations,
+    \(.x) scalar_character(.x$name),
+    character(1)
+  )
+  if (
+    anyNA(observed_relations) ||
+      anyDuplicated(observed_relations) ||
+      !setequal(observed_relations, expected_relations)
+  ) {
+    abort_schema_integrity(
+      "Generated relations must correspond exactly to multivalued slots.",
+      expected_relations = sort(expected_relations),
+      observed_relations = sort(observed_relations),
+      rule = "generated_relation_correspondence",
+      subclass = subclass
+    )
+  }
+  invisible(manifest)
+}
+
+validate_manifest_scalar_slot <- function(
+  slot,
+  column,
+  record_class,
+  slot_name,
+  subclass
+) {
+  object_reference <- scalar_logical(slot$object_reference)
+  relational_type <- scalar_character(slot$relational_type)
+  expected_foreign_key <- if (object_reference) {
+    list(class = scalar_character(slot$range), slot = "id")
+  } else {
+    NULL
+  }
+  if (object_reference && !identical(relational_type, "VARCHAR")) {
+    abort_schema_integrity(
+      paste0(
+        "Object-reference slot `",
+        record_class,
+        ".",
+        slot_name,
+        "` must use relational type `VARCHAR`."
+      ),
+      record_class = record_class,
+      slot = slot_name,
+      observed_type = relational_type,
+      rule = "object_reference_varchar",
+      subclass = subclass
+    )
+  }
+  expected_column <- list(
+    name = scalar_character(slot$column),
+    slot = slot_name,
+    type = relational_type,
+    nullable = !scalar_logical(slot$required),
+    primary_key = scalar_logical(slot$identifier),
+    foreign_key = expected_foreign_key
+  )
+  if (
+    !identical(scalar_character(slot$name), slot_name) ||
+      !manifest_contract_identical(slot$foreign_key, expected_foreign_key) ||
+      !manifest_contract_identical(column, expected_column)
+  ) {
+    abort_schema_integrity(
+      paste0(
+        "Slot `",
+        record_class,
+        ".",
+        slot_name,
+        "` and its physical column definition disagree."
+      ),
+      record_class = record_class,
+      slot = slot_name,
+      rule = "scalar_column_contract",
+      subclass = subclass
+    )
+  }
+  invisible(slot)
+}
+
+validate_manifest_relation_contract <- function(
+  manifest,
+  record_class,
+  slot_name,
+  subclass = NULL
+) {
+  contract <- manifest$classes[[record_class]]
+  slot <- contract$slots[[slot_name]]
+  matches <- Filter(
+    \(.x) {
+      identical(scalar_character(.x$owner_class), record_class) &&
+        identical(scalar_character(.x$slot), slot_name)
+    },
+    manifest$relations
+  )
+  if (length(matches) != 1L) {
+    abort_schema_integrity(
+      "A multivalued slot must have exactly one generated relation.",
+      record_class = record_class,
+      slot = slot_name,
+      relation_count = length(matches),
+      rule = "generated_relation_count",
+      subclass = subclass
+    )
+  }
+  relation <- matches[[1L]]
+  object_reference <- scalar_logical(slot$object_reference)
+  relational_type <- scalar_character(slot$relational_type)
+  kind <- if (object_reference) "object" else "value"
+  expected_foreign_key <- if (object_reference) {
+    list(class = scalar_character(slot$range), slot = "id")
+  } else {
+    NULL
+  }
+  if (object_reference && !identical(relational_type, "VARCHAR")) {
+    abort_schema_integrity(
+      paste0(
+        "Object-reference slot `",
+        record_class,
+        ".",
+        slot_name,
+        "` must use relational type `VARCHAR`."
+      ),
+      record_class = record_class,
+      slot = slot_name,
+      observed_type = relational_type,
+      rule = "object_reference_varchar",
+      subclass = subclass
+    )
+  }
+  predicate <- scalar_character(relation$predicate)
+  valid <- identical(scalar_character(slot$name), slot_name) &&
+    is.null(slot$column) &&
+    scalar_logical(slot$multivalued) &&
+    !scalar_logical(slot$identifier) &&
+    manifest_contract_identical(slot$foreign_key, expected_foreign_key) &&
+    setequal(
+      names(relation),
+      c(
+        "name",
+        "table",
+        "owner_class",
+        "owner_table",
+        "slot",
+        "kind",
+        "ordered",
+        "predicate",
+        "columns"
+      )
+    ) &&
+    identical(
+      scalar_character(relation$name),
+      paste(record_class, slot_name, sep = ".")
+    ) &&
+    identical(
+      scalar_character(relation$owner_table),
+      scalar_character(contract$table)
+    ) &&
+    identical(
+      scalar_character(relation$table),
+      generated_relation_table_name(contract$table, slot_name)
+    ) &&
+    identical(scalar_character(relation$kind), kind) &&
+    identical(
+      scalar_logical(relation$ordered),
+      scalar_logical(slot$ordered)
+    ) &&
+    !is.na(predicate) &&
+    nzchar(predicate) &&
+    manifest_contract_identical(
+      relation$columns,
+      generated_relation_columns(record_class, slot, kind)
+    )
+  if (!valid) {
+    abort_schema_integrity(
+      paste0(
+        "Generated relation `",
+        record_class,
+        ".",
+        slot_name,
+        "` does not match the compiler contract."
+      ),
+      record_class = record_class,
+      slot = slot_name,
+      relation = scalar_character(relation$name),
+      rule = "generated_relation_contract",
+      subclass = subclass
+    )
+  }
+  invisible(relation)
+}
+
+manifest_contract_identical <- function(x, y) {
+  identical(
+    canonical_json(canonical_schema_change_value(x)),
+    canonical_json(canonical_schema_change_value(y))
+  )
+}
+
 #' List concrete classes in a graft schema
 #'
 #' @param schema A `kg_schema` object or manifest path.

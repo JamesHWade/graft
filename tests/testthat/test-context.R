@@ -1,6 +1,7 @@
 test_that("kg_context is manifest-generated and suppresses sensitive fields", {
   schema <- kg_schema(tempest_manifest_path())
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema <- refresh_schema_structural_digest(schema)
   store <- local_ingest_store(schema = schema)
 
   context <- kg_context(store, class = "Entity")

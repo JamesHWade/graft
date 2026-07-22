@@ -1,4 +1,8 @@
 graft_retrieval_limits <- list(
+  batches = 1000L,
+  changes = 5000L,
+  history = 1000L,
+  integrity_issues = 1000L,
   find = 1000L,
   get_claims = 1000L,
   get_evidence = 2000L,
@@ -14,8 +18,12 @@ graft_retrieval_limits <- list(
   graph_hops = 2L
 )
 
-validate_retrieval_store <- function(store) {
-  validate_initialized_store_for_ingest(store, write = FALSE)
+validate_retrieval_store <- function(store, refresh = FALSE) {
+  validate_initialized_store_for_ingest(
+    store,
+    write = FALSE,
+    refresh = refresh
+  )
 }
 
 validate_public_class <- function(
