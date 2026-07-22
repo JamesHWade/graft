@@ -153,8 +153,21 @@ validate_ingest_options <- function(mode, validate) {
   invisible(TRUE)
 }
 
-validate_initialized_store_for_ingest <- function(store, write = FALSE) {
+validate_initialized_store_for_ingest <- function(
+  store,
+  write = FALSE,
+  refresh = FALSE
+) {
   validate_kg_store(store)
+  if (
+    !isTRUE(write) &&
+      !isTRUE(refresh) &&
+      store_schema_is_verified(store) &&
+      store_metadata_is_verified(store)
+  ) {
+    return(invisible(store))
+  }
+  clear_store_verification(store)
   if (!duckdb_table_exists(store$connection, "_graft_store")) {
     abort_backend_error(
       "The kg_store must be initialized with `kg_init()` before ingestion.",
@@ -166,6 +179,7 @@ validate_initialized_store_for_ingest <- function(store, write = FALSE) {
     validate_store_writable(store, "ingest")
   }
   verify_initialized_store(store, activate = FALSE)
+  mark_store_verified(store)
   invisible(store)
 }
 

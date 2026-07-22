@@ -558,3 +558,44 @@ test_that("TIME values remain canonical across ingest, checks, and history", {
     45300
   )
 })
+
+test_that("history rejects tampered inactive schema registry manifests", {
+  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema <- refresh_schema_structural_digest(schema)
+  store <- local_ingest_store(schema = schema)
+  kg_write(
+    store,
+    kg_batch("history-cache", idempotency_key = "history-cache"),
+    "Entity",
+    data.frame(
+      preferred_name = "Project Firefly",
+      description = "TOP SECRET"
+    )
+  )
+  record_id <- DBI::dbReadTable(store$connection, "entity")$id[[1L]]
+  migrated <- migration_schema_copy(
+    schema,
+    "history-registry-v2",
+    structural = FALSE
+  )
+  kg_apply_migration(store, kg_plan_migration(store, migrated))
+  tampered <- modified_ingest_schema(schema)
+  tampered$manifest$classes$Entity$slots$description$sensitive <- FALSE
+  DBI::dbExecute(
+    store$connection,
+    paste(
+      "UPDATE _graft_schema_versions SET manifest_json = ?",
+      "WHERE build_digest = ?"
+    ),
+    params = list(
+      canonical_manifest_json(tampered$manifest),
+      schema$manifest$fingerprints$build_digest
+    )
+  )
+
+  condition <- catch_graft_ingest_condition(kg_history(store, record_id))
+
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "structural_digest_content_mismatch")
+})

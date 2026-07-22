@@ -179,6 +179,7 @@ kg_init <- function(store) {
         })
       )
     }
+    mark_store_verified(store)
     return(invisible(store))
   }
   if (isTRUE(store$read_only)) {
@@ -215,6 +216,7 @@ kg_init <- function(store) {
       register_initial_schema(store)
     })
   )
+  mark_store_verified(store)
   invisible(store)
 }
 

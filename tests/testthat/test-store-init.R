@@ -265,6 +265,101 @@ test_that("initialization is idempotent", {
   )
 })
 
+test_that("live stores reuse verified schemas for ordinary reads", {
+  store <- local_ingest_store()
+  verify <- verify_initialized_store
+  calls <- 0L
+  local_mocked_bindings(
+    verify_initialized_store = function(...) {
+      calls <<- calls + 1L
+      verify(...)
+    }
+  )
+
+  kg_records(store, "Entity")
+  kg_records(store, "Source")
+
+  expect_identical(calls, 0L)
+  kg_check_store(store)
+  expect_identical(calls, 1L)
+
+  changed <- modified_ingest_schema(store$schema)
+  changed$manifest$fingerprints$build_digest <- paste0(
+    "sha256:",
+    strrep("a", 64L)
+  )
+  store$schema <- changed
+  expect_identical(store_schema_is_verified(store), FALSE)
+})
+
+test_that("cached reads reject mutable manifest tampering", {
+  schema <- kg_schema(tempest_manifest_path())
+  schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema <- refresh_schema_structural_digest(schema)
+  store <- local_ingest_store(schema = schema)
+  kg_write(
+    store,
+    kg_batch("cache-test", idempotency_key = "cache-test"),
+    "Entity",
+    data.frame(
+      preferred_name = "Project Firefly",
+      description = "TOP SECRET"
+    )
+  )
+
+  public <- dplyr::collect(kg_records(store, "Entity"))
+  expect_false("description" %in% names(public))
+  store$schema$manifest$classes$Entity$slots$description$sensitive <- FALSE
+
+  condition <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "structural_digest_content_mismatch")
+  expect_null(store$verification)
+})
+
+test_that("cached reads reject persistent metadata tampering", {
+  store <- local_ingest_store()
+  kg_records(store, "Entity")
+  DBI::dbExecute(
+    store$connection,
+    "UPDATE _graft_store SET store_format_version = '1.0.0'"
+  )
+
+  first <- catch_graft_condition(kg_records(store, "Entity"))
+  audit <- catch_graft_condition(kg_check_store(store))
+  second <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(first, "graft_store_format_error")
+  expect_s3_class(audit, "graft_store_format_error")
+  expect_s3_class(second, "graft_store_format_error")
+  expect_null(store$verification)
+})
+
+test_that("cached reads reject active schema registry tampering", {
+  store <- local_ingest_store()
+  kg_records(store, "Entity")
+  tampered <- modified_ingest_schema(store$schema)
+  tampered$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  DBI::dbExecute(
+    store$connection,
+    paste(
+      "UPDATE _graft_schema_versions SET manifest_json = ?",
+      "WHERE build_digest = ?"
+    ),
+    params = list(
+      canonical_manifest_json(tampered$manifest),
+      store$schema$manifest$fingerprints$build_digest
+    )
+  )
+
+  condition <- catch_graft_condition(kg_records(store, "Entity"))
+
+  expect_s3_class(condition, "graft_backend_error")
+  expect_match(conditionMessage(condition), "schema registry entry")
+  expect_null(store$verification)
+})
+
 test_that("unsupported store formats are rejected explicitly", {
   schema <- kg_schema(tempest_manifest_path())
   store <- kg_connect_duckdb(schema)
@@ -369,6 +464,8 @@ test_that("read-only stores verify but never initialize or mutate", {
   )
   withr::defer(kg_disconnect(read_only))
   expect_invisible(kg_init(read_only))
+  expect_identical(store_schema_is_verified(read_only), TRUE)
+  expect_s3_class(kg_records(read_only, "Entity"), "tbl_dbi")
   expect_identical(kg_capabilities(read_only)$writable, FALSE)
   mutation_error <- catch_graft_condition(
     graft:::validate_store_writable(read_only, "test_write")

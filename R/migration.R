@@ -122,6 +122,7 @@ kg_apply_migration <- function(store, plan) {
     })
   )
   store$schema <- new_schema
+  mark_store_verified(store)
   invisible(store)
 }
 

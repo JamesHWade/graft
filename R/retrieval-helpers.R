@@ -18,8 +18,12 @@ graft_retrieval_limits <- list(
   graph_hops = 2L
 )
 
-validate_retrieval_store <- function(store) {
-  validate_initialized_store_for_ingest(store, write = FALSE)
+validate_retrieval_store <- function(store, refresh = FALSE) {
+  validate_initialized_store_for_ingest(
+    store,
+    write = FALSE,
+    refresh = refresh
+  )
 }
 
 validate_public_class <- function(

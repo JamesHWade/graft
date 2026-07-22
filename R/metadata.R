@@ -463,6 +463,46 @@ verify_initialized_store <- function(
   invisible(store)
 }
 
+mark_store_verified <- function(store) {
+  metadata <- read_store_metadata(store$connection)
+  active_build_digest <- scalar_character(metadata$active_build_digest)
+  store$verification <- list(
+    manifest = unserialize(serialize(store$schema$manifest, NULL)),
+    metadata = metadata,
+    active_schema_version = read_schema_version(
+      store$connection,
+      active_build_digest
+    )
+  )
+  invisible(store)
+}
+
+clear_store_verification <- function(store) {
+  store$verification <- NULL
+  invisible(store)
+}
+
+store_schema_is_verified <- function(store) {
+  !is.null(store$verification) &&
+    identical(
+      store$verification$manifest,
+      store$schema$manifest
+    )
+}
+
+store_metadata_is_verified <- function(store) {
+  if (is.null(store$verification)) {
+    return(FALSE)
+  }
+  metadata <- read_store_metadata(store$connection)
+  active_build_digest <- scalar_character(metadata$active_build_digest)
+  identical(store$verification$metadata, metadata) &&
+    identical(
+      store$verification$active_schema_version,
+      read_schema_version(store$connection, active_build_digest)
+    )
+}
+
 verify_store_format <- function(metadata) {
   observed <- scalar_character(metadata$store_format_version)
   if (!identical(observed, graft_store_format_version)) {

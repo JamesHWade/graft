@@ -25,6 +25,8 @@ test_that("migration plans are deterministic and compatible activations apply", 
   )
   expect_identical(metadata$active_build_digest, first$to_build_digest)
   expect_identical(store$schema$manifest, rebuilt$manifest)
+  expect_identical(store_schema_is_verified(store), TRUE)
+  expect_s3_class(kg_records(store, "Entity"), "tbl_dbi")
   expect_identical(migrations$plan_digest, first$plan_digest)
   expect_identical(migrations$classification, "compatible")
   expect_identical(

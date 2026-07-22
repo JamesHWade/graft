@@ -88,6 +88,7 @@ new_kg_store <- function(
   store$path <- path
   store$closed <- FALSE
   store$capabilities <- capabilities
+  store$verification <- NULL
   class(store) <- "kg_store"
   store
 }

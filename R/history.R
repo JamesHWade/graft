@@ -238,7 +238,7 @@ kg_history <- function(store, id, as_of = NULL, limit = 100) {
 #'   `issues` data frame.
 #' @export
 kg_check_store <- function(store, deep = FALSE, limit = 100) {
-  validate_retrieval_store(store)
+  validate_retrieval_store(store, refresh = TRUE)
   deep <- validate_history_flag(deep, "deep")
   limit <- validate_result_limit(
     limit,
@@ -467,6 +467,28 @@ historical_schema <- function(store, build_digest, cache) {
     )
   }
   schema <- schema_from_manifest_json(version$manifest_json[[1L]])
+  validate_manifest_integrity(schema)
+  fingerprints <- schema$manifest$fingerprints
+  if (
+    !identical(
+      scalar_character(version$structural_digest),
+      scalar_character(fingerprints$structural_digest)
+    ) ||
+      !identical(
+        scalar_character(version$source_digest),
+        scalar_character(fingerprints$source_digest)
+      ) ||
+      !identical(
+        scalar_character(version$build_digest),
+        scalar_character(fingerprints$build_digest)
+      )
+  ) {
+    abort_backend_error(
+      "A historical schema registry row does not match its manifest.",
+      operation = "record_history",
+      build_digest = build_digest
+    )
+  }
   assign(build_digest, schema, envir = cache)
   schema
 }
