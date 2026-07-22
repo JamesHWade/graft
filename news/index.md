@@ -6,11 +6,26 @@
   walkthrough demonstrate scheduled Tempest briefings, host-bound
   promotion and approval, evidence-checked decisions, and governed Graft
   ingestion.
+- Store format 2 adds complete system-time revision history and rejects
+  stores created by earlier development versions instead of silently
+  upgrading or operating in a legacy mode.
+- [`kg_apply_migration()`](https://jameshwade.github.io/graft/reference/kg_apply_migration.md)
+  atomically applies an unmodified reviewed migration plan after
+  revalidating its digest and store preconditions; the first migration
+  version accepts only compatible and supported additive changes.
 - [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
   creates stable producer batches, and
   [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
   atomically reconciles, validates, and upserts multiple record classes
   with identifier, origin, observation, and replay lineage.
+- [`kg_batches()`](https://jameshwade.github.io/graft/reference/kg_batches.md)
+  and
+  [`kg_changes()`](https://jameshwade.github.io/graft/reference/kg_changes.md)
+  provide bounded, newest-first provenance and revision views with
+  historical schema-aware sensitivity filtering.
+- [`kg_check_store()`](https://jameshwade.github.io/graft/reference/kg_check_store.md)
+  reports bounded revision-ledger and current-state integrity findings,
+  with an optional deep payload and projection check.
 - [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md),
   [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md),
   and
@@ -50,9 +65,18 @@
 - [`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md)
   hydrates exactly one public record with bounded related identifiers,
   claims, and evidence.
+- [`kg_history()`](https://jameshwade.github.io/graft/reference/kg_history.md)
+  retrieves bounded revisions for one record and recovers its accepted
+  state at a committed batch or time boundary.
+- [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
+  verifies structural-digest integrity and compiler-required physical
+  type contracts before creating or changing store objects.
 - [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
   commits mapped Tempest domain records with run- and stage-stable
   idempotency keys, independently of Tempest deliverable persistence.
+- [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
+  creates a deterministic, serializable migration plan bound to the
+  store identity, format, active schema, and exact target manifest.
 - [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
   returns lazy typed dbplyr tables for public concrete classes.
 - [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md),
@@ -63,14 +87,17 @@
   [`kg_schema_info()`](https://jameshwade.github.io/graft/reference/kg_schema_info.md)
   load and inspect manifests without Python.
 - [`kg_schema_diff()`](https://jameshwade.github.io/graft/reference/kg_schema_diff.md)
-  reports structural schema changes.
+  reports structural schema changes with deterministic per-change and
+  overall compatibility classifications.
 - [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
   provides a collected, hard-capped structured query surface with
   manifest validation and no arbitrary SQL.
 - [`kg_store_info()`](https://jameshwade.github.io/graft/reference/kg_store_info.md)
-  and
+  reports the store format, exact active schema build, and
+  revision-history coverage in addition to connection and schema
+  details;
   [`kg_capabilities()`](https://jameshwade.github.io/graft/reference/kg_capabilities.md)
-  inspect DuckDB stores without requiring Python.
+  reports static backend capabilities.
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   creates six read-only ellmer tools over bounded Graft retrieval APIs,
   with structured results and no arbitrary SQL surface.

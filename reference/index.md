@@ -47,6 +47,24 @@ Validate and write records in batches with provenance and idempotency.
 - [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
   : Validate records without writing them
 
+## History and change control
+
+Inspect accepted revisions and apply explicitly reviewed additive schema
+migrations.
+
+- [`kg_batches()`](https://jameshwade.github.io/graft/reference/kg_batches.md)
+  : List committed ingestion batches
+- [`kg_changes()`](https://jameshwade.github.io/graft/reference/kg_changes.md)
+  : List accepted record changes
+- [`kg_history()`](https://jameshwade.github.io/graft/reference/kg_history.md)
+  : Retrieve the accepted history of one record
+- [`kg_check_store()`](https://jameshwade.github.io/graft/reference/kg_check_store.md)
+  : Check revision-ledger and current-state integrity
+- [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
+  : Plan an additive schema migration
+- [`kg_apply_migration()`](https://jameshwade.github.io/graft/reference/kg_apply_migration.md)
+  : Apply a planned additive schema migration
+
 ## Records and identity
 
 Read records, search declared text fields, and resolve external

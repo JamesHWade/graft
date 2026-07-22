@@ -4,8 +4,9 @@ pkgdown_sha: ~
 articles:
   examples: examples.html
   getting-started: getting-started.html
+  knowledge-change-control: knowledge-change-control.html
   linkml-schema: linkml-schema.html
-last_built: 2026-07-19T23:08Z
+last_built: 2026-07-22T10:51Z
 urls:
   reference: https://jameshwade.github.io/graft/reference
   article: https://jameshwade.github.io/graft/articles

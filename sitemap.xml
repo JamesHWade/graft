@@ -5,13 +5,18 @@
 <url><loc>https://jameshwade.github.io/graft/articles/examples.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/articles/knowledge-change-control.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/linkml-schema.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/authors.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/news/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/index.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_apply_migration.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_batch.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_batches.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_capabilities.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_changes.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_check_store.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_claims.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_classes.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_competing_claims.html</loc></url>
@@ -24,6 +29,7 @@
 <url><loc>https://jameshwade.github.io/graft/reference/kg_evidence.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_find.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_get.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_identifiers.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_ingest.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.html</loc></url>
@@ -31,6 +37,7 @@
 <url><loc>https://jameshwade.github.io/graft/reference/kg_lookup.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_neighbors.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_nodes.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/kg_plan_migration.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_records.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_schema.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/kg_schema_diff.html</loc></url>
