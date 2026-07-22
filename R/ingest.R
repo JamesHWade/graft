@@ -39,8 +39,39 @@ kg_ingest <- function(
   result <- with_duckdb_error(
     "ingest",
     DBI::dbWithTransaction(store$connection, {
-      insert_started_batch(store$connection, batch, now)
+      verify_initialized_store(store, activate = TRUE)
+      metadata <- read_store_metadata(store$connection)
+      build_digest <- scalar_character(
+        store$schema$manifest$fingerprints$build_digest
+      )
+      if (!identical(metadata$active_build_digest, build_digest)) {
+        abort_backend_error(
+          "The active store schema does not match the ingestion schema.",
+          operation = "ingest",
+          active_build_digest = metadata$active_build_digest,
+          build_digest = build_digest
+        )
+      }
+      commit_order <- next_metadata_order(
+        store$connection,
+        "_graft_batches",
+        "commit_order"
+      )
+      insert_started_batch(
+        store$connection,
+        batch,
+        now,
+        build_digest,
+        commit_order
+      )
       staged <- prepare_ingest_records(store, batch, records, now)
+      staged <- write_staged_revisions(
+        store,
+        batch,
+        staged,
+        now,
+        commit_order
+      )
       write_staged_records(store, staged, now)
       write_staged_identifiers(store, batch, staged, now)
       write_staged_lineage(store, batch, staged, now)
@@ -130,22 +161,24 @@ validate_initialized_store_for_ingest <- function(store, write = FALSE) {
       store_path = store$path
     )
   }
-  metadata <- read_store_metadata(store$connection)
-  stored_schema <- schema_from_manifest_json(metadata$manifest_json)
-  diff <- kg_schema_diff(stored_schema, store$schema)
-  if (!isTRUE(diff$compatible)) {
-    abort_schema_mismatch(diff)
-  }
   if (write) {
     validate_store_writable(store, "ingest")
-    verify_initialized_store(store)
   }
+  verify_initialized_store(store, activate = FALSE)
   invisible(store)
 }
 
-insert_started_batch <- function(connection, batch, now) {
+insert_started_batch <- function(
+  connection,
+  batch,
+  now,
+  schema_build_digest,
+  commit_order
+) {
   row <- data.frame(
     batch_id = batch$batch_id,
+    schema_build_digest = schema_build_digest,
+    commit_order = commit_order,
     producer = batch$producer,
     producer_version = batch$producer_version,
     source_run_id = batch$source_run_id,
@@ -653,6 +686,8 @@ write_staged_lineage <- function(store, batch, staged, now) {
         record_id = identity$record_id,
         class = class_staged$class,
         batch_id = batch$batch_id,
+        disposition = class_staged$disposition[[index]],
+        revision_id = class_staged$revision_ids[[index]],
         observed_at = now,
         stringsAsFactors = FALSE
       )

@@ -21,6 +21,20 @@ test_that("a valid multi-class batch commits atomically", {
     nrow(DBI::dbReadTable(store$connection, "_graft_record_observations")),
     7L
   )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions")),
+    7L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_heads")),
+    7L
+  )
+  batch_row <- DBI::dbReadTable(store$connection, "_graft_batches")
+  expect_identical(
+    batch_row$schema_build_digest,
+    store$schema$manifest$fingerprints$build_digest
+  )
+  expect_identical(batch_row$commit_order, 1)
 })
 
 test_that("invalid evidence rolls back every table and batch row", {
@@ -51,8 +65,10 @@ test_that("invalid evidence rolls back every table and batch row", {
   metadata <- c(
     "_graft_batches",
     "_graft_identifiers",
+    "_graft_record_heads",
     "_graft_record_origins",
-    "_graft_record_observations"
+    "_graft_record_observations",
+    "_graft_record_revisions"
   )
   metadata_rows <- vapply(
     metadata,
@@ -157,6 +173,59 @@ test_that("origin-key upserts update mutable data without changing ID", {
   expect_identical(updated$created_at, original$created_at)
   expect_gte(updated$updated_at, original$updated_at)
 
+  matched_result <- kg_write(
+    store,
+    kg_batch("producer-a", idempotency_key = "origin-match"),
+    "Entity",
+    second
+  )
+  revisions <- DBI::dbReadTable(
+    store$connection,
+    "_graft_record_revisions"
+  )
+  heads <- DBI::dbReadTable(store$connection, "_graft_record_heads")
+  observations <- DBI::dbReadTable(
+    store$connection,
+    "_graft_record_observations"
+  )
+  payloads <- lapply(
+    revisions$payload_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+  changed <- lapply(
+    revisions$changed_fields_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+
+  expect_identical(matched_result$matched[["Entity"]], 1L)
+  expect_equal(nrow(revisions), 2L)
+  expect_identical(revisions$revision_number, c(1, 2))
+  expect_identical(revisions$operation, c("insert", "update"))
+  expect_identical(
+    revisions$prior_revision_id,
+    c(NA_character_, revisions$revision_id[[1L]])
+  )
+  expect_identical(revisions$commit_order, c(1, 2))
+  expect_identical(payloads[[1L]]$preferred_name, "First name")
+  expect_identical(payloads[[2L]]$preferred_name, "Updated name")
+  expect_in("created_at", names(payloads[[1L]]))
+  expect_in("updated_at", names(payloads[[1L]]))
+  expect_identical(
+    unlist(changed[[2L]], use.names = FALSE),
+    "preferred_name"
+  )
+  expect_identical(heads$revision_id, revisions$revision_id[[2L]])
+  expect_identical(
+    observations$revision_id,
+    c(revisions$revision_id, revisions$revision_id[[2L]])
+  )
+  expect_identical(
+    observations$disposition,
+    c("inserted", "updated", "matched")
+  )
+
   changed_id <- data.frame(
     id = test_graft_id("different"),
     preferred_name = "Wrong ID",
@@ -224,6 +293,100 @@ test_that("generated Claim.about synchronization preserves retained rows", {
     intersect(after$id[after$object == entity_three], before$id),
     0L
   )
+
+  revisions <- DBI::dbReadTable(
+    store$connection,
+    "_graft_record_revisions"
+  )
+  claim_revisions <- revisions[revisions$class == "Claim", , drop = FALSE]
+  payloads <- lapply(
+    claim_revisions$payload_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+  changed <- jsonlite::fromJSON(
+    claim_revisions$changed_fields_json[[2L]],
+    simplifyVector = FALSE
+  )
+  expect_identical(
+    unlist(payloads[[1L]]$about, use.names = FALSE),
+    sort(c(entity_one, entity_two))
+  )
+  expect_identical(
+    unlist(payloads[[2L]]$about, use.names = FALSE),
+    sort(c(entity_two, entity_three))
+  )
+  expect_identical(unlist(changed, use.names = FALSE), "about")
+})
+
+test_that("post-revision failures roll back history and current state", {
+  store <- local_ingest_store()
+  local_mocked_bindings(
+    write_staged_records = function(...) stop("forced write failure")
+  )
+
+  condition <- catch_graft_ingest_condition(
+    kg_write(
+      store,
+      kg_batch("tempest", idempotency_key = "forced-failure"),
+      "Entity",
+      data.frame(preferred_name = "Must roll back")
+    )
+  )
+
+  expect_s3_class(condition, "graft_backend_error")
+  expect_equal(nrow(DBI::dbReadTable(store$connection, "entity")), 0L)
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions")),
+    0L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_heads")),
+    0L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
+    0L
+  )
+})
+
+test_that("ingestion refuses current-state drift from revision heads", {
+  store <- local_ingest_store()
+  input <- data.frame(
+    preferred_name = "Accepted",
+    .graft_origin_key = "drift-check",
+    check.names = FALSE
+  )
+  kg_write(
+    store,
+    kg_batch("tempest", idempotency_key = "drift-1"),
+    "Entity",
+    input
+  )
+  DBI::dbExecute(
+    store$connection,
+    "UPDATE entity SET preferred_name = 'Direct write'"
+  )
+
+  condition <- catch_graft_ingest_condition(
+    kg_write(
+      store,
+      kg_batch("tempest", idempotency_key = "drift-2"),
+      "Entity",
+      transform(input, preferred_name = "Proposed update")
+    )
+  )
+
+  expect_s3_class(condition, "graft_backend_error")
+  expect_match(conditionMessage(condition), "differs from its revision head")
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions")),
+    1L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
+    1L
+  )
 })
 
 test_that("one exact entity can be observed in thirty batches", {
@@ -249,6 +412,12 @@ test_that("one exact entity can be observed in thirty batches", {
     nrow(DBI::dbReadTable(store$connection, "_graft_record_observations")),
     30L
   )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions")),
+    1L
+  )
+  batches <- DBI::dbReadTable(store$connection, "_graft_batches")
+  expect_identical(batches$commit_order, as.numeric(seq_len(30L)))
 })
 
 test_that("structural mismatch refuses ingestion", {

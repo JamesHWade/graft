@@ -151,7 +151,7 @@ validate_store_writable <- function(store, operation = "write") {
 #' Initialize or verify a graft store
 #'
 #' Initialization creates client tables from the compiled manifest plus the
-#' five package-owned metadata tables and three generated graph views. It is
+#' package-owned metadata tables and three generated graph views. It is
 #' atomic and idempotent. Existing stores must have the same structural digest
 #' as the active schema.
 #'
@@ -164,13 +164,14 @@ kg_init <- function(store) {
   validate_manifest_physical_names(store$schema)
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
-    verify_initialized_store(store)
     if (isTRUE(store$read_only)) {
+      verify_initialized_store(store)
       verify_graph_views(store$connection)
     } else {
       with_duckdb_error(
-        "initialize_graph_views",
+        "initialize_existing_store",
         DBI::dbWithTransaction(store$connection, {
+          verify_initialized_store(store)
           create_graph_views(store$connection, store$schema)
         })
       )
@@ -208,6 +209,7 @@ kg_init <- function(store) {
       create_manifest_tables(store$connection, store$schema)
       create_graph_views(store$connection, store$schema)
       insert_store_metadata(store)
+      register_initial_schema(store)
     })
   )
   invisible(store)
@@ -272,6 +274,7 @@ kg_store_info <- function(store) {
     table_count <- length(duckdb_table_names(store$connection))
     if (initialized) {
       metadata <- read_store_metadata(store$connection)
+      verify_store_format(metadata)
     }
   }
 
@@ -289,6 +292,26 @@ kg_store_info <- function(store) {
     ),
     source_digest = scalar_character(fingerprints$source_digest),
     build_digest = scalar_character(fingerprints$build_digest),
+    store_format_version = if (is.null(metadata)) {
+      graft_store_format_version
+    } else {
+      scalar_character(metadata$store_format_version)
+    },
+    active_build_digest = if (is.null(metadata)) {
+      NA_character_
+    } else {
+      scalar_character(metadata$active_build_digest)
+    },
+    history_complete = if (is.null(metadata)) {
+      NA
+    } else {
+      isTRUE(metadata$history_complete)
+    },
+    history_started_at = if (is.null(metadata)) {
+      as.POSIXct(NA_real_, origin = "1970-01-01", tz = "UTC")
+    } else {
+      metadata$history_started_at
+    },
     stored = metadata
   )
 }

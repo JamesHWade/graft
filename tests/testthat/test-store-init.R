@@ -2,8 +2,12 @@ metadata_table_names <- function() {
   c(
     "_graft_batches",
     "_graft_identifiers",
+    "_graft_record_heads",
     "_graft_record_observations",
     "_graft_record_origins",
+    "_graft_record_revisions",
+    "_graft_schema_activations",
+    "_graft_schema_versions",
     "_graft_store"
   )
 }
@@ -52,6 +56,12 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     store_row$active_structural_digest,
     schema$manifest$fingerprints$structural_digest
   )
+  expect_identical(store_row$store_format_version, "2.0.0")
+  expect_identical(
+    store_row$active_build_digest,
+    schema$manifest$fingerprints$build_digest
+  )
+  expect_identical(store_row$history_complete, TRUE)
   expect_identical(
     jsonlite::fromJSON(store_row$manifest_json, simplifyVector = FALSE),
     schema$manifest
@@ -68,9 +78,12 @@ test_that("in-memory initialization creates metadata and manifest tables", {
       "store_id",
       "store_format_version",
       "active_structural_digest",
+      "active_build_digest",
       "source_digest",
       "build_digest",
       "manifest_json",
+      "history_started_at",
+      "history_complete",
       "created_at",
       "updated_at"
     )
@@ -79,6 +92,8 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     metadata_columns$`_graft_batches`,
     c(
       "batch_id",
+      "schema_build_digest",
+      "commit_order",
       "producer",
       "producer_version",
       "source_run_id",
@@ -102,7 +117,64 @@ test_that("in-memory initialization creates metadata and manifest tables", {
   )
   expect_identical(
     metadata_columns$`_graft_record_observations`,
-    c("record_id", "class", "batch_id", "observed_at")
+    c(
+      "record_id",
+      "class",
+      "batch_id",
+      "disposition",
+      "revision_id",
+      "observed_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_schema_versions`,
+    c(
+      "build_digest",
+      "structural_digest",
+      "source_digest",
+      "manifest_json",
+      "compiler_json",
+      "registered_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_schema_activations`,
+    c(
+      "activation_id",
+      "build_digest",
+      "previous_build_digest",
+      "reason",
+      "activation_order",
+      "activated_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_record_revisions`,
+    c(
+      "revision_id",
+      "record_id",
+      "class",
+      "batch_id",
+      "schema_build_digest",
+      "revision_number",
+      "operation",
+      "payload_json",
+      "content_digest",
+      "changed_fields_json",
+      "prior_revision_id",
+      "recorded_at",
+      "commit_order"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_record_heads`,
+    c(
+      "record_id",
+      "class",
+      "revision_id",
+      "revision_number",
+      "updated_at"
+    )
   )
   expect_identical(
     metadata_columns$`_graft_identifiers`,
@@ -132,6 +204,24 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     DBI::dbListFields(store$connection, "claim__about"),
     c("id", "subject", "object", "position", "created_at")
   )
+
+  versions <- DBI::dbReadTable(store$connection, "_graft_schema_versions")
+  activations <- DBI::dbReadTable(
+    store$connection,
+    "_graft_schema_activations"
+  )
+  expect_equal(nrow(versions), 1L)
+  expect_identical(
+    versions$build_digest,
+    schema$manifest$fingerprints$build_digest
+  )
+  expect_identical(
+    jsonlite::fromJSON(versions$compiler_json, simplifyVector = FALSE),
+    schema$manifest$compiler
+  )
+  expect_equal(nrow(activations), 1L)
+  expect_identical(activations$reason, "initial")
+  expect_identical(activations$activation_order, 1)
 })
 
 test_that("initialization is idempotent", {
@@ -149,6 +239,27 @@ test_that("initialization is idempotent", {
   expect_identical(after$store_id, before$store_id)
   expect_identical(after$created_at, before$created_at)
   expect_identical(DBI::dbListTables(store$connection), tables_before)
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_schema_activations")),
+    1L
+  )
+})
+
+test_that("unsupported store formats are rejected explicitly", {
+  schema <- kg_schema(tempest_manifest_path())
+  store <- kg_connect_duckdb(schema)
+  withr::defer(kg_disconnect(store))
+  kg_init(store)
+  DBI::dbExecute(
+    store$connection,
+    "UPDATE _graft_store SET store_format_version = '1.0.0'"
+  )
+
+  condition <- catch_graft_condition(kg_init(store))
+
+  expect_s3_class(condition, "graft_store_format_error")
+  expect_identical(condition$observed_version, "1.0.0")
+  expect_identical(condition$supported_version, "2.0.0")
 })
 
 test_that("file stores reopen and initialize without Python", {
@@ -301,6 +412,24 @@ test_that("compiler-only digest changes remain writable", {
     info$stored$build_digest,
     rebuilt$manifest$fingerprints$build_digest
   )
+  expect_identical(
+    info$stored$active_build_digest,
+    rebuilt$manifest$fingerprints$build_digest
+  )
+  versions <- DBI::dbReadTable(
+    compatible$connection,
+    "_graft_schema_versions"
+  )
+  activations <- DBI::dbReadTable(
+    compatible$connection,
+    "_graft_schema_activations"
+  )
+  expect_equal(nrow(versions), 2L)
+  expect_identical(
+    activations$reason,
+    c("initial", "compatible_rebuild")
+  )
+  expect_identical(activations$activation_order, c(1, 2))
   expect_identical(kg_capabilities(compatible)$writable, TRUE)
 })
 
