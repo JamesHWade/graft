@@ -15,7 +15,8 @@ kg_schema_diff(old_schema, new_schema)
 A \code{kg_schema_diff} object.
 }
 \description{
-The structural digest determines compatibility. The returned report also
+Compatibility requires both matching structural content and structural
+digests that faithfully describe that content. The returned report also
 identifies class, slot, enum, table, and generated-relation changes so a
 mismatch is useful to an interactive user or pipeline.
 }

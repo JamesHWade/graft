@@ -2,6 +2,7 @@ metadata_table_names <- function() {
   c(
     "_graft_batches",
     "_graft_identifiers",
+    "_graft_migrations",
     "_graft_record_heads",
     "_graft_record_observations",
     "_graft_record_origins",
@@ -57,6 +58,9 @@ test_that("in-memory initialization creates metadata and manifest tables", {
     schema$manifest$fingerprints$structural_digest
   )
   expect_identical(store_row$store_format_version, "2.0.0")
+  info <- kg_store_info(store)
+  expect_identical(info$store_format_version, "2.0.0")
+  expect_identical(info$required_store_format_version, "2.0.0")
   expect_identical(
     store_row$active_build_digest,
     schema$manifest$fingerprints$build_digest
@@ -86,6 +90,22 @@ test_that("in-memory initialization creates metadata and manifest tables", {
       "history_complete",
       "created_at",
       "updated_at"
+    )
+  )
+  expect_identical(
+    metadata_columns$`_graft_migrations`,
+    c(
+      "migration_id",
+      "plan_digest",
+      "from_build_digest",
+      "to_build_digest",
+      "from_structural_digest",
+      "to_structural_digest",
+      "classification",
+      "changes_json",
+      "operations_json",
+      "application_order",
+      "applied_at"
     )
   )
   expect_identical(
@@ -364,11 +384,8 @@ test_that("structural mismatches carry a schema diff", {
   kg_disconnect(store)
 
   incompatible <- modified_schema(schema)
-  incompatible$manifest$fingerprints$structural_digest <- paste0(
-    "sha256:",
-    paste(rep("0", 64L), collapse = "")
-  )
-  incompatible$manifest$tables$Entity$columns[[1L]]$type <- "DOUBLE"
+  incompatible$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  incompatible <- refresh_schema_structural_digest(incompatible)
 
   mismatched <- kg_connect_duckdb(incompatible, path)
   withr::defer(kg_disconnect(mismatched))
@@ -377,7 +394,7 @@ test_that("structural mismatches carry a schema diff", {
   expect_s3_class(condition, "graft_schema_mismatch")
   expect_s3_class(condition$schema_diff, "kg_schema_diff")
   expect_identical(condition$schema_diff$compatible, FALSE)
-  expect_in("Entity", condition$schema_diff$tables$changed)
+  expect_in("Entity", condition$schema_diff$classes$changed)
 })
 
 test_that("compiler-only digest changes remain writable", {
@@ -455,6 +472,36 @@ test_that("reserved client names and failed DDL leave stores blank", {
   expect_length(DBI::dbListTables(invalid_store$connection), 0L)
 })
 
+test_that("fresh initialization refuses invalid manifest integrity atomically", {
+  base <- kg_schema(tempest_manifest_path())
+  stale <- migration_schema_copy(base, "stale-fresh", structural = FALSE)
+  stale$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  stale_store <- kg_connect_duckdb(stale)
+  withr::defer(kg_disconnect(stale_store))
+
+  stale_condition <- catch_graft_condition(kg_init(stale_store))
+
+  expect_s3_class(stale_condition, "graft_schema_integrity_error")
+  expect_identical(
+    stale_condition$rule,
+    "structural_digest_content_mismatch"
+  )
+  expect_length(DBI::dbListTables(stale_store$connection), 0L)
+
+  malformed <- migration_schema_add_object_relation(
+    base,
+    relational_type = "DOUBLE"
+  )
+  malformed_store <- kg_connect_duckdb(malformed)
+  withr::defer(kg_disconnect(malformed_store))
+
+  type_condition <- catch_graft_condition(kg_init(malformed_store))
+
+  expect_s3_class(type_condition, "graft_schema_integrity_error")
+  expect_identical(type_condition$rule, "object_reference_varchar")
+  expect_length(DBI::dbListTables(malformed_store$connection), 0L)
+})
+
 test_that("store info and capabilities describe the lifecycle", {
   schema <- kg_schema(tempest_manifest_path())
   store <- kg_connect_duckdb(schema)
@@ -462,6 +509,8 @@ test_that("store info and capabilities describe the lifecycle", {
   before <- kg_store_info(store)
   expect_identical(before$initialized, FALSE)
   expect_identical(before$closed, FALSE)
+  expect_identical(before$store_format_version, NA_character_)
+  expect_identical(before$required_store_format_version, "2.0.0")
   expect_identical(kg_capabilities(store)$transactions, TRUE)
   expect_identical(kg_capabilities(store)$single_owning_process, TRUE)
 
@@ -469,4 +518,6 @@ test_that("store info and capabilities describe the lifecycle", {
   after <- kg_store_info(store)
   expect_identical(after$closed, TRUE)
   expect_identical(after$initialized, NA)
+  expect_identical(after$store_format_version, NA_character_)
+  expect_identical(after$required_store_format_version, "2.0.0")
 })

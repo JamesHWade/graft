@@ -1,6 +1,7 @@
 #' Compare two compiled graft schemas
 #'
-#' The structural digest determines compatibility. The returned report also
+#' Compatibility requires both matching structural content and structural
+#' digests that faithfully describe that content. The returned report also
 #' identifies class, slot, enum, table, and generated-relation changes so a
 #' mismatch is useful to an interactive user or pipeline.
 #'
@@ -17,10 +18,20 @@ kg_schema_diff <- function(old_schema, new_schema) {
 
   old_digest <- scalar_character(old$fingerprints$structural_digest)
   new_digest <- scalar_character(new$fingerprints$structural_digest)
-  compatible <- identical(old_digest, new_digest)
+  old_content <- manifest_structural_json(old)
+  new_content <- manifest_structural_json(new)
+  content_matches <- identical(old_content, new_content)
+  integrity <- structural_digest_integrity_details(
+    old,
+    new,
+    old_digest,
+    new_digest
+  )
+  compatible <- content_matches && nrow(integrity) == 0L
 
   if (compatible) {
     return(new_kg_schema_diff(
+      compatible = TRUE,
       old_structural_digest = old_digest,
       new_structural_digest = new_digest,
       classes = empty_named_contract_diff(),
@@ -33,7 +44,10 @@ kg_schema_diff <- function(old_schema, new_schema) {
     ))
   }
 
-  details <- schema_change_details(old, new)
+  details <- bind_schema_change_details(
+    schema_change_details(old, new),
+    integrity
+  )
   if (nrow(details) == 0L) {
     details <- new_schema_change_detail(
       path = "/fingerprints/structural_digest",
@@ -48,6 +62,7 @@ kg_schema_diff <- function(old_schema, new_schema) {
   }
 
   new_kg_schema_diff(
+    compatible = FALSE,
     old_structural_digest = old_digest,
     new_structural_digest = new_digest,
     classes = diff_named_contract(old$classes, new$classes),
@@ -57,6 +72,62 @@ kg_schema_diff <- function(old_schema, new_schema) {
     relations = diff_relations(old$relations, new$relations),
     classification = schema_change_classification(details$classification),
     details = details
+  )
+}
+
+manifest_structural_contract <- function(manifest) {
+  list(
+    relational_mapping_version = manifest$relational_mapping_version,
+    classes = manifest$classes,
+    tables = manifest$tables,
+    relations = manifest$relations,
+    enums = manifest$enums,
+    graph_projections = manifest$graph_projections,
+    validation_invariants = manifest$validation_invariants,
+    identifier_normalization_versions = manifest$identifier_normalization_versions
+  )
+}
+
+manifest_structural_json <- function(manifest) {
+  canonical_json(canonical_schema_change_value(
+    manifest_structural_contract(manifest)
+  ))
+}
+
+manifest_structural_digest <- function(manifest) {
+  paste0(
+    "sha256:",
+    digest::digest(
+      manifest_structural_json(manifest),
+      algo = "sha256",
+      serialize = FALSE
+    )
+  )
+}
+
+structural_digest_integrity_details <- function(
+  old,
+  new,
+  old_digest,
+  new_digest
+) {
+  old_computed <- manifest_structural_digest(old)
+  new_computed <- manifest_structural_digest(new)
+  if (
+    identical(old_digest, old_computed) &&
+      identical(new_digest, new_computed)
+  ) {
+    return(empty_schema_change_details())
+  }
+  new_schema_change_detail(
+    path = "/fingerprints/structural_digest",
+    object_type = "manifest",
+    change = "changed",
+    field = "structural_digest",
+    old = list(declared = old_digest, computed = old_computed),
+    new = list(declared = new_digest, computed = new_computed),
+    classification = "unsupported",
+    rule = "structural_digest_content_mismatch"
   )
 }
 

@@ -14,6 +14,12 @@ tempest_manifest_path <- function() {
   )
 }
 
+refresh_schema_structural_digest <- function(schema) {
+  schema$manifest$fingerprints$structural_digest <-
+    manifest_structural_digest(schema$manifest)
+  schema
+}
+
 plain_linkml_schema_path <- function(name = "personinfo.linkml.yaml") {
   test_path(
     "fixtures",

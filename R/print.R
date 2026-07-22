@@ -14,15 +14,14 @@ print.kg_schema <- function(x, ...) {
 
 #' @export
 print.kg_schema_diff <- function(x, ...) {
-  status <- if (isTRUE(x$compatible)) "compatible" else "incompatible"
   cat(
     "<kg_schema_diff> ",
-    status,
-    " (",
     x$classification,
-    ")\n",
+    "\n",
     sep = ""
   )
+  structural <- if (isTRUE(x$compatible)) "unchanged" else "changed"
+  cat("  structural: ", structural, "\n", sep = "")
   if (!isTRUE(x$compatible)) {
     cat("  old: ", x$old_structural_digest, "\n", sep = "")
     cat("  new: ", x$new_structural_digest, "\n", sep = "")
@@ -47,6 +46,38 @@ print.kg_schema_diff <- function(x, ...) {
   print_change_summary("enums", x$enums)
   print_change_summary("tables", x$tables)
   print_change_summary("relations", x$relations)
+  invisible(x)
+}
+
+#' @export
+print.kg_migration_plan <- function(x, ...) {
+  cat(
+    "<kg_migration_plan> ",
+    x$classification,
+    " ",
+    x$migration_id,
+    "\n",
+    sep = ""
+  )
+  cat("  from:       ", x$from_build_digest, "\n", sep = "")
+  cat("  to:         ", x$to_build_digest, "\n", sep = "")
+  cat("  changes:    ", nrow(x$changes), "\n", sep = "")
+  rules <- sort(unique(x$changes$rule), method = "radix")
+  if (length(rules) > 0L) {
+    cat("  rules:      ", paste(rules, collapse = ", "), "\n", sep = "")
+  }
+  cat("  operations: ", length(x$operations), "\n", sep = "")
+  cat("  digest:     ", x$plan_digest, "\n", sep = "")
+  invisible(x)
+}
+
+#' @export
+print.kg_store_check <- function(x, ...) {
+  status <- if (isTRUE(x$valid)) "valid" else "invalid"
+  mode <- if (isTRUE(x$deep)) "deep" else "shallow"
+  cat("<kg_store_check> ", status, " (", mode, ")\n", sep = "")
+  cat("  issues:    ", x$reported_issues, "\n", sep = "")
+  cat("  truncated: ", x$truncated, "\n", sep = "")
   invisible(x)
 }
 

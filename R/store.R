@@ -152,8 +152,10 @@ validate_store_writable <- function(store, operation = "write") {
 #'
 #' Initialization creates client tables from the compiled manifest plus the
 #' package-owned metadata tables and three generated graph views. It is
-#' atomic and idempotent. Existing stores must have the same structural digest
-#' as the active schema.
+#' atomic and idempotent. Before any store mutation, Graft verifies the
+#' manifest's declared structural digest and compiler-required physical type
+#' contracts. Existing stores must also be structurally compatible with the
+#' active schema.
 #'
 #' @param store A `kg_store` object.
 #'
@@ -161,6 +163,7 @@ validate_store_writable <- function(store, operation = "write") {
 #' @export
 kg_init <- function(store) {
   validate_kg_store(store)
+  validate_manifest_integrity(store$schema)
   validate_manifest_physical_names(store$schema)
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
@@ -260,8 +263,10 @@ disconnect_owned_store <- function(store, finalizer = FALSE) {
 #'
 #' @param store A `kg_store` object.
 #'
-#' @return A named list describing the connection, initialization state, and
-#'   active schema fingerprints.
+#' @return A named list describing the connection, initialization state,
+#'   observed and required store formats, active schema fingerprints, and
+#'   revision-history coverage. `store_format_version` is `NA` when no store
+#'   metadata can be observed, including before initialization and after close.
 #' @export
 kg_store_info <- function(store) {
   validate_kg_store(store, require_open = FALSE)
@@ -293,10 +298,11 @@ kg_store_info <- function(store) {
     source_digest = scalar_character(fingerprints$source_digest),
     build_digest = scalar_character(fingerprints$build_digest),
     store_format_version = if (is.null(metadata)) {
-      graft_store_format_version
+      NA_character_
     } else {
       scalar_character(metadata$store_format_version)
     },
+    required_store_format_version = graft_store_format_version,
     active_build_digest = if (is.null(metadata)) {
       NA_character_
     } else {

@@ -57,41 +57,81 @@ validate_manifest_physical_names <- function(schema) {
 create_manifest_tables <- function(connection, schema) {
   manifest <- schema$manifest
   for (table in manifest$tables) {
-    create_table(
-      connection,
-      scalar_character(table$name),
-      table$columns
-    )
-    reference_columns <- Filter(
-      \(.x) !is.null(.x$foreign_key),
-      table$columns
-    )
-    indexes <- lapply(
-      reference_columns,
-      \(.x) scalar_character(.x$name)
-    )
-    create_table_indexes(connection, scalar_character(table$name), indexes)
+    create_manifest_table(connection, table)
   }
   for (relation in manifest$relations) {
-    constraints <- relation_unique_constraints(relation)
-    create_table(
-      connection,
-      scalar_character(relation$table),
+    create_manifest_relation_table(connection, relation)
+  }
+  invisible(connection)
+}
+
+create_manifest_table <- function(connection, table) {
+  table_name <- scalar_character(table$name)
+  create_table(connection, table_name, table$columns)
+  create_table_indexes(
+    connection,
+    table_name,
+    manifest_table_indexes(table)
+  )
+  invisible(connection)
+}
+
+create_manifest_relation_table <- function(connection, relation) {
+  table_name <- scalar_character(relation$table)
+  create_table(
+    connection,
+    table_name,
+    relation$columns,
+    unique_constraints = relation_unique_constraints(relation)
+  )
+  create_table_indexes(
+    connection,
+    table_name,
+    manifest_relation_indexes(relation)
+  )
+  invisible(connection)
+}
+
+manifest_table_indexes <- function(table) {
+  reference_columns <- Filter(
+    \(.x) !is.null(.x$foreign_key),
+    table$columns
+  )
+  lapply(reference_columns, \(.x) scalar_character(.x$name))
+}
+
+manifest_relation_indexes <- function(relation) {
+  index_columns <- intersect(
+    c("owner_id", "subject", "object"),
+    vapply(
       relation$columns,
-      unique_constraints = constraints
+      \(.x) scalar_character(.x$name),
+      character(1)
     )
-    index_columns <- intersect(
-      c("owner_id", "subject", "object"),
-      vapply(
-        relation$columns,
-        \(.x) scalar_character(.x$name),
-        character(1)
-      )
+  )
+  as.list(index_columns)
+}
+
+add_manifest_column <- function(connection, table, column) {
+  if (!scalar_logical(column$nullable, default = TRUE)) {
+    abort_schema_error(
+      "Migration columns must be nullable.",
+      table = table,
+      column = scalar_character(column$name)
     )
+  }
+  sql <- paste0(
+    "ALTER TABLE ",
+    quote_identifier(connection, table),
+    " ADD COLUMN ",
+    column_definition_sql(connection, column)
+  )
+  DBI::dbExecute(connection, sql)
+  if (!is.null(column$foreign_key)) {
     create_table_indexes(
       connection,
-      scalar_character(relation$table),
-      as.list(index_columns)
+      table,
+      list(scalar_character(column$name))
     )
   }
   invisible(connection)
@@ -208,7 +248,7 @@ create_table_indexes <- function(connection, table, indexes) {
     if (length(fields) == 0L || anyNA(fields)) {
       next
     }
-    index_name <- paste(c("graft_idx", table, fields), collapse = "_")
+    index_name <- graft_index_name(table, fields)
     sql <- paste0(
       "CREATE INDEX ",
       quote_identifier(connection, index_name),
@@ -221,4 +261,8 @@ create_table_indexes <- function(connection, table, indexes) {
     DBI::dbExecute(connection, sql)
   }
   invisible(connection)
+}
+
+graft_index_name <- function(table, fields) {
+  paste(c("graft_idx", table, fields), collapse = "_")
 }

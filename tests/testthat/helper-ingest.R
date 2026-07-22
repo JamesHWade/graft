@@ -231,5 +231,5 @@ graph_schema_with_direct_edge <- function() {
     empty_character(direct),
     "RelatedEdge"
   ))
-  schema
+  refresh_schema_structural_digest(schema)
 }

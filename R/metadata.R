@@ -61,6 +61,42 @@ metadata_table_definitions <- function() {
         c("build_digest")
       )
     ),
+    `_graft_migrations` = list(
+      columns = list(
+        ddl_column(
+          "migration_id",
+          "VARCHAR",
+          nullable = FALSE,
+          primary_key = TRUE
+        ),
+        ddl_column("plan_digest", "VARCHAR", nullable = FALSE),
+        ddl_column("from_build_digest", "VARCHAR", nullable = FALSE),
+        ddl_column("to_build_digest", "VARCHAR", nullable = FALSE),
+        ddl_column(
+          "from_structural_digest",
+          "VARCHAR",
+          nullable = FALSE
+        ),
+        ddl_column(
+          "to_structural_digest",
+          "VARCHAR",
+          nullable = FALSE
+        ),
+        ddl_column("classification", "VARCHAR", nullable = FALSE),
+        ddl_column("changes_json", "VARCHAR", nullable = FALSE),
+        ddl_column("operations_json", "VARCHAR", nullable = FALSE),
+        ddl_column("application_order", "BIGINT", nullable = FALSE),
+        ddl_column("applied_at", "TIMESTAMP", nullable = FALSE)
+      ),
+      constraints = list(
+        c("plan_digest"),
+        c("application_order")
+      ),
+      indexes = list(
+        c("from_build_digest"),
+        c("to_build_digest")
+      )
+    ),
     `_graft_batches` = list(
       columns = list(
         ddl_column("batch_id", "VARCHAR", nullable = FALSE, primary_key = TRUE),
@@ -312,14 +348,19 @@ insert_schema_activation <- function(
   invisible(schema)
 }
 
-activate_schema <- function(connection, schema, reason = "compatible_rebuild") {
+activate_schema <- function(
+  connection,
+  schema,
+  reason = "compatible_rebuild",
+  now = Sys.time()
+) {
   metadata <- read_store_metadata(connection)
   previous_build_digest <- scalar_character(metadata$active_build_digest)
   build_digest <- scalar_character(schema$manifest$fingerprints$build_digest)
   if (identical(previous_build_digest, build_digest)) {
     return(invisible(schema))
   }
-  now <- as.POSIXct(Sys.time(), tz = "UTC")
+  now <- as.POSIXct(now, tz = "UTC")
   register_schema_version(connection, schema, now)
   manifest <- schema$manifest
   fingerprints <- manifest$fingerprints
@@ -389,6 +430,8 @@ verify_initialized_store <- function(
   verify_store_format(metadata)
   verify_metadata_structure(store$connection)
   old_schema <- schema_from_manifest_json(metadata$manifest_json)
+  validate_manifest_integrity(old_schema)
+  validate_manifest_integrity(store$schema)
   diff <- kg_schema_diff(old_schema, store$schema)
   if (!isTRUE(diff$compatible)) {
     abort_schema_mismatch(diff)

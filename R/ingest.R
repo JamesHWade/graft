@@ -35,7 +35,7 @@ kg_ingest <- function(
     return(replay)
   }
 
-  now <- ingest_now()
+  started_at <- ingest_now()
   result <- with_duckdb_error(
     "ingest",
     DBI::dbWithTransaction(store$connection, {
@@ -60,27 +60,28 @@ kg_ingest <- function(
       insert_started_batch(
         store$connection,
         batch,
-        now,
+        started_at,
         build_digest,
         commit_order
       )
-      staged <- prepare_ingest_records(store, batch, records, now)
+      staged <- prepare_ingest_records(store, batch, records, started_at)
       staged <- write_staged_revisions(
         store,
         batch,
         staged,
-        now,
+        started_at,
         commit_order
       )
-      write_staged_records(store, staged, now)
-      write_staged_identifiers(store, batch, staged, now)
-      write_staged_lineage(store, batch, staged, now)
+      write_staged_records(store, staged, started_at)
+      write_staged_identifiers(store, batch, staged, started_at)
+      write_staged_lineage(store, batch, staged, started_at)
       result <- result_from_staged(
         batch$batch_id,
         staged,
         proc.time()[["elapsed"]] - started
       )
-      commit_batch(store$connection, batch, result, now)
+      committed_at <- ingest_now()
+      commit_batch(store$connection, batch, result, committed_at)
       result
     })
   )
@@ -193,7 +194,7 @@ insert_started_batch <- function(
   invisible(batch)
 }
 
-commit_batch <- function(connection, batch, result, now) {
+commit_batch <- function(connection, batch, result, committed_at) {
   sql <- paste0(
     "UPDATE ",
     quote_identifier(connection, "_graft_batches"),
@@ -212,7 +213,7 @@ commit_batch <- function(connection, batch, result, now) {
     sql,
     params = list(
       batch_metadata_json(batch$metadata, result),
-      now,
+      committed_at,
       batch$batch_id
     )
   )
@@ -432,6 +433,7 @@ synchronize_generated_relation <- function(
   }
   retained <- logical(nrow(existing))
   final <- vector("list", length(values))
+  slot <- relation_value_slot(relation)
   for (index in seq_along(values)) {
     candidates <- which(
       !retained &
@@ -439,7 +441,8 @@ synchronize_generated_relation <- function(
           existing[[value_column]],
           relation_value_equal,
           logical(1),
-          values[[index]]
+          values[[index]],
+          slot
         )
     )
     if (length(candidates) > 0L) {
@@ -462,6 +465,13 @@ synchronize_generated_relation <- function(
   }
   delete_relation_owner(connection, relation, owner_id)
   if (length(final) > 0L) {
+    final <- lapply(final, function(row) {
+      row[[value_column]] <- canonical_slot_scalar(
+        row[[value_column]][[1L]],
+        slot
+      )
+      row
+    })
     rows <- do.call(rbind, final)
     rownames(rows) <- NULL
     DBI::dbAppendTable(connection, table, rows)
@@ -469,8 +479,11 @@ synchronize_generated_relation <- function(
   invisible(connection)
 }
 
-relation_value_equal <- function(existing, incoming) {
-  identical(as.character(existing), as.character(incoming))
+relation_value_equal <- function(existing, incoming, slot) {
+  identical(
+    canonical_json(canonical_slot_scalar(existing, slot)),
+    canonical_json(canonical_slot_scalar(incoming, slot))
+  )
 }
 
 delete_relation_owner <- function(connection, relation, owner_id) {

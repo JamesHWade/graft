@@ -4,6 +4,19 @@ graft_graph_view_names <- c(
   "_graft_provenance_edges"
 )
 
+drop_graph_views <- function(connection) {
+  for (name in graft_graph_view_names) {
+    DBI::dbExecute(
+      connection,
+      paste0(
+        "DROP VIEW IF EXISTS ",
+        quote_identifier(connection, name)
+      )
+    )
+  }
+  invisible(connection)
+}
+
 create_graph_views <- function(connection, schema) {
   definitions <- graph_view_definitions(connection, schema)
   for (name in names(definitions)) {

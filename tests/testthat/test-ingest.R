@@ -438,7 +438,8 @@ test_that("structural mismatch refuses ingestion", {
     )
   )
 
-  expect_s3_class(condition, "graft_schema_mismatch")
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "structural_digest_content_mismatch")
   expect_equal(nrow(DBI::dbReadTable(store$connection, "entity")), 0L)
 })
 

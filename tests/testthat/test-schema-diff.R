@@ -16,10 +16,6 @@ test_that("schema diff reports compatible manifests", {
 test_that("schema diff identifies concrete structural changes", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
-  new$manifest$fingerprints$structural_digest <- paste0(
-    "sha256:",
-    paste(rep("0", 64L), collapse = "")
-  )
   new$manifest$classes$Entity$slots$new_field <- list(
     name = "new_field",
     range = "string",
@@ -32,6 +28,7 @@ test_that("schema diff identifies concrete structural changes", {
   new$manifest$classes$NewClass <- new$manifest$classes$Activity
   new$manifest$classes$NewClass$name <- "NewClass"
   new$manifest$classes$NewClass$table <- "new_class"
+  new <- refresh_schema_structural_digest(new)
 
   diff <- kg_schema_diff(old, new)
 
@@ -61,10 +58,26 @@ test_that("schema diff ignores source and build changes when structure matches",
   expect_identical(nrow(diff$slots), 0L)
 })
 
+test_that("schema diff refuses structural content hidden behind an old digest", {
+  old <- kg_schema(tempest_manifest_path())
+  tampered <- unserialize(serialize(old, NULL))
+  tampered$manifest$classes$Entity$slots$description$sensitive <- TRUE
+
+  diff <- kg_schema_diff(old, tampered)
+
+  expect_identical(diff$compatible, FALSE)
+  expect_identical(diff$classification, "unsupported")
+  expect_in("slot_sensitive_change", diff$details$rule)
+  expect_in("structural_digest_content_mismatch", diff$details$rule)
+  expect_identical(
+    tampered$manifest$fingerprints$structural_digest,
+    old$manifest$fingerprints$structural_digest
+  )
+})
+
 test_that("schema diff classifies safe additions deterministically", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
-  new$manifest$fingerprints$structural_digest <- "sha256:additive"
   new$manifest$classes$Entity$slots$new_field <- list(
     name = "new_field",
     column = "new_field",
@@ -105,6 +118,7 @@ test_that("schema diff classifies safe additions deterministically", {
     new$manifest$enums$Importance$permissible_values,
     list(list(value = "urgent", meaning = NULL, description = NULL))
   )
+  new <- refresh_schema_structural_digest(new)
 
   reordered <- unserialize(serialize(new, NULL))
   reordered$manifest$classes <- reordered$manifest$classes[
@@ -136,12 +150,16 @@ test_that("schema diff classifies safe additions deterministically", {
   expect_in("optional_slot_added", first$details$rule)
   expect_in("nullable_column_added", first$details$rule)
   expect_in("enum_value_added", first$details$rule)
+
+  printed <- capture.output(print(first))
+  expect_match(printed[[1L]], "<kg_schema_diff> additive", fixed = TRUE)
+  expect_match(paste(printed, collapse = "\n"), "structural: changed")
+  expect_length(grep("incompatible", printed, fixed = TRUE), 0L)
 })
 
 test_that("schema diff classifies removals as destructive", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
-  new$manifest$fingerprints$structural_digest <- "sha256:destructive"
   new$manifest$classes$Entity$slots$description <- NULL
   keep <- vapply(
     new$manifest$tables$Entity$columns,
@@ -150,6 +168,7 @@ test_that("schema diff classifies removals as destructive", {
   )
   new$manifest$tables$Entity$columns <-
     new$manifest$tables$Entity$columns[keep]
+  new <- refresh_schema_structural_digest(new)
 
   diff <- kg_schema_diff(old, new)
 
@@ -167,9 +186,9 @@ test_that("schema diff classifies removals as destructive", {
 test_that("schema diff distinguishes review from unsupported changes", {
   old <- kg_schema(tempest_manifest_path())
   reviewed <- unserialize(serialize(old, NULL))
-  reviewed$manifest$fingerprints$structural_digest <- "sha256:reviewed"
   reviewed$manifest$classes$Entity$slots$description$sensitive <- TRUE
   reviewed$manifest$relations[[1L]]$predicate <- "https://example.org/changed"
+  reviewed <- refresh_schema_structural_digest(reviewed)
 
   review_diff <- kg_schema_diff(old, reviewed)
 
@@ -187,7 +206,6 @@ test_that("schema diff distinguishes review from unsupported changes", {
   )
 
   unsupported <- unserialize(serialize(old, NULL))
-  unsupported$manifest$fingerprints$structural_digest <- "sha256:unsupported"
   unsupported$manifest$classes$Entity$id_policy <- "require"
   unsupported$manifest$classes$Entity$table <- "renamed_entity"
   unsupported$manifest$classes$Entity$slots$description$relational_type <-
@@ -201,6 +219,7 @@ test_that("schema diff distinguishes review from unsupported changes", {
     unsupported$manifest$identifier_normalization_versions
   )[[1L]]
   unsupported$manifest$identifier_normalization_versions[[namespace]] <- "2"
+  unsupported <- refresh_schema_structural_digest(unsupported)
 
   unsupported_diff <- kg_schema_diff(old, unsupported)
 
