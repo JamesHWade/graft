@@ -30,17 +30,9 @@ ci_app_server <- function(example_dir, scenario_factory = ci_scenario_new) {
     output$handoff_count <- shiny::renderText(
       length(current()$state$ingests)
     )
-    output$pending_count <- shiny::renderText({
-      as.integer(
-        current()$stage %in%
-          c(
-            "supplier-knowledge",
-            "independent-knowledge",
-            "workflow-promotion",
-            "decision-approval"
-          )
-      )
-    })
+    output$pending_count <- shiny::renderText(
+      ci_app_pending_count(current())
+    )
     output$active_position <- shiny::renderText(
       ci_app_active_position(current())
     )
@@ -48,13 +40,13 @@ ci_app_server <- function(example_dir, scenario_factory = ci_scenario_new) {
     output$briefing_header <- shiny::renderUI({
       content <- ci_app_latest_monitor_content(current())
       if (is.null(content)) {
-        return(shiny::tagList(
+        return(ci_app_card_title(
           shiny::span("Executive morning brief"),
           shiny::span(class = "status-badge is-waiting", "not run")
         ))
       }
-      shiny::tagList(
-        shiny::span(content$title),
+      ci_app_card_title(
+        shiny::span("Executive morning brief"),
         shiny::span(
           class = paste("status-badge", paste0("is-", content$status)),
           gsub("_", " ", content$status, fixed = TRUE)
@@ -78,7 +70,9 @@ ci_app_server <- function(example_dir, scenario_factory = ci_scenario_new) {
       }
       shiny::div(
         class = "briefing-markdown",
-        shiny::markdown(ci_app_escape_markdown(briefing))
+        shiny::markdown(ci_app_escape_markdown(
+          ci_app_scope_markdown_headings(briefing)
+        ))
       )
     })
     output$scenario_timeline <- shiny::renderUI(
@@ -208,6 +202,11 @@ ci_app_server <- function(example_dir, scenario_factory = ci_scenario_new) {
           previous <- shiny::isolate(scenario())
           scenario(replacement)
           revision(revision() + 1L)
+          bslib::nav_select(
+            "workspace",
+            "Morning brief",
+            session = session
+          )
           session$sendCustomMessage("ci-scroll-stage", list())
           ci_scenario_close(previous)
         }

@@ -29,10 +29,23 @@ ci_app_theme <- function() {
 }
 
 ci_app_title <- function() {
-  shiny::div(
+  shiny::h1(
     class = "app-title",
     shiny::span(class = "app-kicker", "BLUE-SKY"),
     shiny::span("Briefing Room")
+  )
+}
+
+ci_app_card_title <- function(...) {
+  shiny::h2(class = "card-heading", ...)
+}
+
+ci_app_scope_markdown_headings <- function(text) {
+  gsub(
+    "(?m)^(#{1,4})([[:space:]])",
+    "##\\1\\2",
+    text,
+    perl = TRUE
   )
 }
 
@@ -110,7 +123,9 @@ ci_app_ui <- function() {
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Three-morning timeline"),
+            bslib::card_header(
+              ci_app_card_title("Three-morning timeline")
+            ),
             bslib::card_body(shiny::uiOutput("scenario_timeline"))
           )
         )
@@ -121,12 +136,16 @@ ci_app_ui <- function() {
           col_widths = c(7, 5),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Current decision packet"),
+            bslib::card_header(
+              ci_app_card_title("Current decision packet")
+            ),
             bslib::card_body(shiny::uiOutput("decision_packet"))
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Why governed memory matters"),
+            bslib::card_header(
+              ci_app_card_title("Why governed memory matters")
+            ),
             bslib::card_body(shiny::uiOutput("memory_comparison"))
           )
         )
@@ -137,7 +156,9 @@ ci_app_ui <- function() {
           col_widths = c(7, 5),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Review decisions in Graft"),
+            bslib::card_header(
+              ci_app_card_title("Review decisions in Graft")
+            ),
             bslib::card_body(shiny::div(
               class = "table-responsive",
               shiny::tableOutput("decision_records")
@@ -145,7 +166,11 @@ ci_app_ui <- function() {
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Evidence bound to the active position"),
+            bslib::card_header(
+              ci_app_card_title(
+                "Evidence bound to the active position"
+              )
+            ),
             bslib::card_body(shiny::div(
               class = "table-responsive",
               shiny::tableOutput("decision_evidence")
@@ -159,7 +184,9 @@ ci_app_ui <- function() {
           col_widths = c(6, 6),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Committed Graft batches"),
+            bslib::card_header(
+              ci_app_card_title("Committed Graft batches")
+            ),
             bslib::card_body(shiny::div(
               class = "table-responsive",
               shiny::tableOutput("batch_history")
@@ -167,7 +194,9 @@ ci_app_ui <- function() {
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header("Tempest workflow runs"),
+            bslib::card_header(
+              ci_app_card_title("Tempest workflow runs")
+            ),
             bslib::card_body(shiny::div(
               class = "table-responsive",
               shiny::tableOutput("workflow_runs")

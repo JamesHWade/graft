@@ -138,8 +138,8 @@ ci_app_workflow_runs <- function(scenario) {
   }
   data.frame(
     workflow = c(
-      paste("Monitor", seq_along(state$monitor_runs)),
-      paste("Knowledge review", seq_along(state$review_runs)),
+      sprintf("Monitor %d", seq_along(state$monitor_runs)),
+      sprintf("Knowledge review %d", seq_along(state$review_runs)),
       if (!is.null(state$decision_run)) "Promoted decision" else character()
     ),
     status = c(
@@ -152,7 +152,34 @@ ci_app_workflow_runs <- function(scenario) {
       }
     ),
     stringsAsFactors = FALSE
+  ) |>
+    stats::setNames(c("Workflow", "Status"))
+}
+
+ci_app_pending_count <- function(scenario) {
+  if (!identical(scenario$status, "active")) {
+    return(0L)
+  }
+  runs <- c(
+    scenario$state$review_runs,
+    if (!is.null(scenario$state$decision_run)) {
+      list(scenario$state$decision_run)
+    } else {
+      list()
+    }
   )
+  awaiting_approval <- sum(vapply(
+    runs,
+    \(run) {
+      identical(
+        tempest::tempest_run_status(run),
+        "awaiting_approval"
+      )
+    },
+    logical(1)
+  ))
+  as.integer(awaiting_approval) +
+    as.integer(identical(scenario$stage, "workflow-promotion"))
 }
 
 ci_app_active_position <- function(scenario) {

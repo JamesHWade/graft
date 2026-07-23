@@ -308,6 +308,7 @@ test_that("briefing room app advances and resets isolated sessions", {
 
       expect_identical(current()$stage, "supplier-briefing")
       expect_identical(output$briefing_count, "1 / 3")
+      expect_identical(output$pending_count, "1")
       expect_match(
         environment$ci_app_latest_briefing(current()),
         "promising actuator claim"
@@ -329,6 +330,7 @@ test_that("briefing room app advances and resets isolated sessions", {
       session$setInputs(stop_supplier_briefing = 1)
       session$flushReact()
       expect_identical(current()$status, "stopped")
+      expect_identical(output$pending_count, "0")
 
       session$setInputs(stop_supplier_briefing = 2)
       session$flushReact()
@@ -339,6 +341,19 @@ test_that("briefing room app advances and resets isolated sessions", {
       expect_identical(current()$stage, "welcome")
       expect_identical(previous$closed, TRUE)
       expect_identical(file.exists(previous$store_path), FALSE)
+      expect_equal(
+        environment$ci_app_workflow_runs(current()),
+        data.frame(
+          Workflow = character(),
+          Status = character()
+        )
+      )
+      expect_identical(
+        environment$ci_app_scope_markdown_headings(
+          "# Brief\n\n## Detail"
+        ),
+        "### Brief\n\n#### Detail"
+      )
     }
   )
 })
