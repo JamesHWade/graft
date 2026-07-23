@@ -52,6 +52,45 @@ The example promotion store is process-local and represents a host-owned
 approval boundary. A production host must persist those records and authorize
 who can create them.
 
+## Open the Briefing Room
+
+The Shiny Briefing Room turns the same deterministic scenario into an
+executive-facing application. Each browser session owns a temporary Graft
+store. Use the primary action to run the next morning or cross the displayed
+review boundary, and use **Stop here** to verify that the pending write or
+promotion does not occur.
+
+From a development checkout:
+
+```r
+devtools::load_all("../tempest")
+devtools::load_all(".")
+shiny::runApp("inst/examples/continuous-intelligence/app")
+```
+
+From an installed package:
+
+```r
+example <- system.file(
+  "examples",
+  "continuous-intelligence",
+  package = "graft",
+  mustWork = TRUE
+)
+shiny::runApp(file.path(example, "app"))
+```
+
+The four views separate the executive brief, promoted decision packet,
+accepted knowledge and evidence, and the Tempest/Graft audit trail. The
+comparison in the Decision room is deliberately explicit: a briefing alone
+can summarize a signal, while governed memory can establish which accepted
+position changed, why it changed, and what evidence and approval support it.
+
+The **Run morning** controls simulate a scheduler for the frozen corpus. The
+app does not claim to provide production scheduling, authentication, durable
+promotion storage, or multi-user concurrency; those remain host
+responsibilities.
+
 ## Take the operator's seat
 
 The staged walkthrough presents the same scenario one boundary at a time.
@@ -97,6 +136,9 @@ rehearsal <- run_continuous_intelligence_walkthrough(
 - `R/host.R` is the domain-neutral reference host.
 - `R/blue-sky.R` maps the promoted referral into the application-specific
   decision result and approved Graft records.
+- `R/scenario.R` is the resumable example-local state machine shared by the
+  console, automatic demo, and Shiny app.
+- `app/` is the interactive Briefing Room reference host.
 - `walkthrough.R` is the staged operator experience.
 
 ## Reconfigure the loop
