@@ -164,6 +164,20 @@ ci_scenario_stage <- function(scenario) {
     ))
   }
   if (identical(stage, "supplier-knowledge")) {
+    if (length(state$ingests) >= 1L) {
+      return(list(
+        id = stage,
+        phase = "Morning two · Retry",
+        title = "Supplier records are already accepted",
+        detail = paste(
+          "The Graft approval succeeded, but morning two did not finish.",
+          "Retry resumes independent monitoring without repeating the write."
+        ),
+        format = "text",
+        action = "retry",
+        action_label = "Retry morning two"
+      ))
+    }
     content <- ci_scenario_artifact_content(
       state$review_runs[[1L]],
       "knowledge-change-set-json"
@@ -222,6 +236,21 @@ ci_scenario_stage <- function(scenario) {
     ))
   }
   if (identical(stage, "workflow-promotion")) {
+    if (!is.null(state$promotion_record)) {
+      return(list(
+        id = stage,
+        phase = "Morning two · Retry",
+        title = "The decision workflow is already promoted",
+        detail = paste(
+          "The promotion record is committed, but the referred workflow",
+          "did not finish. Retry resumes it without recording another",
+          "promotion."
+        ),
+        format = "text",
+        action = "retry",
+        action_label = "Retry decision workflow"
+      ))
+    }
     content <- ci_scenario_artifact_content(
       state$monitor_runs[[2L]],
       "monitor-result-json"
@@ -247,6 +276,24 @@ ci_scenario_stage <- function(scenario) {
       state$decision_run,
       "workflow-referral-result-json"
     )
+    if (length(state$ingests) >= 3L) {
+      return(list(
+        id = stage,
+        phase = "Morning three · Retry",
+        title = "The bounded test decision is already accepted",
+        detail = paste(
+          content$recommendation,
+          paste(
+            "The Graft approval succeeded, but morning three did not finish.",
+            "Retry resumes the scheduled scan without repeating the write."
+          ),
+          sep = "\n\n"
+        ),
+        format = "text",
+        action = "retry",
+        action_label = "Retry morning three"
+      ))
+    }
     return(list(
       id = stage,
       phase = "Morning two · Decision boundary",

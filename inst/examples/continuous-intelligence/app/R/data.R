@@ -178,8 +178,14 @@ ci_app_pending_count <- function(scenario) {
     },
     logical(1)
   ))
+  retry_needed <-
+    (identical(scenario$stage, "supplier-knowledge") &&
+      length(scenario$state$ingests) >= 1L) ||
+    identical(scenario$stage, "workflow-promotion") ||
+    (identical(scenario$stage, "decision-approval") &&
+      length(scenario$state$ingests) >= 3L)
   as.integer(awaiting_approval) +
-    as.integer(identical(scenario$stage, "workflow-promotion"))
+    as.integer(retry_needed)
 }
 
 ci_app_active_position <- function(scenario) {

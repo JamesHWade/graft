@@ -271,11 +271,88 @@ test_that("briefing scenario checkpoints accepted writes before later work", {
     tempest::tempest_run_status(scenario$state$review_runs[[1L]]),
     "succeeded"
   )
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(retry_stage$action_label, "Retry morning two")
 
   environment$ci_scenario_run_signal_day <- run_signal_day
   environment$ci_scenario_advance(scenario)
   expect_identical(scenario$stage, "independent-briefing")
   expect_length(scenario$state$ingests, 1L)
+})
+
+test_that("briefing scenario labels retries after later workflow failures", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  environment <- new.env(parent = globalenv())
+  for (path in c("host.R", "blue-sky.R", "scenario.R")) {
+    sys.source(
+      continuous_intelligence_example_path("R", path),
+      envir = environment
+    )
+  }
+  scenario <- environment$ci_scenario_new(
+    continuous_intelligence_example_path()
+  )
+  withr::defer(environment$ci_scenario_close(scenario))
+  for (index in seq_len(5L)) {
+    environment$ci_scenario_advance(scenario)
+  }
+  expect_identical(scenario$stage, "workflow-promotion")
+
+  run_referral <- environment$ci_run_referral
+  withr::defer({
+    environment$ci_run_referral <- run_referral
+  })
+  environment$ci_run_referral <- function(...) {
+    rlang::abort(
+      "Forced failure after workflow promotion.",
+      class = "ci_scenario_test_error"
+    )
+  }
+  expect_error(
+    environment$ci_scenario_advance(scenario),
+    class = "ci_scenario_test_error"
+  )
+  promotion <- scenario$state$promotion_record
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(
+    retry_stage$action_label,
+    "Retry decision workflow"
+  )
+
+  environment$ci_run_referral <- run_referral
+  environment$ci_scenario_advance(scenario)
+  expect_identical(scenario$stage, "decision-approval")
+  expect_identical(scenario$state$promotion_record, promotion)
+
+  run_monitor <- environment$ci_run_monitor
+  withr::defer({
+    environment$ci_run_monitor <- run_monitor
+  })
+  environment$ci_run_monitor <- function(...) {
+    rlang::abort(
+      "Forced failure after decision approval.",
+      class = "ci_scenario_test_error"
+    )
+  }
+  expect_error(
+    environment$ci_scenario_advance(scenario),
+    class = "ci_scenario_test_error"
+  )
+  expect_length(scenario$state$ingests, 3L)
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(retry_stage$action_label, "Retry morning three")
+
+  environment$ci_run_monitor <- run_monitor
+  environment$ci_scenario_advance(scenario)
+  expect_identical(scenario$stage, "no-change-briefing")
+  expect_length(scenario$state$ingests, 3L)
 })
 
 test_that("briefing room app advances and resets isolated sessions", {
