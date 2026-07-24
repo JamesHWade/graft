@@ -124,6 +124,10 @@ Markdown deliverable. Tempest stops at the file-publication boundary. The
 approved file, approval decision, source links, and outcome memory enter Graft
 only after the operator approves the exact artifact:
 
+Read [Build a governed local Coworker](https://jameshwade.github.io/graft/articles/coworker.html)
+for the architecture, approval contract, model configuration, and
+tool-extension recipes.
+
 ```r
 example <- system.file(
   "examples",
