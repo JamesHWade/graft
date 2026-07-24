@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* A local Graft Coworker example combines a shinychat tool-using assistant, dsprrr planning, typed Tempest work products, an approval inbox, local file delivery, and approved-only Graft memory. Its Tempest-native model configuration and extensible ellmer tool registry include an optional read-only `btw` tool belt.
 * A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
 * Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
 * `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.
