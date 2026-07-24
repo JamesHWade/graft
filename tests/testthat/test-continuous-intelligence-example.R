@@ -173,6 +173,268 @@ test_that("staged walkthrough exercises each operator boundary", {
   )
 })
 
+test_that("briefing scenario exposes resumable governed stages", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  environment <- new.env(parent = globalenv())
+  for (path in c("host.R", "blue-sky.R", "scenario.R")) {
+    sys.source(
+      continuous_intelligence_example_path("R", path),
+      envir = environment
+    )
+  }
+  scenario <- environment$ci_scenario_new(
+    continuous_intelligence_example_path()
+  )
+  withr::defer(environment$ci_scenario_close(scenario))
+
+  expect_identical(
+    environment$ci_scenario_stage(scenario)$id,
+    "welcome"
+  )
+  expect_identical(
+    environment$ci_scenario_timeline(scenario)$status,
+    c("current", rep("upcoming", 8L))
+  )
+  expect_equal(
+    environment$ci_scenario_counts(scenario),
+    list(assessment_count = 1L, decision_count = 1L)
+  )
+
+  environment$ci_scenario_advance(scenario)
+  environment$ci_scenario_advance(scenario)
+
+  expect_identical(
+    environment$ci_scenario_stage(scenario)$id,
+    "supplier-knowledge"
+  )
+  expect_length(scenario$state$monitor_runs, 1L)
+  expect_length(scenario$state$review_runs, 1L)
+  expect_length(scenario$state$ingests, 0L)
+  expect_identical(
+    tempest::tempest_run_status(scenario$state$review_runs[[1L]]),
+    "awaiting_approval"
+  )
+
+  environment$ci_scenario_stop(scenario)
+
+  expect_identical(scenario$status, "stopped")
+  expect_identical(scenario$stopped_at, "supplier-knowledge")
+  expect_length(scenario$state$ingests, 0L)
+  expect_identical(
+    environment$ci_scenario_timeline(scenario)$status[[3L]],
+    "stopped"
+  )
+})
+
+test_that("briefing scenario checkpoints accepted writes before later work", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  environment <- new.env(parent = globalenv())
+  for (path in c("host.R", "blue-sky.R", "scenario.R")) {
+    sys.source(
+      continuous_intelligence_example_path("R", path),
+      envir = environment
+    )
+  }
+  scenario <- environment$ci_scenario_new(
+    continuous_intelligence_example_path()
+  )
+  withr::defer(environment$ci_scenario_close(scenario))
+  environment$ci_scenario_advance(scenario)
+  environment$ci_scenario_advance(scenario)
+
+  run_signal_day <- environment$ci_scenario_run_signal_day
+  withr::defer({
+    environment$ci_scenario_run_signal_day <- run_signal_day
+  })
+  environment$ci_scenario_run_signal_day <- function(...) {
+    rlang::abort(
+      "Forced failure after the approval boundary.",
+      class = "ci_scenario_test_error"
+    )
+  }
+
+  expect_error(
+    environment$ci_scenario_advance(scenario),
+    class = "ci_scenario_test_error"
+  )
+  expect_identical(scenario$stage, "supplier-knowledge")
+  expect_length(scenario$state$ingests, 1L)
+  expect_identical(
+    tempest::tempest_run_status(scenario$state$review_runs[[1L]]),
+    "succeeded"
+  )
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(retry_stage$action_label, "Retry morning two")
+
+  environment$ci_scenario_run_signal_day <- run_signal_day
+  environment$ci_scenario_advance(scenario)
+  expect_identical(scenario$stage, "independent-briefing")
+  expect_length(scenario$state$ingests, 1L)
+})
+
+test_that("briefing scenario labels retries after later workflow failures", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  environment <- new.env(parent = globalenv())
+  for (path in c("host.R", "blue-sky.R", "scenario.R")) {
+    sys.source(
+      continuous_intelligence_example_path("R", path),
+      envir = environment
+    )
+  }
+  scenario <- environment$ci_scenario_new(
+    continuous_intelligence_example_path()
+  )
+  withr::defer(environment$ci_scenario_close(scenario))
+  for (index in seq_len(5L)) {
+    environment$ci_scenario_advance(scenario)
+  }
+  expect_identical(scenario$stage, "workflow-promotion")
+
+  run_referral <- environment$ci_run_referral
+  withr::defer({
+    environment$ci_run_referral <- run_referral
+  })
+  environment$ci_run_referral <- function(...) {
+    rlang::abort(
+      "Forced failure after workflow promotion.",
+      class = "ci_scenario_test_error"
+    )
+  }
+  expect_error(
+    environment$ci_scenario_advance(scenario),
+    class = "ci_scenario_test_error"
+  )
+  promotion <- scenario$state$promotion_record
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(
+    retry_stage$action_label,
+    "Retry decision workflow"
+  )
+
+  environment$ci_run_referral <- run_referral
+  environment$ci_scenario_advance(scenario)
+  expect_identical(scenario$stage, "decision-approval")
+  expect_identical(scenario$state$promotion_record, promotion)
+
+  run_monitor <- environment$ci_run_monitor
+  withr::defer({
+    environment$ci_run_monitor <- run_monitor
+  })
+  environment$ci_run_monitor <- function(...) {
+    rlang::abort(
+      "Forced failure after decision approval.",
+      class = "ci_scenario_test_error"
+    )
+  }
+  expect_error(
+    environment$ci_scenario_advance(scenario),
+    class = "ci_scenario_test_error"
+  )
+  expect_length(scenario$state$ingests, 3L)
+  retry_stage <- environment$ci_scenario_stage(scenario)
+  expect_identical(retry_stage$action, "retry")
+  expect_identical(retry_stage$action_label, "Retry morning three")
+
+  environment$ci_run_monitor <- run_monitor
+  environment$ci_scenario_advance(scenario)
+  expect_identical(scenario$stage, "no-change-briefing")
+  expect_length(scenario$state$ingests, 3L)
+})
+
+test_that("briefing room app advances and resets isolated sessions", {
+  if (!continuous_intelligence_tempest_available()) {
+    testthat::skip(
+      "A compatible current Tempest workflow runtime is unavailable."
+    )
+  }
+  testthat::skip_if_not_installed("bslib", minimum_version = "0.9.0")
+  testthat::skip_if_not_installed("shiny", minimum_version = "1.11.1")
+  withr::local_options(sass.cache = FALSE)
+  app_dir <- continuous_intelligence_example_path("app")
+  withr::local_dir(app_dir)
+  environment <- new.env(parent = globalenv())
+  sys.source("app.R", envir = environment)
+
+  expect_s3_class(environment$app, "shiny.appobj")
+  expect_s3_class(environment$ci_app_ui(), "bslib_page")
+
+  shiny::testServer(
+    environment$ci_app_server(
+      continuous_intelligence_example_path()
+    ),
+    {
+      expect_identical(current()$stage, "welcome")
+      expect_identical(output$briefing_count, "0 / 3")
+
+      session$setInputs(advance_welcome = 1)
+      session$flushReact()
+
+      expect_identical(current()$stage, "supplier-briefing")
+      expect_identical(output$briefing_count, "1 / 3")
+      expect_identical(output$pending_count, "1")
+      expect_match(
+        environment$ci_app_latest_briefing(current()),
+        "promising actuator claim"
+      )
+      expect_equal(
+        nrow(environment$ci_app_decision_records(current())),
+        1L
+      )
+      expect_equal(
+        nrow(environment$ci_app_decision_evidence(current())),
+        1L
+      )
+
+      session$setInputs(advance_welcome = 2)
+      session$flushReact()
+      expect_identical(current()$stage, "supplier-briefing")
+
+      previous <- current()
+      session$setInputs(stop_supplier_briefing = 1)
+      session$flushReact()
+      expect_identical(current()$status, "stopped")
+      expect_identical(output$pending_count, "0")
+
+      session$setInputs(stop_supplier_briefing = 2)
+      session$flushReact()
+      expect_identical(current()$status, "stopped")
+
+      session$setInputs(reset_scenario = 1)
+      session$flushReact()
+      expect_identical(current()$stage, "welcome")
+      expect_identical(previous$closed, TRUE)
+      expect_identical(file.exists(previous$store_path), FALSE)
+      expect_equal(
+        environment$ci_app_workflow_runs(current()),
+        data.frame(
+          Workflow = character(),
+          Status = character()
+        )
+      )
+      expect_identical(
+        environment$ci_app_scope_markdown_headings(
+          "# Brief\n\n## Detail"
+        ),
+        "### Brief\n\n#### Detail"
+      )
+    }
+  )
+})
+
 test_that("scheduled signals promote through approval into accepted history", {
   if (!continuous_intelligence_tempest_available()) {
     testthat::skip(

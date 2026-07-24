@@ -94,7 +94,14 @@ example <- system.file(
 file.show(file.path(example, "README.md"))
 ```
 
-To take the operator's seat:
+Open the interactive Briefing Room to advance the three mornings, inspect
+accepted evidence, and act at each approval boundary:
+
+```r
+shiny::runApp(file.path(example, "app"))
+```
+
+Or take the operator's seat in the console:
 
 ```r
 source(file.path(example, "walkthrough.R"))

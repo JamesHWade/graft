@@ -472,14 +472,16 @@ blue_sky_result_builder <- function(
       torque_unit,
       "under Project Ember's representative thermal conditions."
     ),
-    uncertainty = paste(
-      "Independent evidence stops at",
+    uncertainty = paste0(
+      "Independent evidence stops at ",
       validated_duration,
+      " ",
       validated_duration_unit,
-      "; thermal behavior during the final",
+      "; thermal behavior during the final ",
       unvalidated_duration,
+      " ",
       duty_unit,
-      "remains unresolved."
+      " remains unresolved."
     ),
     owner = "Project Ember test lead",
     next_step = paste(

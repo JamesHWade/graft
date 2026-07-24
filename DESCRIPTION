@@ -23,10 +23,12 @@ Imports:
     reticulate,
     rlang
 Suggests:
+    bslib (>= 0.9.0),
     ellmer (>= 0.3.0),
     knitr,
     rmarkdown,
     S7,
+    shiny (>= 1.11.1),
     tempest (>= 0.1.0),
     testthat (>= 3.0.0),
     withr,
