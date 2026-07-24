@@ -23,6 +23,18 @@ start from an ordinary LinkML schema and see how graft applies it in R.
   Compile an ordinary LinkML schema, write schema-shaped records to
   DuckDB, and query them from R.
 
+### Agent applications
+
+Build a local agent host with typed workflows, approval-gated actions,
+accepted memory, configurable models, and extensible tools.
+
+- [Build a governed local
+  Coworker](https://jameshwade.github.io/graft/articles/coworker.md):
+
+  Combine Graft, Tempest, dsprrr, shinychat, and extensible ellmer tools
+  in a local agent that publishes and remembers work only after
+  approval.
+
 ### Examples
 
 Small, runnable domain models adapted from established LinkML projects.
