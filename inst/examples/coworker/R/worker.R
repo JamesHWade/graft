@@ -201,11 +201,17 @@ cw_worker_current_run <- function(worker) {
 cw_worker_memory_context <- function(worker) {
   cw_worker_validate(worker)
   memories <- graft::kg_records(worker$store, "Memory") |>
+    dplyr::arrange(
+      dplyr::desc(.data$accepted_at),
+      dplyr::desc(.data$id)
+    ) |>
+    utils::head(10L) |>
     dplyr::collect()
   if (nrow(memories) == 0L) {
     return("No accepted workspace memory yet.")
   }
-  memories <- utils::tail(memories, 10L)
+  memories <- memories |>
+    dplyr::arrange(.data$accepted_at, .data$id)
   paste(
     paste0(
       "- ",
@@ -287,6 +293,7 @@ cw_worker_snapshot <- function(worker) {
       plan = NULL,
       deliverable = NULL,
       pending = list(),
+      expected_export_path = NULL,
       exported_path = NULL
     ))
   }
@@ -303,6 +310,10 @@ cw_worker_snapshot <- function(worker) {
     plan = plan@content,
     deliverable = deliverable@content,
     pending = cw_worker_pending(worker),
+    expected_export_path = file.path(
+      worker$output_dir,
+      cw_output_filename(worker$bundle$workspace$name, run_id)
+    ),
     exported_path = cw_or(deliverable@metadata$exported_path, NULL)
   )
 }

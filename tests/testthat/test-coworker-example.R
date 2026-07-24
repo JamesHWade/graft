@@ -253,17 +253,19 @@ test_that("coworker rejection publishes and remembers nothing", {
   )
 })
 
-test_that("coworker approval publishes and adds accepted continuity", {
+test_that("coworker approval publishes the reviewed target and adds continuity", {
   if (!coworker_runtime_available()) {
     testthat::skip("The current coworker runtime is unavailable.")
   }
-  environment <- local_coworker_environment()
+  environment <- local_coworker_environment(include_app = TRUE)
   worker <- local_coworker_worker(environment)
+  worker$bundle$workspace$name <- "Renamed Atlas workspace"
   pending <- environment$cw_worker_prepare(
     worker,
     worker$bundle$suggested_request,
     environment$cw_reference_planner(worker$bundle)
   )
+  approval_card <- environment$cw_app_approval_card(pending)
 
   approved <- environment$cw_worker_resolve(
     worker,
@@ -281,6 +283,12 @@ test_that("coworker approval publishes and adds accepted continuity", {
   )
 
   expect_identical(approved$status, "succeeded")
+  expect_match(
+    as.character(approval_card),
+    pending$expected_export_path,
+    fixed = TRUE
+  )
+  expect_identical(approved$exported_path, pending$expected_export_path)
   expect_identical(published, pending$deliverable)
   expect_equal(nrow(memories), 1L)
   expect_equal(
@@ -305,6 +313,74 @@ test_that("coworker approval publishes and adds accepted continuity", {
     "Earlier accepted workspace memory was supplied"
   )
   expect_equal(nrow(environment$cw_worker_records(worker, "Memory")), 1L)
+})
+
+test_that("coworker memory context is limited and chronological", {
+  if (!coworker_runtime_available()) {
+    testthat::skip("The current coworker runtime is unavailable.")
+  }
+  environment <- local_coworker_environment()
+  worker <- local_coworker_worker(environment)
+  count <- 12L
+  index <- seq_len(count)
+  run_ids <- paste0("coworker:test-run-", sprintf("%02d", index))
+  memory_ids <- paste0("coworker:test-memory-", sprintf("%02d", index))
+  accepted_at <- sprintf("2026-07-%02dT12:00:00Z", index)
+  source_ids <- environment$cw_source_ids(worker$bundle)
+  work_session <- data.frame(
+    id = "coworker:test-session",
+    workspace = worker$bundle$workspace$id,
+    title = "Memory query test",
+    started_at = accepted_at[[1L]],
+    stringsAsFactors = FALSE
+  )
+  work_runs <- data.frame(
+    id = run_ids,
+    session = work_session$id,
+    workspace = worker$bundle$workspace$id,
+    title = paste("Test run", index),
+    requested_outcome = paste("Test outcome", index),
+    status = "succeeded",
+    workflow_run_id = paste0("workflow-", index),
+    planning_engine = "reference",
+    summary = paste("Summary", index),
+    started_at = accepted_at,
+    completed_at = accepted_at,
+    stringsAsFactors = FALSE
+  )
+  work_runs$source_snapshots <- I(rep(list(source_ids), count))
+  memories <- data.frame(
+    id = memory_ids,
+    run = run_ids,
+    workspace = worker$bundle$workspace$id,
+    key = paste0("memory-", sprintf("%02d", index)),
+    content = paste("Accepted outcome", sprintf("%02d", index)),
+    scope = "workspace",
+    accepted_at = accepted_at,
+    stringsAsFactors = FALSE
+  )
+  memories$source_snapshots <- I(rep(list(source_ids), count))
+  graft::kg_ingest(
+    worker$store,
+    graft::kg_batch(
+      "coworker-memory-test",
+      producer_version = "1",
+      idempotency_key = "coworker-memory-query-limit"
+    ),
+    list(
+      WorkSession = work_session,
+      WorkRun = work_runs,
+      Memory = memories
+    )
+  )
+
+  context <- environment$cw_worker_memory_context(worker)
+  lines <- strsplit(context, "\n", fixed = TRUE)[[1L]]
+
+  expect_length(lines, 10L)
+  expect_match(lines[[1L]], "memory-03", fixed = TRUE)
+  expect_match(lines[[10L]], "memory-12", fixed = TRUE)
+  expect_length(grep("memory-01|memory-02", lines), 0L)
 })
 
 test_that("coworker Shiny host exposes work, inbox, memory, and activity", {
@@ -432,16 +508,13 @@ test_that("coworker Shiny host exposes work, inbox, memory, and activity", {
 test_that("coworker approval empty states match the workflow outcome", {
   environment <- local_coworker_environment(include_app = TRUE)
   ready <- environment$cw_app_approval_card(
-    list(pending = list(), status = "ready"),
-    tempdir()
+    list(pending = list(), status = "ready")
   )
   rejected <- environment$cw_app_approval_card(
-    list(pending = list(), status = "failed"),
-    tempdir()
+    list(pending = list(), status = "failed")
   )
   succeeded <- environment$cw_app_approval_card(
-    list(pending = list(), status = "succeeded"),
-    tempdir()
+    list(pending = list(), status = "succeeded")
   )
 
   expect_match(as.character(ready), "is-ready")

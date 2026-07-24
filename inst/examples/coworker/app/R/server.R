@@ -332,7 +332,7 @@ cw_app_server <- function(
       }
     )
     output$approval_inbox <- shiny::renderUI(
-      cw_app_approval_card(current(), worker$output_dir)
+      cw_app_approval_card(current())
     )
     output$memory_body <- shiny::renderUI({
       if (nrow(memory_rows()) == 0L) {

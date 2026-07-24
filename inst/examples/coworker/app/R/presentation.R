@@ -585,7 +585,7 @@ cw_app_deliverable_preview <- function(snapshot) {
   )
 }
 
-cw_app_approval_card <- function(snapshot, output_dir) {
+cw_app_approval_card <- function(snapshot) {
   if (length(snapshot$pending) == 0L) {
     empty_state <- switch(
       snapshot$status,
@@ -625,10 +625,6 @@ cw_app_approval_card <- function(snapshot, output_dir) {
     ))
   }
   approval <- snapshot$pending[[1L]]
-  expected_file <- file.path(
-    output_dir,
-    cw_safe_filename(paste("project-atlas", snapshot$run_id))
-  )
   shiny::div(
     class = "approval-card",
     shiny::div(
@@ -645,7 +641,7 @@ cw_app_approval_card <- function(snapshot, output_dir) {
       shiny::strong("Proposed action"),
       shiny::p(snapshot$plan$action_summary),
       shiny::strong("Target"),
-      shiny::code(expected_file)
+      shiny::code(snapshot$expected_export_path)
     ),
     shiny::div(
       class = "approval-buttons",

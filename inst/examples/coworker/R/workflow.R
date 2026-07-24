@@ -8,6 +8,10 @@ cw_safe_filename <- function(value) {
   paste0(substr(value, 1L, 80L), ".md")
 }
 
+cw_output_filename <- function(workspace_name, run_id) {
+  cw_safe_filename(paste(workspace_name, run_id))
+}
+
 cw_deliverable_specs <- function() {
   list(
     plan = tempest::tempest_deliverable_spec(
@@ -297,10 +301,10 @@ cw_run_workflow <- function(
       planner = planner,
       deliverables = deliverables,
       output_dir = output_dir,
-      output_filename = cw_safe_filename(paste(
+      output_filename = cw_output_filename(
         source_bundle$workspace$name,
         run_id
-      ))
+      )
     ),
     run_id = run_id
   )
