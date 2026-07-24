@@ -53,6 +53,139 @@ test_that("coworker planner contract stays application-owned and generic", {
   )
 })
 
+test_that("coworker uses Tempest configuration and extensible tools", {
+  if (!coworker_runtime_available()) {
+    testthat::skip("The current coworker runtime is unavailable.")
+  }
+  environment <- local_coworker_environment(include_app = TRUE)
+  withr::local_options(
+    tempest.chat = "anthropic/claude-sonnet-4-20250514"
+  )
+  ambient <- environment$cw_app_config()
+  explicit <- tempest::tempest_config(models = "openai/gpt-5-mini")
+  custom_tool <- ellmer::tool(
+    function() "ready",
+    "Report whether the custom tool is ready.",
+    name = "custom_ready"
+  )
+  context <- list(
+    worker = NULL,
+    input = NULL,
+    revision = NULL,
+    session = NULL,
+    example_dir = coworker_example_path()
+  )
+  provider <- function(received) {
+    expect_setequal(names(received), names(context))
+    list(custom_tool)
+  }
+
+  expect_s3_class(ambient$tempest, "tempest::TempestConfig")
+  expect_identical(
+    environment$cw_chat_model(ambient$tempest, "assistant"),
+    "anthropic/claude-sonnet-4-20250514"
+  )
+  expect_identical(
+    environment$cw_chat_model(explicit, "planner"),
+    "openai/gpt-5-mini"
+  )
+  expect_identical(environment$cw_chat_role("assistant"), "coordinator")
+  expect_identical(environment$cw_chat_role("planner"), "writer")
+  expect_length(
+    environment$cw_extension_tools(provider, context),
+    1L
+  )
+  expect_identical(
+    environment$cw_extension_tools(provider, context)[[1L]]@name,
+    "custom_ready"
+  )
+})
+
+test_that("coworker preserves Tempest chat templates and factories", {
+  if (!coworker_runtime_available()) {
+    testthat::skip("The current coworker runtime is unavailable.")
+  }
+  environment <- local_coworker_environment()
+  withr::local_envvar(OPENAI_API_KEY = "not-a-real-key")
+  template <- ellmer::chat_openai(
+    system_prompt = "Keep my local provider instructions.",
+    model = "gpt-4o-mini"
+  )
+  withr::local_options(tempest.chat = template)
+  template_config <- environment$cw_app_config()
+  assistant <- environment$cw_chat_client(
+    "assistant",
+    config = template_config$tempest
+  )
+  calls <- new.env(parent = emptyenv())
+  factory_config <- tempest::tempest_config(
+    models = "anthropic/claude-sonnet-4-20250514",
+    chat_fn = function(role, model, system_prompt, echo) {
+      calls$role <- role
+      calls$model <- model
+      calls$system_prompt <- system_prompt
+      calls$echo <- echo
+      template$clone(deep = TRUE)
+    }
+  )
+  planner <- environment$cw_chat_client(
+    "planner",
+    config = factory_config
+  )
+
+  expect_match(
+    assistant$get_system_prompt(),
+    "You are Graft Coworker",
+    fixed = TRUE
+  )
+  expect_match(
+    assistant$get_system_prompt(),
+    "Keep my local provider instructions.",
+    fixed = TRUE
+  )
+  expect_identical(
+    template$get_system_prompt(),
+    "Keep my local provider instructions."
+  )
+  expect_identical(identical(assistant, template), FALSE)
+  expect_s3_class(planner, "Chat")
+  expect_identical(calls$role, "writer")
+  expect_identical(
+    calls$model,
+    "anthropic/claude-sonnet-4-20250514"
+  )
+  expect_match(calls$system_prompt, "grounded work products")
+  expect_identical(calls$echo, "none")
+})
+
+test_that("coworker offers a read-only btw tool profile", {
+  if (
+    !coworker_runtime_available() || !requireNamespace("btw", quietly = TRUE)
+  ) {
+    testthat::skip("The coworker runtime with btw is unavailable.")
+  }
+  environment <- local_coworker_environment(include_app = TRUE)
+  tools <- environment$cw_btw_tools("read_only")
+  tool_names <- vapply(tools, \(tool) tool@name, character(1))
+
+  expect_gt(length(tool_names), 10L)
+  expect_length(
+    grep(
+      paste(
+        "write|edit|patch|replace|commit|branch_create|branch_checkout|",
+        "pkg_|run_r|github|agent_subagent",
+        sep = ""
+      ),
+      tool_names
+    ),
+    0L
+  )
+  expect_length(
+    environment$cw_toolset(tools),
+    length(tool_names)
+  )
+})
+
 test_that("coworker prepares work without crossing the approval boundary", {
   if (!coworker_runtime_available()) {
     testthat::skip("The current coworker runtime is unavailable.")
@@ -222,6 +355,8 @@ test_that("coworker Shiny host exposes work, inbox, memory, and activity", {
       expect_match(output$work_header$html, "Outcome workspace")
       expect_match(output$work_context$html, "3 sources")
       expect_match(output$work_context$html, "No accepted memory")
+      expect_match(output$runtime_status$html, "openai/gpt-5-mini")
+      expect_match(output$runtime_status$html, "2 tools loaded")
 
       session$setInputs(run_reference = 0)
       session$flushReact()

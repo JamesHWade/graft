@@ -93,6 +93,43 @@ body {
   padding: 0.85rem 0.9rem;
 }
 
+.runtime-status {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.runtime-status-row {
+  align-items: center;
+  background: rgba(var(--bs-primary-rgb), 0.06);
+  border: 1px solid rgba(var(--bs-primary-rgb), 0.12);
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  padding: 0.65rem 0.75rem;
+}
+
+.runtime-status-row svg {
+  color: var(--bs-primary);
+}
+
+.runtime-status-row span {
+  display: grid;
+  min-width: 0;
+}
+
+.runtime-status-row small {
+  color: var(--bs-secondary-color);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.runtime-status-row strong {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
 .local-first-note p {
   color: #4f625b;
   font-size: 0.82rem;

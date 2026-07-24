@@ -25,6 +25,7 @@ Imports:
 Suggests:
     bsicons,
     bslib (>= 0.9.0),
+    btw,
     dsprrr,
     ellmer (>= 0.3.0),
     knitr,

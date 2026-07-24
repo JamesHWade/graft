@@ -136,6 +136,22 @@ options(tempest.chat = "openai/gpt-5-mini")
 shiny::runApp(file.path(example, "app"))
 ```
 
+Coworker builds its clients from `tempest_config()`, so a personal
+`tempest.chat` default, an explicit role-specific model configuration, or a
+custom Tempest `chat_fn` can select the provider without changing the
+workflow. Its per-session ellmer tool registry accepts custom tools and can
+load a conservative R-aware [btw](https://github.com/posit-dev/btw) tool belt:
+
+```r
+options(graft.coworker.btw = "read_only")
+shiny::runApp(file.path(example, "app"))
+```
+
+Use `options(graft.coworker.tools = list(...))` for additional ellmer tools or
+a provider function that constructs session-aware tools. Mutating tools remain
+an explicit host decision; the read-only btw profile excludes file and Git
+writes so it cannot bypass the Tempest approval card.
+
 The app also includes a provider-free reference request so the complete
 prepare, review, approve, publish, and remember loop can be exercised without
 an API key. By default its DuckDB store and deliverables persist under

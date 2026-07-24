@@ -160,6 +160,33 @@ cw_app_context_chip <- function(icon, label) {
   )
 }
 
+cw_app_runtime_status <- function(model, tool_count) {
+  shiny::div(
+    class = "runtime-status",
+    shiny::div(
+      class = "runtime-status-row",
+      bsicons::bs_icon("cpu"),
+      shiny::span(
+        shiny::tags$small("Model"),
+        shiny::strong(model)
+      )
+    ),
+    shiny::div(
+      class = "runtime-status-row",
+      bsicons::bs_icon("tools"),
+      shiny::span(
+        shiny::tags$small("Tool belt"),
+        shiny::strong(
+          paste(
+            tool_count,
+            if (tool_count == 1L) "tool loaded" else "tools loaded"
+          )
+        )
+      )
+    )
+  )
+}
+
 cw_app_work_context <- function(snapshot, bundle, memory_count) {
   source_kinds <- vapply(
     bundle$sources,
@@ -261,6 +288,7 @@ cw_app_ui <- function(app_dir) {
           "Turn this off to make tool runs use the provider-free planner."
         )
       ),
+      shiny::uiOutput("runtime_status"),
       shiny::hr(),
       shiny::div(
         class = "local-first-note",

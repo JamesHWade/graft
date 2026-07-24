@@ -84,13 +84,139 @@ cw_app_tools <- function(
   list(prepare, recall)
 }
 
+cw_normalize_tools <- function(tools, source) {
+  if (is.null(tools)) {
+    return(list())
+  }
+  if (inherits(tools, "ellmer::ToolDef")) {
+    tools <- list(tools)
+  }
+  if (!is.list(tools)) {
+    stop(paste0("`", source, "` must return ellmer tools in a list."))
+  }
+  valid <- vapply(
+    tools,
+    inherits,
+    logical(1),
+    what = "ellmer::ToolDef"
+  )
+  if (!all(valid)) {
+    stop(paste0("Every `", source, "` entry must be an ellmer tool."))
+  }
+  unname(tools)
+}
+
+cw_extension_tools <- function(provider, context) {
+  if (is.null(provider)) {
+    return(list())
+  }
+  tools <- if (is.function(provider)) {
+    provider(context)
+  } else {
+    provider
+  }
+  cw_normalize_tools(tools, "graft.coworker.tools")
+}
+
+cw_btw_read_only <- function(tools) {
+  tool_names <- vapply(tools, \(tool) tool@name, character(1))
+  allowed <- grepl(
+    paste0(
+      "^btw_tool_(",
+      "cran_|",
+      "docs_|",
+      "env_describe_|",
+      "files_(code_search|list_files|read_text_file|list|read|search)$|",
+      "git_(status|diff|log|branch_list)$|",
+      "ide_read_current_editor$|",
+      "search_|",
+      "session_|",
+      "sessioninfo_|",
+      "skill$|",
+      "web_read_url$",
+      ")"
+    ),
+    tool_names
+  )
+  unname(tools[allowed])
+}
+
+cw_btw_tools <- function(profile = FALSE) {
+  if (is.null(profile) || identical(profile, FALSE)) {
+    return(list())
+  }
+  if (!requireNamespace("btw", quietly = TRUE)) {
+    stop(
+      paste(
+        "Install `btw` to use `graft.coworker.btw`.",
+        "For example: `install.packages(\"btw\")`."
+      )
+    )
+  }
+  if (identical(profile, TRUE)) {
+    profile <- "read_only"
+  }
+  if (
+    !is.character(profile) ||
+      length(profile) == 0L ||
+      anyNA(profile) ||
+      any(!nzchar(profile))
+  ) {
+    stop(
+      paste(
+        "`graft.coworker.btw` must be `FALSE`, `TRUE`,",
+        "`\"read_only\"`, `\"all\"`, or btw tool/group names."
+      )
+    )
+  }
+  if (identical(profile, "all")) {
+    return(cw_normalize_tools(btw::btw_tools(), "btw::btw_tools()"))
+  }
+  if (identical(profile, "read_only")) {
+    tools <- cw_normalize_tools(
+      suppressWarnings(btw::btw_tools()),
+      "btw::btw_tools()"
+    )
+    return(cw_btw_read_only(tools))
+  }
+  tools <- do.call(btw::btw_tools, as.list(profile))
+  cw_normalize_tools(tools, "btw::btw_tools()")
+}
+
+cw_toolset <- function(...) {
+  tools <- unlist(list(...), recursive = FALSE)
+  tools <- cw_normalize_tools(tools, "coworker tool registry")
+  tool_names <- vapply(tools, \(tool) tool@name, character(1))
+  duplicated_names <- unique(tool_names[duplicated(tool_names)])
+  if (length(duplicated_names) > 0L) {
+    stop(
+      paste(
+        "Coworker tool names must be unique:",
+        paste(duplicated_names, collapse = ", ")
+      )
+    )
+  }
+  tools
+}
+
 cw_app_server <- function(
   example_dir,
   worker_factory = cw_worker_new,
-  client_factory = cw_chat_client
+  client_factory = NULL,
+  config = cw_app_config()
 ) {
   force(example_dir)
   force(worker_factory)
+  if (!inherits(config, "graft_coworker_config")) {
+    stop("`config` must be created by `cw_app_config()`.")
+  }
+  force(config)
+  if (is.null(client_factory)) {
+    tempest_config <- config$tempest
+    client_factory <- function(role) {
+      cw_chat_client(role, config = tempest_config)
+    }
+  }
   force(client_factory)
   function(input, output, session) {
     worker <- worker_factory(example_dir)
@@ -105,12 +231,25 @@ cw_app_server <- function(
     })
 
     client <- client_factory("assistant")
-    client$register_tools(cw_app_tools(
+    core_tools <- cw_app_tools(
       worker,
       input,
       revision,
       client_factory
-    ))
+    )
+    extension_context <- list(
+      worker = worker,
+      input = input,
+      revision = revision,
+      session = session,
+      example_dir = example_dir
+    )
+    tools <- cw_toolset(
+      core_tools,
+      cw_btw_tools(config$btw),
+      cw_extension_tools(config$tools, extension_context)
+    )
+    client$register_tools(tools)
     chat <- shinychat::chat_server("coworker_chat", client)
 
     memory_rows <- shiny::reactive({
@@ -151,6 +290,12 @@ cw_app_server <- function(
         )
       )
     })
+    output$runtime_status <- shiny::renderUI(
+      cw_app_runtime_status(
+        cw_client_model(client, config$tempest),
+        length(tools)
+      )
+    )
     output$plan_body <- shiny::renderUI(cw_app_plan_body(current()))
     output$deliverable_preview <- shiny::renderUI(
       cw_app_deliverable_preview(current())

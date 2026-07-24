@@ -195,18 +195,60 @@ cw_chat_system_prompt <- function(role = c("assistant", "planner")) {
   )
 }
 
-cw_chat_client <- function(role = c("assistant", "planner")) {
-  role <- match.arg(role)
-  configured <- getOption("tempest.chat")
-  prompt <- cw_chat_system_prompt(role)
-  if (inherits(configured, "Chat")) {
-    client <- configured$clone(deep = TRUE)
-    client$set_system_prompt(prompt)
-    return(client)
+cw_tempest_config <- function(config = NULL) {
+  configured <- cw_or(
+    config,
+    getOption("graft.coworker.tempest_config")
+  )
+  configured <- cw_or(configured, tempest::tempest_config())
+  if (!inherits(configured, "tempest::TempestConfig")) {
+    stop(
+      paste(
+        "`graft.coworker.tempest_config` must be created by",
+        "`tempest::tempest_config()`."
+      )
+    )
   }
-  model <- cw_or(
-    configured,
-    Sys.getenv("GRAFT_COWORKER_MODEL", unset = "openai/gpt-5-mini")
+  configured
+}
+
+cw_app_config <- function(
+  tempest_config = NULL,
+  tools = getOption("graft.coworker.tools"),
+  btw = getOption("graft.coworker.btw", FALSE)
+) {
+  structure(
+    list(
+      tempest = cw_tempest_config(tempest_config),
+      tools = tools,
+      btw = btw
+    ),
+    class = "graft_coworker_config"
+  )
+}
+
+cw_chat_role <- function(role = c("assistant", "planner")) {
+  role <- match.arg(role)
+  c(
+    assistant = "coordinator",
+    planner = "writer"
+  )[[role]]
+}
+
+cw_chat_model <- function(config, role = c("assistant", "planner")) {
+  config <- cw_tempest_config(config)
+  tempest_role <- cw_chat_role(role)
+  cw_or(
+    config@models[[tempest_role]],
+    config@models[["coordinator"]]
+  )
+}
+
+cw_client_model <- function(client, config) {
+  configured_model <- cw_chat_model(config, "assistant")
+  model <- tryCatch(
+    client$get_model(),
+    error = function(error) NULL
   )
   if (
     !is.character(model) ||
@@ -214,12 +256,55 @@ cw_chat_client <- function(role = c("assistant", "planner")) {
       is.na(model) ||
       !nzchar(model)
   ) {
+    return(configured_model)
+  }
+  if (identical(model, sub("^.*/", "", configured_model))) {
+    return(configured_model)
+  }
+  model
+}
+
+cw_chat_client <- function(
+  role = c("assistant", "planner"),
+  config = cw_tempest_config()
+) {
+  role <- match.arg(role)
+  config <- cw_tempest_config(config)
+  tempest_role <- cw_chat_role(role)
+  model <- cw_chat_model(config, role)
+  prompt <- cw_chat_system_prompt(role)
+  client <- if (!is.null(config@chat_fn)) {
+    config@chat_fn(
+      role = tempest_role,
+      model = model,
+      system_prompt = prompt,
+      echo = "none"
+    )
+  } else if (!is.null(config@chat)) {
+    client_prompt <- config@chat$get_system_prompt()
+    client <- config@chat$clone(deep = TRUE)
+    combined_prompt <- c(
+      prompt,
+      if (!is.null(client_prompt)) c("---", client_prompt)
+    ) |>
+      paste(collapse = "\n\n")
+    client$set_system_prompt(combined_prompt)
+    client
+  } else {
+    ellmer::chat(
+      name = model,
+      system_prompt = prompt,
+      params = config@params,
+      echo = "none"
+    )
+  }
+  if (!inherits(client, "Chat")) {
     stop(
       paste(
-        "`options(tempest.chat = )` must contain an ellmer Chat or",
-        "provider/model string."
+        "The configured Tempest chat factory must return an",
+        "ellmer Chat object."
       )
     )
   }
-  ellmer::chat(model, system_prompt = prompt)
+  client
 }
