@@ -253,8 +253,8 @@ finished local work product, review the exact publication, and make only the
 accepted outcome durable.
 
 Continue with [Getting started with Graft](getting-started.html) for the
-schema-to-store workflow, or [Govern knowledge
-changes](knowledge-change-control.html) for revision history and reviewed
-schema evolution. The complete Coworker implementation is available in the
-[source
-directory](https://github.com/JamesHWade/graft/tree/main/inst/examples/coworker).
+schema-to-store workflow, or
+[Govern knowledge changes](knowledge-change-control.html) for revision history
+and reviewed schema evolution. The complete Coworker implementation is
+available in the
+[source directory](https://github.com/JamesHWade/graft/tree/main/inst/examples/coworker).
