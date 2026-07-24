@@ -310,7 +310,7 @@ cw_worker_snapshot <- function(worker) {
     plan = plan@content,
     deliverable = deliverable@content,
     pending = cw_worker_pending(worker),
-    expected_export_path = file.path(
+    expected_export_path = cw_output_path(
       worker$output_dir,
       cw_output_filename(worker$bundle$workspace$name, run_id)
     ),

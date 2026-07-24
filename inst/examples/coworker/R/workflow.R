@@ -12,6 +12,13 @@ cw_output_filename <- function(workspace_name, run_id) {
   cw_safe_filename(paste(workspace_name, run_id))
 }
 
+cw_output_path <- function(output_dir, output_filename, must_work = FALSE) {
+  normalizePath(
+    file.path(output_dir, basename(output_filename)),
+    mustWork = must_work
+  )
+}
+
 cw_deliverable_specs <- function() {
   list(
     plan = tempest::tempest_deliverable_spec(
@@ -120,7 +127,7 @@ cw_workflow_registry <- function() {
       )
       dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
       filename <- basename(runtime$output_filename)
-      path <- file.path(output_dir, filename)
+      path <- cw_output_path(output_dir, filename)
       writeLines(
         enc2utf8(artifact@content),
         path,
@@ -129,7 +136,11 @@ cw_workflow_registry <- function() {
       artifact@metadata <- utils::modifyList(
         artifact@metadata,
         list(
-          exported_path = normalizePath(path, mustWork = TRUE),
+          exported_path = cw_output_path(
+            output_dir,
+            filename,
+            must_work = TRUE
+          ),
           exported_filename = filename
         )
       )
