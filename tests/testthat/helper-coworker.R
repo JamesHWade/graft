@@ -31,8 +31,8 @@ coworker_runtime_available <- function() {
   )
   if (
     getRversion() < "4.3.0" ||
-      any(
-        !vapply(
+      !all(
+        vapply(
           required_packages,
           requireNamespace,
           logical(1),

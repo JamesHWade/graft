@@ -160,7 +160,7 @@ cw_btw_tools <- function(profile = FALSE) {
     !is.character(profile) ||
       length(profile) == 0L ||
       anyNA(profile) ||
-      any(!nzchar(profile))
+      !all(nzchar(profile))
   ) {
     stop(
       paste(
