@@ -114,3 +114,36 @@ instead of approving the complete story automatically.
 The example keeps scheduling, workflow routing, approval, and writes in the
 host application. A contrasting package-maintainer profile exercises the same
 host contract with different domain configuration.
+
+## Graft Coworker example
+
+The installable `coworker` example is a local, outcome-oriented work surface
+inspired by OpenWorker. A shinychat assistant can call a tool that uses a
+dsprrr planner and Tempest's typed workflow runtime to prepare a finished
+Markdown deliverable. Tempest stops at the file-publication boundary. The
+approved file, approval decision, source links, and outcome memory enter Graft
+only after the operator approves the exact artifact:
+
+```r
+example <- system.file(
+  "examples",
+  "coworker",
+  package = "graft",
+  mustWork = TRUE
+)
+
+options(tempest.chat = "openai/gpt-5-mini")
+shiny::runApp(file.path(example, "app"))
+```
+
+The app also includes a provider-free reference request so the complete
+prepare, review, approve, publish, and remember loop can be exercised without
+an API key. By default its DuckDB store and deliverables persist under
+`tools::R_user_dir("graft", "data")`; set `GRAFT_COWORKER_HOME` to choose
+another local directory.
+
+This is a vertical slice rather than a desktop-agent replacement. It currently
+ships one bounded source bundle and one approval-gated local-file action. The
+host boundaries are ready for additional source adapters, connector actions,
+schedules, and durable conversation storage without turning those
+application concerns into workflow-specific Graft APIs.

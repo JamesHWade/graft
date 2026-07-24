@@ -1,0 +1,244 @@
+id: https://w3id.org/graft/examples/coworker
+name: graft-coworker
+title: Graft Coworker local work memory
+version: 0.1.0
+prefixes:
+  coworker: https://w3id.org/graft/examples/coworker/
+  graft: https://w3id.org/graft/
+  linkml: https://w3id.org/linkml/
+default_prefix: coworker
+default_range: string
+
+enums:
+  WorkStatus:
+    permissible_values:
+      awaiting_approval:
+      succeeded:
+      failed:
+  ApprovalDecisionValue:
+    permissible_values:
+      approved:
+      rejected:
+  MemoryScope:
+    permissible_values:
+      workspace:
+      session:
+
+slots:
+  id:
+    identifier: true
+    range: uriorcurie
+    required: true
+    pattern: "^coworker:[A-Za-z0-9._~-]+$"
+  name:
+    range: string
+    required: true
+  description:
+    range: string
+  title:
+    range: string
+    required: true
+  requested_outcome:
+    range: string
+    required: true
+  status:
+    range: WorkStatus
+    required: true
+  session:
+    range: WorkSession
+    required: true
+  workspace:
+    range: CoworkerWorkspace
+    required: true
+  run:
+    range: WorkRun
+    required: true
+  deliverable:
+    range: Deliverable
+    required: true
+  source_snapshots:
+    range: SourceSnapshot
+    multivalued: true
+    required: true
+  source_kind:
+    range: string
+    required: true
+  uri:
+    range: uri
+  content:
+    range: string
+    required: true
+  content_hash:
+    range: string
+    required: true
+  observed_at:
+    range: datetime
+    required: true
+  started_at:
+    range: datetime
+    required: true
+  completed_at:
+    range: datetime
+  workflow_run_id:
+    range: string
+    required: true
+  planning_engine:
+    range: string
+    required: true
+  summary:
+    range: string
+    required: true
+  media_type:
+    range: string
+    required: true
+  file_path:
+    range: string
+    required: true
+  approval_id:
+    range: string
+    required: true
+  decision:
+    range: ApprovalDecisionValue
+    required: true
+  reviewer:
+    range: string
+    required: true
+  decided_at:
+    range: datetime
+    required: true
+  note:
+    range: string
+  key:
+    range: string
+    required: true
+  scope:
+    range: MemoryScope
+    required: true
+  accepted_at:
+    range: datetime
+    required: true
+
+classes:
+  CoworkerWorkspace:
+    slots:
+      - id
+      - name
+      - description
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: name
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "name, description"
+
+  WorkSession:
+    slots:
+      - id
+      - workspace
+      - title
+      - started_at
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: title
+      graft.search_slots:
+        tag: graft.search_slots
+        value: title
+
+  SourceSnapshot:
+    slots:
+      - id
+      - workspace
+      - title
+      - source_kind
+      - uri
+      - content
+      - content_hash
+      - observed_at
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: title
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, content"
+
+  WorkRun:
+    slots:
+      - id
+      - session
+      - workspace
+      - title
+      - requested_outcome
+      - status
+      - source_snapshots
+      - workflow_run_id
+      - planning_engine
+      - summary
+      - started_at
+      - completed_at
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: title
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, requested_outcome, summary"
+
+  Deliverable:
+    slots:
+      - id
+      - run
+      - workspace
+      - title
+      - summary
+      - status
+      - media_type
+      - file_path
+      - content_hash
+      - completed_at
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: title
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "title, summary, file_path"
+
+  ApprovalDecision:
+    slots:
+      - id
+      - run
+      - deliverable
+      - workspace
+      - approval_id
+      - decision
+      - reviewer
+      - decided_at
+      - note
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: approval_id
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "approval_id, reviewer, note"
+
+  Memory:
+    slots:
+      - id
+      - run
+      - workspace
+      - source_snapshots
+      - key
+      - content
+      - scope
+      - accepted_at
+    annotations:
+      graft.label_slot:
+        tag: graft.label_slot
+        value: key
+      graft.search_slots:
+        tag: graft.search_slots
+        value: "key, content"

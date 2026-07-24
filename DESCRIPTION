@@ -23,12 +23,15 @@ Imports:
     reticulate,
     rlang
 Suggests:
+    bsicons,
     bslib (>= 0.9.0),
+    dsprrr,
     ellmer (>= 0.3.0),
     knitr,
     rmarkdown,
     S7,
     shiny (>= 1.11.1),
+    shinychat (>= 0.4.0),
     tempest (>= 0.1.0),
     testthat (>= 3.0.0),
     withr,
@@ -38,6 +41,8 @@ Config/roxygen2/version: 8.0.0
 Config/Needs/website: brand.yml
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 Remotes:
-    JamesHWade/tempest
+    JamesHWade/dsprrr,
+    JamesHWade/tempest,
+    posit-dev/shinychat/pkg-r
 VignetteBuilder: knitr
 BugReports: https://github.com/JamesHWade/graft/issues
