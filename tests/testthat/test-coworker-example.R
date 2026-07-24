@@ -167,17 +167,22 @@ test_that("coworker offers a read-only btw tool profile", {
   environment <- local_coworker_environment(include_app = TRUE)
   tools <- environment$cw_btw_tools("read_only")
   tool_names <- vapply(tools, \(tool) tool@name, character(1))
+  unsafe_pattern <- paste(
+    "^btw_tool_(",
+    "files_.*(edit|patch|replace|write)|",
+    "git_(commit|branch_create|branch_checkout)|",
+    "pkg_|run_r$|github$|agent_subagent$",
+    ")",
+    sep = ""
+  )
 
   expect_gt(length(tool_names), 10L)
   expect_length(
-    grep(
-      paste(
-        "write|edit|patch|replace|commit|branch_create|branch_checkout|",
-        "pkg_|run_r|github|agent_subagent",
-        sep = ""
-      ),
-      tool_names
-    ),
+    grep(unsafe_pattern, tool_names),
+    0L
+  )
+  expect_length(
+    grep(unsafe_pattern, "btw_tool_ide_read_current_editor"),
     0L
   )
   expect_length(
