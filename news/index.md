@@ -2,6 +2,11 @@
 
 ## graft 0.0.0.9000
 
+- A local Graft Coworker example combines a shinychat tool-using
+  assistant, dsprrr planning, typed Tempest work products, an approval
+  inbox, local file delivery, and approved-only Graft memory. Its
+  Tempest-native model configuration and extensible ellmer tool registry
+  include an optional read-only `btw` tool belt.
 - A provider-free continuous-intelligence example, staged operator
   walkthrough, and interactive Shiny Briefing Room demonstrate scheduled
   Tempest briefings, host-bound promotion and approval, evidence-checked
