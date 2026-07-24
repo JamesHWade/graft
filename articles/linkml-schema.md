@@ -190,7 +190,7 @@ kg_ingest(
   ),
   records
 )
-#> <kg_ingest_result> committed graft:01KY4Q7HXXR1Z70V06BN89156B
+#> <kg_ingest_result> committed graft:01KY8X44F8R1Z70V06BN89156B
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0

@@ -31,7 +31,7 @@ manifest_v1 <- system.file(
 schema_v1 <- kg_schema(manifest_v1)
 store <- kg_connect_duckdb(schema_v1, ":memory:")
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/Rtmphnc7wQ/duckdb/extensions
+#> ℹ /tmp/RtmpeNUCv6/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 kg_init(store)
@@ -138,8 +138,8 @@ kg_changes(store, record_id = initiative_id)[
 #> 1            2               2    update         status
 #> 2            1               1    insert   id, labe....
 #>                           batch_id
-#> 1 graft:01KY4Q7DXTQP8ZR98JRJEWGEYP
-#> 2 graft:01KY4Q7DMRR1Z70V06BN89156B
+#> 1 graft:01KY8X3ZA8QP8ZR98JRJEWGEYP
+#> 2 graft:01KY8X3YYZR1Z70V06BN89156B
 #>                                                       schema_build_digest
 #> 1 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #> 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
@@ -154,8 +154,8 @@ kg_history(store, initiative_id)[
   c("revision_number", "operation", "changed_fields", "recorded_at")
 ]
 #>   revision_number operation changed_fields         recorded_at
-#> 1               2    update         status 2026-07-22 10:51:30
-#> 2               1    insert   id, labe.... 2026-07-22 10:51:29
+#> 1               2    update         status 2026-07-24 01:51:26
+#> 2               1    insert   id, labe.... 2026-07-24 01:51:25
 ```
 
 ## Recover state at a commit boundary
@@ -231,13 +231,13 @@ operations before approval.
 
 plan <- kg_plan_migration(store, schema_v2)
 plan
-#> <kg_migration_plan> additive graft-migration-8e6d0807d592b997259b340dac24ba913da71444ffdf24759ddc372e931e1700
+#> <kg_migration_plan> additive graft-migration-27d18b636587737716e49cde1fa79432b1687bb271bf6457eb993af251de52bc
 #>   from:       sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #>   to:         sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124
 #>   changes:    2
 #>   rules:      nullable_column_added, optional_slot_added
 #>   operations: 1
-#>   digest:     sha256:8e6d0807d592b997259b340dac24ba913da71444ffdf24759ddc372e931e1700
+#>   digest:     sha256:27d18b636587737716e49cde1fa79432b1687bb271bf6457eb993af251de52bc
 
 plan$changes[
   c("path", "object_type", "classification", "rule")

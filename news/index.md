@@ -2,10 +2,10 @@
 
 ## graft 0.0.0.9000
 
-- A provider-free continuous-intelligence example and staged operator
-  walkthrough demonstrate scheduled Tempest briefings, host-bound
-  promotion and approval, evidence-checked decisions, and governed Graft
-  ingestion.
+- A provider-free continuous-intelligence example, staged operator
+  walkthrough, and interactive Shiny Briefing Room demonstrate scheduled
+  Tempest briefings, host-bound promotion and approval, evidence-checked
+  decisions, and governed Graft ingestion.
 - Store format 2 adds complete system-time revision history and rejects
   stores created by earlier development versions instead of silently
   upgrading or operating in a legacy mode.

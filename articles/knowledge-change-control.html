@@ -106,7 +106,7 @@ compiled, so the walkthrough does not require Python.</p>
 <span><span class="va">schema_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_schema.html">kg_schema</a></span><span class="op">(</span><span class="va">manifest_v1</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb</a></span><span class="op">(</span><span class="va">schema_v1</span>, <span class="st">":memory:"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; duckdb is keeping downloaded extensions in a temporary directory:</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/Rtmphnc7wQ/duckdb/extensions</span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpeNUCv6/duckdb/extensions</span></span>
 <span><span class="co">#&gt; This is removed when the R session ends, so extensions are re-downloaded each session.</span></span>
 <span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.</span></span>
 <span><span class="fu"><a href="../reference/kg_init.html">kg_init</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
@@ -194,8 +194,8 @@ ledger payloads and content digests are not.</p>
 <span><span class="co">#&gt; 1            2               2    update         status</span></span>
 <span><span class="co">#&gt; 2            1               1    insert   id, labe....</span></span>
 <span><span class="co">#&gt;                           batch_id</span></span>
-<span><span class="co">#&gt; 1 graft:01KY4Q7DXTQP8ZR98JRJEWGEYP</span></span>
-<span><span class="co">#&gt; 2 graft:01KY4Q7DMRR1Z70V06BN89156B</span></span>
+<span><span class="co">#&gt; 1 graft:01KY8X3ZA8QP8ZR98JRJEWGEYP</span></span>
+<span><span class="co">#&gt; 2 graft:01KY8X3YYZR1Z70V06BN89156B</span></span>
 <span><span class="co">#&gt;                                                       schema_build_digest</span></span>
 <span><span class="co">#&gt; 1 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span>
 <span><span class="co">#&gt; 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span></code></pre></div>
@@ -206,8 +206,8 @@ record:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"revision_number"</span>, <span class="st">"operation"</span>, <span class="st">"changed_fields"</span>, <span class="st">"recorded_at"</span><span class="op">)</span></span>
 <span><span class="op">]</span></span>
 <span><span class="co">#&gt;   revision_number operation changed_fields         recorded_at</span></span>
-<span><span class="co">#&gt; 1               2    update         status 2026-07-22 10:51:30</span></span>
-<span><span class="co">#&gt; 2               1    insert   id, labe.... 2026-07-22 10:51:29</span></span></code></pre></div>
+<span><span class="co">#&gt; 1               2    update         status 2026-07-24 01:51:26</span></span>
+<span><span class="co">#&gt; 2               1    insert   id, labe.... 2026-07-24 01:51:25</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="recover-state-at-a-commit-boundary">Recover state at a commit boundary<a class="anchor" aria-label="anchor" href="#recover-state-at-a-commit-boundary"></a>
@@ -275,13 +275,13 @@ operations before approval.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_plan_migration.html">kg_plan_migration</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">schema_v2</span><span class="op">)</span></span>
 <span><span class="va">plan</span></span>
-<span><span class="co">#&gt; &lt;kg_migration_plan&gt; additive graft-migration-8e6d0807d592b997259b340dac24ba913da71444ffdf24759ddc372e931e1700</span></span>
+<span><span class="co">#&gt; &lt;kg_migration_plan&gt; additive graft-migration-27d18b636587737716e49cde1fa79432b1687bb271bf6457eb993af251de52bc</span></span>
 <span><span class="co">#&gt;   from:       sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span>
 <span><span class="co">#&gt;   to:         sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124</span></span>
 <span><span class="co">#&gt;   changes:    2</span></span>
 <span><span class="co">#&gt;   rules:      nullable_column_added, optional_slot_added</span></span>
 <span><span class="co">#&gt;   operations: 1</span></span>
-<span><span class="co">#&gt;   digest:     sha256:8e6d0807d592b997259b340dac24ba913da71444ffdf24759ddc372e931e1700</span></span>
+<span><span class="co">#&gt;   digest:     sha256:27d18b636587737716e49cde1fa79432b1687bb271bf6457eb993af251de52bc</span></span>
 <span></span>
 <span><span class="va">plan</span><span class="op">$</span><span class="va">changes</span><span class="op">[</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"path"</span>, <span class="st">"object_type"</span>, <span class="st">"classification"</span>, <span class="st">"rule"</span><span class="op">)</span></span>
