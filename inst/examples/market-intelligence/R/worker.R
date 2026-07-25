@@ -19,7 +19,6 @@ mi_tempest_exports <- function() {
 
 mi_require_runtime <- function() {
   packages <- c(
-    "digest",
     "dplyr",
     "dsprrr",
     "ellmer",

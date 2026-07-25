@@ -306,3 +306,49 @@ test_that("market intelligence UI exposes the complete decision loop", {
     -1L
   )
 })
+
+test_that("market intelligence UI escapes model-supplied markdown", {
+  if (!market_intelligence_runtime_available()) {
+    testthat::skip("The current market-intelligence runtime is unavailable.")
+  }
+  environment <- local_market_intelligence_environment(include_app = TRUE)
+  markdown <- paste(
+    "# Signal",
+    "<script>alert('unsafe')</script>",
+    "A & B",
+    sep = "\n"
+  )
+  escaped <- environment$mi_app_escape_markdown(markdown)
+  rendered <- as.character(environment$mi_app_briefing_card(list(
+    status = "awaiting_approval",
+    briefing = list(markdown = markdown),
+    change_set = list(
+      headline = "Signal",
+      summary = "Summary",
+      implication = "Implication",
+      continuity = "Continuity"
+    )
+  )))
+
+  expect_match(escaped, "&lt;script&gt;", fixed = TRUE)
+  expect_match(escaped, "&lt;/script&gt;", fixed = TRUE)
+  expect_match(escaped, "A &amp; B", fixed = TRUE)
+  expect_no_match(escaped, "<script>", fixed = TRUE)
+  expect_match(rendered, "&lt;script&gt;", fixed = TRUE)
+  expect_no_match(rendered, "<script>", fixed = TRUE)
+})
+
+test_that("market intelligence runtime excludes unused digest dependency", {
+  environment <- local_market_intelligence_environment()
+  environment$requireNamespace <- function(package, quietly = FALSE) {
+    if (identical(package, "digest")) {
+      stop("The unused digest dependency was requested.")
+    }
+    TRUE
+  }
+  environment$getNamespaceExports <- function(package) {
+    environment$mi_tempest_exports()
+  }
+
+  expect_invisible(environment$mi_require_runtime())
+})

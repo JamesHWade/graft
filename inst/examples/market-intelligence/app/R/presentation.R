@@ -54,6 +54,12 @@ mi_app_status_badge <- function(status, label = NULL) {
   )
 }
 
+mi_app_escape_markdown <- function(text) {
+  text <- gsub("&", "&amp;", text, fixed = TRUE)
+  text <- gsub("<", "&lt;", text, fixed = TRUE)
+  gsub(">", "&gt;", text, fixed = TRUE)
+}
+
 mi_app_scope_markdown_headings <- function(text, offset = 2L) {
   lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   lines <- vapply(
@@ -365,8 +371,8 @@ mi_app_briefing_card <- function(snapshot) {
       shiny::tags$details(
         class = "mi-full-brief",
         shiny::tags$summary("Read the complete source-linked briefing"),
-        shiny::markdown(mi_app_scope_markdown_headings(
-          snapshot$briefing$markdown
+        shiny::markdown(mi_app_escape_markdown(
+          mi_app_scope_markdown_headings(snapshot$briefing$markdown)
         ))
       )
     )
