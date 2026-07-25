@@ -291,6 +291,12 @@ test_that("market intelligence UI exposes the complete decision loop", {
   portfolio <- as.character(
     environment$mi_app_portfolio_view(baseline)
   )
+  sources <- as.character(environment$mi_app_source_list(list(list(
+    title = "Source",
+    uri = "https://example.com/source",
+    source_type = "public filing",
+    published_at = "2026-07-25"
+  ))))
 
   expect_match(ui, "Materials Market Radar")
   expect_match(ui, "Briefing")
@@ -301,6 +307,7 @@ test_that("market intelligence UI exposes the complete decision loop", {
   expect_match(ui, "mi-focus")
   expect_match(portfolio, "LyondellBasell")
   expect_match(portfolio, "Downstream lenses")
+  expect_match(sources, 'rel="noopener noreferrer"', fixed = TRUE)
   expect_identical(
     gregexpr("fluidPage", ui, fixed = TRUE)[[1L]][[1L]],
     -1L

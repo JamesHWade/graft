@@ -320,7 +320,7 @@ mi_app_source_list <- function(sources) {
             source$title,
             href = source$uri,
             target = "_blank",
-            rel = "noreferrer"
+            rel = "noopener noreferrer"
           ),
           shiny::tags$span(
             paste(source$source_type, source$published_at, sep = " · ")
