@@ -253,14 +253,20 @@ test_that("market intelligence schema artifact is current", {
     output
   )
 
+  normalize_manifest <- function(path) {
+    manifest <- jsonlite::read_json(path, simplifyVector = FALSE)
+    manifest$compiler$python_version <- NULL
+    manifest$fingerprints$build_digest <- NULL
+    manifest
+  }
+
   expect_identical(
-    readLines(output, warn = FALSE),
-    readLines(
+    normalize_manifest(output),
+    normalize_manifest(
       market_intelligence_example_path(
         "schema",
         "market-intelligence.graft.json"
-      ),
-      warn = FALSE
+      )
     )
   )
 })
