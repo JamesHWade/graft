@@ -115,6 +115,35 @@ The example keeps scheduling, workflow routing, approval, and writes in the
 host application. A contrasting package-maintainer profile exercises the same
 host contract with different domain configuration.
 
+## Materials Market Radar example
+
+The installable `market-intelligence` example turns competitor, business, and
+downstream-market signals into a governed morning decision loop. Its portfolio
+map spans six Dow business clusters, an enterprise and specialist competitor
+watchlist, and downstream lenses such as data centers, electrification,
+packaging, construction, and consumer care:
+
+```r
+example <- system.file(
+  "examples",
+  "market-intelligence",
+  package = "graft",
+  mustWork = TRUE
+)
+shiny::runApp(file.path(example, "app"))
+```
+
+The provider-free two-scan walkthrough makes organizational learning visible.
+The first scan proposes a cross-business thesis and waits for approval. Only
+the accepted assessment, sources, and accountable action enter Graft; the next
+competitor scan receives that reviewed history as explicit context. Rejected
+interpretations never enter the knowledge ledger.
+
+Read [Build a governed materials market
+radar](https://jameshwade.github.io/graft/articles/market-intelligence.html) for
+the market model, workflow boundary, production source strategy, model
+configuration, and tool-extension recipes.
+
 ## Graft Coworker example
 
 The installable `coworker` example is a local, outcome-oriented work surface

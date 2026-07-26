@@ -33,7 +33,9 @@ home:
 
 navbar:
   structure:
-    left: [intro, change_control, coworker, examples, reference, news]
+    left:
+      [intro, change_control, market_intelligence, coworker, examples,
+      reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
@@ -42,6 +44,9 @@ navbar:
     change_control:
       text: Change control
       href: articles/knowledge-change-control.html
+    market_intelligence:
+      text: Market radar
+      href: articles/market-intelligence.html
     coworker:
       text: Coworker
       href: articles/coworker.html
@@ -74,6 +79,7 @@ articles:
       Build a local agent host with typed workflows, approval-gated actions,
       accepted memory, configurable models, and extensible tools.
     contents:
+      - market-intelligence
       - coworker
   - title: Examples
     desc: >

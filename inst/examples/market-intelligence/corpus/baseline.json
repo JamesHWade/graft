@@ -1,0 +1,157 @@
+{
+  "businesses": [
+    {
+      "id": "market:business-hydrocarbons-energy",
+      "name": "Hydrocarbons & Energy",
+      "segment": "Packaging & Specialty Plastics",
+      "description": "Ethylene, propylene, aromatics, and energy inputs supporting the portfolio."
+    },
+    {
+      "id": "market:business-packaging-specialty-plastics",
+      "name": "Packaging and Specialty Plastics",
+      "segment": "Packaging & Specialty Plastics",
+      "description": "Polyethylene, functional polymers, and specialty plastics for packaging and infrastructure."
+    },
+    {
+      "id": "market:business-industrial-solutions",
+      "name": "Industrial Solutions",
+      "segment": "Industrial Intermediates & Infrastructure",
+      "description": "Industrial intermediates, heat-transfer fluids, and performance solutions."
+    },
+    {
+      "id": "market:business-polyurethanes-construction",
+      "name": "Polyurethanes & Construction Chemicals",
+      "segment": "Industrial Intermediates & Infrastructure",
+      "description": "Polyurethanes, intermediates, and construction-chemicals systems."
+    },
+    {
+      "id": "market:business-coatings-performance-monomers",
+      "name": "Coatings & Performance Monomers",
+      "segment": "Performance Materials & Coatings",
+      "description": "Architectural coatings binders and acrylic building blocks."
+    },
+    {
+      "id": "market:business-consumer-solutions",
+      "name": "Consumer Solutions",
+      "segment": "Performance Materials & Coatings",
+      "description": "Silicones and specialty materials for consumer and electronics applications."
+    }
+  ],
+  "competitors": [
+    {
+      "id": "market:competitor-lyondellbasell",
+      "name": "LyondellBasell",
+      "description": "Enterprise watchlist competitor spanning five Dow businesses."
+    },
+    {
+      "id": "market:competitor-ineos",
+      "name": "INEOS",
+      "description": "Enterprise watchlist competitor spanning four Dow businesses."
+    },
+    {
+      "id": "market:competitor-basf",
+      "name": "BASF",
+      "description": "Diversified materials competitor spanning three Dow businesses."
+    },
+    {
+      "id": "market:competitor-sabic",
+      "name": "SABIC",
+      "description": "Diversified materials competitor spanning three Dow businesses."
+    },
+    {
+      "id": "market:competitor-covestro",
+      "name": "Covestro",
+      "description": "Specialist competitor in polyurethanes and construction markets."
+    },
+    {
+      "id": "market:competitor-wacker",
+      "name": "Wacker Chemie",
+      "description": "Specialist competitor in silicones and coatings materials."
+    }
+  ],
+  "downstream_markets": [
+    {
+      "id": "market:downstream-data-centers",
+      "name": "Data centers",
+      "description": "Cooling, power, connectivity, construction, and electronics material demand."
+    },
+    {
+      "id": "market:downstream-electrification",
+      "name": "Electrification",
+      "description": "Wire and cable, grid, power electronics, and thermal-management demand."
+    },
+    {
+      "id": "market:downstream-packaging",
+      "name": "Packaging",
+      "description": "Rigid, flexible, and circular packaging demand."
+    },
+    {
+      "id": "market:downstream-construction",
+      "name": "Construction",
+      "description": "Insulation, sealants, coatings, and infrastructure demand."
+    },
+    {
+      "id": "market:downstream-consumer-care",
+      "name": "Consumer care",
+      "description": "Home, personal-care, and durable-consumer applications."
+    }
+  ],
+  "enterprise_watchlist": [
+    {
+      "competitor": "LyondellBasell",
+      "business_count": 5,
+      "tier": "Enterprise"
+    },
+    {
+      "competitor": "INEOS",
+      "business_count": 4,
+      "tier": "Enterprise"
+    },
+    {
+      "competitor": "BASF",
+      "business_count": 3,
+      "tier": "Enterprise"
+    },
+    {
+      "competitor": "SABIC",
+      "business_count": 3,
+      "tier": "Enterprise"
+    },
+    {
+      "competitor": "Wacker Chemie",
+      "business_count": 2,
+      "tier": "Business cluster"
+    },
+    {
+      "competitor": "Covestro",
+      "business_count": 1,
+      "tier": "Specialist"
+    }
+  ],
+  "business_watchlist": [
+    {
+      "business": "Hydrocarbons & Energy",
+      "competitors": "Chevron Phillips Chemical; ExxonMobil; INEOS; LyondellBasell; SABIC; Shell; Sinopec"
+    },
+    {
+      "business": "Packaging and Specialty Plastics",
+      "competitors": "Borealis; CNPC; ExxonMobil; INEOS; Lanxess; LyondellBasell; Nova; SABIC; Sinopec"
+    },
+    {
+      "business": "Industrial Solutions",
+      "competitors": "BASF; Eastman; Hexion; Huntsman; INEOS; LyondellBasell; SABIC; Sasol; Shell"
+    },
+    {
+      "business": "Polyurethanes & Construction Chemicals",
+      "competitors": "Arkema; Ashland; BASF; Covestro; Eastman; Huntsman; INEOS; LyondellBasell; Wanhua"
+    },
+    {
+      "business": "Coatings & Performance Monomers",
+      "competitors": "Arkema; BASF; Celanese; Evonik; LyondellBasell; Wacker Chemie"
+    },
+    {
+      "business": "Consumer Solutions",
+      "competitors": "Elkem; Momentive; Shin-Etsu; Wacker Chemie"
+    }
+  ]
+}
