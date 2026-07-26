@@ -2,6 +2,10 @@
 
 ## graft 0.0.0.9000
 
+- A governed Materials Market Radar example combines business,
+  competitor, and downstream-market signals with dsprrr analysis, typed
+  Tempest briefings and approval, configurable models and tools, and
+  accepted-only Graft knowledge that visibly changes a later scan.
 - A local Graft Coworker example combines a shinychat tool-using
   assistant, dsprrr planning, typed Tempest work products, an approval
   inbox, local file delivery, and approved-only Graft memory. Its

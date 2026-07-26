@@ -28,6 +28,13 @@ start from an ordinary LinkML schema and see how graft applies it in R.
 Build a local agent host with typed workflows, approval-gated actions,
 accepted memory, configurable models, and extensible tools.
 
+- [Build a governed materials market
+  radar](https://jameshwade.github.io/graft/articles/market-intelligence.md):
+
+  Reconcile competitor, business, customer, and downstream-market
+  signals into reviewed intelligence that becomes durable context for
+  the next scan.
+
 - [Build a governed local
   Coworker](https://jameshwade.github.io/graft/articles/coworker.md):
 
