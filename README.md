@@ -76,6 +76,36 @@ chat <- ellmer::chat_anthropic()
 chat$set_tools(kg_tools(store))
 ```
 
+## Share accepted knowledge
+
+`kg_export_okf()` projects accepted revisions into an [Open Knowledge
+Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
+v0.2 directory:
+
+```r
+bundle <- kg_export_okf(store, "knowledge/okf")
+bundle
+```
+
+Each concept remains readable Markdown, object references become links, and
+source records become OKF source citations. The `graft` frontmatter extension
+retains exact record, revision, batch, and schema identity. Exporting an
+earlier committed batch or time produces the accepted knowledge boundary that
+was visible then:
+
+```r
+historical <- kg_export_okf(
+  store,
+  "knowledge/okf-2026-q2",
+  as_of = "batch-2026-q2"
+)
+```
+
+OKF is the interchange layer, not a replacement for the LinkML-derived
+manifest or DuckDB revision ledger. Read [Share accepted knowledge with
+OKF](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
+for the mapping, safety boundary, and Tempest handoff.
+
 ## Continuous intelligence example
 
 The installable `continuous-intelligence` example combines Graft with

@@ -164,6 +164,18 @@ print.kg_context <- function(x, ...) {
 }
 
 #' @export
+print.kg_okf_bundle <- function(x, ...) {
+  cat("<kg_okf_bundle> OKF ", x$okf_version, "\n", sep = "")
+  cat("  path:       ", x$path, "\n", sep = "")
+  cat("  concepts:   ", x$concept_count, "\n", sep = "")
+  cat("  structural: ", x$structural_digest, "\n", sep = "")
+  if (!is.null(x$as_of_batch_id) && !is.na(x$as_of_batch_id)) {
+    cat("  as of:      ", x$as_of_batch_id, "\n", sep = "")
+  }
+  invisible(x)
+}
+
+#' @export
 print.kg_subgraph <- function(x, ...) {
   cat("<kg_subgraph> ", x$request$kind, "\n", sep = "")
   cat("  nodes:      ", nrow(x$nodes), "\n", sep = "")

@@ -20,6 +20,7 @@
 * `kg_context()` generates a token-bounded, sensitive-field-safe description
   of the active manifest and DuckDB access constraints.
 * `kg_edges()`, `kg_nodes()`, `kg_neighbors()`, `kg_traverse()`, and `kg_subgraph()` provide lazy manifest-driven graph projections plus deterministic, explicitly collected one-hop and two-hop retrieval with hard node and edge caps.
+* `kg_export_okf()` writes a deterministic, source-linked Open Knowledge Format v0.2 projection of current or historical accepted revisions while preserving Graft schema, batch, revision, and record identity.
 * `kg_find()`, `kg_lookup()`, and `kg_identifiers()` provide bounded
   manifest-declared search and exact identifier resolution with registry
   provenance.

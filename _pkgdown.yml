@@ -34,7 +34,7 @@ home:
 navbar:
   structure:
     left:
-      [intro, change_control, market_intelligence, coworker, examples,
+      [intro, change_control, open_knowledge, market_intelligence, coworker, examples,
       reference, news]
     right: [search, github, lightswitch]
   components:
@@ -44,6 +44,9 @@ navbar:
     change_control:
       text: Change control
       href: articles/knowledge-change-control.html
+    open_knowledge:
+      text: Open knowledge
+      href: articles/open-knowledge-format.html
     market_intelligence:
       text: Market radar
       href: articles/market-intelligence.html
@@ -74,6 +77,7 @@ articles:
       - getting-started
       - knowledge-change-control
       - linkml-schema
+      - open-knowledge-format
   - title: Agent applications
     desc: >
       Build a local agent host with typed workflows, approval-gated actions,
@@ -163,6 +167,12 @@ reference:
       - kg_context
       - kg_select
       - kg_tools
+  - title: Knowledge exchange
+    desc: >
+      Project accepted revisions into a portable, human-readable exchange
+      format without replacing the governing schema or ledger.
+  - contents:
+      - kg_export_okf
   - title: Experimental integrations
     desc: >
       Package-specific adapters. Most graft users do not need these functions.

@@ -21,7 +21,8 @@ Imports:
     duckdb,
     jsonlite,
     reticulate,
-    rlang
+    rlang,
+    yaml
 Suggests:
     bsicons,
     bslib (>= 0.9.0),
@@ -35,8 +36,7 @@ Suggests:
     shinychat (>= 0.4.0),
     tempest (>= 0.1.0),
     testthat (>= 3.0.0),
-    withr,
-    yaml
+    withr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 Config/Needs/website: brand.yml

@@ -15,7 +15,8 @@ graft_retrieval_limits <- list(
   context_tokens = 10000L,
   graph_nodes = 500L,
   graph_edges = 2000L,
-  graph_hops = 2L
+  graph_hops = 2L,
+  okf_concepts = 10000L
 )
 
 validate_retrieval_store <- function(store, refresh = FALSE) {

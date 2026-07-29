@@ -1,0 +1,188 @@
+---
+title: "Share accepted knowledge with OKF"
+description: >
+  Publish current or historical Graft revisions as portable, source-linked
+  Markdown for agents, Git, and documentation tools.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Share accepted knowledge with OKF}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Graft and the [Open Knowledge
+Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
+(OKF) solve different problems. Graft validates writes against a compiled
+domain contract and preserves every accepted revision. OKF packages selected
+knowledge as plain Markdown and YAML that people, agents, Git, and
+documentation tools can inspect.
+
+`kg_export_okf()` connects those layers without confusing them:
+
+| Layer | Governs | Primary representation |
+|---|---|---|
+| LinkML | Domain classes, slots, ranges, identity, and sensitivity | Source schema |
+| Graft | Executable validation, accepted state, revisions, and retrieval | `.graft.json` manifest and DuckDB |
+| OKF | Portable reading, navigation, provenance, and exchange | Markdown directory |
+
+The LinkML-derived manifest remains authoritative for writes. An OKF bundle is
+a projection of an accepted boundary, not a second writable database.
+
+## Export current accepted state
+
+Pass an initialized store and a destination directory:
+
+```{r current, eval = FALSE}
+library(graft)
+
+bundle <- kg_export_okf(
+  store,
+  "knowledge/okf",
+  limit = 5000
+)
+
+bundle
+```
+
+The result reports the directory, OKF and Graft profile versions, concept
+count, exported classes, schema digest, and accepted time boundary. The
+directory contains:
+
+```text
+knowledge/okf/
+├── index.md
+└── concepts/
+    ├── index.md
+    ├── Assessment/
+    │   ├── index.md
+    │   └── market%3Aresin-demand.md
+    └── Source/
+        ├── index.md
+        └── source%3Aquarterly-results.md
+```
+
+Exports are deterministic for the same accepted state. Graft stages and
+validates the complete bundle before installing it. It refuses to write a
+partial result when `limit` is exceeded and refuses to replace an unrelated
+directory. Set `overwrite = TRUE` only to replace a directory that already
+identifies itself as a complete Graft OKF bundle.
+
+Use `classes` to publish a deliberate subset:
+
+```{r selected-classes, eval = FALSE}
+kg_export_okf(
+  store,
+  "knowledge/market-radar",
+  classes = c("Business", "Assessment", "Source")
+)
+```
+
+References to records outside that selection remain visible as stable
+identifiers rather than becoming broken promises about included content.
+
+## Reproduce a historical boundary
+
+`as_of` accepts a committed batch identifier or a scalar `POSIXt` value:
+
+```{r historical, eval = FALSE}
+quarter_close <- kg_export_okf(
+  store,
+  "knowledge/2026-q2-close",
+  as_of = "batch-2026-q2-close"
+)
+
+morning_view <- kg_export_okf(
+  store,
+  "knowledge/2026-07-28-morning",
+  as_of = as.POSIXct("2026-07-28 08:00:00", tz = "UTC")
+)
+```
+
+Graft reconstructs each record from the last accepted revision at that
+boundary. It also uses the historical manifest that governed that revision,
+so fields marked sensitive at that time remain excluded from the projection.
+
+## Preserve identity, evidence, and relationships
+
+Every concept has standard OKF frontmatter and a namespaced `graft` extension.
+The extension records:
+
+- stable record and class identity;
+- revision number and content digest;
+- committed batch and source-run identity; and
+- the exact schema build digest.
+
+The readable Markdown body follows the domain contract:
+
+- label slots become titles;
+- statement or descriptive text becomes the primary narrative;
+- non-sensitive scalar fields become a details table;
+- object references to included records become Markdown links; and
+- direct source references and statement evidence become OKF `sources` and
+  footnotes.
+
+Graft maps common lifecycle values to OKF's `draft`, `stable`, and
+`deprecated` statuses. Batch producer and commit time become generation
+provenance. The export does not invent human verification: approval remains
+captured by the accepted Graft revision and its host workflow.
+
+## Hand the bundle to Tempest
+
+Tempest can read any conformant OKF bundle, including a Graft projection:
+
+```{r tempest-handoff, eval = FALSE}
+library(tempest)
+
+knowledge <- tempest_read_okf("knowledge/okf")
+tempest_okf_concepts(knowledge)
+
+resources <- tempest_okf_resources(
+  knowledge,
+  include_stale = FALSE
+)
+
+evidence <- SourceStore$new()
+invisible(lapply(resources, evidence$upsert_resource))
+
+context <- tempest_okf_context(
+  knowledge,
+  types = c("Assessment", "Business"),
+  include_stale = FALSE,
+  max_concepts = 25,
+  max_chars = 50000
+)
+```
+
+Reading is intentionally separate from adding resources to a `SourceStore`.
+This keeps the mutation visible to the host. The bounded context starts with a
+trust notice and cannot grant tools, change workflow policy, approve an
+artifact, or authorize an external action.
+
+## Keep the authority boundary explicit
+
+An OKF bundle is useful evidence, not ambient authority:
+
+| Operation | Authority |
+|---|---|
+| Read Markdown and inspect metadata | OKF consumer |
+| Decide which concepts enter a workflow | Host application |
+| Grant model tools or authenticated connections | Tempest runtime and host policy |
+| Approve a generated interpretation or action | Human or explicit host policy |
+| Commit accepted knowledge | Graft write path |
+
+This separation lets an agent carry organizational context without turning
+documents into executable instructions. Even OKF Attested Computation
+documents remain descriptions in Tempest; referenced code is never executed
+by the reader.
+
+Continue with [Govern knowledge changes](knowledge-change-control.html) for
+revision history and schema evolution, or [Build a governed materials market
+radar](market-intelligence.html) for an approval-gated application that can
+publish its accepted state.
