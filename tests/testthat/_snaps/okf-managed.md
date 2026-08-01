@@ -37,3 +37,4 @@
     Condition
       Error in `kg_plan_okf_import()`:
       ! Removing OKF concept files is not supported; restore 1 accepted concept(s) before planning.
+
