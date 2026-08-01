@@ -1119,9 +1119,7 @@ okf_bundle_digest <- function(path) {
           warn = FALSE,
           encoding = "UTF-8"
         )
-        lines <- lines[
-          !grepl("^[[:space:]]+bundle_digest:", lines)
-        ]
+        lines <- okf_index_digest_lines(lines)
         digest::digest(
           paste0(paste(lines, collapse = "\n"), "\n"),
           algo = "sha256",
@@ -1151,6 +1149,44 @@ okf_bundle_digest <- function(path) {
       serialize = FALSE
     )
   )
+}
+
+okf_index_digest_lines <- function(lines) {
+  delimiters <- which(lines == "---")
+  if (length(delimiters) < 2L) {
+    return(lines)
+  }
+  frontmatter <- seq_len(delimiters[[2L]] - 1L)
+  graft_line <- frontmatter[lines[frontmatter] == "graft:"]
+  if (length(graft_line) != 1L) {
+    return(lines)
+  }
+  block_start <- graft_line + 1L
+  block_end <- delimiters[[2L]] - 1L
+  if (block_start > block_end) {
+    return(lines)
+  }
+  block <- seq.int(block_start, block_end)
+  top_level <- which(grepl("^[^[:space:]#]", lines[block]))
+  if (length(top_level) > 0L) {
+    block <- utils::head(block, top_level[[1L]] - 1L)
+  }
+  direct <- block[grepl("^[[:space:]]+[^[:space:]#]", lines[block])]
+  if (length(direct) == 0L) {
+    return(lines)
+  }
+  indentation <- nchar(
+    sub("^([[:space:]]*).*", "\\1", lines[direct]),
+    type = "chars"
+  )
+  direct <- direct[indentation == min(indentation)]
+  bundle_digest <- direct[
+    grepl("^[[:space:]]+bundle_digest[[:space:]]*:", lines[direct])
+  ]
+  if (length(bundle_digest) != 1L) {
+    return(lines)
+  }
+  lines[-bundle_digest]
 }
 
 okf_bundle_entries <- function(path, include_directories = FALSE) {

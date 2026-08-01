@@ -76,6 +76,30 @@ test_that("synchronization exposes current, modified, and stale states", {
   expect_snapshot(error = TRUE, kg_okf_context(fixture$store))
 })
 
+test_that("bundle digests exclude only the self-digest frontmatter field", {
+  fixture <- local_okf_store()
+  bundle <- kg_sync_okf(fixture$store)
+  index_path <- file.path(bundle$path, "index.md")
+  frontmatter <- graft:::okf_parse_frontmatter(index_path)
+  original <- graft:::okf_bundle_digest(bundle$path)
+
+  replace_okf_line(
+    index_path,
+    frontmatter$graft$bundle_digest,
+    "sha256:changed-self-digest"
+  )
+  expect_identical(graft:::okf_bundle_digest(bundle$path), original)
+
+  lines <- readLines(index_path, warn = FALSE, encoding = "UTF-8")
+  writeLines(
+    c(lines, "", "  bundle_digest: body evidence"),
+    index_path,
+    useBytes = TRUE
+  )
+  body_digest <- graft:::okf_bundle_digest(bundle$path)
+  expect_length(unique(c(original, body_digest)), 2L)
+})
+
 test_that("status safely rejects unrelated bundle metadata", {
   fixture <- local_okf_store()
   directory <- withr::local_tempdir()
