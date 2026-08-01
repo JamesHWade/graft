@@ -394,17 +394,46 @@ okf_concept_files <- function(path) {
   files[!basename(files) %in% c("index.md", "log.md")]
 }
 
-okf_document_body <- function(path) {
-  lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
-  delimiters <- which(lines == "---")
-  if (length(delimiters) < 2L) {
-    return("")
+okf_document_body <- function(path, max_chars = NULL) {
+  connection <- file(path, open = "r", encoding = "UTF-8")
+  on.exit(close(connection), add = TRUE)
+  delimiters <- 0L
+  while (delimiters < 2L) {
+    line <- readLines(connection, n = 1L, warn = FALSE)
+    if (length(line) == 0L) {
+      return("")
+    }
+    if (identical(line, "---")) {
+      delimiters <- delimiters + 1L
+    }
   }
-  start <- delimiters[[2L]] + 1L
-  if (start > length(lines)) {
-    return("")
+  if (is.null(max_chars)) {
+    return(paste(readLines(connection, warn = FALSE), collapse = "\n"))
   }
-  paste(lines[seq.int(start, length(lines))], collapse = "\n")
+
+  pieces <- character()
+  used <- 0L
+  truncated <- FALSE
+  repeat {
+    line <- readLines(connection, n = 1L, warn = FALSE)
+    if (length(line) == 0L) {
+      break
+    }
+    piece <- if (length(pieces) == 0L) line else paste0("\n", line)
+    remaining <- max_chars - used
+    if (nchar(piece, type = "chars") > remaining) {
+      pieces[[length(pieces) + 1L]] <- substr(
+        piece,
+        1L,
+        max(remaining, 0L)
+      )
+      truncated <- TRUE
+      break
+    }
+    pieces[[length(pieces) + 1L]] <- piece
+    used <- used + nchar(piece, type = "chars")
+  }
+  structure(paste0(pieces, collapse = ""), truncated = truncated)
 }
 
 okf_snapshot_bundle <- function(path) {
@@ -633,7 +662,6 @@ kg_okf_context <- function(
     "## Concepts",
     ""
   )
-  documents_truncated <- FALSE
   if (length(concepts) == 0L) {
     lines <- c(lines, "No matching concepts.")
   } else {
@@ -659,34 +687,43 @@ kg_okf_context <- function(
       character(1)
     )
     lines <- c(lines, entries)
-    if (include_documents) {
-      rendered_chars <- nchar(paste(lines, collapse = "\n"), type = "chars")
-      for (concept in concepts) {
-        if (rendered_chars >= max_chars) {
-          documents_truncated <- TRUE
-          break
-        }
-        lines <- c(
-          lines,
-          "",
-          paste0("## ", concept$title, " (`", concept$type, "`)"),
-          "",
-          substr(
-            okf_document_body(concept$source_path),
-            1L,
-            max_chars
-          )
-        )
-        rendered_chars <- nchar(
-          paste(lines, collapse = "\n"),
-          type = "chars"
-        )
+  }
+  text <- paste(lines, collapse = "\n")
+  rendered_chars <- nchar(text, type = "chars")
+  char_truncated <- rendered_chars > max_chars
+  if (include_documents && !char_truncated) {
+    for (index in seq_along(concepts)) {
+      concept <- concepts[[index]]
+      prefix <- paste0(
+        "\n\n## ",
+        concept$title,
+        " (`",
+        concept$type,
+        "`)\n\n"
+      )
+      remaining <- max_chars - rendered_chars
+      prefix_chars <- nchar(prefix, type = "chars")
+      if (prefix_chars > remaining) {
+        text <- paste0(text, substr(prefix, 1L, max(remaining, 0L)))
+        char_truncated <- TRUE
+        break
+      }
+      text <- paste0(text, prefix)
+      rendered_chars <- rendered_chars + prefix_chars
+
+      body <- okf_document_body(
+        concept$source_path,
+        max_chars = max_chars - rendered_chars
+      )
+      body_chars <- nchar(body, type = "chars")
+      text <- paste0(text, body)
+      rendered_chars <- rendered_chars + body_chars
+      if (isTRUE(attr(body, "truncated"))) {
+        char_truncated <- TRUE
+        break
       }
     }
   }
-  text <- paste(lines, collapse = "\n")
-  char_truncated <- documents_truncated ||
-    nchar(text, type = "chars") > max_chars
   if (char_truncated) {
     notice <- "\n\n[OKF context truncated at the character limit.]"
     available <- max_chars - nchar(notice, type = "chars")

@@ -120,9 +120,10 @@ the same kind of thing:
 
 ## Create a store
 
-For exploration, use an in-memory DuckDB database. A durable file-backed store
-manages a sibling OKF path by default: `knowledge.duckdb` is paired with
-`knowledge.okf`.
+The executable example below deliberately uses an in-memory DuckDB database,
+so it does not create a managed OKF directory. In a durable workflow, pass a
+file path instead; file-backed stores manage a sibling OKF path by default, so
+`knowledge.duckdb` is paired with `knowledge.okf`.
 
 ```{r create-store}
 store <- kg_connect_duckdb(schema, ":memory:")

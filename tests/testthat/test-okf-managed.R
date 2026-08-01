@@ -139,7 +139,7 @@ test_that("OKF read snapshots are stable after the working tree changes", {
 
 test_that("OKF context uses progressive disclosure for accepted knowledge", {
   fixture <- local_okf_store()
-  kg_sync_okf(fixture$store)
+  bundle <- kg_sync_okf(fixture$store)
 
   index <- kg_okf_context(fixture$store, limit = 3)
   documents <- kg_okf_context(
@@ -172,9 +172,18 @@ test_that("OKF context uses progressive disclosure for accepted knowledge", {
     20L * 1024L^2
   )
 
+  entity <- okf_fixture_concept(
+    bundle,
+    "Entity",
+    fixture$records$Entity$id
+  )
+  bounded_body <- graft:::okf_document_body(entity, max_chars = 25L)
+  expect_lte(nchar(bounded_body, type = "chars"), 25L)
+  expect_identical(attr(bounded_body, "truncated"), TRUE)
+
   body_reads <- 0L
   local_mocked_bindings(
-    okf_document_body = function(path) {
+    okf_document_body = function(path, max_chars = NULL) {
       body_reads <<- body_reads + 1L
       strrep("x", 1000L)
     }
