@@ -6,8 +6,9 @@ Authors@R:
 Description: Turns records produced by R workflows into consistent, traceable
     knowledge. A LinkML-derived runtime contract reconciles identity across
     runs, validates related records, preserves claims with source evidence, and
-    governs bounded retrieval. Stores use embedded DuckDB and remain available
-    through DBI and dbplyr.
+    governs bounded retrieval. A managed Open Knowledge Format working tree
+    keeps accepted knowledge readable by people, agents, Git, and other tools.
+    Stores use embedded DuckDB and remain available through DBI and dbplyr.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

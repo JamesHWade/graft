@@ -1,11 +1,11 @@
 ---
-title: "Share accepted knowledge with OKF"
+title: "Work with open knowledge by default"
 description: >
-  Publish current or historical Graft revisions as portable, source-linked
-  Markdown for agents, Git, and documentation tools.
+  Use a managed, human- and agent-readable OKF working tree without giving up
+  Graft's schema validation, accepted history, or approval boundary.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Share accepted knowledge with OKF}
+  %\VignetteIndexEntry{Work with open knowledge by default}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,120 +17,285 @@ knitr::opts_chunk$set(
 )
 ```
 
-Graft and the [Open Knowledge
+Graft is OKF-first and Graft-backed.
+
+People and agents should not need a database client to understand accepted
+knowledge. They should be able to open a Markdown file, follow links, inspect
+provenance, and review a Git diff. The [Open Knowledge
 Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-(OKF) solve different problems. Graft validates writes against a compiled
-domain contract and preserves every accepted revision. OKF packages selected
-knowledge as plain Markdown and YAML that people, agents, Git, and
-documentation tools can inspect.
+(OKF) provides that working surface.
 
-`kg_export_okf()` connects those layers without confusing them:
+Readable files are not enough to govern writes. Each layer has one job:
 
-| Layer | Governs | Primary representation |
-|---|---|---|
-| LinkML | Domain classes, slots, ranges, identity, and sensitivity | Source schema |
-| Graft | Executable validation, accepted state, revisions, and retrieval | `.graft.json` manifest and DuckDB |
-| OKF | Portable reading, navigation, provenance, and exchange | Markdown directory |
+- **OKF is the working surface.** Markdown and YAML support reading,
+  navigation, proposals, Git review, and exchange.
+- **LinkML is the domain contract.** The source schema defines classes, slots,
+  ranges, identity, and sensitivity.
+- **Graft is the accepted ledger.** The compiled `.graft.json` manifest and
+  DuckDB enforce validation, accepted state, revisions, and retrieval.
 
-The LinkML-derived manifest remains authoritative for writes. An OKF bundle is
-a projection of an accepted boundary, not a second writable database.
+The OKF directory is the working tree. Graft is the ledger.
 
-## Export current accepted state
+```{r okf-system}
+#| echo: false
+#| out.width: "100%"
+#| fig.align: center
+#| fig.class: "graft-architecture-visual"
+#| fig.cap: "Graft gives each representation one job."
+#| fig.alt: >
+#|   Architecture diagram with Graft at the center. LinkML feeds a compiled
+#|   domain contract into Graft; OKF connects as the Markdown and YAML working
+#|   surface; and DuckDB connects as the accepted revision ledger. People and
+#|   agents read and propose through OKF, while Graft alone validates and
+#|   commits accepted state to DuckDB.
+knitr::include_graphics("../man/figures/okf-linkml-duckdb-system.svg")
+```
 
-Pass an initialized store and a destination directory:
+## Use the managed working tree
 
-```{r current, eval = FALSE}
+A file-backed store manages a sibling OKF directory by default:
+
+```{r managed-store, eval = FALSE}
 library(graft)
 
-bundle <- kg_export_okf(
-  store,
-  "knowledge/okf",
-  limit = 5000
+schema <- kg_schema("knowledge.graft.json")
+store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+kg_init(store)
+```
+
+This pairs `knowledge.duckdb` with `knowledge.okf`. Connecting does not create
+or change the directory. Synchronize only after the store contains the
+accepted boundary you want to publish:
+
+```{r synchronize, eval = FALSE}
+kg_okf_status(store)
+
+bundle <- kg_sync_okf(store)
+bundle
+
+kg_okf_status(store)
+```
+
+`kg_sync_okf()` stages and validates the complete bundle before atomically
+installing it. It replaces only a directory that identifies itself as a
+Graft-produced bundle. It never replaces an unrelated directory or writes a
+partial result after exceeding the concept limit.
+
+Synchronization is deliberately separate from `kg_ingest()`. Accepted
+database writes remain unambiguous even when a filesystem is unavailable,
+read-only, or shared by another process.
+
+Use `okf_path` to choose a different managed directory, or opt out:
+
+```{r configure, eval = FALSE}
+store <- kg_connect_duckdb(
+  schema,
+  "knowledge.duckdb",
+  okf_path = "knowledge/open"
 )
 
-bundle
+database_only <- kg_connect_duckdb(
+  schema,
+  "knowledge.duckdb",
+  okf = "disabled"
+)
 ```
 
-The result reports the directory, OKF and Graft profile versions, concept
-count, exported classes, schema digest, and accepted time boundary. The
-directory contains:
+An explicit path passed to `kg_sync_okf()` also configures that directory as
+the store's managed working tree. This is useful for an in-memory store used in
+a test or temporary analysis.
 
-```text
-knowledge/okf/
-├── index.md
-└── concepts/
-    ├── index.md
-    ├── Assessment/
-    │   ├── index.md
-    │   └── market%3Aresin-demand.md
-    └── Source/
-        ├── index.md
-        └── source%3Aquarterly-results.md
+## Make drift visible
+
+`kg_okf_status()` is read-only. It reports one of six states:
+
+- **`unconfigured`:** the store has no managed path. Supply one or use a
+  file-backed store.
+- **`missing`:** the path is configured but no bundle exists. Run
+  `kg_sync_okf()`.
+- **`current`:** bundle digest, schema, and accepted batch match. Read or share
+  it.
+- **`stale`:** Graft accepted a later batch. Synchronize again.
+- **`modified`:** files differ from the accepted projection. Review an import
+  plan or discard the edits by synchronizing.
+- **`incompatible`:** directory or schema metadata does not match. Inspect it
+  before replacing anything.
+
+The bundle digest covers root and child indexes as well as concept documents.
+Graft therefore notices changes to navigation and prose, not only edits to
+frontmatter.
+
+## Give agents progressive access
+
+`kg_okf_context()` starts with an index instead of dumping the corpus:
+
+```{r agent-index, eval = FALSE}
+kg_okf_context(store)
 ```
 
-Exports are deterministic for the same accepted state. Graft stages and
-validates the complete bundle before installing it. It refuses to write a
-partial result when `limit` is exceeded and refuses to replace an unrelated
-directory. Set `overwrite = TRUE` only to replace a directory that already
-identifies itself as a complete Graft OKF bundle.
+Add a query or type restriction to include matching Markdown documents:
 
-Use `classes` to publish a deliberate subset:
+```{r agent-documents, eval = FALSE}
+kg_okf_context(
+  store,
+  query = "resin demand",
+  types = c("Assessment", "Business"),
+  limit = 25,
+  max_chars = 50000
+)
+```
+
+The function refuses a stale, modified, or incompatible bundle. Those files
+may be useful proposals, but they are not current accepted knowledge.
+Each call reads a verified filesystem snapshot, keeps only matching metadata
+and selected documents in memory, and refuses bundles above the 20 MiB
+agent-context input limit.
+
+`kg_tools()` includes the same progressive surface as the read-only
+`kg_open_knowledge` ellmer tool. The model cannot supply a path or bypass the
+managed bundle:
+
+```{r ellmer, eval = FALSE}
+chat <- ellmer::chat_anthropic()
+chat$set_tools(kg_tools(store))
+```
+
+Every context begins with a trust notice. Document content is evidence, not an
+instruction to use a tool, change policy, reveal credentials, or perform an
+external action.
+
+```{r okf-read-write-paths}
+#| echo: false
+#| out.width: "100%"
+#| fig.align: center
+#| fig.class: "graft-architecture-visual"
+#| fig.cap: "Reading accepted context is deliberately easier than changing accepted state."
+#| fig.alt: >
+#|   Two-lane sequence diagram contrasting read and write paths. The read lane
+#|   verifies a current OKF snapshot and returns bounded accepted evidence
+#|   without mutation. The write lane treats a file edit as a proposal,
+#|   validates it against LinkML, requires approval of the exact plan, commits
+#|   through Graft into DuckDB, and then resynchronizes OKF.
+knitr::include_graphics("../man/figures/okf-agent-read-write-paths.svg")
+```
+
+## Review edits as proposals
+
+Every concept contains readable Markdown and a namespaced `graft` extension.
+The extension preserves:
+
+- stable record and class identity;
+- revision, batch, and schema identity;
+- ledger and public-content digests; and
+- a structured, sensitivity-filtered `graft.record` mapping.
+
+The Markdown body is a generated reading view. Edit `graft.record` when a
+change should be proposed back to Graft. Then create a plan:
+
+```{r plan-import, eval = FALSE}
+plan <- kg_plan_okf_import(store)
+plan
+plan$changes
+```
+
+Planning is read-only. Graft:
+
+1. creates a stable snapshot of a complete managed bundle;
+2. verifies that its schema and accepted batch are current;
+3. compares each proposal with the exact accepted public-content digest;
+4. rejects missing concept files rather than interpreting them as deletion;
+5. validates inserts and updates against the active manifest; and
+6. binds the plan to the store, schema, batch, and edited bundle digest.
+
+Nothing is committed until a human or explicit host policy approves that exact
+plan:
+
+```{r apply-import, eval = FALSE}
+result <- kg_apply_okf_import(
+  store,
+  plan,
+  kg_batch(
+    producer = "human:reviewer",
+    source_run_id = "okf-review-2026-07-29",
+    idempotency_key = "approved-okf-edit-1"
+  )
+)
+```
+
+Application revalidates every precondition before calling `kg_ingest()`. A
+changed plan, changed bundle, newer accepted batch, different store, or
+different schema is rejected. After a successful commit, Graft regenerates
+the working tree from accepted state.
+
+This is the approval boundary: editing a file proposes knowledge; applying a
+reviewed plan accepts it.
+
+```{r okf-acceptance-loop}
+#| echo: false
+#| out.width: "100%"
+#| fig.align: center
+#| fig.class: "graft-architecture-visual"
+#| fig.cap: "An OKF edit becomes knowledge only after validation and approval."
+#| fig.alt: >
+#|   Circular workflow diagram. Accepted DuckDB revisions synchronize to a
+#|   current OKF tree; edits become proposals; and Graft snapshots, compares,
+#|   and validates them against LinkML. Human or host-policy approval gates the
+#|   commit. Rejected proposals remain outside the ledger, while accepted
+#|   plans commit through Graft and regenerate OKF.
+knitr::include_graphics("../man/figures/okf-acceptance-loop.svg")
+```
+
+## Publish selected or historical snapshots
+
+`kg_export_okf()` remains available when the destination is not the managed
+working tree. Use it for a selected exchange bundle:
 
 ```{r selected-classes, eval = FALSE}
 kg_export_okf(
   store,
-  "knowledge/market-radar",
+  "exports/market-radar",
   classes = c("Business", "Assessment", "Source")
 )
 ```
 
 References to records outside that selection remain visible as stable
-identifiers rather than becoming broken promises about included content.
+identifiers. Selected bundles are intentionally not importable as complete
+working trees.
 
-## Reproduce a historical boundary
-
-`as_of` accepts a committed batch identifier or a scalar `POSIXt` value:
+Use `as_of` to reproduce the accepted state at a committed batch or time:
 
 ```{r historical, eval = FALSE}
 quarter_close <- kg_export_okf(
   store,
-  "knowledge/2026-q2-close",
+  "exports/2026-q2-close",
   as_of = "batch-2026-q2-close"
 )
 
 morning_view <- kg_export_okf(
   store,
-  "knowledge/2026-07-28-morning",
+  "exports/2026-07-28-morning",
   as_of = as.POSIXct("2026-07-28 08:00:00", tz = "UTC")
 )
 ```
 
-Graft reconstructs each record from the last accepted revision at that
-boundary. It also uses the historical manifest that governed that revision,
-so fields marked sensitive at that time remain excluded from the projection.
+Graft reconstructs each record from its last accepted revision at that
+boundary. It uses the historical manifest that governed the revision, so
+fields marked sensitive at that time remain excluded.
 
-## Preserve identity, evidence, and relationships
+## Preserve evidence and relationships
 
-Every concept has standard OKF frontmatter and a namespaced `graft` extension.
-The extension records:
-
-- stable record and class identity;
-- revision number and content digest;
-- committed batch and source-run identity; and
-- the exact schema build digest.
-
-The readable Markdown body follows the domain contract:
+The readable projection follows the domain contract:
 
 - label slots become titles;
 - statement or descriptive text becomes the primary narrative;
 - non-sensitive scalar fields become a details table;
 - object references to included records become Markdown links; and
-- direct source references and statement evidence become OKF `sources` and
+- source references and statement evidence become OKF `sources` and
   footnotes.
 
 Graft maps common lifecycle values to OKF's `draft`, `stable`, and
 `deprecated` statuses. Batch producer and commit time become generation
-provenance. The export does not invent human verification: approval remains
+provenance. Export does not invent human verification: approval remains
 captured by the accepted Graft revision and its host workflow.
 
 ## Hand the bundle to Tempest
@@ -140,7 +305,7 @@ Tempest can read any conformant OKF bundle, including a Graft projection:
 ```{r tempest-handoff, eval = FALSE}
 library(tempest)
 
-knowledge <- tempest_read_okf("knowledge/okf")
+knowledge <- tempest_read_okf("knowledge.okf")
 tempest_okf_concepts(knowledge)
 
 resources <- tempest_okf_resources(
@@ -160,29 +325,24 @@ context <- tempest_okf_context(
 )
 ```
 
-Reading is intentionally separate from adding resources to a `SourceStore`.
-This keeps the mutation visible to the host. The bounded context starts with a
-trust notice and cannot grant tools, change workflow policy, approve an
-artifact, or authorize an external action.
+Reading remains separate from adding resources to a `SourceStore`. The host
+retains control over mutations, model tools, approval, and side effects.
 
-## Keep the authority boundary explicit
-
-An OKF bundle is useful evidence, not ambient authority:
+## Keep authority explicit
 
 | Operation | Authority |
 |---|---|
 | Read Markdown and inspect metadata | OKF consumer |
-| Decide which concepts enter a workflow | Host application |
-| Grant model tools or authenticated connections | Tempest runtime and host policy |
-| Approve a generated interpretation or action | Human or explicit host policy |
+| Propose a structured record edit | Person or agent editing OKF |
+| Validate and plan the proposal | Graft |
+| Approve the exact plan | Human or explicit host policy |
 | Commit accepted knowledge | Graft write path |
+| Grant tools or authenticated connections | Tempest runtime and host policy |
 
-This separation lets an agent carry organizational context without turning
-documents into executable instructions. Even OKF Attested Computation
-documents remain descriptions in Tempest; referenced code is never executed
-by the reader.
+Even an OKF Attested Computation remains descriptive context. Graft and
+Tempest do not execute referenced code merely because a document points to it.
 
 Continue with [Govern knowledge changes](knowledge-change-control.html) for
 revision history and schema evolution, or [Build a governed materials market
-radar](market-intelligence.html) for an approval-gated application that can
-publish its accepted state.
+radar](market-intelligence.html) for an application whose approved knowledge
+changes a later decision.

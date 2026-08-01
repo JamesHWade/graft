@@ -43,6 +43,14 @@ test_that("kg_export_okf writes a deterministic source-linked bundle", {
   expect_identical(frontmatter$status, "stable")
   expect_identical(frontmatter$generated$by, "tempest/0.9.0")
   expect_identical(frontmatter$graft$record_id, fixture$ids$claim_branching)
+  expect_identical(
+    frontmatter$graft$record$statement_text,
+    "Increasing short-chain branching generally lowers LLDPE crystallinity."
+  )
+  expect_match(
+    frontmatter$graft$public_content_digest,
+    "^sha256:"
+  )
   expect_length(frontmatter$sources, 2L)
   expect_in(
     "https://example.org/lldpe/review",

@@ -389,6 +389,26 @@ pre {
   box-shadow: 0 6px 18px rgba(18, 54, 45, 0.04);
 }
 
+.figure:has(.graft-architecture-visual) {
+  width: 100%;
+  margin: 1.5rem 0 2.25rem;
+}
+
+.graft-architecture-visual {
+  display: block;
+  width: 100% !important;
+  height: auto;
+}
+
+.figure:has(.graft-architecture-visual) .caption {
+  max-width: 62ch;
+  margin: 0.65rem auto 0;
+  color: var(--graft-slate);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 code {
   border-radius: 0.28rem;
 }
@@ -433,6 +453,35 @@ footer {
 
   .graft-flow-step::after {
     display: none;
+  }
+
+  .figure:has(.graft-architecture-visual) {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .figure:has(.graft-architecture-visual)::before {
+    position: sticky;
+    left: 0;
+    display: block;
+    width: max-content;
+    margin-bottom: 0.55rem;
+    color: var(--graft-slate);
+    content: "Swipe to explore the diagram →";
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .graft-architecture-visual {
+    width: 44rem !important;
+    max-width: none;
+  }
+
+  .figure:has(.graft-architecture-visual) .caption {
+    position: sticky;
+    left: 0;
+    width: 100%;
   }
 }
 

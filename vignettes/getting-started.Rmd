@@ -47,7 +47,7 @@ and then queries the result.
 
 From a package user's perspective, the main workflow is:
 
-> domain contract -> validated workflow results -> connected records -> bounded R retrieval
+> domain contract -> accepted Graft ledger -> managed OKF working tree -> bounded retrieval
 
 Each part has one job:
 
@@ -60,9 +60,11 @@ Each part has one job:
 3. **Ingest workflow results.** graft validates related data frames atomically,
    reconciles declared identifiers, and records the producer and replay
    boundary.
-4. **Retrieve records with context.** Read one class lazily with dbplyr or use
-   bounded functions to inspect records, claims, evidence, and graph
-   neighborhoods.
+4. **Synchronize open knowledge.** Materialize accepted state as readable,
+   diffable OKF Markdown for people, agents, Git, and other tools.
+5. **Retrieve records with context.** Browse OKF progressively, read one class
+   lazily with dbplyr, or use bounded functions to inspect exact records,
+   claims, evidence, and graph neighborhoods.
 
 The current backend is embedded DuckDB. That keeps stores local, portable, and
 available to familiar DBI and dbplyr workflows without making the backend the
@@ -118,8 +120,9 @@ the same kind of thing:
 
 ## Create a store
 
-For exploration, use an in-memory DuckDB database. For a durable store, replace
-`":memory:"` with a file path.
+For exploration, use an in-memory DuckDB database. A durable file-backed store
+manages a sibling OKF path by default: `knowledge.duckdb` is paired with
+`knowledge.okf`.
 
 ```{r create-store}
 store <- kg_connect_duckdb(schema, ":memory:")
@@ -322,9 +325,59 @@ kg_select(
 )
 ```
 
+## Work with open knowledge
+
+For a durable store, synchronize accepted state into its managed OKF working
+tree:
+
+```{r, eval = FALSE}
+schema <- kg_schema("my-domain.graft.json")
+store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+kg_init(store)
+
+kg_sync_okf(store)
+kg_okf_status(store)
+```
+
+Synchronization is explicit. Graft never turns a filesystem failure into an
+ambiguous database result, and a status check reports whether the bundle is
+missing, current, stale, locally modified, or incompatible.
+
+Start with a bounded index, then ask for matching documents:
+
+```{r, eval = FALSE}
+kg_okf_context(store)
+kg_okf_context(
+  store,
+  query = "polyethylene",
+  types = c("Material", "Claim")
+)
+```
+
+Edits to a concept's structured `graft.record` mapping are proposals. Planning
+is read-only; applying a reviewed plan uses the ordinary atomic ingestion path:
+
+```{r, eval = FALSE}
+plan <- kg_plan_okf_import(store)
+plan
+
+kg_apply_okf_import(
+  store,
+  plan,
+  kg_batch(
+    producer = "human:reviewer",
+    idempotency_key = "approved-okf-edit-1"
+  )
+)
+```
+
+See [Work with open knowledge by default](open-knowledge-format.html) for the
+complete synchronization, review, historical-export, and Tempest handoff
+contract.
+
 ## Use graft with ellmer
 
-If the `ellmer` package is installed, `kg_tools()` creates six read-only tools
+If the `ellmer` package is installed, `kg_tools()` creates seven read-only tools
 that capture one initialized store:
 
 ```{r, eval = FALSE}
@@ -332,9 +385,10 @@ chat <- ellmer::chat_anthropic()
 chat$set_tools(kg_tools(store))
 ```
 
-The tools call the same query functions shown above. They do not accept SQL,
-file paths, URLs, or network options. Each result reports its limit, whether it
-was truncated, and the store's schema digest.
+The tools call the same query functions shown above. `kg_open_knowledge` gives
+the model progressive access to the current accepted OKF bundle. The tools do
+not accept SQL, file paths, URLs, or network options. Each result reports its
+limit, whether it was truncated, and the store's schema digest.
 
 `kg_tools()` does not validate model output. It gives a model read-only access
 to records and evidence that are already present in the store.
@@ -395,8 +449,8 @@ dbplyr.
 
 graft does not design the LinkML schema, collect source material, provide
 vector similarity search, or replace a general-purpose graph database. It
-manages the boundary between schema-defined records and their representation
-in DuckDB.
+manages the boundary between readable open knowledge and validated, accepted,
+historical records.
 
 ```{r cleanup, include = FALSE}
 kg_disconnect(store)

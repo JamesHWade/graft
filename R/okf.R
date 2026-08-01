@@ -20,10 +20,13 @@ graft_okf_profile_version <- "1"
 #'
 #' Exports are bounded and atomic. Existing directories are never replaced
 #' unless `overwrite = TRUE` and the directory identifies itself as a
-#' Graft-produced OKF bundle.
+#' Graft-produced OKF bundle. The managed directory is reserved for a complete
+#' projection of current accepted state; selected or historical exports must
+#' use another `path`.
 #'
 #' @param store An initialized `kg_store`.
-#' @param path Destination directory. It need not already exist.
+#' @param path Destination directory. The default uses the store's managed OKF
+#'   directory. It need not already exist.
 #' @param classes Optional concrete classes to export. The default exports all
 #'   public classes in the active manifest.
 #' @param as_of Optional committed batch identifier or scalar `POSIXt` time.
@@ -41,13 +44,30 @@ graft_okf_profile_version <- "1"
 #' @export
 kg_export_okf <- function(
   store,
-  path,
+  path = NULL,
   classes = NULL,
   as_of = NULL,
   limit = 5000,
   overwrite = FALSE
 ) {
   validate_retrieval_store(store)
+  path <- okf_resolve_path(store, path)
+  if (
+    !is.null(store$okf_path) &&
+      identical(path, store$okf_path) &&
+      (!is.null(classes) || !is.null(as_of))
+  ) {
+    abort_validation_error(
+      paste(
+        "The managed OKF directory must remain a complete projection of",
+        "current accepted state. Supply a different `path` for selected or",
+        "historical exports."
+      ),
+      field = "path",
+      rule = "managed_okf_current_complete",
+      observed_value = path
+    )
+  }
   path <- okf_output_path(path)
   classes <- okf_export_classes(store, classes)
   limit <- validate_result_limit(
@@ -55,7 +75,11 @@ kg_export_okf <- function(
     hard_limit = graft_retrieval_limits$okf_concepts
   )
   overwrite <- validate_history_flag(overwrite, "overwrite")
-  boundary <- resolve_history_boundary(store, as_of)
+  boundary <- if (is.null(as_of)) {
+    okf_current_boundary(store)
+  } else {
+    resolve_history_boundary(store, as_of)
+  }
   bundle_schema <- okf_boundary_schema(store, boundary)
   snapshot <- okf_snapshot_records(store, classes, boundary, limit)
   bundle <- okf_build_bundle(
@@ -63,7 +87,8 @@ kg_export_okf <- function(
     snapshot,
     boundary,
     bundle_schema,
-    overwrite
+    overwrite,
+    classes
   )
   structure(bundle, class = "kg_okf_bundle")
 }
@@ -244,7 +269,8 @@ okf_build_bundle <- function(
   snapshot,
   boundary,
   bundle_schema,
-  overwrite
+  overwrite,
+  export_classes
 ) {
   okf_check_destination(path, overwrite)
   stage <- tempfile(
@@ -273,7 +299,13 @@ okf_build_bundle <- function(
     )
   })
   okf_write_concepts(stage, concepts)
-  okf_write_indexes(stage, bundle_schema, concepts, boundary)
+  bundle_digest <- okf_write_indexes(
+    stage,
+    bundle_schema,
+    concepts,
+    boundary,
+    export_classes
+  )
   okf_validate_staged_bundle(stage, length(concepts))
   okf_install_staged_bundle(stage, path, overwrite)
 
@@ -297,6 +329,7 @@ okf_build_bundle <- function(
     structural_digest = scalar_character(
       bundle_schema$manifest$fingerprints$structural_digest
     ),
+    bundle_digest = bundle_digest,
     as_of_batch_id = boundary$batch_id,
     as_of_committed_at = latest
   )
@@ -457,6 +490,7 @@ okf_record_frontmatter <- function(
   role <- scalar_character(contract$role, "node")
   status <- okf_record_status(record)
   stale_after <- okf_record_date(record$stale_after)
+  editable_record <- okf_editable_record(record, contract)
   tags <- unique(c(metadata$class[[1L]], if (!identical(role, "node")) role))
   frontmatter <- list(
     type = metadata$class[[1L]],
@@ -488,7 +522,9 @@ okf_record_frontmatter <- function(
       batch_id = metadata$batch_id[[1L]],
       source_run_id = okf_optional_value(metadata$source_run_id[[1L]]),
       schema_build_digest = metadata$schema_build_digest[[1L]],
-      content_digest = metadata$content_digest[[1L]]
+      content_digest = metadata$content_digest[[1L]],
+      public_content_digest = okf_public_record_digest(editable_record),
+      record = editable_record
     )
   )
   okf_compact(frontmatter)
@@ -518,6 +554,42 @@ okf_record_date <- function(value) {
 
 okf_optional_value <- function(value) {
   if (is.null(value) || length(value) == 0L || is.na(value)) NULL else value
+}
+
+okf_editable_record <- function(record, contract) {
+  fields <- setdiff(
+    names(record),
+    c("created_at", "updated_at")
+  )
+  result <- record[fields]
+  for (field in fields) {
+    slot <- contract$slots[[field]]
+    value <- result[[field]]
+    if (is.null(slot) || is.null(value)) {
+      next
+    }
+    if (inherits(value, "POSIXt")) {
+      result[[field]] <- okf_datetime(value)
+    } else if (inherits(value, "Date")) {
+      result[[field]] <- format(value, "%Y-%m-%d")
+    } else if (inherits(value, "difftime")) {
+      result[[field]] <- as.character(value)
+    } else if (scalar_logical(slot$multivalued)) {
+      result[[field]] <- unname(as.list(value))
+    }
+  }
+  okf_compact(result)
+}
+
+okf_public_record_digest <- function(record) {
+  paste0(
+    "sha256:",
+    digest::digest(
+      canonical_json(record),
+      algo = "sha256",
+      serialize = FALSE
+    )
+  )
 }
 
 okf_datetime <- function(value) {
@@ -853,7 +925,13 @@ okf_document <- function(frontmatter, body) {
   paste("---", yaml, "---", body, "", sep = "\n")
 }
 
-okf_write_indexes <- function(stage, schema, concepts, boundary) {
+okf_write_indexes <- function(
+  stage,
+  schema,
+  concepts,
+  boundary,
+  export_classes
+) {
   classes <- sort(
     unique(vapply(
       concepts,
@@ -905,6 +983,17 @@ okf_write_indexes <- function(stage, schema, concepts, boundary) {
       } else {
         okf_datetime(boundary$committed_at)
       },
+      scope = if (
+        setequal(
+          export_classes,
+          names(schema$manifest$classes)
+        )
+      ) {
+        "complete"
+      } else {
+        "selected"
+      },
+      classes = sort(export_classes, method = "radix"),
       concept_count = length(concepts)
     )
   ))
@@ -989,6 +1078,117 @@ okf_write_indexes <- function(stage, schema, concepts, boundary) {
         collapse = "\n"
       )
     )
+  }
+  bundle_digest <- okf_bundle_digest(stage)
+  index_frontmatter$graft$bundle_digest <- bundle_digest
+  okf_write_text(
+    file.path(stage, "index.md"),
+    okf_document(index_frontmatter, paste(body, collapse = "\n"))
+  )
+  bundle_digest
+}
+
+okf_bundle_digest <- function(path) {
+  root_link <- Sys.readlink(path)
+  if (!is.na(root_link) && nzchar(root_link)) {
+    abort_backend_error(
+      "Symbolic links are not supported in managed OKF bundles.",
+      operation = "okf_bundle_files",
+      path = path
+    )
+  }
+  root <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  files <- okf_bundle_entries(root, include_directories = FALSE)
+  relative <- substring(
+    normalizePath(files, winslash = "/", mustWork = TRUE),
+    nchar(root) + 2L
+  )
+  order <- order(relative, method = "radix")
+  files <- files[order]
+  relative <- relative[order]
+  entries <- vapply(
+    seq_along(files),
+    function(index) {
+      content_digest <- if (identical(relative[[index]], "index.md")) {
+        lines <- readLines(
+          files[[index]],
+          warn = FALSE,
+          encoding = "UTF-8"
+        )
+        lines <- lines[
+          !grepl("^[[:space:]]+bundle_digest:", lines)
+        ]
+        digest::digest(
+          paste0(paste(lines, collapse = "\n"), "\n"),
+          algo = "sha256",
+          serialize = FALSE
+        )
+      } else {
+        digest::digest(
+          files[[index]],
+          algo = "sha256",
+          file = TRUE,
+          serialize = FALSE
+        )
+      }
+      paste0(
+        relative[[index]],
+        "\n",
+        content_digest
+      )
+    },
+    character(1)
+  )
+  paste0(
+    "sha256:",
+    digest::digest(
+      paste(entries, collapse = "\n"),
+      algo = "sha256",
+      serialize = FALSE
+    )
+  )
+}
+
+okf_bundle_entries <- function(path, include_directories = FALSE) {
+  root_link <- Sys.readlink(path)
+  if (!is.na(root_link) && nzchar(root_link)) {
+    abort_backend_error(
+      "Symbolic links are not supported in managed OKF bundles.",
+      operation = "okf_bundle_files",
+      path = path
+    )
+  }
+  entries <- list.files(
+    path,
+    recursive = TRUE,
+    full.names = TRUE,
+    all.files = TRUE,
+    no.. = TRUE,
+    include.dirs = TRUE
+  )
+  if (length(entries) == 0L) {
+    return(character())
+  }
+  links <- Sys.readlink(entries)
+  if (any(!is.na(links) & nzchar(links))) {
+    abort_backend_error(
+      "Symbolic links are not supported in managed OKF bundles.",
+      operation = "okf_bundle_files",
+      path = entries[which(!is.na(links) & nzchar(links))[[1L]]]
+    )
+  }
+  info <- file.info(entries)
+  if (anyNA(info$isdir)) {
+    abort_backend_error(
+      "An OKF bundle entry could not be inspected.",
+      operation = "okf_bundle_files",
+      path = entries[which(is.na(info$isdir))[[1L]]]
+    )
+  }
+  if (include_directories) {
+    entries
+  } else {
+    entries[!info$isdir]
   }
 }
 
@@ -1115,6 +1315,7 @@ okf_is_graft_bundle <- function(path) {
   }
   frontmatter <- tryCatch(okf_parse_frontmatter(index), error = \(...) NULL)
   !is.null(frontmatter) &&
+    is.list(frontmatter$graft) &&
     identical(okf_default(frontmatter$graft$profile, NULL), "graft-okf")
 }
 

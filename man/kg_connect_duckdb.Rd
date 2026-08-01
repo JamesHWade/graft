@@ -8,7 +8,9 @@ kg_connect_duckdb(
   schema,
   path = ":memory:",
   read_only = FALSE,
-  connection = NULL
+  connection = NULL,
+  okf = c("managed", "disabled"),
+  okf_path = NULL
 )
 }
 \arguments{
@@ -20,6 +22,13 @@ kg_connect_duckdb(
 \item{read_only}{Whether the store must prohibit writes.}
 
 \item{connection}{An optional existing DuckDB DBI connection.}
+
+\item{okf}{Whether to manage an Open Knowledge Format working tree for the
+store. File-backed stores use \code{"managed"} by default. Use \code{"disabled"} to
+opt out.}
+
+\item{okf_path}{Optional managed OKF directory. By default, a file-backed
+\code{knowledge.duckdb} store uses the sibling \code{knowledge.okf} directory.}
 }
 \value{
 A \code{kg_store} object. Call \code{\link[=kg_init]{kg_init()}} before using a new store.

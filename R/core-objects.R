@@ -78,7 +78,9 @@ new_kg_store <- function(
   owns_connection,
   read_only,
   path,
-  capabilities
+  capabilities,
+  okf_mode,
+  okf_path
 ) {
   store <- new.env(parent = emptyenv())
   store$schema <- schema
@@ -88,6 +90,9 @@ new_kg_store <- function(
   store$path <- path
   store$closed <- FALSE
   store$capabilities <- capabilities
+  store$okf_mode <- okf_mode
+  store$okf_path <- okf_path
+  store$okf_expected <- NULL
   store$verification <- NULL
   class(store) <- "kg_store"
   store

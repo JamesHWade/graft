@@ -94,6 +94,12 @@ print.kg_store <- function(x, ...) {
   mode <- if (isTRUE(info$read_only)) "read-only" else "read-write"
   cat("<kg_store> DuckDB ", status, " (", mode, ")\n", sep = "")
   cat("  path:       ", info$path, "\n", sep = "")
+  okf <- if (identical(info$okf_mode, "disabled")) {
+    "<disabled>"
+  } else {
+    scalar_character(info$okf_path, "<path required>")
+  }
+  cat("  OKF:        ", okf, "\n", sep = "")
   cat("  structural: ", info$structural_digest, "\n", sep = "")
   invisible(x)
 }
@@ -172,6 +178,36 @@ print.kg_okf_bundle <- function(x, ...) {
   if (!is.null(x$as_of_batch_id) && !is.na(x$as_of_batch_id)) {
     cat("  as of:      ", x$as_of_batch_id, "\n", sep = "")
   }
+  invisible(x)
+}
+
+#' @export
+print.kg_okf_status <- function(x, ...) {
+  cat("<kg_okf_status> ", x$status, "\n", sep = "")
+  if (!is.null(x$path)) {
+    cat("  path:   ", x$path, "\n", sep = "")
+  }
+  cat("  reason: ", x$reason, "\n", sep = "")
+  invisible(x)
+}
+
+#' @export
+print.kg_okf_context <- function(x, ...) {
+  cat(x$text, "\n", sep = "")
+  invisible(x)
+}
+
+#' @export
+print.kg_okf_import_plan <- function(x, ...) {
+  cat("<kg_okf_import_plan> ", nrow(x$changes), " change(s)\n", sep = "")
+  if (nrow(x$changes) > 0L) {
+    counts <- table(x$changes$action)
+    for (action in names(counts)) {
+      cat("  ", action, ": ", unname(counts[[action]]), "\n", sep = "")
+    }
+  }
+  cat("  base batch: ", x$base_batch_id, "\n", sep = "")
+  cat("  digest:     ", x$plan_digest, "\n", sep = "")
   invisible(x)
 }
 

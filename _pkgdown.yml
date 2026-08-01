@@ -167,11 +167,17 @@ reference:
       - kg_context
       - kg_select
       - kg_tools
-  - title: Knowledge exchange
+  - title: Open knowledge
     desc: >
-      Project accepted revisions into a portable, human-readable exchange
-      format without replacing the governing schema or ledger.
+      Synchronize, read, review, and exchange the managed human- and
+      agent-readable OKF working tree without replacing the governing schema
+      or ledger.
   - contents:
+      - kg_sync_okf
+      - kg_okf_status
+      - kg_okf_context
+      - kg_plan_okf_import
+      - kg_apply_okf_import
       - kg_export_okf
   - title: Experimental integrations
     desc: >

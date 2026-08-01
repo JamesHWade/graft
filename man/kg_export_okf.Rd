@@ -6,7 +6,7 @@
 \usage{
 kg_export_okf(
   store,
-  path,
+  path = NULL,
   classes = NULL,
   as_of = NULL,
   limit = 5000,
@@ -16,7 +16,8 @@ kg_export_okf(
 \arguments{
 \item{store}{An initialized \code{kg_store}.}
 
-\item{path}{Destination directory. It need not already exist.}
+\item{path}{Destination directory. The default uses the store's managed OKF
+directory. It need not already exist.}
 
 \item{classes}{Optional concrete classes to export. The default exports all
 public classes in the active manifest.}
@@ -49,7 +50,9 @@ governed each exported revision.
 
 Exports are bounded and atomic. Existing directories are never replaced
 unless \code{overwrite = TRUE} and the directory identifies itself as a
-Graft-produced OKF bundle.
+Graft-produced OKF bundle. The managed directory is reserved for a complete
+projection of current accepted state; selected or historical exports must
+use another \code{path}.
 }
 \examples{
 \dontrun{
