@@ -1167,7 +1167,7 @@ okf_index_digest_lines <- function(lines) {
     return(lines)
   }
   block <- seq.int(block_start, block_end)
-  top_level <- which(grepl("^[^[:space:]#]", lines[block]))
+  top_level <- grep("^[^[:space:]#]", lines[block])
   if (length(top_level) > 0L) {
     block <- utils::head(block, top_level[[1L]] - 1L)
   }
