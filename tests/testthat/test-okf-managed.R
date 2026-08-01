@@ -90,6 +90,26 @@ test_that("deep status derives the accepted digest without writing", {
   expect_identical(status$status, "current")
 })
 
+test_that("context catalog paths use a normalized root", {
+  fixture <- local_okf_store()
+  bundle <- kg_sync_okf(fixture$store)
+  root <- normalizePath(bundle$path, winslash = "/", mustWork = TRUE)
+  files <- graft:::okf_concept_files(bundle$path)
+  expected <- substring(
+    normalizePath(files, winslash = "/", mustWork = TRUE),
+    nchar(root) + 2L
+  )
+
+  catalog <- graft:::okf_context_catalog(
+    file.path(bundle$path, "."),
+    query = NULL,
+    types = NULL
+  )
+
+  paths <- vapply(catalog, \(.x) .x$path, character(1))
+  expect_setequal(paths, expected)
+})
+
 test_that("bundle digests exclude only the self-digest frontmatter field", {
   fixture <- local_okf_store()
   bundle <- kg_sync_okf(fixture$store)

@@ -529,8 +529,10 @@ okf_assert_context_size <- function(path) {
 }
 
 okf_context_catalog <- function(path, query, types) {
+  root <- normalizePath(path, winslash = "/", mustWork = TRUE)
   concepts <- list()
   for (file in okf_concept_files(path)) {
+    source_path <- normalizePath(file, winslash = "/", mustWork = TRUE)
     frontmatter <- okf_parse_frontmatter(file)
     type <- scalar_character(frontmatter$type)
     if (!is.null(types) && !type %in% types) {
@@ -554,10 +556,10 @@ okf_context_catalog <- function(path, query, types) {
       description = description,
       record_id = scalar_character(frontmatter$graft$record_id, ""),
       path = substring(
-        normalizePath(file, winslash = "/", mustWork = TRUE),
-        nchar(path) + 2L
+        source_path,
+        nchar(root) + 2L
       ),
-      source_path = file
+      source_path = source_path
     )
   }
   if (length(concepts) == 0L) {
