@@ -9,6 +9,11 @@
 #'   `connection`, it must identify that connection's database.
 #' @param read_only Whether the store must prohibit writes.
 #' @param connection An optional existing DuckDB DBI connection.
+#' @param okf Whether to manage an Open Knowledge Format working tree for the
+#'   store. File-backed stores use `"managed"` by default. Use `"disabled"` to
+#'   opt out.
+#' @param okf_path Optional managed OKF directory. By default, a file-backed
+#'   `knowledge.duckdb` store uses the sibling `knowledge.okf` directory.
 #'
 #' @return A `kg_store` object. Call [kg_init()] before using a new store.
 #' @export
@@ -16,10 +21,13 @@ kg_connect_duckdb <- function(
   schema,
   path = ":memory:",
   read_only = FALSE,
-  connection = NULL
+  connection = NULL,
+  okf = c("managed", "disabled"),
+  okf_path = NULL
 ) {
   schema <- as_kg_schema(schema)
   validate_read_only(read_only)
+  okf <- rlang::arg_match(okf)
 
   owns_connection <- is.null(connection)
   if (owns_connection) {
@@ -51,6 +59,7 @@ kg_connect_duckdb <- function(
     path <- duckdb_connection_path(connection)
   }
 
+  okf_path <- resolve_managed_okf_path(path, okf, okf_path)
   capabilities <- new_duckdb_capabilities(
     read_only = read_only,
     owns_connection = owns_connection
@@ -61,7 +70,9 @@ kg_connect_duckdb <- function(
     owns_connection = owns_connection,
     read_only = read_only,
     path = path,
-    capabilities = capabilities
+    capabilities = capabilities,
+    okf_mode = okf,
+    okf_path = okf_path
   )
   if (owns_connection) {
     reg.finalizer(
@@ -73,6 +84,36 @@ kg_connect_duckdb <- function(
     )
   }
   store
+}
+
+resolve_managed_okf_path <- function(store_path, okf, okf_path) {
+  if (identical(okf, "disabled")) {
+    if (!is.null(okf_path)) {
+      abort_validation_error(
+        "`okf_path` cannot be supplied when `okf = \"disabled\"`.",
+        field = "okf_path",
+        rule = "disabled_okf_path",
+        observed_value = okf_path
+      )
+    }
+    return(NULL)
+  }
+  if (!is.null(okf_path)) {
+    return(okf_normalize_path(okf_path))
+  }
+  if (
+    identical(store_path, ":memory:") ||
+      identical(store_path, "<caller-supplied>")
+  ) {
+    return(NULL)
+  }
+  extension <- tools::file_ext(store_path)
+  stem <- if (nzchar(extension)) {
+    tools::file_path_sans_ext(store_path)
+  } else {
+    store_path
+  }
+  okf_normalize_path(paste0(stem, ".okf"))
 }
 
 validate_read_only <- function(read_only) {
@@ -267,8 +308,9 @@ disconnect_owned_store <- function(store, finalizer = FALSE) {
 #'
 #' @return A named list describing the connection, initialization state,
 #'   observed and required store formats, active schema fingerprints, and
-#'   revision-history coverage. `store_format_version` is `NA` when no store
-#'   metadata can be observed, including before initialization and after close.
+#'   revision-history coverage, and managed OKF configuration.
+#'   `store_format_version` is `NA` when no store metadata can be observed,
+#'   including before initialization and after close.
 #' @export
 kg_store_info <- function(store) {
   validate_kg_store(store, require_open = FALSE)
@@ -291,6 +333,8 @@ kg_store_info <- function(store) {
     path = store$path,
     read_only = store$read_only,
     owns_connection = store$owns_connection,
+    okf_mode = store$okf_mode,
+    okf_path = store$okf_path,
     closed = closed,
     initialized = initialized,
     table_count = table_count,

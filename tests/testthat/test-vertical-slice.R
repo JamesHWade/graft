@@ -211,7 +211,7 @@ test_that("actual ToolDefs execute the provider-free vertical slice", {
       "kg_select"
     )
   )
-  expect_identical(length(evaluation$tools), 6L)
+  expect_identical(length(evaluation$tools), 7L)
   for (output in outputs) {
     expect_named(
       output,

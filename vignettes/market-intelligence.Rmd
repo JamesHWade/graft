@@ -223,6 +223,29 @@ Raw source snapshots belong in an immutable source store. Deterministic facts
 may enter Graft under an explicit validation policy. Ambiguous entity matches,
 assessments, implications, and proposed actions should remain reviewable.
 
+Approved radar knowledge can be published as a source-linked OKF bundle for
+other agents and documentation tools without granting them access to the
+DuckDB store:
+
+```{r export-okf, eval = FALSE}
+kg_export_okf(
+  worker$graft,
+  "knowledge/materials-market-radar",
+  classes = c(
+    "Business",
+    "Competitor",
+    "DownstreamMarket",
+    "Assessment",
+    "Action"
+  )
+)
+```
+
+The export contains accepted revisions only. A proposed assessment remains
+absent until the operator approves the Tempest change set and the host commits
+it to Graft. Continue with [Share accepted knowledge with
+OKF](open-knowledge-format.html) for the exact mapping and Tempest handoff.
+
 The complete implementation is in the
 [market-intelligence example
 directory](https://github.com/JamesHWade/graft/tree/main/inst/examples/market-intelligence).

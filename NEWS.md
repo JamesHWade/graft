@@ -5,6 +5,7 @@
 * A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
 * Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
 * `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.
+* `kg_apply_okf_import()` revalidates and commits an approved, tamper-evident OKF import plan through Graft's ordinary atomic ingestion path, then synchronizes the managed working tree.
 * `kg_batch()` creates stable producer batches, and `kg_ingest()` atomically
   reconciles, validates, and upserts multiple record classes with identifier,
   origin, observation, and replay lineage.
@@ -14,12 +15,11 @@
   narrative and semantic assertions, stored citations, and non-adjudicated
   comparison sets while preserving qualifiers and ordinary attributes.
 * `kg_compile_schema()` compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.
-* `kg_connect_duckdb()`, `kg_init()`, and `kg_disconnect()` provide an
-  ownership-aware DuckDB store lifecycle with manifest-driven initialization
-  and structural schema protection.
+* `kg_connect_duckdb()`, `kg_init()`, and `kg_disconnect()` provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization, structural schema protection, and a managed sibling OKF directory by default for file-backed stores.
 * `kg_context()` generates a token-bounded, sensitive-field-safe description
   of the active manifest and DuckDB access constraints.
 * `kg_edges()`, `kg_nodes()`, `kg_neighbors()`, `kg_traverse()`, and `kg_subgraph()` provide lazy manifest-driven graph projections plus deterministic, explicitly collected one-hop and two-hop retrieval with hard node and edge caps.
+* `kg_export_okf()` writes a deterministic, source-linked Open Knowledge Format v0.2 projection of current or historical accepted revisions while preserving Graft schema, batch, revision, and record identity.
 * `kg_find()`, `kg_lookup()`, and `kg_identifiers()` provide bounded
   manifest-declared search and exact identifier resolution with registry
   provenance.
@@ -30,7 +30,10 @@
 * `kg_ingest_tempest_records()` commits mapped Tempest domain records with
   run- and stage-stable idempotency keys, independently of Tempest deliverable
   persistence.
+* `kg_okf_context()` gives people and agents bounded progressive disclosure over current accepted OKF knowledge and refuses stale, modified, or incompatible bundles.
+* `kg_okf_status()` reports whether a managed OKF working tree is unconfigured, missing, current, stale, locally modified, or incompatible.
 * `kg_plan_migration()` creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.
+* `kg_plan_okf_import()` creates a read-only, schema-validated proposal plan bound to the exact store, accepted batch, schema, and edited OKF bundle.
 * `kg_records()` returns lazy typed dbplyr tables for public concrete classes.
 * `kg_schema()`, `kg_classes()`, `kg_slots()`, `kg_enums()`, and
   `kg_schema_info()` load and inspect manifests without Python.
@@ -38,8 +41,8 @@
 * `kg_select()` provides a collected, hard-capped structured query surface
   with manifest validation and no arbitrary SQL.
 * `kg_store_info()` reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; `kg_capabilities()` reports static backend capabilities.
-* `kg_tools()` creates six read-only ellmer tools over bounded Graft retrieval
-  APIs, with structured results and no arbitrary SQL surface.
+* `kg_sync_okf()` atomically materializes current accepted state into the store's managed OKF working tree without replacing unrelated directories.
+* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with structured results and no arbitrary SQL surface.
 * `kg_unresolved()` returns bounded unresolved mention records.
 * `kg_validate_data()` preflights the same staged identity, shape, and
   reference checks as ingestion without mutating the store.

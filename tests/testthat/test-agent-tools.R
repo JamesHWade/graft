@@ -1,8 +1,9 @@
-test_that("kg_tools returns exactly six safe read-only ToolDefs", {
+test_that("kg_tools returns exactly seven safe read-only ToolDefs", {
   fixture <- local_retrieval_store()
   tools <- kg_tools(fixture$store)
   expected <- c(
     "kg_describe",
+    "kg_open_knowledge",
     "kg_find",
     "kg_get",
     "kg_neighbors",
@@ -11,10 +12,10 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
   )
 
   expect_named(tools, expected)
-  expect_identical(length(tools), 6L)
+  expect_identical(length(tools), 7L)
   expect_identical(
     vapply(tools, inherits, logical(1), "ellmer::ToolDef"),
-    stats::setNames(rep(TRUE, 6L), expected)
+    stats::setNames(rep(TRUE, 7L), expected)
   )
   expect_identical(
     vapply(
@@ -32,7 +33,7 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
   )
   expect_identical(
     lapply(tools, \(.x) agent_tool_prop(.x, "annotations")),
-    rep(list(expected_annotations), 6L) |>
+    rep(list(expected_annotations), 7L) |>
       stats::setNames(expected)
   )
   arguments <- lapply(
@@ -45,7 +46,7 @@ test_that("kg_tools returns exactly six safe read-only ToolDefs", {
       \(.x) agent_tool_prop(.x, "additional_properties"),
       logical(1)
     ),
-    stats::setNames(rep(FALSE, 6L), expected)
+    stats::setNames(rep(FALSE, 7L), expected)
   )
   exposed <- unique(unlist(lapply(
     arguments,
@@ -89,7 +90,17 @@ test_that("ToolDef schemas encode defaults, enums, and hard caps", {
   find <- properties$kg_find
   get <- properties$kg_get
   neighbors <- properties$kg_neighbors
+  open <- properties$kg_open_knowledge
   select <- properties$kg_select
+
+  expect_named(open, c("query", "types", "limit", "max_chars"))
+  expect_identical(agent_tool_prop(open$query, "required"), FALSE)
+  expect_identical(agent_tool_prop(open$types, "required"), FALSE)
+  expect_identical(agent_tool_prop(open$limit, "json")$maximum, 100L)
+  expect_identical(
+    agent_tool_prop(open$max_chars, "json")$maximum,
+    100000L
+  )
 
   expect_named(find, c("query", "class", "limit"))
   expect_identical(agent_tool_prop(find$query, "required"), TRUE)
@@ -187,6 +198,7 @@ test_that("ToolDef schemas encode defaults, enums, and hard caps", {
   )
 
   expect_identical(eval(formals(tools$kg_find)$limit), 20)
+  expect_identical(eval(formals(tools$kg_open_knowledge)$limit), 10)
   expect_identical(
     eval(formals(tools$kg_get)$include),
     c(
@@ -232,9 +244,14 @@ test_that("kg_select tool accepts integer and mixed numeric filter values", {
 
 test_that("ToolDefs invoke directly and return universal metadata", {
   fixture <- local_retrieval_store()
+  local_sync_okf(fixture$store)
   tools <- kg_tools(fixture$store)
   outputs <- list(
     kg_describe = tools$kg_describe(token_budget = 40),
+    kg_open_knowledge = tools$kg_open_knowledge(
+      query = "polyethylene",
+      types = "Entity"
+    ),
     kg_find = tools$kg_find(query = "polyethylene"),
     kg_get = tools$kg_get(id = fixture$ids$entity),
     kg_neighbors = tools$kg_neighbors(id = fixture$ids$entity),
@@ -257,6 +274,7 @@ test_that("ToolDefs invoke directly and return universal metadata", {
     expect_identical(is.null(output$limit), FALSE)
   }
   expect_s3_class(outputs$kg_describe$result, "kg_context")
+  expect_s3_class(outputs$kg_open_knowledge$result, "kg_okf_context")
   expect_s3_class(outputs$kg_find$result, "data.frame")
   expect_s3_class(outputs$kg_get$result, "kg_record")
   expect_s3_class(outputs$kg_neighbors$result, "kg_subgraph")
@@ -264,6 +282,14 @@ test_that("ToolDefs invoke directly and return universal metadata", {
   expect_s3_class(outputs$kg_select$result, "data.frame")
 
   expect_identical(outputs$kg_describe$limit, 40L)
+  expect_identical(
+    outputs$kg_open_knowledge$limit,
+    list(
+      concepts = 10L,
+      characters = 20000L,
+      bundle_bytes = 20L * 1024L^2
+    )
+  )
   expect_identical(outputs$kg_find$limit, 20L)
   expect_named(
     outputs$kg_get$limit,
@@ -356,6 +382,9 @@ test_that("ToolDef calls retain graft runtime validation and hard caps", {
   describe_cap <- catch_graft_ingest_condition(
     tools$kg_describe(token_budget = 10001)
   )
+  okf_cap <- catch_graft_ingest_condition(
+    tools$kg_open_knowledge(limit = 101)
+  )
 
   expect_s3_class(bad_field, "graft_validation_error")
   expect_identical(bad_field$rule, "public_scalar_field")
@@ -369,4 +398,6 @@ test_that("ToolDef calls retain graft runtime validation and hard caps", {
   expect_identical(graph_cap$hard_limit, 2000L)
   expect_s3_class(describe_cap, "graft_limit_error")
   expect_identical(describe_cap$hard_limit, 10000L)
+  expect_s3_class(okf_cap, "graft_limit_error")
+  expect_identical(okf_cap$hard_limit, 100L)
 })

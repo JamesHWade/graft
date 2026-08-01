@@ -10,10 +10,10 @@ kg_tools(store)
 \item{store}{An initialized \code{kg_store}.}
 }
 \value{
-A named list of six \code{ellmer::ToolDef} objects.
+A named list of seven \code{ellmer::ToolDef} objects.
 }
 \description{
-\code{kg_tools()} creates six read-only \code{\link[ellmer:tool]{ellmer::tool()}} definitions that capture
+\code{kg_tools()} creates seven read-only \code{\link[ellmer:tool]{ellmer::tool()}} definitions that capture
 one initialized store. The tools expose only graft's bounded retrieval
 functions; they do not accept SQL, file paths, URLs, or network options.
 }

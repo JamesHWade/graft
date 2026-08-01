@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">How OKF, LinkML, and DuckDB fit together in Graft</title>
+  <desc id="desc">Graft sits at the center. A LinkML schema compiles into its runtime contract, Open Knowledge Format provides the readable working surface for people and agents, and DuckDB holds accepted revisions and provenance.</desc>
+  <style>
+    :root {
+      --bg: #f7faf8;
+      --surface: #ffffff;
+      --surface-soft: #eef7f3;
+      --surface-warm: #fff6e8;
+      --ink: #18211e;
+      --muted: #5b6863;
+      --forest: #176b52;
+      --forest-deep: #12362d;
+      --leaf: #2f8f6b;
+      --mint: #ddf3eb;
+      --amber: #c98224;
+      --border: #cbd9d3;
+      --line: #82a99b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101916;
+        --surface: #16231f;
+        --surface-soft: #1a2b25;
+        --surface-warm: #33281b;
+        --ink: #edf7f3;
+        --muted: #aabbb4;
+        --forest: #79d6b5;
+        --forest-deep: #d9f5ea;
+        --leaf: #79d6b5;
+        --mint: #224a3e;
+        --amber: #efb661;
+        --border: #365248;
+        --line: #79a995;
+      }
+    }
+    text {
+      fill: var(--ink);
+      font-family: "Source Sans 3", "Segoe UI", sans-serif;
+    }
+    .eyebrow {
+      fill: var(--muted);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .title {
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .subtitle {
+      fill: var(--muted);
+      font-size: 20px;
+    }
+    .label {
+      font-size: 19px;
+      font-weight: 700;
+    }
+    .small {
+      fill: var(--muted);
+      font-size: 17px;
+    }
+    .mono {
+      font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .node {
+      fill: var(--surface);
+      stroke: var(--border);
+      stroke-width: 2;
+    }
+    .node-soft {
+      fill: var(--surface-soft);
+      stroke: var(--border);
+      stroke-width: 2;
+    }
+    .node-warm {
+      fill: var(--surface-warm);
+      stroke: var(--amber);
+      stroke-width: 2;
+    }
+    .connector {
+      fill: none;
+      stroke: var(--line);
+      stroke-linecap: round;
+      stroke-width: 4;
+    }
+    .connector-strong {
+      fill: none;
+      stroke: var(--forest);
+      stroke-linecap: round;
+      stroke-width: 5;
+    }
+    .pill {
+      fill: var(--mint);
+    }
+    .pill-text {
+      fill: var(--forest-deep);
+      font-size: 16px;
+      font-weight: 700;
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line)"/>
+    </marker>
+    <marker id="arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--forest)"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#12362d" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect x="12" y="12" width="1176" height="736" rx="28" fill="var(--bg)" stroke="var(--border)" stroke-width="2"/>
+
+  <text class="eyebrow" x="600" y="56" text-anchor="middle">ONE KNOWLEDGE SYSTEM · THREE DISTINCT JOBS</text>
+
+  <rect class="node-warm" x="70" y="105" width="360" height="210" rx="24"/>
+  <circle cx="122" cy="157" r="24" fill="var(--amber)" opacity="0.16"/>
+  <path d="M111 143h18l10 10v22h-28z M129 143v11h10" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linejoin="round"/>
+  <text class="eyebrow" x="158" y="151">DOMAIN CONTRACT</text>
+  <text class="title" x="105" y="207">LinkML</text>
+  <text class="subtitle" x="105" y="239">Defines meaning before storage</text>
+  <text class="small" x="105" y="273">classes · slots · identity · ranges</text>
+  <text class="small" x="105" y="298">relationships · sensitivity</text>
+
+  <rect class="node-soft" x="770" y="105" width="360" height="210" rx="24"/>
+  <circle cx="822" cy="157" r="24" fill="var(--leaf)" opacity="0.16"/>
+  <path d="M811 141h18l10 10v24h-28z M829 141v11h10 M816 161h18 M816 168h14" fill="none" stroke="var(--leaf)" stroke-width="3" stroke-linejoin="round"/>
+  <text class="eyebrow" x="858" y="151">WORKING SURFACE</text>
+  <text class="title" x="805" y="207">OKF</text>
+  <text class="subtitle" x="805" y="239">Makes knowledge legible</text>
+  <text class="small" x="805" y="273">Markdown · YAML · links · Git diffs</text>
+  <text class="small" x="805" y="298">human review · agent context</text>
+
+  <rect class="node" x="390" y="350" width="420" height="230" rx="28" filter="url(#shadow)"/>
+  <rect x="390" y="350" width="12" height="230" rx="6" fill="var(--forest)"/>
+  <text class="eyebrow" x="445" y="397">GOVERNING RUNTIME</text>
+  <text class="title" x="445" y="448">graft</text>
+  <text class="subtitle" x="445" y="480">Connects readable work to accepted state</text>
+  <rect class="pill" x="445" y="510" width="96" height="34" rx="17"/>
+  <text class="pill-text" x="493" y="533" text-anchor="middle">validate</text>
+  <rect class="pill" x="551" y="510" width="90" height="34" rx="17"/>
+  <text class="pill-text" x="596" y="533" text-anchor="middle">identify</text>
+  <rect class="pill" x="651" y="510" width="108" height="34" rx="17"/>
+  <text class="pill-text" x="705" y="533" text-anchor="middle">approve</text>
+
+  <rect class="node" x="70" y="615" width="1060" height="94" rx="24"/>
+  <ellipse cx="132" cy="650" rx="26" ry="10" fill="none" stroke="var(--forest)" stroke-width="3"/>
+  <path d="M106 650v24c0 6 12 10 26 10s26-4 26-10v-24 M106 662c0 6 12 10 26 10s26-4 26-10" fill="none" stroke="var(--forest)" stroke-width="3"/>
+  <text class="eyebrow" x="186" y="647">ACCEPTED LEDGER</text>
+  <text class="title" x="186" y="684">DuckDB</text>
+  <text class="subtitle" x="388" y="683">durable revisions · provenance · transactions · bounded queries</text>
+
+  <path class="connector" d="M430 210 C520 210 500 334 535 350" marker-end="url(#arrow)"/>
+  <rect class="pill" x="438" y="256" width="154" height="34" rx="17"/>
+  <text class="pill-text mono" x="515" y="279" text-anchor="middle">compile schema</text>
+
+  <path class="connector-strong" d="M770 210 C682 210 704 334 668 350" marker-start="url(#arrow-strong)" marker-end="url(#arrow-strong)"/>
+  <rect class="pill" x="614" y="256" width="170" height="34" rx="17"/>
+  <text class="pill-text mono" x="699" y="279" text-anchor="middle">read · propose</text>
+
+  <path class="connector-strong" d="M600 580 L600 615" marker-start="url(#arrow-strong)" marker-end="url(#arrow-strong)"/>
+  <rect class="pill" x="626" y="585" width="174" height="34" rx="17"/>
+  <text class="pill-text mono" x="713" y="608" text-anchor="middle">commit · retrieve</text>
+
+  <text class="label" x="940" y="391" text-anchor="middle">People + agents</text>
+  <text class="small" x="940" y="418" text-anchor="middle">work in readable files</text>
+  <path class="connector" d="M1080 420 C1100 390 1100 350 1080 316" marker-end="url(#arrow)"/>
+
+  <text class="label" x="213" y="414" text-anchor="middle">Applications</text>
+  <text class="small" x="213" y="441" text-anchor="middle">call bounded Graft APIs</text>
+  <path class="connector" d="M300 455 L382 455" marker-end="url(#arrow)"/>
+</svg>
