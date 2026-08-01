@@ -24,6 +24,11 @@ test_that("file stores manage a sibling OKF working tree by default", {
   withr::defer(kg_disconnect(memory))
   kg_init(memory)
   expect_identical(kg_okf_status(memory)$status, "unconfigured")
+  expect_output(
+    print(memory),
+    "OKF:        <unconfigured>",
+    fixed = TRUE
+  )
 
   disabled <- kg_connect_duckdb(schema, okf = "disabled")
   withr::defer(kg_disconnect(disabled))

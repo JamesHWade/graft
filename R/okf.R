@@ -96,7 +96,7 @@ kg_export_okf <- function(
 okf_output_path <- function(path) {
   path <- validate_scalar_text(path, "path")
   path <- path.expand(path)
-  if (!grepl("^(/|[A-Za-z]:[/\\\\])", path)) {
+  if (!okf_is_absolute_path(path)) {
     path <- file.path(getwd(), path)
   }
   parent <- dirname(path)
@@ -109,6 +109,10 @@ okf_output_path <- function(path) {
   }
   parent <- normalizePath(parent, winslash = "/", mustWork = TRUE)
   file.path(parent, basename(path))
+}
+
+okf_is_absolute_path <- function(path) {
+  startsWith(path, "\\\\") || grepl("^(/|[A-Za-z]:[/\\\\])", path)
 }
 
 okf_export_classes <- function(store, classes) {

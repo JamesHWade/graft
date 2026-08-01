@@ -97,7 +97,7 @@ print.kg_store <- function(x, ...) {
   okf <- if (identical(info$okf_mode, "disabled")) {
     "<disabled>"
   } else {
-    scalar_character(info$okf_path, "<path required>")
+    scalar_character(info$okf_path, "<unconfigured>")
   }
   cat("  OKF:        ", okf, "\n", sep = "")
   cat("  structural: ", info$structural_digest, "\n", sep = "")

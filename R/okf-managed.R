@@ -5,7 +5,7 @@ okf_import_plan_version <- "1.0.0"
 okf_normalize_path <- function(path) {
   path <- validate_scalar_text(path, "path")
   path <- path.expand(path)
-  if (!grepl("^(/|[A-Za-z]:[/\\\\])", path)) {
+  if (!okf_is_absolute_path(path)) {
     path <- file.path(getwd(), path)
   }
   parent <- dirname(path)

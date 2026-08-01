@@ -1,3 +1,16 @@
+test_that("OKF absolute paths include Windows network shares", {
+  expect_identical(graft:::okf_is_absolute_path("/tmp/bundle.okf"), TRUE)
+  expect_identical(
+    graft:::okf_is_absolute_path("C:\\exports\\bundle.okf"),
+    TRUE
+  )
+  expect_identical(
+    graft:::okf_is_absolute_path("\\\\server\\share\\bundle.okf"),
+    TRUE
+  )
+  expect_identical(graft:::okf_is_absolute_path("exports/bundle.okf"), FALSE)
+})
+
 test_that("kg_export_okf writes a deterministic source-linked bundle", {
   fixture <- local_vertical_slice_store()
   first_path <- tempfile("graft-okf-first-")
