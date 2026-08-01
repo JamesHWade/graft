@@ -621,16 +621,6 @@ kg_okf_context <- function(
   total <- length(concepts)
   concepts <- utils::head(concepts, limit)
   include_documents <- !is.null(query) || !is.null(types)
-  if (include_documents) {
-    concepts <- lapply(concepts, function(concept) {
-      concept$body <- substr(
-        okf_document_body(concept$source_path),
-        1L,
-        max_chars
-      )
-      concept
-    })
-  }
   lines <- c(
     "# Accepted Graft knowledge",
     "",
@@ -643,6 +633,7 @@ kg_okf_context <- function(
     "## Concepts",
     ""
   )
+  documents_truncated <- FALSE
   if (length(concepts) == 0L) {
     lines <- c(lines, "No matching concepts.")
   } else {
@@ -669,19 +660,33 @@ kg_okf_context <- function(
     )
     lines <- c(lines, entries)
     if (include_documents) {
+      rendered_chars <- nchar(paste(lines, collapse = "\n"), type = "chars")
       for (concept in concepts) {
+        if (rendered_chars >= max_chars) {
+          documents_truncated <- TRUE
+          break
+        }
         lines <- c(
           lines,
           "",
           paste0("## ", concept$title, " (`", concept$type, "`)"),
           "",
-          concept$body
+          substr(
+            okf_document_body(concept$source_path),
+            1L,
+            max_chars
+          )
+        )
+        rendered_chars <- nchar(
+          paste(lines, collapse = "\n"),
+          type = "chars"
         )
       }
     }
   }
   text <- paste(lines, collapse = "\n")
-  char_truncated <- nchar(text, type = "chars") > max_chars
+  char_truncated <- documents_truncated ||
+    nchar(text, type = "chars") > max_chars
   if (char_truncated) {
     notice <- "\n\n[OKF context truncated at the character limit.]"
     available <- max_chars - nchar(notice, type = "chars")

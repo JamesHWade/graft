@@ -171,6 +171,21 @@ test_that("OKF context uses progressive disclosure for accepted knowledge", {
     documents$limits$bundle_bytes,
     20L * 1024L^2
   )
+
+  body_reads <- 0L
+  local_mocked_bindings(
+    okf_document_body = function(path) {
+      body_reads <<- body_reads + 1L
+      strrep("x", 1000L)
+    }
+  )
+  bounded <- kg_okf_context(
+    fixture$store,
+    types = "Entity",
+    max_chars = 100
+  )
+  expect_identical(body_reads, 0L)
+  expect_identical(bounded$truncated, TRUE)
 })
 
 test_that("edited OKF records require a reviewed import plan", {

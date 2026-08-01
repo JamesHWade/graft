@@ -9,6 +9,15 @@ test_that("OKF absolute paths include Windows network shares", {
     TRUE
   )
   expect_identical(graft:::okf_is_absolute_path("exports/bundle.okf"), FALSE)
+
+  parent <- withr::local_tempdir()
+  expected <- file.path(
+    normalizePath(parent, winslash = "/", mustWork = TRUE),
+    "bundle.okf"
+  )
+  trailing <- paste0(expected, .Platform$file.sep)
+  expect_identical(graft:::okf_normalize_path(trailing), expected)
+  expect_identical(graft:::okf_output_path(trailing), expected)
 })
 
 test_that("kg_export_okf writes a deterministic source-linked bundle", {
