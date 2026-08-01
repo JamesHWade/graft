@@ -37,6 +37,7 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/knowledge-change-control.html">Change control</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
 <li class="active nav-item"><a class="nav-link" href="../articles/market-intelligence.html">Market radar</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/coworker.html">Coworker</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
@@ -327,6 +328,25 @@ consumer care, electrification, and data centers.</li>
 Deterministic facts may enter Graft under an explicit validation policy.
 Ambiguous entity matches, assessments, implications, and proposed
 actions should remain reviewable.</p>
+<p>Approved radar knowledge can be published as a source-linked OKF
+bundle for other agents and documentation tools without granting them
+access to the DuckDB store:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_export_okf.html">kg_export_okf</a></span><span class="op">(</span></span>
+<span>  <span class="va">worker</span><span class="op">$</span><span class="va">graft</span>,</span>
+<span>  <span class="st">"knowledge/materials-market-radar"</span>,</span>
+<span>  classes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Business"</span>,</span>
+<span>    <span class="st">"Competitor"</span>,</span>
+<span>    <span class="st">"DownstreamMarket"</span>,</span>
+<span>    <span class="st">"Assessment"</span>,</span>
+<span>    <span class="st">"Action"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The export contains accepted revisions only. A proposed assessment
+remains absent until the operator approves the Tempest change set and
+the host commits it to Graft. Continue with <a href="open-knowledge-format.html">Share accepted knowledge with OKF</a>
+for the exact mapping and Tempest handoff.</p>
 <p>The complete implementation is in the <a href="https://github.com/JamesHWade/graft/tree/main/inst/examples/market-intelligence" class="external-link">market-intelligence
 example directory</a>. Continue with <a href="coworker.html">Build a
 governed local Coworker</a> for the broader agent work-surface pattern,

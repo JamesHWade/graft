@@ -1,6 +1,6 @@
 # Create bounded ellmer tools for a graft store
 
-`kg_tools()` creates six read-only
+`kg_tools()` creates seven read-only
 [`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html)
 definitions that capture one initialized store. The tools expose only
 graft's bounded retrieval functions; they do not accept SQL, file paths,
@@ -20,7 +20,7 @@ kg_tools(store)
 
 ## Value
 
-A named list of six
+A named list of seven
 [`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/tool.html)
 objects.
 

@@ -22,6 +22,10 @@
   atomically applies an unmodified reviewed migration plan after
   revalidating its digest and store preconditions; the first migration
   version accepts only compatible and supported additive changes.
+- [`kg_apply_okf_import()`](https://jameshwade.github.io/graft/reference/kg_apply_okf_import.md)
+  revalidates and commits an approved, tamper-evident OKF import plan
+  through Graft’s ordinary atomic ingestion path, then synchronizes the
+  managed working tree.
 - [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
   creates stable producer batches, and
   [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
@@ -52,7 +56,8 @@
   and
   [`kg_disconnect()`](https://jameshwade.github.io/graft/reference/kg_disconnect.md)
   provide an ownership-aware DuckDB store lifecycle with manifest-driven
-  initialization and structural schema protection.
+  initialization, structural schema protection, and a managed sibling
+  OKF directory by default for file-backed stores.
 - [`kg_context()`](https://jameshwade.github.io/graft/reference/kg_context.md)
   generates a token-bounded, sensitive-field-safe description of the
   active manifest and DuckDB access constraints.
@@ -65,6 +70,10 @@
   provide lazy manifest-driven graph projections plus deterministic,
   explicitly collected one-hop and two-hop retrieval with hard node and
   edge caps.
+- [`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
+  writes a deterministic, source-linked Open Knowledge Format v0.2
+  projection of current or historical accepted revisions while
+  preserving Graft schema, batch, revision, and record identity.
 - [`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md),
   [`kg_lookup()`](https://jameshwade.github.io/graft/reference/kg_lookup.md),
   and
@@ -83,9 +92,19 @@
 - [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
   commits mapped Tempest domain records with run- and stage-stable
   idempotency keys, independently of Tempest deliverable persistence.
+- [`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
+  gives people and agents bounded progressive disclosure over current
+  accepted OKF knowledge and refuses stale, modified, or incompatible
+  bundles.
+- [`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
+  reports whether a managed OKF working tree is unconfigured, missing,
+  current, stale, locally modified, or incompatible.
 - [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
   creates a deterministic, serializable migration plan bound to the
   store identity, format, active schema, and exact target manifest.
+- [`kg_plan_okf_import()`](https://jameshwade.github.io/graft/reference/kg_plan_okf_import.md)
+  creates a read-only, schema-validated proposal plan bound to the exact
+  store, accepted batch, schema, and edited OKF bundle.
 - [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
   returns lazy typed dbplyr tables for public concrete classes.
 - [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md),
@@ -107,8 +126,12 @@
   details;
   [`kg_capabilities()`](https://jameshwade.github.io/graft/reference/kg_capabilities.md)
   reports static backend capabilities.
+- [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
+  atomically materializes current accepted state into the store’s
+  managed OKF working tree without replacing unrelated directories.
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-  creates six read-only ellmer tools over bounded Graft retrieval APIs,
+  creates seven read-only ellmer tools over bounded Graft retrieval
+  APIs, including progressive access to current accepted OKF knowledge,
   with structured results and no arbitrary SQL surface.
 - [`kg_unresolved()`](https://jameshwade.github.io/graft/reference/kg_unresolved.md)
   returns bounded unresolved mention records.

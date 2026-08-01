@@ -30,10 +30,14 @@ manifest_v1 <- system.file(
 )
 schema_v1 <- kg_schema(manifest_v1)
 store <- kg_connect_duckdb(schema_v1, ":memory:")
-#> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/Rtmp0m6MRx/duckdb/extensions
-#> This is removed when the R session ends, so extensions are re-downloaded each session.
-#> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpKwdb5j/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 kg_init(store)
 ```
 
@@ -138,8 +142,8 @@ kg_changes(store, record_id = initiative_id)[
 #> 1            2               2    update         status
 #> 2            1               1    insert   id, labe....
 #>                           batch_id
-#> 1 graft:01KYEYFVVXQP8ZR98JRJEWGEYP
-#> 2 graft:01KYEYFVGRR1Z70V06BN89156B
+#> 1 graft:01KYZPVNQ7QP8ZR98JRJEWGEYP
+#> 2 graft:01KYZPVNC0R1Z70V06BN89156B
 #>                                                       schema_build_digest
 #> 1 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #> 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
@@ -154,8 +158,8 @@ kg_history(store, initiative_id)[
   c("revision_number", "operation", "changed_fields", "recorded_at")
 ]
 #>   revision_number operation changed_fields         recorded_at
-#> 1               2    update         status 2026-07-26 10:10:50
-#> 2               1    insert   id, labe.... 2026-07-26 10:10:50
+#> 1               2    update         status 2026-08-01 22:24:34
+#> 2               1    insert   id, labe.... 2026-08-01 22:24:34
 ```
 
 ## Recover state at a commit boundary
@@ -231,13 +235,13 @@ operations before approval.
 
 plan <- kg_plan_migration(store, schema_v2)
 plan
-#> <kg_migration_plan> additive graft-migration-c9544218ca7fde1bdc8be846f4e51ccaef29313bd31972b2a624894e2287e402
+#> <kg_migration_plan> additive graft-migration-71fa3add988cba8752700127c1fdb85e2a43868dc53260557049dcf1ee46dd5b
 #>   from:       sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #>   to:         sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124
 #>   changes:    2
 #>   rules:      nullable_column_added, optional_slot_added
 #>   operations: 1
-#>   digest:     sha256:c9544218ca7fde1bdc8be846f4e51ccaef29313bd31972b2a624894e2287e402
+#>   digest:     sha256:71fa3add988cba8752700127c1fdb85e2a43868dc53260557049dcf1ee46dd5b
 
 plan$changes[
   c("path", "object_type", "classification", "rule")

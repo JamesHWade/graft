@@ -11,7 +11,9 @@ kg_connect_duckdb(
   schema,
   path = ":memory:",
   read_only = FALSE,
-  connection = NULL
+  connection = NULL,
+  okf = c("managed", "disabled"),
+  okf_path = NULL
 )
 ```
 
@@ -33,6 +35,17 @@ kg_connect_duckdb(
 - connection:
 
   An optional existing DuckDB DBI connection.
+
+- okf:
+
+  Whether to manage an Open Knowledge Format working tree for the store.
+  File-backed stores use `"managed"` by default. Use `"disabled"` to opt
+  out.
+
+- okf_path:
+
+  Optional managed OKF directory. By default, a file-backed
+  `knowledge.duckdb` store uses the sibling `knowledge.okf` directory.
 
 ## Value
 

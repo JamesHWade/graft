@@ -31,8 +31,8 @@ and its evidence, and then queries the result.
 
 From a package user’s perspective, the main workflow is:
 
-> domain contract -\> validated workflow results -\> connected records
-> -\> bounded R retrieval
+> domain contract -\> accepted Graft ledger -\> managed OKF working tree
+> -\> bounded retrieval
 
 Each part has one job:
 
@@ -45,9 +45,12 @@ Each part has one job:
 3.  **Ingest workflow results.** graft validates related data frames
     atomically, reconciles declared identifiers, and records the
     producer and replay boundary.
-4.  **Retrieve records with context.** Read one class lazily with dbplyr
-    or use bounded functions to inspect records, claims, evidence, and
-    graph neighborhoods.
+4.  **Synchronize open knowledge.** Materialize accepted state as
+    readable, diffable OKF Markdown for people, agents, Git, and other
+    tools.
+5.  **Retrieve records with context.** Browse OKF progressively, read
+    one class lazily with dbplyr, or use bounded functions to inspect
+    exact records, claims, evidence, and graph neighborhoods.
 
 The current backend is embedded DuckDB. That keeps stores local,
 portable, and available to familiar DBI and dbplyr workflows without
@@ -148,20 +151,28 @@ record is the same kind of thing:
 
 ## Create a store
 
-For exploration, use an in-memory DuckDB database. For a durable store,
-replace `":memory:"` with a file path.
+The executable example below deliberately uses an in-memory DuckDB
+database, so it does not create a managed OKF directory. In a durable
+workflow, pass a file path instead; file-backed stores manage a sibling
+OKF path by default, so `knowledge.duckdb` is paired with
+`knowledge.okf`.
 
 ``` r
 
 store <- kg_connect_duckdb(schema, ":memory:")
-#> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpCtBdvj/duckdb/extensions
-#> This is removed when the R session ends, so extensions are re-downloaded each session.
-#> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpkjVrcr/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 kg_init(store)
 store
 #> <kg_store> DuckDB initialized (read-write)
 #>   path:       :memory:
+#>   OKF:        <unconfigured>
 #>   structural: sha256:2f89cfc254e22a342a36ae87e438164fa714de11c712d57e5d7be25bfa00e145
 ```
 
@@ -204,7 +215,7 @@ kg_ingest(
   ),
   foundations
 )
-#> <kg_ingest_result> committed graft:01KYEYFN75R1Z70V06BN89156B
+#> <kg_ingest_result> committed graft:01KYZPVEYAR1Z70V06BN89156B
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0
@@ -256,7 +267,7 @@ kg_write(
     about = I(list(material_id))
   )
 )
-#> <kg_ingest_result> committed graft:01KYEYFP7SQ2GY08F99AMH9TQ1
+#> <kg_ingest_result> committed graft:01KYZPVFY1Q2GY08F99AMH9TQ1
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -293,7 +304,7 @@ kg_write(
     excerpt = "Crystallinity (%) for the LLDPE sample: 37."
   )
 )
-#> <kg_ingest_result> committed graft:01KYEYFQ4N92H6D99E1M5Y9W65
+#> <kg_ingest_result> committed graft:01KYZPVGT892H6D99E1M5Y9W65
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -314,9 +325,9 @@ Search is useful for discovery:
 
 kg_find(store, "LLDPE", limit = 5)
 #>                                 id    class
-#> 1 graft:01KYEYFNK878J8TW5CCRM2CHPK   Source
-#> 2 graft:01KYEYFNJXC500CHZ4PA036PQ1 Material
-#> 3 graft:01KYEYFPKNXYMNMFJVDDVKRXM5    Claim
+#> 1 graft:01KYZPVFA278J8TW5CCRM2CHPK   Source
+#> 2 graft:01KYZPVF9QC500CHZ4PA036PQ1 Material
+#> 3 graft:01KYZPVG9HXYMNMFJVDDVKRXM5    Claim
 #>                                                                          label
 #> 1                                  Controlled DSC study of LLDPE crystallinity
 #> 2                                      Linear low-density polyethylene (LLDPE)
@@ -333,7 +344,7 @@ Hydration starts from one stable ID and returns bounded related records:
 
 material <- kg_get(store, material_id)
 material
-#> <kg_record> Material graft:01KYEYFNJXC500CHZ4PA036PQ1
+#> <kg_record> Material graft:01KYZPVF9QC500CHZ4PA036PQ1
 #>   identifiers: 1
 #>   claims: 1
 #>   evidence: 1
@@ -403,7 +414,7 @@ kg_records(store, "Claim") |>
 #> # A tibble: 1 × 3
 #>   id                               statement_text                     confidence
 #>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KYEYFPKNXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95
+#> 1 graft:01KYZPVG9HXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95
 ```
 
 [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -424,18 +435,73 @@ kg_select(
   limit = 10
 )
 #>                                 id
-#> 1 graft:01KYEYFPKNXYMNMFJVDDVKRXM5
+#> 1 graft:01KYZPVG9HXYMNMFJVDDVKRXM5
 #>                                                                 statement_text
 #> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
 #>   confidence
 #> 1       0.95
 ```
 
+## Work with open knowledge
+
+For a durable store, synchronize accepted state into its managed OKF
+working tree:
+
+``` r
+
+schema <- kg_schema("my-domain.graft.json")
+store <- kg_connect_duckdb(schema, "knowledge.duckdb")
+kg_init(store)
+
+kg_sync_okf(store)
+kg_okf_status(store)
+```
+
+Synchronization is explicit. Graft never turns a filesystem failure into
+an ambiguous database result, and a status check reports whether the
+bundle is missing, current, stale, locally modified, or incompatible.
+
+Start with a bounded index, then ask for matching documents:
+
+``` r
+
+kg_okf_context(store)
+kg_okf_context(
+  store,
+  query = "polyethylene",
+  types = c("Material", "Claim")
+)
+```
+
+Edits to a concept’s structured `graft.record` mapping are proposals.
+Planning is read-only; applying a reviewed plan uses the ordinary atomic
+ingestion path:
+
+``` r
+
+plan <- kg_plan_okf_import(store)
+plan
+
+kg_apply_okf_import(
+  store,
+  plan,
+  kg_batch(
+    producer = "human:reviewer",
+    idempotency_key = "approved-okf-edit-1"
+  )
+)
+```
+
+See [Work with open knowledge by
+default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md)
+for the complete synchronization, review, historical-export, and Tempest
+handoff contract.
+
 ## Use graft with ellmer
 
 If the `ellmer` package is installed,
 [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-creates six read-only tools that capture one initialized store:
+creates seven read-only tools that capture one initialized store:
 
 ``` r
 
@@ -443,9 +509,11 @@ chat <- ellmer::chat_anthropic()
 chat$set_tools(kg_tools(store))
 ```
 
-The tools call the same query functions shown above. They do not accept
-SQL, file paths, URLs, or network options. Each result reports its
-limit, whether it was truncated, and the store’s schema digest.
+The tools call the same query functions shown above. `kg_open_knowledge`
+gives the model progressive access to the current accepted OKF bundle.
+The tools do not accept SQL, file paths, URLs, or network options. Each
+result reports its limit, whether it was truncated, and the store’s
+schema digest.
 
 [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
 does not validate model output. It gives a model read-only access to
@@ -512,5 +580,5 @@ through R, DBI, and dbplyr.
 
 graft does not design the LinkML schema, collect source material,
 provide vector similarity search, or replace a general-purpose graph
-database. It manages the boundary between schema-defined records and
-their representation in DuckDB.
+database. It manages the boundary between readable open knowledge and
+validated, accepted, historical records.

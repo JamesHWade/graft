@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">The Graft acceptance loop for Open Knowledge Format edits</title>
+  <desc id="desc">Accepted DuckDB revisions synchronize to a current OKF working tree. File edits are proposals that Graft snapshots, compares, and validates with LinkML. Only an approved exact plan commits through Graft and regenerates the working tree; rejected proposals remain outside the ledger.</desc>
+  <style>
+    :root {
+      --bg: #f7faf8;
+      --surface: #ffffff;
+      --surface-soft: #eef7f3;
+      --surface-warm: #fff6e8;
+      --ink: #18211e;
+      --muted: #5b6863;
+      --forest: #176b52;
+      --forest-deep: #12362d;
+      --leaf: #2f8f6b;
+      --mint: #ddf3eb;
+      --amber: #c98224;
+      --red: #a53f4b;
+      --border: #cbd9d3;
+      --line: #82a99b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101916;
+        --surface: #16231f;
+        --surface-soft: #1a2b25;
+        --surface-warm: #33281b;
+        --ink: #edf7f3;
+        --muted: #aabbb4;
+        --forest: #79d6b5;
+        --forest-deep: #d9f5ea;
+        --leaf: #79d6b5;
+        --mint: #224a3e;
+        --amber: #efb661;
+        --red: #e08a94;
+        --border: #365248;
+        --line: #79a995;
+      }
+    }
+    text {
+      fill: var(--ink);
+      font-family: "Source Sans 3", "Segoe UI", sans-serif;
+    }
+    .eyebrow {
+      fill: var(--muted);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .step {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .copy {
+      fill: var(--muted);
+      font-size: 17px;
+    }
+    .mono {
+      font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .box {
+      fill: var(--surface);
+      stroke: var(--border);
+      stroke-width: 2;
+    }
+    .box-soft {
+      fill: var(--surface-soft);
+      stroke: var(--forest);
+      stroke-width: 2;
+    }
+    .box-warm {
+      fill: var(--surface-warm);
+      stroke: var(--amber);
+      stroke-width: 2;
+    }
+    .line {
+      fill: none;
+      stroke: var(--line);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 4;
+    }
+    .line-strong {
+      fill: none;
+      stroke: var(--forest);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 5;
+    }
+    .line-reject {
+      fill: none;
+      stroke: var(--red);
+      stroke-linecap: round;
+      stroke-dasharray: 8 8;
+      stroke-width: 3;
+    }
+    .pill {
+      fill: var(--mint);
+    }
+    .pill-text {
+      fill: var(--forest-deep);
+      font-size: 16px;
+      font-weight: 700;
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--line)"/>
+    </marker>
+    <marker id="arrow-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--forest)"/>
+    </marker>
+    <marker id="arrow-reject" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--red)"/>
+    </marker>
+  </defs>
+
+  <rect x="12" y="12" width="1176" height="736" rx="28" fill="var(--bg)" stroke="var(--border)" stroke-width="2"/>
+  <text class="eyebrow" x="600" y="56" text-anchor="middle">THE ACCEPTANCE LOOP · FILE EDITS ARE PROPOSALS</text>
+
+  <rect class="box-soft" x="70" y="100" width="300" height="148" rx="22"/>
+  <text class="eyebrow" x="105" y="134">ACCEPTED STATE</text>
+  <text class="step" x="105" y="175">DuckDB revisions</text>
+  <text class="copy" x="105" y="204">durable · queryable · historical</text>
+  <circle cx="327" cy="139" r="20" fill="var(--forest)" opacity="0.15"/>
+  <path d="M309 139c0-5 8-9 18-9s18 4 18 9v19c0 5-8 9-18 9s-18-4-18-9z M309 139c0 5 8 9 18 9s18-4 18-9" fill="none" stroke="var(--forest)" stroke-width="3"/>
+
+  <rect class="box" x="450" y="100" width="300" height="148" rx="22"/>
+  <text class="eyebrow" x="485" y="134">CURRENT PROJECTION</text>
+  <text class="step" x="485" y="175">OKF working tree</text>
+  <text class="copy" x="485" y="204">readable · linked · diffable</text>
+  <path d="M704 126h17l10 10v26h-27z M721 126v11h10 M709 146h17 M709 153h13" fill="none" stroke="var(--leaf)" stroke-width="3"/>
+
+  <rect class="box-warm" x="830" y="100" width="300" height="148" rx="22"/>
+  <text class="eyebrow" x="865" y="134">LOCAL CHANGE</text>
+  <text class="step" x="865" y="175">Edited graft.record</text>
+  <text class="copy" x="865" y="204">proposal only · not accepted</text>
+  <path d="M1081 151l20-20 10 10-20 20-14 4z M1099 133l10 10" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linejoin="round"/>
+
+  <path class="line-strong" d="M370 174 L450 174" marker-end="url(#arrow-strong)"/>
+  <rect class="pill" x="369" y="125" width="116" height="32" rx="16"/>
+  <text class="pill-text mono" x="427" y="147" text-anchor="middle">sync</text>
+
+  <path class="line" d="M750 174 L830 174" marker-end="url(#arrow)"/>
+  <rect class="pill" x="746" y="125" width="122" height="32" rx="16"/>
+  <text class="pill-text mono" x="807" y="147" text-anchor="middle">edit</text>
+
+  <rect class="box" x="830" y="330" width="300" height="164" rx="22"/>
+  <text class="eyebrow" x="865" y="365">READ-ONLY PLAN</text>
+  <text class="step" x="865" y="405">Snapshot + compare</text>
+  <text class="copy" x="865" y="435">store · schema · batch · digest</text>
+  <rect class="pill" x="865" y="451" width="226" height="30" rx="15"/>
+  <text class="pill-text mono" x="978" y="472" text-anchor="middle">kg_plan_okf_import()</text>
+  <path class="line" d="M980 248 L980 330" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="450" y="330" width="300" height="164" rx="22"/>
+  <text class="eyebrow" x="485" y="365">DOMAIN VALIDATION</text>
+  <text class="step" x="485" y="405">LinkML contract</text>
+  <text class="copy" x="485" y="435">identity · types · ranges · references</text>
+  <path d="M694 361h18l10 10v24h-28z M712 361v11h10" fill="none" stroke="var(--amber)" stroke-width="3"/>
+  <path class="line" d="M830 412 L750 412" marker-end="url(#arrow)"/>
+
+  <path d="M220 350 L310 412 L220 474 L130 412 Z" fill="var(--surface)" stroke="var(--forest)" stroke-width="3"/>
+  <text class="eyebrow" x="220" y="400" text-anchor="middle">EXACT PLAN</text>
+  <text class="step" x="220" y="429" text-anchor="middle">Approved?</text>
+  <path class="line-strong" d="M450 412 L310 412" marker-end="url(#arrow-strong)"/>
+
+  <rect class="box-soft" x="70" y="590" width="300" height="108" rx="22"/>
+  <text class="eyebrow" x="105" y="624">COMMIT THROUGH GRAFT</text>
+  <text class="step" x="105" y="663">Validate again + ingest</text>
+  <path class="line-strong" d="M220 474 L220 590" marker-end="url(#arrow-strong)"/>
+  <rect class="pill" x="238" y="526" width="92" height="30" rx="15"/>
+  <text class="pill-text" x="284" y="547" text-anchor="middle">approved</text>
+
+  <rect x="830" y="590" width="300" height="108" rx="22" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="8 7"/>
+  <text class="eyebrow" x="865" y="624">OUTSIDE THE LEDGER</text>
+  <text class="step" x="865" y="663">Reject or revise proposal</text>
+  <path class="line-reject" d="M310 412 C520 530 700 628 830 644" marker-end="url(#arrow-reject)"/>
+  <rect x="540" y="548" width="92" height="30" rx="15" fill="var(--surface-warm)"/>
+  <text x="586" y="569" text-anchor="middle" fill="var(--red)" font-size="16" font-weight="700">rejected</text>
+
+  <path class="line-strong" d="M70 644 C30 644 30 174 70 174" marker-end="url(#arrow-strong)"/>
+  <rect class="pill" x="20" y="374" width="132" height="34" rx="17"/>
+  <text class="pill-text mono" x="86" y="397" text-anchor="middle">commit</text>
+</svg>

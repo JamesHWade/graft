@@ -259,6 +259,25 @@ ellmer tools.
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   : Create bounded ellmer tools for a graft store
 
+## Open knowledge
+
+Synchronize, read, review, and exchange the managed human- and
+agent-readable OKF working tree without replacing the governing schema
+or ledger.
+
+- [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
+  : Synchronize the managed Open Knowledge Format working tree
+- [`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
+  : Inspect the managed Open Knowledge Format working tree
+- [`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
+  : Read accepted knowledge from the managed OKF working tree
+- [`kg_plan_okf_import()`](https://jameshwade.github.io/graft/reference/kg_plan_okf_import.md)
+  : Plan changes from an edited Open Knowledge Format working tree
+- [`kg_apply_okf_import()`](https://jameshwade.github.io/graft/reference/kg_apply_okf_import.md)
+  : Apply an approved Open Knowledge Format import plan
+- [`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
+  : Export accepted Graft knowledge as an Open Knowledge Format bundle
+
 ## Experimental integrations
 
 Package-specific adapters. Most graft users do not need these functions.
@@ -292,6 +311,13 @@ start from an ordinary LinkML schema and see how graft applies it in R.
 
   Compile an ordinary LinkML schema, write schema-shaped records to
   DuckDB, and query them from R.
+
+- [Work with open knowledge by
+  default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
+
+  Use a managed, human- and agent-readable OKF working tree without
+  giving up Graft’s schema validation, accepted history, or approval
+  boundary.
 
 ### Agent applications
 

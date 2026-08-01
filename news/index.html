@@ -17,6 +17,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/knowledge-change-control.html">Change control</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/market-intelligence.html">Market radar</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/coworker.html">Coworker</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
@@ -52,6 +53,8 @@
 <li>
 <code><a href="../reference/kg_apply_migration.html">kg_apply_migration()</a></code> atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.</li>
 <li>
+<code><a href="../reference/kg_apply_okf_import.html">kg_apply_okf_import()</a></code> revalidates and commits an approved, tamper-evident OKF import plan through Graft’s ordinary atomic ingestion path, then synchronizes the managed working tree.</li>
+<li>
 <code><a href="../reference/kg_batch.html">kg_batch()</a></code> creates stable producer batches, and <code><a href="../reference/kg_ingest.html">kg_ingest()</a></code> atomically reconciles, validates, and upserts multiple record classes with identifier, origin, observation, and replay lineage.</li>
 <li>
 <code><a href="../reference/kg_batches.html">kg_batches()</a></code> and <code><a href="../reference/kg_changes.html">kg_changes()</a></code> provide bounded, newest-first provenance and revision views with historical schema-aware sensitivity filtering.</li>
@@ -62,11 +65,13 @@
 <li>
 <code><a href="../reference/kg_compile_schema.html">kg_compile_schema()</a></code> compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.</li>
 <li>
-<code><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb()</a></code>, <code><a href="../reference/kg_init.html">kg_init()</a></code>, and <code><a href="../reference/kg_disconnect.html">kg_disconnect()</a></code> provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization and structural schema protection.</li>
+<code><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb()</a></code>, <code><a href="../reference/kg_init.html">kg_init()</a></code>, and <code><a href="../reference/kg_disconnect.html">kg_disconnect()</a></code> provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization, structural schema protection, and a managed sibling OKF directory by default for file-backed stores.</li>
 <li>
 <code><a href="../reference/kg_context.html">kg_context()</a></code> generates a token-bounded, sensitive-field-safe description of the active manifest and DuckDB access constraints.</li>
 <li>
 <code><a href="../reference/kg_edges.html">kg_edges()</a></code>, <code><a href="../reference/kg_nodes.html">kg_nodes()</a></code>, <code><a href="../reference/kg_neighbors.html">kg_neighbors()</a></code>, <code><a href="../reference/kg_traverse.html">kg_traverse()</a></code>, and <code><a href="../reference/kg_subgraph.html">kg_subgraph()</a></code> provide lazy manifest-driven graph projections plus deterministic, explicitly collected one-hop and two-hop retrieval with hard node and edge caps.</li>
+<li>
+<code><a href="../reference/kg_export_okf.html">kg_export_okf()</a></code> writes a deterministic, source-linked Open Knowledge Format v0.2 projection of current or historical accepted revisions while preserving Graft schema, batch, revision, and record identity.</li>
 <li>
 <code><a href="../reference/kg_find.html">kg_find()</a></code>, <code><a href="../reference/kg_lookup.html">kg_lookup()</a></code>, and <code><a href="../reference/kg_identifiers.html">kg_identifiers()</a></code> provide bounded manifest-declared search and exact identifier resolution with registry provenance.</li>
 <li>
@@ -78,7 +83,13 @@
 <li>
 <code><a href="../reference/kg_ingest_tempest_records.html">kg_ingest_tempest_records()</a></code> commits mapped Tempest domain records with run- and stage-stable idempotency keys, independently of Tempest deliverable persistence.</li>
 <li>
+<code><a href="../reference/kg_okf_context.html">kg_okf_context()</a></code> gives people and agents bounded progressive disclosure over current accepted OKF knowledge and refuses stale, modified, or incompatible bundles.</li>
+<li>
+<code><a href="../reference/kg_okf_status.html">kg_okf_status()</a></code> reports whether a managed OKF working tree is unconfigured, missing, current, stale, locally modified, or incompatible.</li>
+<li>
 <code><a href="../reference/kg_plan_migration.html">kg_plan_migration()</a></code> creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.</li>
+<li>
+<code><a href="../reference/kg_plan_okf_import.html">kg_plan_okf_import()</a></code> creates a read-only, schema-validated proposal plan bound to the exact store, accepted batch, schema, and edited OKF bundle.</li>
 <li>
 <code><a href="../reference/kg_records.html">kg_records()</a></code> returns lazy typed dbplyr tables for public concrete classes.</li>
 <li>
@@ -90,7 +101,9 @@
 <li>
 <code><a href="../reference/kg_store_info.html">kg_store_info()</a></code> reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; <code><a href="../reference/kg_capabilities.html">kg_capabilities()</a></code> reports static backend capabilities.</li>
 <li>
-<code><a href="../reference/kg_tools.html">kg_tools()</a></code> creates six read-only ellmer tools over bounded Graft retrieval APIs, with structured results and no arbitrary SQL surface.</li>
+<code><a href="../reference/kg_sync_okf.html">kg_sync_okf()</a></code> atomically materializes current accepted state into the store’s managed OKF working tree without replacing unrelated directories.</li>
+<li>
+<code><a href="../reference/kg_tools.html">kg_tools()</a></code> creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with structured results and no arbitrary SQL surface.</li>
 <li>
 <code><a href="../reference/kg_unresolved.html">kg_unresolved()</a></code> returns bounded unresolved mention records.</li>
 <li>

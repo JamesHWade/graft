@@ -23,6 +23,13 @@ start from an ordinary LinkML schema and see how graft applies it in R.
   Compile an ordinary LinkML schema, write schema-shaped records to
   DuckDB, and query them from R.
 
+- [Work with open knowledge by
+  default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
+
+  Use a managed, human- and agent-readable OKF working tree without
+  giving up Graft’s schema validation, accepted history, or approval
+  boundary.
+
 ### Agent applications
 
 Build a local agent host with typed workflows, approval-gated actions,
