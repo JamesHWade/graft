@@ -333,22 +333,28 @@ okf_expected_bundle_digest <- function(store, boundary) {
     return(cached$bundle_digest)
   }
 
-  path <- tempfile("graft-okf-expected-")
-  on.exit(
-    if (dir.exists(path)) unlink(path, recursive = TRUE, force = TRUE),
-    add = TRUE
-  )
-  bundle <- kg_export_okf(
+  classes <- okf_export_classes(store, NULL)
+  bundle_schema <- okf_boundary_schema(store, boundary)
+  snapshot <- okf_snapshot_records(
     store,
-    path = path,
-    limit = graft_retrieval_limits$okf_concepts
+    classes,
+    boundary,
+    graft_retrieval_limits$okf_concepts
   )
+  concepts <- okf_snapshot_concepts(snapshot)
+  documents <- okf_bundle_documents(
+    bundle_schema,
+    concepts,
+    boundary,
+    classes
+  )
+  bundle_digest <- okf_documents_digest(documents)
   store$okf_expected <- list(
     batch_id = batch_id,
     schema_build_digest = build_digest,
-    bundle_digest = bundle$bundle_digest
+    bundle_digest = bundle_digest
   )
-  bundle$bundle_digest
+  bundle_digest
 }
 
 new_kg_okf_status <- function(

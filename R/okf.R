@@ -293,23 +293,22 @@ okf_build_bundle <- function(
     add = TRUE
   )
 
-  path_map <- okf_snapshot_path_map(snapshot)
-  concept_lookup <- okf_snapshot_lookup(snapshot, path_map)
-  concepts <- lapply(seq_along(snapshot), function(index) {
-    okf_snapshot_concept(
-      snapshot[[index]],
-      path_map[[index]],
-      concept_lookup
-    )
-  })
-  okf_write_concepts(stage, concepts)
-  bundle_digest <- okf_write_indexes(
-    stage,
+  concepts <- okf_snapshot_concepts(snapshot)
+  documents <- okf_bundle_documents(
     bundle_schema,
     concepts,
     boundary,
     export_classes
   )
+  bundle_digest <- okf_documents_digest(documents)
+  documents <- okf_bundle_documents(
+    bundle_schema,
+    concepts,
+    boundary,
+    export_classes,
+    bundle_digest = bundle_digest
+  )
+  okf_write_documents(stage, documents)
   okf_validate_staged_bundle(stage, length(concepts))
   okf_install_staged_bundle(stage, path, overwrite)
 
@@ -337,6 +336,18 @@ okf_build_bundle <- function(
     as_of_batch_id = boundary$batch_id,
     as_of_committed_at = latest
   )
+}
+
+okf_snapshot_concepts <- function(snapshot) {
+  path_map <- okf_snapshot_path_map(snapshot)
+  concept_lookup <- okf_snapshot_lookup(snapshot, path_map)
+  lapply(seq_along(snapshot), function(index) {
+    okf_snapshot_concept(
+      snapshot[[index]],
+      path_map[[index]],
+      concept_lookup
+    )
+  })
 }
 
 okf_snapshot_path_map <- function(snapshot) {
@@ -899,9 +910,9 @@ okf_default <- function(value, default) {
   if (is.null(value)) default else value
 }
 
-okf_write_concepts <- function(stage, concepts) {
-  for (concept in concepts) {
-    destination <- file.path(stage, concept$path)
+okf_write_documents <- function(stage, documents) {
+  for (relative in names(documents)) {
+    destination <- file.path(stage, relative)
     if (
       !dir.exists(dirname(destination)) &&
         !dir.create(dirname(destination), recursive = TRUE)
@@ -914,7 +925,7 @@ okf_write_concepts <- function(stage, concepts) {
     }
     okf_write_text(
       destination,
-      okf_document(concept$frontmatter, concept$body)
+      documents[[relative]]
     )
   }
 }
@@ -929,12 +940,12 @@ okf_document <- function(frontmatter, body) {
   paste("---", yaml, "---", body, "", sep = "\n")
 }
 
-okf_write_indexes <- function(
-  stage,
+okf_bundle_documents <- function(
   schema,
   concepts,
   boundary,
-  export_classes
+  export_classes,
+  bundle_digest = NULL
 ) {
   classes <- sort(
     unique(vapply(
@@ -998,7 +1009,8 @@ okf_write_indexes <- function(
         "selected"
       },
       classes = sort(export_classes, method = "radix"),
-      concept_count = length(concepts)
+      concept_count = length(concepts),
+      bundle_digest = bundle_digest
     )
   ))
   title <- scalar_character(schema_metadata$name, "Graft knowledge")
@@ -1019,9 +1031,19 @@ okf_write_indexes <- function(
       class_entries
     }
   )
-  okf_write_text(
-    file.path(stage, "index.md"),
-    okf_document(index_frontmatter, paste(body, collapse = "\n"))
+  documents <- c(
+    stats::setNames(
+      vapply(
+        concepts,
+        \(.x) okf_document(.x$frontmatter, .x$body),
+        character(1)
+      ),
+      vapply(concepts, \(.x) .x$path, character(1))
+    ),
+    "index.md" = okf_document(
+      index_frontmatter,
+      paste(body, collapse = "\n")
+    )
   )
 
   concepts_index <- c(
@@ -1033,13 +1055,8 @@ okf_write_indexes <- function(
       sub("](concepts/", "](", class_entries, fixed = TRUE)
     }
   )
-  if (!dir.exists(file.path(stage, "concepts"))) {
-    dir.create(file.path(stage, "concepts"))
-  }
-  okf_write_text(
-    file.path(stage, "concepts", "index.md"),
+  documents[["concepts/index.md"]] <-
     paste(c(concepts_index, ""), collapse = "\n")
-  )
 
   for (class in classes) {
     class_concepts <- grouped[[class]]
@@ -1070,26 +1087,48 @@ okf_write_indexes <- function(
       },
       character(1)
     )
-    okf_write_text(
-      file.path(
-        stage,
-        "concepts",
-        utils::URLencode(class, reserved = TRUE),
-        "index.md"
-      ),
-      paste(
-        c(paste0("# ", okf_heading_text(class)), "", entries, ""),
-        collapse = "\n"
-      )
+    relative <- file.path(
+      "concepts",
+      utils::URLencode(class, reserved = TRUE),
+      "index.md"
+    )
+    documents[[relative]] <- paste(
+      c(paste0("# ", okf_heading_text(class)), "", entries, ""),
+      collapse = "\n"
     )
   }
-  bundle_digest <- okf_bundle_digest(stage)
-  index_frontmatter$graft$bundle_digest <- bundle_digest
-  okf_write_text(
-    file.path(stage, "index.md"),
-    okf_document(index_frontmatter, paste(body, collapse = "\n"))
+  names(documents) <- gsub("\\\\", "/", names(documents))
+  documents
+}
+
+okf_documents_digest <- function(documents) {
+  relative <- sort(names(documents), method = "radix")
+  entries <- vapply(
+    relative,
+    function(path) {
+      text <- enc2utf8(documents[[path]])
+      if (identical(path, "index.md")) {
+        lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
+        lines <- okf_index_digest_lines(lines)
+        text <- paste0(paste(lines, collapse = "\n"), "\n")
+      }
+      content_digest <- digest::digest(
+        text,
+        algo = "sha256",
+        serialize = FALSE
+      )
+      paste0(path, "\n", content_digest)
+    },
+    character(1)
   )
-  bundle_digest
+  paste0(
+    "sha256:",
+    digest::digest(
+      paste(entries, collapse = "\n"),
+      algo = "sha256",
+      serialize = FALSE
+    )
+  )
 }
 
 okf_bundle_digest <- function(path) {

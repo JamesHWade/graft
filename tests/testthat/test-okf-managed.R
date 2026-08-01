@@ -76,6 +76,20 @@ test_that("synchronization exposes current, modified, and stale states", {
   expect_snapshot(error = TRUE, kg_okf_context(fixture$store))
 })
 
+test_that("deep status derives the accepted digest without writing", {
+  fixture <- local_okf_store()
+  kg_sync_okf(fixture$store)
+  fixture$store$okf_expected <- NULL
+  local_mocked_bindings(
+    kg_export_okf = \(...) stop("Unexpected export."),
+    okf_write_text = \(...) stop("Unexpected write.")
+  )
+
+  status <- kg_okf_status(fixture$store, deep = TRUE)
+
+  expect_identical(status$status, "current")
+})
+
 test_that("bundle digests exclude only the self-digest frontmatter field", {
   fixture <- local_okf_store()
   bundle <- kg_sync_okf(fixture$store)
