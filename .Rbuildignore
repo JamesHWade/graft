@@ -5,6 +5,7 @@
 ^\.DS_Store$
 ^\.venv$
 ^\.openai$
+^\.dsprrr_cache$
 ^AGENTS\.md$
 ^\.claude$
 ^[.]?air[.]toml$

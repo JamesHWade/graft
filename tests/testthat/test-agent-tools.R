@@ -273,13 +273,24 @@ test_that("ToolDefs invoke directly and return universal metadata", {
     expect_identical(output$store_schema_digest, digest)
     expect_identical(is.null(output$limit), FALSE)
   }
-  expect_s3_class(outputs$kg_describe$result, "kg_context")
-  expect_s3_class(outputs$kg_open_knowledge$result, "kg_okf_context")
+  expect_type(outputs$kg_describe$result, "list")
+  expect_type(outputs$kg_open_knowledge$result, "list")
   expect_s3_class(outputs$kg_find$result, "data.frame")
-  expect_s3_class(outputs$kg_get$result, "kg_record")
-  expect_s3_class(outputs$kg_neighbors$result, "kg_subgraph")
+  expect_type(outputs$kg_get$result, "list")
+  expect_type(outputs$kg_neighbors$result, "list")
   expect_s3_class(outputs$kg_claims$result, "data.frame")
   expect_s3_class(outputs$kg_select$result, "data.frame")
+
+  serialized <- vapply(
+    outputs,
+    \(output) as.character(jsonlite::toJSON(output, auto_unbox = TRUE)),
+    character(1)
+  )
+  expect_named(serialized, names(outputs))
+  expect_identical(
+    vapply(serialized, nzchar, logical(1)),
+    stats::setNames(rep(TRUE, length(outputs)), names(outputs))
+  )
 
   expect_identical(outputs$kg_describe$limit, 40L)
   expect_identical(

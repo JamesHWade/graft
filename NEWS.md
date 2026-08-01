@@ -42,7 +42,7 @@
   with manifest validation and no arbitrary SQL.
 * `kg_store_info()` reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; `kg_capabilities()` reports static backend capabilities.
 * `kg_sync_okf()` atomically materializes current accepted state into the store's managed OKF working tree without replacing unrelated directories.
-* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with structured results and no arbitrary SQL surface.
+* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with JSON-compatible structured results and no arbitrary SQL surface.
 * `kg_unresolved()` returns bounded unresolved mention records.
 * `kg_validate_data()` preflights the same staged identity, shape, and
   reference checks as ingestion without mutating the store.

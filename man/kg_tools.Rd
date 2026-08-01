@@ -18,6 +18,7 @@ one initialized store. The tools expose only graft's bounded retrieval
 functions; they do not accept SQL, file paths, URLs, or network options.
 }
 \details{
-Every tool returns the native graft result in \code{result} plus explicit
-\code{truncated}, \code{limit}, and \code{store_schema_digest} fields.
+Every tool returns a JSON-compatible representation of the graft result in
+\code{result} plus explicit \code{truncated}, \code{limit}, and \code{store_schema_digest}
+fields.
 }

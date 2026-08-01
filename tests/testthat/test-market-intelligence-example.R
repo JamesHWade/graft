@@ -101,6 +101,30 @@ test_that("market planner visibly uses accepted memory", {
   expect_match(result$briefing_markdown, "## Continuity")
 })
 
+test_that("market planner requires an ISO action due date", {
+  if (!market_intelligence_runtime_available()) {
+    testthat::skip("The current market-intelligence runtime is unavailable.")
+  }
+  environment <- local_market_intelligence_environment()
+  bundle <- environment$mi_read_json(
+    market_intelligence_example_path(
+      "corpus",
+      "2026-07-23-quarterly-results.json"
+    )
+  )
+  bundle$proposal$due_date <- "Within 10 business days"
+
+  expect_snapshot(
+    environment$mi_run_planner(
+      environment$mi_reference_planner(bundle),
+      bundle$suggested_request,
+      bundle,
+      "No accepted market assessments yet."
+    ),
+    error = TRUE
+  )
+})
+
 test_that("market worker keeps assessment outside Graft until approval", {
   if (!market_intelligence_runtime_available()) {
     testthat::skip("The current market-intelligence runtime is unavailable.")
