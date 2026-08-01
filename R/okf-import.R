@@ -572,7 +572,7 @@ validate_okf_import_plan <- function(plan) {
       (length(plan$records) > 0L &&
         (is.null(names(plan$records)) ||
           anyNA(names(plan$records)) ||
-          any(!nzchar(names(plan$records))) ||
+          !all(nzchar(names(plan$records))) ||
           anyDuplicated(names(plan$records)) ||
           !all(vapply(plan$records, is.data.frame, logical(1)))))
   ) {

@@ -120,7 +120,7 @@ okf_export_classes <- function(store, classes) {
     !is.character(classes) ||
       length(classes) == 0L ||
       anyNA(classes) ||
-      any(!nzchar(classes))
+      !all(nzchar(classes))
   ) {
     abort_validation_error(
       "`classes` must contain one or more non-empty class names.",

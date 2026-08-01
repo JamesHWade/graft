@@ -569,7 +569,7 @@ kg_okf_context <- function(
       !is.character(types) ||
         length(types) == 0L ||
         anyNA(types) ||
-        any(!nzchar(types))
+        !all(nzchar(types))
     ) {
       abort_validation_error(
         "`types` must contain one or more non-empty concept types.",
