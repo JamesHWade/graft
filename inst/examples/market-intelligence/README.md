@@ -18,8 +18,8 @@ documents, an evidence-backed implication, and one accountable action.
   pause.
 - **Graft** stores the portfolio taxonomy and only approved observations,
   assessments, actions, source lineage, and run records.
-- **Shiny and bslib** provide the morning brief, portfolio map, review inbox,
-  knowledge ledger, and workflow audit.
+- **Shiny and bslib** provide a source-linked daily brief, a three-layer
+  decision room, the portfolio map, knowledge ledger, and workflow audit.
 
 The application owns its schema, sources, routing, schedule, model choice,
 tool registry, and side effects. It adds no market-specific Graft or Tempest
@@ -36,9 +36,9 @@ devtools::load_all(".")
 shiny::runApp("inst/examples/market-intelligence/app")
 ```
 
-The default path is provider-free. Select **Use configured model** before a
-scan to use the same dsprrr signature with the model configured through
-Tempest:
+The default path is provider-free. Open **Run settings** and select **Use
+configured model** before a scan to use the same dsprrr signature with the
+model configured through Tempest:
 
 ```r
 options(tempest.chat = "openai/gpt-5-mini")

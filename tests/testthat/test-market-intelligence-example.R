@@ -307,6 +307,7 @@ test_that("market intelligence UI exposes the complete decision loop", {
   if (!market_intelligence_runtime_available()) {
     testthat::skip("The current market-intelligence runtime is unavailable.")
   }
+  withr::local_options(sass.cache = withr::local_tempdir())
   environment <- local_market_intelligence_environment(include_app = TRUE)
   ui <- as.character(environment$mi_app_ui())
   baseline <- environment$mi_read_json(
@@ -338,6 +339,51 @@ test_that("market intelligence UI exposes the complete decision loop", {
   )
 })
 
+test_that("market intelligence UI makes the daily decision legible", {
+  if (!market_intelligence_runtime_available()) {
+    testthat::skip("The current market-intelligence runtime is unavailable.")
+  }
+  environment <- local_market_intelligence_environment(include_app = TRUE)
+  worker <- local_market_intelligence_worker(environment)
+  snapshot <- environment$mi_worker_prepare(worker)
+  briefing <- as.character(environment$mi_app_briefing_view(
+    snapshot,
+    environment$mi_worker_progress(worker),
+    3L
+  ))
+  review <- as.character(environment$mi_app_review_view(snapshot))
+
+  expect_identical(snapshot$scan_date, "2026-07-23")
+  expect_match(briefing, "Your daily market brief")
+  expect_match(briefing, "July 23, 2026")
+  expect_match(briefing, "What changed")
+  expect_match(briefing, "Why it matters")
+  expect_match(briefing, "What accepted memory changed")
+  expect_match(briefing, "Proposed next step")
+  expect_match(briefing, 'id="open_review"', fixed = TRUE)
+  expect_match(review, "Observed")
+  expect_match(review, "Interpreted")
+  expect_match(review, "Proposed")
+  expect_match(review, "What your decision does")
+  expect_match(review, "Approve and save to Graft")
+  expect_match(review, "Accepted Graft memory remains unchanged")
+
+  environment$mi_worker_resolve(worker, "approved")
+  second_snapshot <- environment$mi_worker_prepare(worker)
+  second_briefing <- as.character(environment$mi_app_briefing_view(
+    second_snapshot,
+    environment$mi_worker_progress(worker),
+    3L
+  ))
+
+  expect_identical(second_snapshot$scan_date, "2026-07-24")
+  expect_match(second_briefing, "Accepted memory applied")
+  expect_match(
+    second_briefing,
+    "Accepted Graft history informed this brief"
+  )
+})
+
 test_that("market intelligence UI escapes model-supplied markdown", {
   if (!market_intelligence_runtime_available()) {
     testthat::skip("The current market-intelligence runtime is unavailable.")
@@ -357,8 +403,15 @@ test_that("market intelligence UI escapes model-supplied markdown", {
       headline = "Signal",
       summary = "Summary",
       implication = "Implication",
-      continuity = "Continuity"
-    )
+      continuity = "Continuity",
+      memory_used = FALSE,
+      action = list(
+        title = "Review the signal",
+        owner = "Market strategy",
+        due_date = "2026-08-07"
+      )
+    ),
+    pending = list()
   )))
 
   expect_match(escaped, "&lt;script&gt;", fixed = TRUE)
