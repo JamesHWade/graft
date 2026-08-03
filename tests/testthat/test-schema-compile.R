@@ -49,8 +49,8 @@ test_that("structural digest excludes compiler provenance", {
   variant_script <- file.path(directory, "compile_schema_variant.py")
   script <- readLines(graft:::graft_compiler_path(), warn = FALSE)
   script <- sub(
-    'COMPILER_VERSION = "0.2.0"',
-    'COMPILER_VERSION = "0.2.1"',
+    'COMPILER_VERSION = "0.3.0"',
+    'COMPILER_VERSION = "0.3.1"',
     script,
     fixed = TRUE
   )
@@ -83,7 +83,7 @@ test_that("structural digest excludes compiler provenance", {
   )
   expect_identical(
     variant_schema$manifest$compiler$version,
-    "0.2.1"
+    "0.3.1"
   )
 })
 
@@ -161,42 +161,30 @@ test_that("plain LinkML schemas compile without graft annotations", {
   expect_in("updated_at", names(person$slots))
 })
 
-test_that("plain LinkML identifiers work throughout the store", {
+test_that("plain LinkML identifiers compile to projection contracts", {
   skip_if_no_linkml_runtime()
   manifest_path <- withr::local_tempfile(fileext = ".graft.json")
   schema <- kg_compile_schema(
     plain_linkml_schema_path(),
     manifest_path
   )
-  store <- kg_connect_duckdb(schema, ":memory:")
-  withr::defer(kg_disconnect(store))
-  kg_init(store)
-
-  kg_ingest(
-    store,
-    kg_batch("plain-linkml", idempotency_key = "personinfo-v1"),
-    list(
-      Organization = data.frame(
-        id = "org:daily-planet",
-        name = "Daily Planet"
-      ),
-      Person = data.frame(
-        id = "person:clark-kent",
-        full_name = "Clark Kent",
-        aliases = I(list(c("Superman", "Kal-El"))),
-        age = 35L,
-        employed_by = I(list("org:daily-planet"))
-      )
-    )
+  person <- schema$manifest$classes$Person
+  relation_names <- vapply(
+    schema$manifest$relations,
+    \(.x) .x$name,
+    character(1)
   )
 
-  person <- kg_get(store, "person:clark-kent")
-
-  expect_identical(person$class, "Person")
-  expect_identical(person$record$full_name[[1]], "Clark Kent")
-  expect_setequal(person$record$aliases, c("Superman", "Kal-El"))
+  expect_identical(person$view, "person")
+  expect_identical(person$slots$full_name$view_column, "full_name")
+  expect_identical(person$slots$age$duckdb_type, "BIGINT")
+  expect_null(person$slots$aliases$view_column)
+  expect_setequal(
+    relation_names,
+    c("Person.aliases", "Person.employed_by")
+  )
   expect_identical(
-    kg_find(store, "Clark", class = "Person", limit = 5)$id,
-    "person:clark-kent"
+    schema$manifest$relations[[match("Person.aliases", relation_names)]]$view,
+    "person__aliases"
   )
 })

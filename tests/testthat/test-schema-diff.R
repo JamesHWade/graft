@@ -16,18 +16,13 @@ test_that("schema diff reports compatible manifests", {
 test_that("schema diff identifies concrete structural changes", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
-  new$manifest$classes$Entity$slots$new_field <- list(
-    name = "new_field",
-    range = "string",
-    relational_type = "VARCHAR",
-    required = FALSE,
-    multivalued = FALSE,
-    identifier = FALSE,
-    object_reference = FALSE
-  )
+  new_field <- new$manifest$classes$Entity$slots$description
+  new_field$name <- "new_field"
+  new_field$view_column <- "new_field"
+  new$manifest$classes$Entity$slots$new_field <- new_field
   new$manifest$classes$NewClass <- new$manifest$classes$Activity
   new$manifest$classes$NewClass$name <- "NewClass"
-  new$manifest$classes$NewClass$table <- "new_class"
+  new$manifest$classes$NewClass$view <- "new_class"
   new <- refresh_schema_structural_digest(new)
 
   diff <- kg_schema_diff(old, new)
@@ -78,38 +73,13 @@ test_that("schema diff refuses structural content hidden behind an old digest", 
 test_that("schema diff classifies safe additions deterministically", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
-  new$manifest$classes$Entity$slots$new_field <- list(
-    name = "new_field",
-    column = "new_field",
-    range = "string",
-    relational_type = "VARCHAR",
-    required = FALSE,
-    multivalued = FALSE,
-    ordered = FALSE,
-    identifier = FALSE,
-    object_reference = FALSE,
-    enum = NULL,
-    foreign_key = NULL,
-    external_identifier = NULL,
-    sensitive = FALSE
-  )
-  new$manifest$tables$Entity$columns <- c(
-    new$manifest$tables$Entity$columns,
-    list(list(
-      name = "new_field",
-      slot = "new_field",
-      type = "VARCHAR",
-      nullable = TRUE,
-      primary_key = FALSE,
-      foreign_key = NULL
-    ))
-  )
+  new_field <- new$manifest$classes$Entity$slots$description
+  new_field$name <- "new_field"
+  new_field$view_column <- "new_field"
+  new$manifest$classes$Entity$slots$new_field <- new_field
   new$manifest$classes$NewClass <- new$manifest$classes$Activity
   new$manifest$classes$NewClass$name <- "NewClass"
-  new$manifest$classes$NewClass$table <- "new_class"
-  new$manifest$tables$NewClass <- new$manifest$tables$Activity
-  new$manifest$tables$NewClass$class <- "NewClass"
-  new$manifest$tables$NewClass$name <- "new_class"
+  new$manifest$classes$NewClass$view <- "new_class"
   new$manifest$graph_projections$node_classes <- c(
     new$manifest$graph_projections$node_classes,
     "NewClass"
@@ -123,9 +93,6 @@ test_that("schema diff classifies safe additions deterministically", {
   reordered <- unserialize(serialize(new, NULL))
   reordered$manifest$classes <- reordered$manifest$classes[
     rev(names(reordered$manifest$classes))
-  ]
-  reordered$manifest$tables <- reordered$manifest$tables[
-    rev(names(reordered$manifest$tables))
   ]
   first <- kg_schema_diff(old, new)
   second <- kg_schema_diff(old, reordered)
@@ -148,7 +115,6 @@ test_that("schema diff classifies safe additions deterministically", {
     )
   )
   expect_in("optional_slot_added", first$details$rule)
-  expect_in("nullable_column_added", first$details$rule)
   expect_in("enum_value_added", first$details$rule)
 
   printed <- capture.output(print(first))
@@ -161,13 +127,6 @@ test_that("schema diff classifies removals as destructive", {
   old <- kg_schema(tempest_manifest_path())
   new <- unserialize(serialize(old, NULL))
   new$manifest$classes$Entity$slots$description <- NULL
-  keep <- vapply(
-    new$manifest$tables$Entity$columns,
-    \(.x) !identical(.x$slot, "description"),
-    logical(1)
-  )
-  new$manifest$tables$Entity$columns <-
-    new$manifest$tables$Entity$columns[keep]
   new <- refresh_schema_structural_digest(new)
 
   diff <- kg_schema_diff(old, new)
@@ -175,10 +134,6 @@ test_that("schema diff classifies removals as destructive", {
   expect_identical(diff$classification, "destructive")
   expect_equal(
     subset(diff$details, rule == "slot_removed")$classification,
-    "destructive"
-  )
-  expect_equal(
-    subset(diff$details, rule == "column_removed")$classification,
     "destructive"
   )
 })
@@ -207,14 +162,15 @@ test_that("schema diff distinguishes review from unsupported changes", {
 
   unsupported <- unserialize(serialize(old, NULL))
   unsupported$manifest$classes$Entity$id_policy <- "require"
-  unsupported$manifest$classes$Entity$table <- "renamed_entity"
-  unsupported$manifest$classes$Entity$slots$description$relational_type <-
-    "DOUBLE"
+  unsupported$manifest$classes$Entity$view <- "renamed_entity"
+  unsupported$manifest$classes$Entity$slots$description$view_column <-
+    "renamed_description"
+  unsupported$manifest$classes$Entity$slots$description$duckdb_type <- "DOUBLE"
   unsupported$manifest$classes$Entity$slots$description$required <- TRUE
   unsupported$manifest$classes$Entity$slots$description$multivalued <- TRUE
   unsupported$manifest$classes$Claim$slots$about$ordered <- TRUE
-  unsupported$manifest$tables$Entity$name <- "renamed_entity"
   unsupported$manifest$relations[[1L]]$ordered <- TRUE
+  unsupported$manifest$projection_mapping_version <- "2"
   namespace <- names(
     unsupported$manifest$identifier_normalization_versions
   )[[1L]]
@@ -226,14 +182,15 @@ test_that("schema diff distinguishes review from unsupported changes", {
   expect_identical(unsupported_diff$classification, "unsupported")
   expected_rules <- c(
     "class_id_policy_change",
-    "class_table_change",
-    "slot_relational_type_change",
+    "class_view_change",
+    "slot_view_column_change",
+    "slot_duckdb_type_change",
     "slot_required_change",
     "slot_multivalued_change",
     "slot_ordered_change",
-    "table_name_change",
     "relation_ordered_change",
-    "identifier_normalization_version_change"
+    "identifier_normalization_version_change",
+    "projection_mapping_version_change"
   )
   expect_setequal(
     intersect(unsupported_diff$details$rule, expected_rules),

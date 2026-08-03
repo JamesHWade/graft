@@ -8,6 +8,9 @@ test_that("committed manifest loads without a usable Python path", {
   expect_s3_class(schema, "kg_schema")
   expect_identical(kg_schema_info(schema)$schema_name, "tempest-artifacts")
   expect_identical(kg_schema_info(schema)$class_count, 10L)
+  expect_identical(kg_schema_info(schema)$manifest_version, "2.0.0")
+  expect_identical(kg_schema_info(schema)$projection_mapping_version, "1")
+  expect_null(schema$manifest$tables)
 })
 
 test_that("schema inspection exposes roles, slots, and enums", {
@@ -25,8 +28,14 @@ test_that("schema inspection exposes roles, slots, and enums", {
     classes$statement_shape[classes$class == "SemanticClaim"],
     "semantic"
   )
+  expect_identical(classes$view[classes$class == "Claim"], "claim")
   expect_in("about", slots$slot)
   expect_identical(slots$required[slots$slot == "about"], TRUE)
+  expect_identical(slots$duckdb_type[slots$slot == "about"], "VARCHAR")
+  expect_identical(
+    slots$view_column[slots$slot == "about"],
+    NA_character_
+  )
   expect_in("supports", enums$value[enums$enum == "EvidenceSupportType"])
   expect_identical(
     schema$manifest$classes$Source$slots$uri$external_identifier,
@@ -36,6 +45,33 @@ test_that("schema inspection exposes roles, slots, and enums", {
     schema$manifest$identifier_normalization_versions$canonical_url,
     "1"
   )
+  expect_identical(
+    schema$manifest$relations[[1L]],
+    list(
+      kind = "object",
+      name = "Claim.about",
+      ordered = FALSE,
+      owner_class = "Claim",
+      owner_view = "claim",
+      predicate = "https://w3id.org/graft/about",
+      slot = "about",
+      view = "claim__about"
+    )
+  )
+})
+
+test_that("manifest integrity validates projection contracts", {
+  schema <- kg_schema(tempest_manifest_path())
+
+  expect_invisible(validate_manifest_integrity(schema))
+
+  tampered <- unserialize(serialize(schema, NULL))
+  tampered$manifest$relations[[1L]]$view <- "wrong_projection"
+  tampered <- refresh_schema_structural_digest(tampered)
+  condition <- rlang::catch_cnd(validate_manifest_integrity(tampered))
+
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "generated_relation_contract")
 })
 
 test_that("narrative claims do not require artificial predicates", {

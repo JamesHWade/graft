@@ -2,7 +2,7 @@
 #'
 #' Compatibility requires both matching structural content and structural
 #' digests that faithfully describe that content. The returned report also
-#' identifies class, slot, enum, table, and generated-relation changes so a
+#' identifies class, slot, enum, projection, and generated-relation changes so a
 #' mismatch is useful to an interactive user or pipeline.
 #'
 #' @param old_schema A `kg_schema` object or manifest path.
@@ -68,7 +68,7 @@ kg_schema_diff <- function(old_schema, new_schema) {
     classes = diff_named_contract(old$classes, new$classes),
     slots = diff_class_slots(old$classes, new$classes),
     enums = diff_named_contract(old$enums, new$enums),
-    tables = diff_named_contract(old$tables, new$tables),
+    tables = empty_named_contract_diff(),
     relations = diff_relations(old$relations, new$relations),
     classification = schema_change_classification(details$classification),
     details = details
@@ -77,9 +77,8 @@ kg_schema_diff <- function(old_schema, new_schema) {
 
 manifest_structural_contract <- function(manifest) {
   list(
-    relational_mapping_version = manifest$relational_mapping_version,
+    projection_mapping_version = manifest$projection_mapping_version,
     classes = manifest$classes,
-    tables = manifest$tables,
     relations = manifest$relations,
     enums = manifest$enums,
     graph_projections = manifest$graph_projections,
@@ -268,7 +267,6 @@ schema_change_details <- function(old, new) {
   bind_schema_change_details(
     diff_class_details(old$classes, new$classes),
     diff_enum_details(old$enums, new$enums),
-    diff_table_details(old$tables, new$tables),
     diff_relation_details(old$relations, new$relations),
     diff_graph_projection_details(
       old$graph_projections,
@@ -283,9 +281,9 @@ schema_change_details <- function(old, new) {
       old$identifier_normalization_versions,
       new$identifier_normalization_versions
     ),
-    diff_relational_mapping_version(
-      old$relational_mapping_version,
-      new$relational_mapping_version
+    diff_projection_mapping_version(
+      old$projection_mapping_version,
+      new$projection_mapping_version
     )
   )
 }
@@ -326,7 +324,7 @@ classify_class_property <- function(field, change, old, new) {
     field %in%
       c(
         "name",
-        "table",
+        "view",
         "id_policy",
         "id_format",
         "origin_key_slots",
@@ -389,16 +387,15 @@ diff_slot_details <- function(old, new, class_name) {
 classify_slot_property <- function(field, change, old, new) {
   unsupported <- c(
     "name",
-    "column",
+    "view_column",
     "range",
-    "relational_type",
+    "duckdb_type",
     "required",
     "multivalued",
     "ordered",
     "identifier",
     "object_reference",
     "enum",
-    "foreign_key",
     "external_identifier"
   )
   if (field %in% unsupported) {
@@ -504,45 +501,6 @@ diff_enum_value_details <- function(old, new, enum_name) {
   bind_schema_change_details(rows)
 }
 
-diff_table_details <- function(old, new) {
-  rows <- diff_named_object_additions(
-    old,
-    new,
-    collection = "tables",
-    object_type = "table",
-    added_classification = "additive",
-    added_rule = "table_added",
-    removed_classification = "destructive",
-    removed_rule = "table_removed"
-  )
-  common <- sort(intersect(names(old), names(new)))
-  for (table_name in common) {
-    path <- schema_change_path("tables", table_name)
-    rows[[length(rows) + 1L]] <- diff_object_properties(
-      old[[table_name]],
-      new[[table_name]],
-      path = path,
-      object_type = "table",
-      exclude = "columns",
-      classify = function(field, change, old, new) {
-        if (field %in% c("name", "class")) {
-          c("unsupported", paste0("table_", field, "_change"))
-        } else {
-          c("review_required", paste0("table_", field, "_change"))
-        }
-      }
-    )
-    rows[[length(rows) + 1L]] <- diff_column_details(
-      old[[table_name]]$columns,
-      new[[table_name]]$columns,
-      path,
-      "table_column",
-      allow_nullable_addition = TRUE
-    )
-  }
-  bind_schema_change_details(rows)
-}
-
 diff_relation_details <- function(old, new) {
   old <- relation_map(old)
   new <- relation_map(new)
@@ -564,73 +522,12 @@ diff_relation_details <- function(old, new) {
       new[[relation_name]],
       path = path,
       object_type = "relation",
-      exclude = "columns",
       classify = function(field, change, old, new) {
         if (identical(field, "predicate")) {
           c("review_required", "relation_predicate_change")
         } else {
           c("unsupported", paste0("relation_", field, "_change"))
         }
-      }
-    )
-    rows[[length(rows) + 1L]] <- diff_column_details(
-      old[[relation_name]]$columns,
-      new[[relation_name]]$columns,
-      path,
-      "relation_column",
-      allow_nullable_addition = FALSE
-    )
-  }
-  bind_schema_change_details(rows)
-}
-
-diff_column_details <- function(
-  old,
-  new,
-  parent_path,
-  object_type,
-  allow_nullable_addition
-) {
-  old <- schema_column_map(old)
-  new <- schema_column_map(new)
-  rows <- list()
-  added <- sort(setdiff(names(new), names(old)))
-  removed <- sort(setdiff(names(old), names(new)))
-  for (column_name in added) {
-    column <- new[[column_name]]
-    safe <- isTRUE(allow_nullable_addition) && isTRUE(column$nullable)
-    rows[[length(rows) + 1L]] <- new_schema_change_detail(
-      path = paste0(parent_path, "/columns/", json_pointer_escape(column_name)),
-      object_type = object_type,
-      change = "added",
-      new = column,
-      classification = if (safe) "additive" else "unsupported",
-      rule = if (safe) "nullable_column_added" else "column_added"
-    )
-  }
-  for (column_name in removed) {
-    rows[[length(rows) + 1L]] <- new_schema_change_detail(
-      path = paste0(parent_path, "/columns/", json_pointer_escape(column_name)),
-      object_type = object_type,
-      change = "removed",
-      old = old[[column_name]],
-      classification = "destructive",
-      rule = "column_removed"
-    )
-  }
-  common <- sort(intersect(names(old), names(new)))
-  for (column_name in common) {
-    rows[[length(rows) + 1L]] <- diff_object_properties(
-      old[[column_name]],
-      new[[column_name]],
-      path = paste0(
-        parent_path,
-        "/columns/",
-        json_pointer_escape(column_name)
-      ),
-      object_type = object_type,
-      classify = function(field, change, old, new) {
-        c("unsupported", paste0("column_", field, "_change"))
       }
     )
   }
@@ -751,19 +648,19 @@ diff_normalization_details <- function(old, new) {
   bind_schema_change_details(rows)
 }
 
-diff_relational_mapping_version <- function(old, new) {
+diff_projection_mapping_version <- function(old, new) {
   if (identical(old, new)) {
     return(empty_schema_change_details())
   }
   new_schema_change_detail(
-    path = "/relational_mapping_version",
+    path = "/projection_mapping_version",
     object_type = "manifest",
     change = "changed",
-    field = "relational_mapping_version",
+    field = "projection_mapping_version",
     old = old,
     new = new,
     classification = "unsupported",
-    rule = "relational_mapping_version_change"
+    rule = "projection_mapping_version_change"
   )
 }
 
@@ -961,22 +858,6 @@ schema_named_list <- function(values, field) {
   )
   names(values) <- keys
   values[order(keys)]
-}
-
-schema_column_map <- function(columns) {
-  if (length(columns) == 0L) {
-    return(list())
-  }
-  keys <- vapply(
-    columns,
-    function(column) {
-      slot <- scalar_character(column$slot, "")
-      if (nzchar(slot)) slot else scalar_character(column$name)
-    },
-    character(1)
-  )
-  names(columns) <- keys
-  columns[order(keys)]
 }
 
 validation_map <- function(invariants) {

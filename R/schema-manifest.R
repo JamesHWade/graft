@@ -48,12 +48,11 @@ kg_schema <- function(path) {
 validate_manifest_header <- function(manifest, path) {
   required <- c(
     "manifest_version",
-    "relational_mapping_version",
+    "projection_mapping_version",
     "schema",
     "classes",
     "slots",
     "enums",
-    "tables",
     "relations",
     "graph_projections",
     "validation_invariants",
@@ -150,7 +149,7 @@ validate_manifest_integrity <- function(schema, subclass = NULL) {
   }
 
   validate_global_slot_types(manifest, subclass)
-  validate_manifest_physical_contracts(manifest, subclass)
+  validate_manifest_projection_contracts(manifest, subclass)
   invisible(schema)
 }
 
@@ -189,7 +188,7 @@ validate_compiler_slot_type <- function(
       "VARCHAR"
     )
   }
-  observed <- scalar_character(slot$relational_type)
+  observed <- scalar_character(slot$duckdb_type)
   if (!identical(observed, expected)) {
     qualified <- if (is.null(record_class)) {
       slot_name
@@ -200,7 +199,7 @@ validate_compiler_slot_type <- function(
       paste0(
         if (object_reference) "Object-reference slot `" else "Slot `",
         qualified,
-        "` must use relational type `",
+        "` must use DuckDB type `",
         expected,
         "`."
       ),
@@ -212,7 +211,7 @@ validate_compiler_slot_type <- function(
       rule = if (object_reference) {
         "object_reference_varchar"
       } else {
-        "slot_relational_type_contract"
+        "slot_duckdb_type_contract"
       },
       subclass = subclass
     )
@@ -220,44 +219,30 @@ validate_compiler_slot_type <- function(
   invisible(slot)
 }
 
-validate_manifest_physical_contracts <- function(manifest, subclass) {
+validate_manifest_projection_contracts <- function(manifest, subclass) {
   class_names <- names(manifest$classes)
-  if (!setequal(class_names, names(manifest$tables))) {
-    abort_schema_integrity(
-      "Concrete classes and manifest tables must correspond exactly.",
-      classes = sort(class_names),
-      tables = sort(names(manifest$tables)),
-      rule = "class_table_correspondence",
-      subclass = subclass
-    )
-  }
-
   expected_relations <- character()
+  projection_names <- character()
   for (record_class in class_names) {
     contract <- manifest$classes[[record_class]]
-    table <- manifest$tables[[record_class]]
+    view <- scalar_character(contract$view)
     if (
-      !identical(scalar_character(table$class), record_class) ||
-        !identical(
-          scalar_character(table$name),
-          scalar_character(contract$table)
-        ) ||
-        !identical(
-          scalar_character(table$role),
-          scalar_character(contract$role)
-        )
+      !identical(scalar_character(contract$name), record_class) ||
+        is.na(view) ||
+        !nzchar(view)
     ) {
       abort_schema_integrity(
         paste0(
           "Class `",
           record_class,
-          "` and its physical table metadata disagree."
+          "` has invalid projection metadata."
         ),
         record_class = record_class,
-        rule = "class_table_metadata",
+        rule = "class_projection_metadata",
         subclass = subclass
       )
     }
+    projection_names <- c(projection_names, view)
 
     slots <- contract$slots
     for (slot_name in names(slots)) {
@@ -272,50 +257,25 @@ validate_manifest_physical_contracts <- function(manifest, subclass) {
       \(.x) !scalar_logical(.x$multivalued),
       slots
     )
-    columns <- table$columns
-    column_names <- vapply(
-      columns,
-      \(.x) scalar_character(.x$name),
-      character(1)
-    )
-    if (anyNA(column_names) || anyDuplicated(column_names)) {
-      abort_schema_integrity(
-        paste0("Table for class `", record_class, "` has invalid columns."),
-        record_class = record_class,
-        rule = "unique_table_columns",
-        subclass = subclass
-      )
-    }
-    column_map <- stats::setNames(columns, column_names)
-    expected_columns <- vapply(
+    view_columns <- vapply(
       scalar_slots,
-      \(.x) scalar_character(.x$column),
+      \(.x) scalar_character(.x$view_column),
       character(1)
     )
     if (
-      anyNA(expected_columns) ||
-        anyDuplicated(expected_columns) ||
-        !setequal(column_names, expected_columns)
+      anyNA(view_columns) ||
+        any(!nzchar(view_columns)) ||
+        anyDuplicated(tolower(view_columns))
     ) {
       abort_schema_integrity(
         paste0(
           "Scalar slots for class `",
           record_class,
-          "` must correspond exactly to physical columns."
+          "` must use unique projection columns."
         ),
         record_class = record_class,
-        rule = "scalar_column_correspondence",
+        rule = "unique_projection_columns",
         subclass = subclass
-      )
-    }
-
-    for (slot_name in names(scalar_slots)) {
-      validate_manifest_scalar_slot(
-        scalar_slots[[slot_name]],
-        column_map[[expected_columns[[slot_name]]]],
-        record_class,
-        slot_name,
-        subclass
       )
     }
 
@@ -332,6 +292,10 @@ validate_manifest_physical_contracts <- function(manifest, subclass) {
         subclass
       )
       relation_names <- c(relation_names, scalar_character(relation$name))
+      projection_names <- c(
+        projection_names,
+        scalar_character(relation$view)
+      )
     }
     declared_relations <- empty_character(contract$relations)
     if (
@@ -370,67 +334,21 @@ validate_manifest_physical_contracts <- function(manifest, subclass) {
       subclass = subclass
     )
   }
-  invisible(manifest)
-}
-
-validate_manifest_scalar_slot <- function(
-  slot,
-  column,
-  record_class,
-  slot_name,
-  subclass
-) {
-  object_reference <- scalar_logical(slot$object_reference)
-  relational_type <- scalar_character(slot$relational_type)
-  expected_foreign_key <- if (object_reference) {
-    list(class = scalar_character(slot$range), slot = "id")
-  } else {
-    NULL
-  }
-  if (object_reference && !identical(relational_type, "VARCHAR")) {
-    abort_schema_integrity(
-      paste0(
-        "Object-reference slot `",
-        record_class,
-        ".",
-        slot_name,
-        "` must use relational type `VARCHAR`."
-      ),
-      record_class = record_class,
-      slot = slot_name,
-      observed_type = relational_type,
-      rule = "object_reference_varchar",
-      subclass = subclass
-    )
-  }
-  expected_column <- list(
-    name = scalar_character(slot$column),
-    slot = slot_name,
-    type = relational_type,
-    nullable = !scalar_logical(slot$required),
-    primary_key = scalar_logical(slot$identifier),
-    foreign_key = expected_foreign_key
-  )
+  invalid_projection_names <- is.na(projection_names) |
+    !nzchar(projection_names) |
+    startsWith(tolower(projection_names), "_graft_")
   if (
-    !identical(scalar_character(slot$name), slot_name) ||
-      !manifest_contract_identical(slot$foreign_key, expected_foreign_key) ||
-      !manifest_contract_identical(column, expected_column)
+    any(invalid_projection_names) ||
+      anyDuplicated(tolower(projection_names))
   ) {
     abort_schema_integrity(
-      paste0(
-        "Slot `",
-        record_class,
-        ".",
-        slot_name,
-        "` and its physical column definition disagree."
-      ),
-      record_class = record_class,
-      slot = slot_name,
-      rule = "scalar_column_contract",
+      "Class and relation projection names must be valid and unique.",
+      projection_names = projection_names,
+      rule = "unique_projection_names",
       subclass = subclass
     )
   }
-  invisible(slot)
+  invisible(manifest)
 }
 
 validate_manifest_relation_contract <- function(
@@ -460,47 +378,23 @@ validate_manifest_relation_contract <- function(
   }
   relation <- matches[[1L]]
   object_reference <- scalar_logical(slot$object_reference)
-  relational_type <- scalar_character(slot$relational_type)
   kind <- if (object_reference) "object" else "value"
-  expected_foreign_key <- if (object_reference) {
-    list(class = scalar_character(slot$range), slot = "id")
-  } else {
-    NULL
-  }
-  if (object_reference && !identical(relational_type, "VARCHAR")) {
-    abort_schema_integrity(
-      paste0(
-        "Object-reference slot `",
-        record_class,
-        ".",
-        slot_name,
-        "` must use relational type `VARCHAR`."
-      ),
-      record_class = record_class,
-      slot = slot_name,
-      observed_type = relational_type,
-      rule = "object_reference_varchar",
-      subclass = subclass
-    )
-  }
   predicate <- scalar_character(relation$predicate)
   valid <- identical(scalar_character(slot$name), slot_name) &&
-    is.null(slot$column) &&
+    is.null(slot$view_column) &&
     scalar_logical(slot$multivalued) &&
     !scalar_logical(slot$identifier) &&
-    manifest_contract_identical(slot$foreign_key, expected_foreign_key) &&
     setequal(
       names(relation),
       c(
         "name",
-        "table",
+        "view",
         "owner_class",
-        "owner_table",
+        "owner_view",
         "slot",
         "kind",
         "ordered",
-        "predicate",
-        "columns"
+        "predicate"
       )
     ) &&
     identical(
@@ -508,12 +402,12 @@ validate_manifest_relation_contract <- function(
       paste(record_class, slot_name, sep = ".")
     ) &&
     identical(
-      scalar_character(relation$owner_table),
-      scalar_character(contract$table)
+      scalar_character(relation$owner_view),
+      scalar_character(contract$view)
     ) &&
     identical(
-      scalar_character(relation$table),
-      generated_relation_table_name(contract$table, slot_name)
+      scalar_character(relation$view),
+      paste0(contract$view, "__", projection_snake_case(slot_name))
     ) &&
     identical(scalar_character(relation$kind), kind) &&
     identical(
@@ -521,11 +415,7 @@ validate_manifest_relation_contract <- function(
       scalar_logical(slot$ordered)
     ) &&
     !is.na(predicate) &&
-    nzchar(predicate) &&
-    manifest_contract_identical(
-      relation$columns,
-      generated_relation_columns(record_class, slot, kind)
-    )
+    nzchar(predicate)
   if (!valid) {
     abort_schema_integrity(
       paste0(
@@ -545,11 +435,15 @@ validate_manifest_relation_contract <- function(
   invisible(relation)
 }
 
-manifest_contract_identical <- function(x, y) {
-  identical(
-    canonical_json(canonical_schema_change_value(x)),
-    canonical_json(canonical_schema_change_value(y))
+projection_snake_case <- function(value) {
+  value <- gsub(
+    "([a-z0-9])([A-Z])",
+    "\\1_\\2",
+    value,
+    perl = TRUE
   )
+  value <- gsub("[^A-Za-z0-9]+", "_", value)
+  tolower(gsub("^_+|_+$", "", value))
 }
 
 #' List concrete classes in a graft schema
@@ -566,7 +460,7 @@ kg_classes <- function(schema) {
       class = character(),
       role = character(),
       statement_shape = character(),
-      table = character(),
+      view = character(),
       id_policy = character()
     ))
   }
@@ -578,7 +472,7 @@ kg_classes <- function(schema) {
       \(.x) scalar_character(.x$statement_shape),
       character(1)
     ),
-    table = vapply(classes, \(.x) scalar_character(.x$table), character(1)),
+    view = vapply(classes, \(.x) scalar_character(.x$view), character(1)),
     id_policy = vapply(
       classes,
       \(.x) scalar_character(.x$id_policy),
@@ -633,22 +527,22 @@ slots_data_frame <- function(slots, class) {
       class = character(),
       slot = character(),
       range = character(),
-      relational_type = character(),
+      duckdb_type = character(),
       required = logical(),
       multivalued = logical(),
       identifier = logical(),
       object_reference = logical(),
       enum = character(),
-      column = character()
+      view_column = character()
     ))
   }
   data.frame(
     class = rep(class, length(slots)),
     slot = names(slots),
     range = vapply(slots, \(.x) scalar_character(.x$range), character(1)),
-    relational_type = vapply(
+    duckdb_type = vapply(
       slots,
-      \(.x) scalar_character(.x$relational_type),
+      \(.x) scalar_character(.x$duckdb_type),
       character(1)
     ),
     required = vapply(
@@ -672,7 +566,11 @@ slots_data_frame <- function(slots, class) {
       logical(1)
     ),
     enum = vapply(slots, \(.x) scalar_character(.x$enum), character(1)),
-    column = vapply(slots, \(.x) scalar_character(.x$column), character(1)),
+    view_column = vapply(
+      slots,
+      \(.x) scalar_character(.x$view_column),
+      character(1)
+    ),
     row.names = NULL,
     check.names = FALSE
   )
@@ -738,8 +636,8 @@ kg_schema_info <- function(schema) {
     schema_name = scalar_character(manifest$schema$name),
     schema_version = scalar_character(manifest$schema$version),
     manifest_version = scalar_character(manifest$manifest_version),
-    relational_mapping_version = scalar_character(
-      manifest$relational_mapping_version
+    projection_mapping_version = scalar_character(
+      manifest$projection_mapping_version
     ),
     structural_digest = scalar_character(
       manifest$fingerprints$structural_digest
