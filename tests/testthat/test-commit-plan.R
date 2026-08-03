@@ -1,10 +1,13 @@
 test_that("planning is read-only and exposes reviewed changes", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
-  before <- lapply(DBI::dbListTables(store$connection), function(table) {
-    DBI::dbReadTable(store$connection, table)
-  })
-  names(before) <- DBI::dbListTables(store$connection)
+  before <- lapply(
+    DBI::dbListTables(graft_test_connection(store)),
+    function(table) {
+      DBI::dbReadTable(graft_test_connection(store), table)
+    }
+  )
+  names(before) <- DBI::dbListTables(graft_test_connection(store))
 
   plan <- graft_plan(
     store,
@@ -13,7 +16,7 @@ test_that("planning is read-only and exposes reviewed changes", {
   )
 
   after <- lapply(names(before), function(table) {
-    DBI::dbReadTable(store$connection, table)
+    DBI::dbReadTable(graft_test_connection(store), table)
   })
   names(after) <- names(before)
   expect_s7_class(plan, graft:::GraftCommitPlan)
@@ -26,7 +29,7 @@ test_that("planning is read-only and exposes reviewed changes", {
 })
 
 test_that("planning is deterministic for an unchanged store snapshot", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
   provenance <- graft_provenance(
     "workflow",
@@ -50,7 +53,7 @@ test_that("planning is deterministic for an unchanged store snapshot", {
 })
 
 test_that("planning assigns match and update from one current-head snapshot", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(
     Entity = data.frame(
       id = test_graft_id("head-snapshot"),
@@ -71,7 +74,7 @@ test_that("planning assigns match and update from one current-head snapshot", {
   staged_row$payload_json <- canonical_json(prior_payload)
   revision_id <- test_graft_id("head-snapshot-revision")
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_revisions",
     data.frame(
       revision_id = revision_id,
@@ -91,7 +94,7 @@ test_that("planning assigns match and update from one current-head snapshot", {
     )
   )
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_heads",
     data.frame(
       record_id = staged_row$record_id,
@@ -151,7 +154,7 @@ test_that("planning assigns match and update from one current-head snapshot", {
 })
 
 test_that("deleted heads retain identity ownership and require resurrection", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(
     Entity = data.frame(
       id = test_graft_id("deleted-head"),
@@ -163,7 +166,7 @@ test_that("deleted heads retain identity ownership and require resurrection", {
   row <- graft:::commit_plan_execution(initial)$staged$rows[1L, ]
   revision_id <- test_graft_id("deleted-head-revision")
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_revisions",
     data.frame(
       revision_id = revision_id,
@@ -183,7 +186,7 @@ test_that("deleted heads retain identity ownership and require resurrection", {
     )
   )
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_heads",
     data.frame(
       record_id = row$record_id,
@@ -221,14 +224,14 @@ test_that("deleted heads retain identity ownership and require resurrection", {
 })
 
 test_that("replay checks static binding and exact plan identity", {
-  store <- local_ingest_store()
-  other_store <- local_ingest_store()
+  store <- local_graft_ingest_store()
+  other_store <- local_graft_ingest_store()
   provenance <- graft_provenance(
     "workflow",
     idempotency_key = "replay-boundary"
   )
   make_plan <- function(target_store, candidate) {
-    metadata <- read_store_metadata(target_store$connection)
+    metadata <- read_store_metadata(graft_test_connection(target_store))
     heads <- empty_plan_changes()[
       c(
         "class",
@@ -248,7 +251,7 @@ test_that("replay checks static binding and exact plan identity", {
         metadata$active_structural_digest
       ),
       planned_at = commit_plan_snapshot_time(
-        target_store$connection,
+        graft_test_connection(target_store),
         metadata
       ),
       provenance = provenance,
@@ -263,7 +266,7 @@ test_that("replay checks static binding and exact plan identity", {
   seed_replay <- function(target_store, plan) {
     batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
     commit_order <- next_metadata_order(
-      target_store$connection,
+      graft_test_connection(target_store),
       "_graft_batches",
       "commit_order"
     )
@@ -276,7 +279,7 @@ test_that("replay checks static binding and exact plan identity", {
       observed = empty_counts
     )
     DBI::dbAppendTable(
-      target_store$connection,
+      graft_test_connection(target_store),
       "_graft_batches",
       committed_batch_row(
         batch,
@@ -322,7 +325,7 @@ test_that("replay checks static binding and exact plan identity", {
 })
 
 test_that("invalid input returns a non-committable plan", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
   records$Entity$preferred_name <- NA_character_
 
@@ -337,14 +340,14 @@ test_that("invalid input returns a non-committable plan", {
   expect_identical(plan@issues$rule, "required")
   expect_s3_class(condition, "graft_commit_plan_invalid")
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(graft_test_connection(store), "_graft_batches")),
     0L
   )
 })
 
 test_that("commit rejects stale identifier and origin registries", {
-  identifier_store <- local_ingest_store()
-  origin_store <- local_ingest_store()
+  identifier_store <- local_graft_ingest_store()
+  origin_store <- local_graft_ingest_store()
   records <- list(
     Entity = data.frame(
       id = test_graft_id("registry-candidate"),
@@ -356,7 +359,7 @@ test_that("commit rejects stale identifier and origin registries", {
   origin_plan <- graft_plan(origin_store, records, provenance)
   now <- as.POSIXct("2026-01-01", tz = "UTC")
   DBI::dbAppendTable(
-    identifier_store$connection,
+    graft_test_connection(identifier_store),
     "_graft_identifiers",
     data.frame(
       record_id = test_graft_id("registry-identifier"),
@@ -372,7 +375,7 @@ test_that("commit rejects stale identifier and origin registries", {
     )
   )
   DBI::dbAppendTable(
-    origin_store$connection,
+    graft_test_connection(origin_store),
     "_graft_origins",
     data.frame(
       record_id = test_graft_id("registry-origin"),
@@ -395,11 +398,17 @@ test_that("commit rejects stale identifier and origin registries", {
   expect_s3_class(identifier_condition, "graft_commit_plan_stale")
   expect_s3_class(origin_condition, "graft_commit_plan_stale")
   expect_equal(
-    nrow(DBI::dbReadTable(identifier_store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(
+      graft_test_connection(identifier_store),
+      "_graft_batches"
+    )),
     0L
   )
   expect_equal(
-    nrow(DBI::dbReadTable(origin_store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(
+      graft_test_connection(origin_store),
+      "_graft_batches"
+    )),
     0L
   )
 })
@@ -407,7 +416,7 @@ test_that("commit rejects stale identifier and origin registries", {
 test_that("commit head checks reject composite corruption", {
   cases <- c("revision_id", "class", "revision_number")
   conditions <- lapply(cases, function(case) {
-    store <- local_ingest_store()
+    store <- local_graft_ingest_store()
     records <- list(
       Entity = data.frame(
         id = test_graft_id(paste0("corrupt-", case)),
@@ -418,7 +427,7 @@ test_that("commit head checks reject composite corruption", {
     row <- graft:::commit_plan_execution(initial)$staged$rows[1L, ]
     revision_id <- test_graft_id(paste0("corrupt-revision-", case))
     DBI::dbAppendTable(
-      store$connection,
+      graft_test_connection(store),
       "_graft_record_revisions",
       data.frame(
         revision_id = revision_id,
@@ -438,7 +447,7 @@ test_that("commit head checks reject composite corruption", {
       )
     )
     DBI::dbAppendTable(
-      store$connection,
+      graft_test_connection(store),
       "_graft_record_heads",
       data.frame(
         record_id = row$record_id,
@@ -453,19 +462,19 @@ test_that("commit head checks reject composite corruption", {
     plan <- graft_plan(store, records, graft_provenance("corruption-test"))
     if (identical(case, "revision_id")) {
       DBI::dbExecute(
-        store$connection,
+        graft_test_connection(store),
         "UPDATE _graft_record_heads SET revision_id = ? WHERE record_id = ?",
         params = list(test_graft_id("dangling-revision"), row$record_id)
       )
     } else if (identical(case, "class")) {
       DBI::dbExecute(
-        store$connection,
+        graft_test_connection(store),
         "UPDATE _graft_record_heads SET class = ? WHERE record_id = ?",
         params = list("Source", row$record_id)
       )
     } else {
       DBI::dbExecute(
-        store$connection,
+        graft_test_connection(store),
         paste0(
           "UPDATE _graft_record_heads SET revision_number = ? ",
           "WHERE record_id = ?"
@@ -482,7 +491,7 @@ test_that("commit head checks reject composite corruption", {
 })
 
 test_that("commit rejects a head created after an insert plan", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(
     Entity = data.frame(
       id = test_graft_id("unexpected-head"),
@@ -493,7 +502,7 @@ test_that("commit rejects a head created after an insert plan", {
   row <- graft:::commit_plan_execution(plan)$staged$rows[1L, ]
   revision_id <- test_graft_id("unexpected-head-revision")
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_revisions",
     data.frame(
       revision_id = revision_id,
@@ -513,7 +522,7 @@ test_that("commit rejects a head created after an insert plan", {
     )
   )
   DBI::dbAppendTable(
-    store$connection,
+    graft_test_connection(store),
     "_graft_record_heads",
     data.frame(
       record_id = row$record_id,
@@ -531,13 +540,16 @@ test_that("commit rejects a head created after an insert plan", {
 })
 
 test_that("commit accepts a prepared plan and preserves replay behavior", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
   provenance <- graft_provenance("workflow")
   plan <- graft_plan(store, records, provenance)
 
   first <- graft_commit(store, plan)
-  before <- nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions"))
+  before <- nrow(DBI::dbReadTable(
+    graft_test_connection(store),
+    "_graft_record_revisions"
+  ))
   replay_condition <- NULL
   replay <- withCallingHandlers(
     graft_commit(store, plan),
@@ -545,7 +557,10 @@ test_that("commit accepts a prepared plan and preserves replay behavior", {
       replay_condition <<- condition
     }
   )
-  after <- nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions"))
+  after <- nrow(DBI::dbReadTable(
+    graft_test_connection(store),
+    "_graft_record_revisions"
+  ))
 
   expect_identical(first$inserted[["Entity"]], 1L)
   expect_s3_class(replay_condition, "graft_batch_replay")
@@ -582,7 +597,7 @@ test_that("executor rejects malformed staged rows before writing", {
   )
 
   for (case in names(mutations)) {
-    store <- local_ingest_store()
+    store <- local_graft_ingest_store()
     plan <- graft_plan(
       store,
       list(
@@ -604,7 +619,7 @@ test_that("executor rejects malformed staged rows before writing", {
     )
     counts <- vapply(
       authority,
-      \(table) nrow(DBI::dbReadTable(store$connection, table)),
+      \(table) nrow(DBI::dbReadTable(graft_test_connection(store), table)),
       integer(1)
     )
 
@@ -614,7 +629,7 @@ test_that("executor rejects malformed staged rows before writing", {
 })
 
 test_that("executor enforces match and head invariants before writing", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   record_id <- test_graft_id("malformed-match")
   records <- list(
     Entity = data.frame(id = record_id, preferred_name = "Reviewed content")
@@ -623,7 +638,7 @@ test_that("executor enforces match and head invariants before writing", {
   graft_ingest(store, records, provenance)
   before <- lapply(
     graft_authoritative_table_names,
-    \(table) DBI::dbReadTable(store$connection, table)
+    \(table) DBI::dbReadTable(graft_test_connection(store), table)
   )
   names(before) <- graft_authoritative_table_names
   plan <- graft_plan(store, records, provenance)
@@ -646,7 +661,7 @@ test_that("executor enforces match and head invariants before writing", {
   condition <- catch_graft_ingest_condition(graft_commit(store, malformed))
   after <- lapply(
     graft_authoritative_table_names,
-    \(table) DBI::dbReadTable(store$connection, table)
+    \(table) DBI::dbReadTable(graft_test_connection(store), table)
   )
   names(after) <- graft_authoritative_table_names
 
@@ -655,7 +670,7 @@ test_that("executor enforces match and head invariants before writing", {
 })
 
 test_that("bulk commit persists insert, update, match, and identity evidence", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   first_records <- list(
     Entity = data.frame(
       preferred_name = "Water",
@@ -682,11 +697,11 @@ test_that("bulk commit persists insert, update, match, and identity evidence", {
     graft_provenance("bulk-test", idempotency_key = "bulk-match")
   )
   revisions <- DBI::dbGetQuery(
-    store$connection,
+    graft_test_connection(store),
     "SELECT * FROM _graft_record_revisions ORDER BY commit_order"
   )
   observations <- DBI::dbGetQuery(
-    store$connection,
+    graft_test_connection(store),
     paste0(
       "SELECT observation.* FROM _graft_record_observations AS observation ",
       "INNER JOIN _graft_batches AS batch USING (batch_id) ",
@@ -720,15 +735,15 @@ test_that("bulk commit persists insert, update, match, and identity evidence", {
   )
   expect_length(evidence, 3L)
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_identifiers")),
+    nrow(DBI::dbReadTable(graft_test_connection(store), "_graft_identifiers")),
     1L
   )
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_origins")),
+    nrow(DBI::dbReadTable(graft_test_connection(store), "_graft_origins")),
     1L
   )
   expect_identical(
-    DBI::dbReadTable(store$connection, "entity")$preferred_name,
+    DBI::dbReadTable(graft_test_connection(store), "entity")$preferred_name,
     "Heavy water"
   )
 })
@@ -744,7 +759,7 @@ test_that("every bulk stage rolls back a multi-class commit", {
     "batch"
   )
   for (stage in stages) {
-    store <- local_ingest_store()
+    store <- local_graft_ingest_store()
     records <- valid_atomic_records()[c("Entity", "Source")]
     plan <- graft_plan(
       store,
@@ -755,7 +770,7 @@ test_that("every bulk stage rolls back a multi-class commit", {
       )
     )
     projection_state <- DBI::dbReadTable(
-      store$connection,
+      graft_test_connection(store),
       "_graft_projection_state"
     )
     withr::local_options(
@@ -770,23 +785,31 @@ test_that("every bulk stage rolls back a multi-class commit", {
     )
     rows <- vapply(
       authority,
-      \(table) nrow(DBI::dbReadTable(store$connection, table)),
+      \(table) nrow(DBI::dbReadTable(graft_test_connection(store), table)),
       integer(1)
     )
     expect_s3_class(condition, "graft_backend_error")
     expect_identical(condition$stage, stage)
     expect_identical(unname(rows), integer(length(rows)))
     expect_identical(
-      DBI::dbReadTable(store$connection, "_graft_projection_state"),
+      DBI::dbReadTable(graft_test_connection(store), "_graft_projection_state"),
       projection_state
     )
-    expect_equal(nrow(DBI::dbReadTable(store$connection, "entity")), 0L)
-    expect_equal(nrow(DBI::dbReadTable(store$connection, "source")), 0L)
+    expect_equal(
+      nrow(DBI::dbReadTable(graft_test_connection(store), "entity")),
+      0L
+    )
+    expect_equal(
+      nrow(DBI::dbReadTable(graft_test_connection(store), "source")),
+      0L
+    )
   }
 })
 
 test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  schema <- modified_ingest_schema(
+    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
+  )
   about <- schema$manifest$classes$Claim$slots$about
   about$object_reference <- FALSE
   about$range <- "decimal"
@@ -806,7 +829,8 @@ test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
   schema$manifest$classes$Claim$slots$confidence$minimum_value <- NULL
   schema$manifest$classes$Claim$slots$confidence$maximum_value <- NULL
   schema <- refresh_schema_structural_digest(schema)
-  store <- local_ingest_store(schema = schema)
+  schema <- new_graft_schema(schema)
+  store <- local_graft_ingest_store(schema = schema)
   record_id <- test_graft_id("exact-commit")
 
   result <- graft_ingest(
@@ -823,16 +847,16 @@ test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
   )
   payload <- projection_parse_payload(
     DBI::dbReadTable(
-      store$connection,
+      graft_test_connection(store),
       "_graft_record_revisions"
     )$payload_json[[1L]]
   )
   bigint <- DBI::dbGetQuery(
-    store$connection,
+    graft_test_connection(store),
     "SELECT CAST(confidence AS VARCHAR) AS value FROM claim"
   )
   decimal <- DBI::dbGetQuery(
-    store$connection,
+    graft_test_connection(store),
     "SELECT CAST(value AS VARCHAR) AS value FROM claim__about"
   )
 
@@ -844,8 +868,8 @@ test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
 })
 
 test_that("bulk commit statements are independent of candidate row count", {
-  one_store <- local_ingest_store()
-  many_store <- local_ingest_store()
+  one_store <- local_graft_ingest_store()
+  many_store <- local_graft_ingest_store()
   one_plan <- graft_plan(
     one_store,
     list(
@@ -890,8 +914,8 @@ test_that("bulk commit statements are independent of candidate row count", {
 })
 
 test_that("commit rejects tampered and cross-store plans before writing", {
-  first_store <- local_ingest_store()
-  second_store <- local_ingest_store()
+  first_store <- local_graft_ingest_store()
+  second_store <- local_graft_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
   plan <- graft_plan(
     first_store,
@@ -927,17 +951,23 @@ test_that("commit rejects tampered and cross-store plans before writing", {
   expect_s3_class(time_tampered_condition, "graft_commit_plan_tampered")
   expect_s3_class(cross_store_condition, "graft_commit_plan_stale")
   expect_equal(
-    nrow(DBI::dbReadTable(first_store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(
+      graft_test_connection(first_store),
+      "_graft_batches"
+    )),
     0L
   )
   expect_equal(
-    nrow(DBI::dbReadTable(second_store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(
+      graft_test_connection(second_store),
+      "_graft_batches"
+    )),
     1L
   )
 })
 
 test_that("commit rejects a reused idempotency key for a different plan", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   provenance <- graft_provenance(
     "workflow",
     idempotency_key = "collision"
@@ -949,10 +979,10 @@ test_that("commit rejects a reused idempotency key for a different plan", {
   changed$Entity$preferred_name <- "Different candidate"
   colliding_plan <- graft_plan(store, changed, provenance)
   before_batches <- nrow(
-    DBI::dbReadTable(store$connection, "_graft_batches")
+    DBI::dbReadTable(graft_test_connection(store), "_graft_batches")
   )
   before_revisions <- nrow(
-    DBI::dbReadTable(store$connection, "_graft_record_revisions")
+    DBI::dbReadTable(graft_test_connection(store), "_graft_record_revisions")
   )
 
   condition <- catch_graft_ingest_condition(
@@ -963,17 +993,20 @@ test_that("commit rejects a reused idempotency key for a different plan", {
   expect_identical(condition$observed_batch_id, committed_plan@plan_id)
   expect_identical(condition$expected_batch_id, colliding_plan@plan_id)
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(graft_test_connection(store), "_graft_batches")),
     before_batches
   )
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_record_revisions")),
+    nrow(DBI::dbReadTable(
+      graft_test_connection(store),
+      "_graft_record_revisions"
+    )),
     before_revisions
   )
 })
 
 test_that("commit rejects a stale expected record head", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   initial <- list(Entity = valid_atomic_records()$Entity)
   graft_ingest(
     store,
@@ -994,13 +1027,16 @@ test_that("commit rejects a stale expected record head", {
     intervening,
     graft_provenance("workflow", idempotency_key = "intervening")
   )
-  before <- nrow(DBI::dbReadTable(store$connection, "_graft_batches"))
+  before <- nrow(DBI::dbReadTable(
+    graft_test_connection(store),
+    "_graft_batches"
+  ))
 
   condition <- catch_graft_ingest_condition(graft_commit(store, stale_plan))
 
   expect_s3_class(condition, "graft_commit_plan_stale")
   expect_equal(
-    nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
+    nrow(DBI::dbReadTable(graft_test_connection(store), "_graft_batches")),
     before
   )
 })

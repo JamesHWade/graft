@@ -25,6 +25,10 @@ local_graft_ingest_store <- function(
   store
 }
 
+graft_test_connection <- function(store) {
+  as_graft_store_internal(store)$connection
+}
+
 test_graft_id <- function(seed) {
   deterministic_graft_id("TestFixture", list(seed = seed))
 }
