@@ -4,6 +4,7 @@ test_that("BR-21 current retrieval uses the ledger and active sensitivity", {
   )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
+  schema <- new_graft_schema(schema)
   fixture <- retrieval_fixture_records()
   store <- local_graft_ingest_store(schema = schema)
   connection <- as_graft_store_internal(store)$connection
@@ -487,6 +488,7 @@ test_that("BR-23 exact pagination cannot be starved by false payload hits", {
   )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
+  schema <- new_graft_schema(schema)
   store <- local_graft_ingest_store(schema = schema)
   connection <- as_graft_store_internal(store)$connection
   entity_ids <- sort(vapply(
@@ -659,6 +661,7 @@ test_that("BR-22 exact BIGINT and DECIMAL history remains lossless", {
   schema$manifest$slots$temperature$range <- "decimal"
   schema$manifest$slots$temperature$duckdb_type <- "DECIMAL"
   schema <- refresh_schema_structural_digest(schema)
+  schema <- new_graft_schema(schema)
   fixture <- retrieval_fixture_records()
   exact_bigint <- "9223372036854775807"
   exact_decimal <- "12345678901234.567"

@@ -239,23 +239,23 @@ GraftStore <- S7::new_class(
     ),
     path = S7::new_property(
       S7::class_character,
-      getter = \(self) graft_store_state(self)$legacy$path
+      getter = \(self) graft_store_state(self)$backend$path
     ),
     read_only = S7::new_property(
       S7::class_logical,
-      getter = \(self) graft_store_state(self)$legacy$read_only
+      getter = \(self) graft_store_state(self)$backend$read_only
     ),
     closed = S7::new_property(
       S7::class_logical,
       getter = function(self) {
-        legacy <- graft_store_state(self)$legacy
-        validate_kg_store(legacy, require_open = FALSE)
-        isTRUE(legacy$closed)
+        backend <- graft_store_state(self)$backend
+        validate_store_backend(backend, require_open = FALSE)
+        isTRUE(backend$closed)
       }
     ),
     capabilities = S7::new_property(
       S7::class_list,
-      getter = \(self) as.list(graft_store_state(self)$legacy$capabilities)
+      getter = \(self) as.list(graft_store_state(self)$backend$capabilities)
     ),
     schema = S7::new_property(
       S7::class_any,
@@ -291,7 +291,7 @@ graft_schema <- function(path, output = NULL) {
         schema_path = path
       )
     }
-    return(new_graft_schema(kg_schema(path)))
+    return(new_graft_schema(load_schema_manifest(path)))
   }
   if (!grepl("\\.ya?ml$", lower)) {
     abort_schema_error(
@@ -305,7 +305,7 @@ graft_schema <- function(path, output = NULL) {
     )
   }
   output <- normalize_graft_schema_output(output)
-  new_graft_schema(kg_compile_schema(path, output))
+  new_graft_schema(compile_schema_manifest(path, output))
 }
 
 normalize_graft_schema_path <- function(path) {
@@ -395,11 +395,11 @@ graft_open <- function(
 ) {
   path_missing <- missing(path)
   schema <- as_graft_schema_object(schema, "schema")
-  legacy_schema <- as_graft_schema_internal(schema, "schema")
+  compiled_schema <- as_graft_schema_internal(schema, "schema")
   validate_read_only(read_only)
   okf <- rlang::arg_match(okf)
   args <- list(
-    schema = legacy_schema,
+    schema = compiled_schema,
     read_only = read_only,
     connection = connection,
     okf = okf,
@@ -408,20 +408,20 @@ graft_open <- function(
   if (is.null(connection) || !path_missing) {
     args$path <- path
   }
-  legacy <- do.call(kg_connect_duckdb, args)
+  backend <- do.call(open_store_backend, args)
   tryCatch(
     {
-      kg_init(legacy)
-      metadata <- read_store_metadata(legacy$connection)
+      initialize_store_backend(backend)
+      metadata <- read_store_metadata(backend$connection)
       state <- new.env(parent = emptyenv())
-      state$legacy <- legacy
+      state$backend <- backend
       state$schema <- schema
       state$id <- scalar_character(metadata$store_id)
       state$id_digest <- graft_sha256(canonical_json(state$id))
       GraftStore(state)
     },
     error = function(error) {
-      kg_disconnect(legacy)
+      close_store_backend(backend)
       stop(error)
     }
   )
@@ -437,21 +437,21 @@ graft_open <- function(
 #' @return `store`, invisibly.
 #' @export
 graft_close <- function(store) {
-  legacy <- as_graft_store_internal(
+  backend <- as_graft_store_internal(
     store,
     arg = "store",
     require_open = FALSE
   )
-  kg_disconnect(legacy)
+  close_store_backend(backend)
   invisible(store)
 }
 
-new_graft_schema <- function(schema) {
-  validate_manifest_integrity(schema)
+new_graft_schema <- function(compiled_schema) {
+  validate_manifest_integrity(compiled_schema)
   state <- new.env(parent = emptyenv())
-  state$manifest_json <- canonical_manifest_json(schema$manifest)
-  state$path <- scalar_character(schema$path)
-  state$classes <- graft_class_contracts(schema$manifest)
+  state$manifest_json <- canonical_manifest_json(compiled_schema$manifest)
+  state$path <- scalar_character(compiled_schema$path)
+  state$classes <- graft_class_contracts(compiled_schema$manifest)
   GraftSchema(state)
 }
 
@@ -460,9 +460,6 @@ as_graft_schema_object <- function(x, arg = rlang::caller_arg(x)) {
     as_graft_schema_internal(x, arg)
     return(x)
   }
-  if (inherits(x, "kg_schema")) {
-    return(new_graft_schema(x))
-  }
   abort_schema_error(
     paste0("`", arg, "` must be a GraftSchema object."),
     argument = arg
@@ -470,10 +467,6 @@ as_graft_schema_object <- function(x, arg = rlang::caller_arg(x)) {
 }
 
 as_graft_schema_internal <- function(x, arg = rlang::caller_arg(x)) {
-  if (inherits(x, "kg_schema")) {
-    validate_manifest_integrity(x)
-    return(x)
-  }
   if (!S7::S7_inherits(x, GraftSchema)) {
     abort_schema_error(
       paste0("`", arg, "` must be a GraftSchema object."),
@@ -496,9 +489,9 @@ as_graft_schema_internal <- function(x, arg = rlang::caller_arg(x)) {
   }
   state <- graft_schema_state(x)
   path <- if (is.na(state$path)) NULL else state$path
-  schema <- new_kg_schema(graft_schema_manifest(x), path)
-  validate_manifest_integrity(schema)
-  schema
+  compiled_schema <- new_compiled_schema(graft_schema_manifest(x), path)
+  validate_manifest_integrity(compiled_schema)
+  compiled_schema
 }
 
 as_graft_store_internal <- function(
@@ -506,10 +499,6 @@ as_graft_store_internal <- function(
   arg = rlang::caller_arg(x),
   require_open = TRUE
 ) {
-  if (is_kg_store(x)) {
-    validate_kg_store(x, require_open = require_open, arg = arg)
-    return(x)
-  }
   if (!S7::S7_inherits(x, GraftStore)) {
     abort_backend_error(
       paste0("`", arg, "` must be a GraftStore object."),
@@ -532,9 +521,9 @@ as_graft_store_internal <- function(
       parent = error
     )
   }
-  legacy <- graft_store_state(x)$legacy
-  validate_kg_store(legacy, require_open = require_open, arg = arg)
-  legacy
+  backend <- graft_store_state(x)$backend
+  validate_store_backend(backend, require_open = require_open, arg = arg)
+  backend
 }
 
 slot_contract_field_names <- function() {
@@ -670,13 +659,13 @@ validate_graft_schema_s7 <- function(self) {
   if (!identical(canonical_manifest_json(manifest), state$manifest_json)) {
     return("internal manifest JSON must be canonical")
   }
-  schema <- new_kg_schema(
+  compiled_schema <- new_compiled_schema(
     manifest,
     if (is.na(state$path)) NULL else state$path
   )
   integrity_error <- tryCatch(
     {
-      validate_manifest_integrity(schema)
+      validate_manifest_integrity(compiled_schema)
       NULL
     },
     error = conditionMessage
@@ -710,7 +699,7 @@ validate_graft_store_s7 <- function(self) {
   if (
     !identical(
       sort(ls(state)),
-      sort(c("legacy", "schema", "id", "id_digest"))
+      sort(c("backend", "schema", "id", "id_digest"))
     )
   ) {
     return("internal store state fields are invalid")
@@ -737,56 +726,56 @@ validate_graft_store_s7 <- function(self) {
   if (!is.null(schema_error)) {
     return("@schema is invalid")
   }
-  legacy <- state$legacy
-  if (!is_kg_store(legacy)) {
-    return("internal store state must contain a kg_store")
+  backend <- state$backend
+  if (!is_store_backend(backend)) {
+    return("internal store state must contain a connection backend")
   }
   store_error <- tryCatch(
     {
-      validate_kg_store(legacy, require_open = FALSE)
+      validate_store_backend(backend, require_open = FALSE)
       NULL
     },
     error = conditionMessage
   )
   if (!is.null(store_error)) {
-    return("internal kg_store state is invalid")
+    return("internal store backend is invalid")
   }
   if (
-    !is_scalar_flag(legacy$read_only) ||
-      !is_scalar_flag(legacy$owns_connection) ||
-      !is_scalar_flag(legacy$closed) ||
-      !is_nonempty_string(legacy$path)
+    !is_scalar_flag(backend$read_only) ||
+      !is_scalar_flag(backend$owns_connection) ||
+      !is_scalar_flag(backend$closed) ||
+      !is_nonempty_string(backend$path)
   ) {
-    return("internal kg_store lifecycle fields are invalid")
+    return("internal store lifecycle fields are invalid")
   }
-  expected_capabilities <- new_duckdb_capabilities(
-    legacy$read_only,
-    legacy$owns_connection
+  expected_capabilities <- duckdb_capabilities(
+    backend$read_only,
+    backend$owns_connection
   )
-  if (!identical(legacy$capabilities, expected_capabilities)) {
+  if (!identical(backend$capabilities, expected_capabilities)) {
     return("@capabilities does not match the connection lifecycle")
   }
-  legacy_schema <- tryCatch(
+  compiled_schema <- tryCatch(
     {
-      validate_manifest_integrity(legacy$schema)
-      legacy$schema
+      validate_manifest_integrity(backend$schema)
+      backend$schema
     },
     error = identity
   )
-  if (inherits(legacy_schema, "error")) {
-    return("internal kg_store schema is invalid")
+  if (inherits(compiled_schema, "error")) {
+    return("internal store schema is invalid")
   }
   if (
     !identical(
-      canonical_manifest_json(legacy_schema$manifest),
+      canonical_manifest_json(compiled_schema$manifest),
       graft_schema_state(state$schema)$manifest_json
     )
   ) {
     return("@schema does not match the store schema")
   }
-  if (!isTRUE(legacy$closed)) {
+  if (!isTRUE(backend$closed)) {
     metadata <- tryCatch(
-      read_store_metadata(legacy$connection),
+      read_store_metadata(backend$connection),
       error = identity
     )
     if (

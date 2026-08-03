@@ -181,9 +181,9 @@ test_that("v0.1 public API completes the governed knowledge loop", {
 
 test_that("graft_schema validates source and output boundaries", {
   local_mocked_bindings(
-    kg_compile_schema = function(schema, output) {
+    compile_schema_manifest = function(schema, output) {
       file.copy(tempest_manifest_path(), output)
-      kg_schema(output)
+      load_schema_manifest(output)
     }
   )
   temporary <- graft_schema(tempest_schema_path())

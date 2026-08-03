@@ -244,7 +244,7 @@ historical_schema_version <- function(version, build_digest) {
       schema_version_count = nrow(version)
     )
   }
-  schema <- schema_from_manifest_json(version$manifest_json[[1L]])
+  schema <- compiled_schema_from_json(version$manifest_json[[1L]])
   validate_manifest_integrity(schema)
   fingerprints <- schema$manifest$fingerprints
   if (

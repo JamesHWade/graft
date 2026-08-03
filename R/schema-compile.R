@@ -1,23 +1,4 @@
-#' Compile a LinkML schema into a graft manifest
-#'
-#' `kg_compile_schema()` is the only public graft operation that requires
-#' Python. It uses `linkml_runtime.SchemaView` to resolve the complete import
-#' closure and writes a canonical JSON manifest. Loading the result with
-#' [kg_schema()] does not require Python.
-#'
-#' Ordinary LinkML schemas do not need to import graft's core schema or use
-#' graft annotations. Concrete classes receive conservative node, identity,
-#' label, search, and timestamp defaults in the compiled manifest. Import
-#' `graft-core.linkml` only when a schema needs graft-specific statement,
-#' evidence, source, mention, edge, or metadata behavior.
-#'
-#' @param schema Path to a root LinkML YAML schema.
-#' @param output Output path for the compiled `.graft.json` manifest. If
-#'   `NULL`, the path is derived from `schema`.
-#'
-#' @return A [kg_schema()] object loaded from the compiled manifest.
-#' @export
-kg_compile_schema <- function(schema, output = NULL) {
+compile_schema_manifest <- function(schema, output = NULL) {
   error_call <- rlang::caller_call()
   schema <- normalize_schema_input(schema)
   output <- normalize_manifest_output(schema, output)
@@ -48,7 +29,7 @@ kg_compile_schema <- function(schema, output = NULL) {
     }
   )
 
-  kg_schema(output)
+  load_schema_manifest(output)
 }
 
 normalize_schema_input <- function(schema) {

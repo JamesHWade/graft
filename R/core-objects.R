@@ -1,43 +1,19 @@
-new_kg_schema <- function(manifest, path = NULL) {
-  structure(
-    list(
-      manifest = manifest,
-      path = path
-    ),
-    class = "kg_schema"
+new_compiled_schema <- function(manifest, path = NULL) {
+  list(
+    manifest = manifest,
+    path = path
   )
 }
 
-new_kg_schema_diff <- function(
-  compatible,
-  old_structural_digest,
-  new_structural_digest,
-  classes,
-  slots,
-  enums,
-  tables,
-  relations,
-  classification,
-  details
-) {
-  structure(
-    list(
-      compatible = compatible,
-      classification = classification,
-      old_structural_digest = old_structural_digest,
-      new_structural_digest = new_structural_digest,
-      classes = classes,
-      slots = slots,
-      enums = enums,
-      tables = tables,
-      relations = relations,
-      details = details
-    ),
-    class = "kg_schema_diff"
-  )
+is_compiled_schema <- function(x) {
+  is.list(x) &&
+    !is.object(x) &&
+    identical(names(x), c("manifest", "path")) &&
+    is.list(x$manifest) &&
+    (is.null(x$path) || is_nonempty_string(x$path))
 }
 
-new_kg_store <- function(
+new_store_backend <- function(
   schema,
   connection,
   owns_connection,
@@ -59,140 +35,38 @@ new_kg_store <- function(
   store$okf_path <- okf_path
   store$okf_expected <- NULL
   store$verification <- NULL
-  class(store) <- "kg_store"
   store
 }
 
-new_kg_record <- function(
-  id,
-  record_class,
-  record,
-  related,
-  limits,
-  truncated,
-  store_schema_digest
-) {
-  structure(
-    c(
-      list(
-        id = id,
-        class = record_class,
-        record = record
-      ),
-      related,
-      list(
-        truncated = truncated,
-        limits = limits,
-        store_schema_digest = store_schema_digest
-      )
-    ),
-    class = "kg_record"
-  )
+is_store_backend <- function(x) {
+  is.environment(x) &&
+    !is.object(x) &&
+    all(
+      c(
+        "schema",
+        "connection",
+        "owns_connection",
+        "read_only",
+        "path",
+        "closed",
+        "capabilities",
+        "okf_mode",
+        "okf_path",
+        "okf_expected",
+        "verification"
+      ) %in%
+        ls(x, all.names = TRUE)
+    )
 }
 
-new_kg_context <- function(
-  text,
-  classes,
-  identity_namespaces,
-  relationships,
-  evidence_expectations,
-  query_limits,
-  duckdb_ownership,
-  token_budget,
-  estimated_tokens,
-  truncated,
-  store_schema_digest
-) {
-  structure(
-    list(
-      text = text,
-      classes = classes,
-      identity_namespaces = identity_namespaces,
-      relationships = relationships,
-      evidence_expectations = evidence_expectations,
-      query_limits = query_limits,
-      duckdb_ownership = duckdb_ownership,
-      token_budget = token_budget,
-      estimated_tokens = estimated_tokens,
-      truncated = truncated,
-      store_schema_digest = store_schema_digest
-    ),
-    class = "kg_context"
-  )
-}
-
-new_kg_subgraph <- function(
-  nodes,
-  edges,
-  roots,
-  path,
-  predicate,
-  direction,
-  hops,
-  projection,
-  truncated,
-  limits,
-  store_schema_digest,
-  request_kind
-) {
-  request <- list(
-    kind = request_kind,
-    roots = roots,
-    path = path,
-    predicate = predicate,
-    direction = direction,
-    hops = as.integer(hops),
-    projection = projection
-  )
-  structure(
-    list(
-      nodes = nodes,
-      edges = edges,
-      roots = roots,
-      requested_roots = roots,
-      path = path,
-      predicate = predicate,
-      direction = direction,
-      hops = as.integer(hops),
-      projection = projection,
-      request = request,
-      truncated = isTRUE(truncated),
-      limits = limits,
-      store_schema_digest = store_schema_digest
-    ),
-    class = "kg_subgraph"
-  )
-}
-
-is_kg_schema <- function(x) {
-  inherits(x, "kg_schema")
-}
-
-as_kg_schema <- function(x, arg = rlang::caller_arg(x)) {
-  if (is_kg_schema(x)) {
-    return(x)
-  }
-  if (is.character(x) && length(x) == 1L && !is.na(x)) {
-    return(kg_schema(x))
-  }
-  abort_schema_error(
-    paste0("`", arg, "` must be a kg_schema object or a manifest path."),
-    argument = arg
-  )
-}
-
-is_kg_store <- function(x) {
-  inherits(x, "kg_store") && is.environment(x)
-}
-
-validate_kg_store <- function(
+validate_store_backend <- function(
   store,
   require_open = TRUE,
   arg = rlang::caller_arg(store)
 ) {
-  if (!is_kg_store(store)) {
+  if (!is_store_backend(store)) {
     abort_backend_error(
-      paste0("`", arg, "` must be a kg_store object."),
+      paste0("`", arg, "` has invalid internal store state."),
       operation = "validate_store",
       argument = arg
     )
@@ -208,7 +82,7 @@ validate_kg_store <- function(
   }
   if (isTRUE(require_open) && isTRUE(store$closed)) {
     abort_backend_error(
-      "The kg_store is closed.",
+      "The GraftStore is closed.",
       operation = "validate_store",
       store_path = store$path
     )

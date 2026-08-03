@@ -1,52 +1,46 @@
-test_that("committed manifest loads without a usable Python path", {
+test_that("compiled manifests load without Python", {
   withr::local_envvar(
     RETICULATE_PYTHON = "/path/that/does/not/exist/python"
   )
 
-  schema <- kg_schema(tempest_manifest_path())
+  schema <- graft_schema(tempest_manifest_path())
 
-  expect_s3_class(schema, "kg_schema")
-  expect_identical(kg_schema_info(schema)$schema_name, "tempest-artifacts")
-  expect_identical(kg_schema_info(schema)$class_count, 10L)
-  expect_identical(kg_schema_info(schema)$manifest_version, "2.0.0")
-  expect_identical(kg_schema_info(schema)$projection_mapping_version, "1")
-  expect_null(schema$manifest$tables)
+  expect_identical(S7::S7_inherits(schema, GraftSchema), TRUE)
+  expect_identical(schema@name, "tempest-artifacts")
+  expect_length(schema@classes, 10L)
+  expect_identical(schema@manifest$manifest_version, "2.0.0")
+  expect_identical(schema@manifest$projection_mapping_version, "1")
+  expect_null(schema@manifest$tables)
 })
 
-test_that("schema inspection exposes roles, slots, and enums", {
-  schema <- kg_schema(tempest_manifest_path())
+test_that("schema properties expose semantic contracts", {
+  schema <- graft_schema(tempest_manifest_path())
+  claim <- schema@classes$Claim
+  semantic_claim <- schema@classes$SemanticClaim
+  about <- claim@slots$about
+  manifest <- schema@manifest
+  support_values <- manifest$enums$EvidenceSupportType$permissible_values
+  support_names <- vapply(
+    support_values,
+    \(value) scalar_character(value$value),
+    character(1)
+  )
 
-  classes <- kg_classes(schema)
-  slots <- kg_slots(schema, "Claim")
-  enums <- kg_enums(schema)
-
+  expect_identical(claim@statement_shape, "narrative")
+  expect_identical(semantic_claim@statement_shape, "semantic")
+  expect_identical(about@required, TRUE)
+  expect_identical(about@duckdb_type, "VARCHAR")
+  expect_in("supports", support_names)
   expect_identical(
-    classes$statement_shape[classes$class == "Claim"],
-    "narrative"
-  )
-  expect_identical(
-    classes$statement_shape[classes$class == "SemanticClaim"],
-    "semantic"
-  )
-  expect_identical(classes$view[classes$class == "Claim"], "claim")
-  expect_in("about", slots$slot)
-  expect_identical(slots$required[slots$slot == "about"], TRUE)
-  expect_identical(slots$duckdb_type[slots$slot == "about"], "VARCHAR")
-  expect_identical(
-    slots$view_column[slots$slot == "about"],
-    NA_character_
-  )
-  expect_in("supports", enums$value[enums$enum == "EvidenceSupportType"])
-  expect_identical(
-    schema$manifest$classes$Source$slots$uri$external_identifier,
+    schema@classes$Source@slots$uri@external_identifier,
     "canonical_url"
   )
   expect_identical(
-    schema$manifest$identifier_normalization_versions$canonical_url,
+    manifest$identifier_normalization_versions$canonical_url,
     "1"
   )
   expect_identical(
-    schema$manifest$relations[[1L]],
+    manifest$relations[[1L]],
     list(
       kind = "object",
       name = "Claim.about",
@@ -61,7 +55,7 @@ test_that("schema inspection exposes roles, slots, and enums", {
 })
 
 test_that("manifest integrity validates projection contracts", {
-  schema <- kg_schema(tempest_manifest_path())
+  schema <- as_graft_schema_internal(graft_schema(tempest_manifest_path()))
 
   expect_invisible(validate_manifest_integrity(schema))
 
@@ -75,7 +69,7 @@ test_that("manifest integrity validates projection contracts", {
 })
 
 test_that("manifest integrity rejects scalar slot name mismatches", {
-  schema <- kg_schema(tempest_manifest_path())
+  schema <- as_graft_schema_internal(graft_schema(tempest_manifest_path()))
   tampered <- unserialize(serialize(schema, NULL))
   tampered$manifest$classes$Entity$slots$description$name <- "renamed"
   tampered <- refresh_schema_structural_digest(tampered)
@@ -89,35 +83,37 @@ test_that("manifest integrity rejects scalar slot name mismatches", {
 })
 
 test_that("narrative claims do not require artificial predicates", {
-  schema <- kg_schema(tempest_manifest_path())
-  claim_slots <- kg_slots(schema, "Claim")$slot
+  schema <- graft_schema(tempest_manifest_path())
+  claim_slots <- names(schema@classes$Claim@slots)
   claim <- yaml::read_yaml(
     test_path("fixtures", "tempest-schema", "valid-narrative.yaml")
   )
 
-  expect_disjoint(
-    claim_slots,
-    c("predicate", "object_entity", "object_value", "object_datatype")
+  semantic_fields <- c(
+    "predicate",
+    "object_entity",
+    "object_value",
+    "object_datatype"
   )
-  expect_disjoint(
-    names(claim),
-    c("predicate", "object_entity", "object_value", "object_datatype")
-  )
+  expect_disjoint(claim_slots, semantic_fields)
+  expect_disjoint(names(claim), semantic_fields)
   expect_identical(
-    schema$manifest$graph_projections$semantic_edges$exclude_narrative_statements,
+    schema@manifest$graph_projections$semantic_edges$exclude_narrative_statements,
     TRUE
   )
   expect_length(
-    schema$manifest$graph_projections$semantic_edges$object_relations,
+    schema@manifest$graph_projections$semantic_edges$object_relations,
     0L
   )
 })
 
-test_that("semantic statements represent an exactly-one object invariant", {
-  schema <- kg_schema(tempest_manifest_path())
-  invariants <- schema$manifest$validation_invariants
-  names <- vapply(invariants, \(.x) .x$name, character(1))
-  invariant <- invariants[[which(names == "exactly_one_semantic_object")]]
+test_that("semantic statements retain their exactly-one invariant", {
+  schema <- graft_schema(tempest_manifest_path())
+  invariants <- schema@manifest$validation_invariants
+  invariant_names <- vapply(invariants, \(.x) .x$name, character(1))
+  invariant <- invariants[[which(
+    invariant_names == "exactly_one_semantic_object"
+  )]]
 
   expect_identical(invariant$class, "SemanticClaim")
   expect_setequal(
@@ -126,39 +122,4 @@ test_that("semantic statements represent an exactly-one object invariant", {
   )
   expect_identical(invariant$cardinality, 1L)
   expect_identical(invariant$rule, "exactly_one_present")
-})
-
-test_that("mixed narrative and invalid semantic fixtures violate invariants", {
-  schema <- kg_schema(tempest_manifest_path())
-  invariants <- schema$manifest$validation_invariants
-  names <- vapply(invariants, \(.x) .x$name, character(1))
-  narrative <- invariants[[which(names == "narrative_shape")]]
-  semantic <- invariants[[which(names == "exactly_one_semantic_object")]]
-
-  mixed <- yaml::read_yaml(
-    invalid_schema_path("narrative-with-semantic-fields.yaml")
-  )
-  both <- yaml::read_yaml(
-    invalid_schema_path("semantic-with-both-objects.yaml")
-  )
-  neither <- yaml::read_yaml(
-    invalid_schema_path("semantic-without-object.yaml")
-  )
-  present <- function(record, fields) {
-    sum(vapply(fields, \(.x) !is.null(record[[.x]]), logical(1)))
-  }
-
-  expect_gt(
-    length(intersect(names(mixed), unlist(narrative$forbidden_fields))),
-    0L
-  )
-  expect_identical(present(both, semantic$fields), 2L)
-  expect_identical(present(neither, semantic$fields), 0L)
-})
-
-test_that("manifest failures use structured schema conditions", {
-  expect_snapshot(
-    error = TRUE,
-    kg_slots(kg_schema(tempest_manifest_path()), "MissingClass")
-  )
 })

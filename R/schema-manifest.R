@@ -1,13 +1,4 @@
-#' Load a compiled graft schema manifest
-#'
-#' Loading a manifest is implemented entirely in R and does not initialize
-#' Python or require `linkml_runtime`.
-#'
-#' @param path Path to a compiled `.graft.json` manifest.
-#'
-#' @return An immutable `kg_schema` S3 object.
-#' @export
-kg_schema <- function(path) {
+load_schema_manifest <- function(path) {
   if (
     !is.character(path) ||
       length(path) != 1L ||
@@ -42,7 +33,7 @@ kg_schema <- function(path) {
     }
   )
   validate_manifest_header(manifest, normalized_path)
-  new_kg_schema(manifest, normalized_path)
+  new_compiled_schema(manifest, normalized_path)
 }
 
 validate_manifest_header <- function(manifest, path) {
@@ -97,9 +88,9 @@ validate_manifest_header <- function(manifest, path) {
 }
 
 validate_manifest_integrity <- function(schema, subclass = NULL) {
-  if (!inherits(schema, "kg_schema") || !is.list(schema$manifest)) {
+  if (!is_compiled_schema(schema)) {
     abort_schema_integrity(
-      "Schema integrity validation requires a kg_schema object.",
+      "Schema integrity validation requires a compiled schema.",
       subclass = subclass
     )
   }
@@ -461,210 +452,4 @@ projection_snake_case <- function(value) {
   )
   value <- gsub("[^A-Za-z0-9]+", "_", value)
   tolower(gsub("^_+|_+$", "", value))
-}
-
-#' List concrete classes in a graft schema
-#'
-#' @param schema A `kg_schema` object or manifest path.
-#'
-#' @return A data frame with one row per concrete class.
-#' @export
-kg_classes <- function(schema) {
-  schema <- as_kg_schema(schema)
-  classes <- schema$manifest$classes
-  if (length(classes) == 0L) {
-    return(data.frame(
-      class = character(),
-      role = character(),
-      statement_shape = character(),
-      view = character(),
-      id_policy = character()
-    ))
-  }
-  data.frame(
-    class = names(classes),
-    role = vapply(classes, \(.x) scalar_character(.x$role), character(1)),
-    statement_shape = vapply(
-      classes,
-      \(.x) scalar_character(.x$statement_shape),
-      character(1)
-    ),
-    view = vapply(classes, \(.x) scalar_character(.x$view), character(1)),
-    id_policy = vapply(
-      classes,
-      \(.x) scalar_character(.x$id_policy),
-      character(1)
-    ),
-    row.names = NULL,
-    check.names = FALSE
-  )
-}
-
-#' List slots in a graft schema
-#'
-#' @param schema A `kg_schema` object or manifest path.
-#' @param class Optional concrete class name. When supplied, class-induced slot
-#'   usage is returned; otherwise global slot definitions are returned.
-#'
-#' @return A data frame with one row per slot.
-#' @export
-kg_slots <- function(schema, class = NULL) {
-  schema <- as_kg_schema(schema)
-  if (is.null(class)) {
-    slots <- schema$manifest$slots
-    class_value <- NA_character_
-  } else {
-    if (
-      !is.character(class) ||
-        length(class) != 1L ||
-        is.na(class) ||
-        !nzchar(class)
-    ) {
-      abort_schema_error(
-        "`class` must be one concrete class name or `NULL`.",
-        argument = "class"
-      )
-    }
-    class_contract <- schema$manifest$classes[[class]]
-    if (is.null(class_contract)) {
-      abort_schema_error(
-        paste0("Unknown concrete class `", class, "`."),
-        record_class = class
-      )
-    }
-    slots <- class_contract$slots
-    class_value <- class
-  }
-  slots_data_frame(slots, class_value)
-}
-
-slots_data_frame <- function(slots, class) {
-  if (length(slots) == 0L) {
-    return(data.frame(
-      class = character(),
-      slot = character(),
-      range = character(),
-      duckdb_type = character(),
-      required = logical(),
-      multivalued = logical(),
-      identifier = logical(),
-      object_reference = logical(),
-      enum = character(),
-      view_column = character()
-    ))
-  }
-  data.frame(
-    class = rep(class, length(slots)),
-    slot = names(slots),
-    range = vapply(slots, \(.x) scalar_character(.x$range), character(1)),
-    duckdb_type = vapply(
-      slots,
-      \(.x) scalar_character(.x$duckdb_type),
-      character(1)
-    ),
-    required = vapply(
-      slots,
-      \(.x) scalar_logical(.x$required),
-      logical(1)
-    ),
-    multivalued = vapply(
-      slots,
-      \(.x) scalar_logical(.x$multivalued),
-      logical(1)
-    ),
-    identifier = vapply(
-      slots,
-      \(.x) scalar_logical(.x$identifier),
-      logical(1)
-    ),
-    object_reference = vapply(
-      slots,
-      \(.x) scalar_logical(.x$object_reference),
-      logical(1)
-    ),
-    enum = vapply(slots, \(.x) scalar_character(.x$enum), character(1)),
-    view_column = vapply(
-      slots,
-      \(.x) scalar_character(.x$view_column),
-      character(1)
-    ),
-    row.names = NULL,
-    check.names = FALSE
-  )
-}
-
-#' List enum values in a graft schema
-#'
-#' @param schema A `kg_schema` object or manifest path.
-#'
-#' @return A data frame with one row per permissible enum value.
-#' @export
-kg_enums <- function(schema) {
-  schema <- as_kg_schema(schema)
-  enums <- schema$manifest$enums
-  rows <- lapply(names(enums), function(name) {
-    values <- enums[[name]]$permissible_values
-    if (length(values) == 0L) {
-      return(NULL)
-    }
-    data.frame(
-      enum = rep(name, length(values)),
-      value = vapply(
-        values,
-        \(.x) scalar_character(.x$value),
-        character(1)
-      ),
-      meaning = vapply(
-        values,
-        \(.x) scalar_character(.x$meaning),
-        character(1)
-      ),
-      description = vapply(
-        values,
-        \(.x) scalar_character(.x$description),
-        character(1)
-      ),
-      row.names = NULL
-    )
-  })
-  rows <- Filter(Negate(is.null), rows)
-  if (length(rows) == 0L) {
-    return(data.frame(
-      enum = character(),
-      value = character(),
-      meaning = character(),
-      description = character()
-    ))
-  }
-  do.call(rbind, rows)
-}
-
-#' Summarize a graft schema
-#'
-#' @param schema A `kg_schema` object or manifest path.
-#'
-#' @return A named list of schema metadata and fingerprints.
-#' @export
-kg_schema_info <- function(schema) {
-  schema <- as_kg_schema(schema)
-  manifest <- schema$manifest
-  list(
-    schema_id = scalar_character(manifest$schema$id),
-    schema_name = scalar_character(manifest$schema$name),
-    schema_version = scalar_character(manifest$schema$version),
-    manifest_version = scalar_character(manifest$manifest_version),
-    projection_mapping_version = scalar_character(
-      manifest$projection_mapping_version
-    ),
-    structural_digest = scalar_character(
-      manifest$fingerprints$structural_digest
-    ),
-    source_digest = scalar_character(manifest$fingerprints$source_digest),
-    build_digest = scalar_character(manifest$fingerprints$build_digest),
-    compiler = manifest$compiler,
-    class_count = length(manifest$classes),
-    relation_count = length(manifest$relations),
-    source_files = manifest$schema$source_files,
-    path = schema$path
-  )
 }

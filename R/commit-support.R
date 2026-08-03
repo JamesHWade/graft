@@ -43,7 +43,7 @@ validate_initialized_store <- function(
   write = FALSE,
   refresh = FALSE
 ) {
-  validate_kg_store(store)
+  validate_store_backend(store)
   if (
     !isTRUE(write) &&
       !isTRUE(refresh) &&

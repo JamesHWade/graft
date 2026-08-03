@@ -32,8 +32,10 @@ test_that("GraftSchema exposes immutable semantic contracts", {
 })
 
 test_that("GraftSchema rejects malformed construction and tampering", {
-  legacy <- kg_schema(tempest_manifest_path())
-  expect_identical(as_graft_schema_internal(legacy), legacy)
+  compiled <- load_schema_manifest(tempest_manifest_path())
+  expect_identical(is.object(compiled), FALSE)
+  internal_error <- rlang::catch_cnd(as_graft_schema_internal(compiled))
+  expect_s3_class(internal_error, "graft_schema_error")
 
   malformed <- new.env(parent = emptyenv())
   condition <- rlang::catch_cnd(GraftSchema(malformed))
@@ -58,9 +60,11 @@ test_that("graft_open initializes and reopens one store identity", {
   expect_identical(first@read_only, FALSE)
   expect_identical(first@closed, FALSE)
   expect_identical(first@capabilities$writable, TRUE)
-  expect_identical(first@path, as_graft_store_internal(first)$path)
-  legacy <- as_graft_store_internal(first)
-  expect_identical(as_graft_store_internal(legacy), legacy)
+  backend <- as_graft_store_internal(first)
+  expect_identical(first@path, backend$path)
+  expect_identical(is.object(backend), FALSE)
+  internal_error <- rlang::catch_cnd(as_graft_store_internal(backend))
+  expect_s3_class(internal_error, "graft_backend_error")
 
   expect_invisible(graft_close(first))
   expect_identical(first@closed, TRUE)

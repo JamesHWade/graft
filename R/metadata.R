@@ -349,12 +349,12 @@ verify_initialized_store <- function(
   metadata <- read_store_metadata(store$connection)
   verify_store_format(metadata)
   verify_metadata_structure(store$connection)
-  old_schema <- schema_from_manifest_json(metadata$manifest_json)
+  old_schema <- compiled_schema_from_json(metadata$manifest_json)
   validate_manifest_integrity(old_schema)
   validate_manifest_integrity(store$schema)
-  diff <- kg_schema_diff(old_schema, store$schema)
-  if (!isTRUE(diff$compatible)) {
-    abort_schema_mismatch(diff)
+  compatibility <- schema_compatibility(old_schema, store$schema)
+  if (!isTRUE(compatibility$compatible)) {
+    abort_schema_mismatch(compatibility)
   }
 
   active_build_digest <- scalar_character(metadata$active_build_digest)
@@ -495,7 +495,7 @@ read_schema_version <- function(connection, build_digest) {
   )
 }
 
-schema_from_manifest_json <- function(manifest_json) {
+compiled_schema_from_json <- function(manifest_json) {
   manifest <- tryCatch(
     jsonlite::fromJSON(
       scalar_character(manifest_json),
@@ -513,7 +513,7 @@ schema_from_manifest_json <- function(manifest_json) {
     }
   )
   validate_manifest_header(manifest, "<stored manifest>")
-  new_kg_schema(manifest)
+  new_compiled_schema(manifest)
 }
 
 canonical_manifest_json <- function(manifest) {

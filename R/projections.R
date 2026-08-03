@@ -145,7 +145,7 @@ verify_projection_views <- function(connection, schema) {
         "The initialized read-only store has invalid generated projection ",
         "object(s): ",
         paste(details, collapse = ", "),
-        ". Reopen it writable and call `kg_init()`."
+        ". Reopen it writable with `graft_open()`."
       ),
       operation = "verify_projection_views",
       invalid_projections = invalid
@@ -274,7 +274,7 @@ verify_projection_state <- function(connection, schema) {
       paste0(
         "The derived projection state is missing column(s): ",
         paste(missing_columns, collapse = ", "),
-        ". Reopen the store writable and call `kg_init()`."
+        ". Reopen the store writable with `graft_open()`."
       ),
       operation = "verify_projection_state",
       missing_columns = missing_columns
@@ -293,7 +293,7 @@ verify_projection_state <- function(connection, schema) {
         "The derived projection state must contain exactly one active row; ",
         "found ",
         nrow(state),
-        ". Reopen the store writable and call `kg_init()`."
+        ". Reopen the store writable with `graft_open()`."
       ),
       operation = "verify_projection_state",
       row_count = nrow(state)
@@ -311,7 +311,7 @@ verify_projection_state <- function(connection, schema) {
       paste0(
         "The generated projections are stale or altered in: ",
         paste(stale, collapse = ", "),
-        ". Reopen the store writable and call `kg_init()`."
+        ". Reopen the store writable with `graft_open()`."
       ),
       operation = "verify_projection_state",
       stale_fields = stale

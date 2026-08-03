@@ -252,7 +252,7 @@ graft_query <- function(
   limit = 100L
 ) {
   store <- as_graft_store_internal(store, "store")
-  validate_kg_store(store)
+  validate_store_backend(store)
   operation <- rlang::arg_match(operation)
   request <- validate_graft_query_request(request)
   if (identical(operation, "integrity")) {
@@ -285,7 +285,7 @@ graft_query <- function(
 }
 
 validate_graft_integrity_store <- function(store) {
-  validate_kg_store(store)
+  validate_store_backend(store)
   if (!duckdb_table_exists(store$connection, "_graft_store")) {
     abort_backend_error(
       "The GraftStore must be initialized by `graft_open()` before retrieval.",
