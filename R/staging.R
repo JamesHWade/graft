@@ -249,7 +249,7 @@ normalize_candidate_class <- function(record_class, data, contract) {
     slot <- contract$slots[[slot_name]]
     source <- if (slot_name %in% names(data)) data[[slot_name]] else NULL
     values <- if (scalar_logical(slot$multivalued)) {
-      vector("list", nrow(data))
+      rep(list(missing_slot_vector(slot, 0L)), nrow(data))
     } else {
       missing_slot_vector(slot, nrow(data))
     }
@@ -267,9 +267,7 @@ normalize_candidate_class <- function(record_class, data, contract) {
           candidate_field_key(index, slot_name)
         )
       }
-      if (scalar_logical(slot$multivalued)) {
-        values[[index]] <- result$value
-      } else if (!is.null(result$value)) {
+      if (!is.null(result$value)) {
         values[[index]] <- result$value
       }
     }
@@ -869,116 +867,173 @@ reference_class_compatible <- function(manifest, expected, actual) {
 }
 
 plan_candidate_changes <- function(staged, current, planned_at) {
-  rows <- list()
-  changes <- list()
+  capacity <- as.integer(sum(vapply(
+    staged,
+    \(.x) nrow(.x$data),
+    integer(1)
+  )))
+  row_class <- character(capacity)
+  row_input <- integer(capacity)
+  row_record_id <- character(capacity)
+  row_action <- character(capacity)
+  row_payload_json <- character(capacity)
+  row_content_digest <- character(capacity)
+  row_changed_fields_json <- character(capacity)
+  row_expected_revision_id <- rep(NA_character_, capacity)
+  row_expected_revision_number <- rep(NA_real_, capacity)
+  row_expected_content_digest <- rep(NA_character_, capacity)
+  row_identity_reason <- character(capacity)
+  row_identity_evidence <- character(capacity)
+  change_fields <- character(capacity)
+  cursor <- 0L
   current_index <- paste(current$class, current$record_id, sep = "\u001f")
+  empty_evidence <- canonical_json(list())
   for (record_class in names(staged)) {
     class_staged <- staged[[record_class]]
+    created_at <- if ("created_at" %in% names(class_staged$data)) {
+      class_staged$data$created_at
+    } else {
+      NULL
+    }
+    updated_at <- if ("updated_at" %in% names(class_staged$data)) {
+      class_staged$data$updated_at
+    } else {
+      NULL
+    }
     for (index in seq_len(nrow(class_staged$data))) {
       record_id <- class_staged$data$id[[index]]
       if (is.na(record_id) || !nzchar(record_id)) {
         next
       }
       key <- paste(record_class, record_id, sep = "\u001f")
-      current_row <- current[match(key, current_index), , drop = FALSE]
-      if (nrow(current_row) == 1L && is.na(current_row$record_id[[1L]])) {
-        current_row <- current[0L, , drop = FALSE]
-      }
-      prior <- if (nrow(current_row) == 0L) {
+      current_row <- match(key, current_index)
+      has_current <- !is.na(current_row) &&
+        !is.na(current$record_id[[current_row]])
+      prior <- if (!has_current) {
         NULL
       } else {
-        parse_revision_payload(current_row$payload_json[[1L]])
+        parse_revision_payload(current$payload_json[[current_row]])
       }
       payload <- candidate_record_payload(class_staged, index)
       digest <- logical_record_content_digest(payload)
-      deleted <- nrow(current_row) == 1L &&
-        identical(current_row$operation[[1L]], "delete")
-      action <- if (nrow(current_row) == 0L) {
+      deleted <- has_current &&
+        identical(current$operation[[current_row]], "delete")
+      action <- if (!has_current) {
         "insert"
       } else if (deleted) {
         "update"
-      } else if (identical(digest, current_row$content_digest[[1L]])) {
+      } else if (identical(digest, current$content_digest[[current_row]])) {
         "match"
       } else {
         "update"
       }
-      class_staged$data <- set_candidate_timestamps(
-        class_staged$data,
-        index,
-        action,
-        prior,
-        planned_at
-      )
-      payload <- candidate_record_payload(class_staged, index)
+      if (!is.null(created_at)) {
+        created_at[[index]] <- if (is.null(prior)) {
+          planned_at
+        } else {
+          projection_coerce_timestamps(
+            scalar_character(prior$created_at)
+          )[[1L]]
+        }
+        payload["created_at"] <- list(plan_canonical_slot_value(
+          created_at[[index]],
+          class_staged$contract$slots$created_at
+        ))
+      }
+      if (!is.null(updated_at)) {
+        updated_at[[index]] <- if (identical(action, "match")) {
+          projection_coerce_timestamps(
+            scalar_character(prior$updated_at)
+          )[[1L]]
+        } else {
+          planned_at
+        }
+        payload["updated_at"] <- list(plan_canonical_slot_value(
+          updated_at[[index]],
+          class_staged$contract$slots$updated_at
+        ))
+      }
       changed <- if (identical(action, "match")) {
         character()
       } else {
         logical_record_changed_fields(payload, prior)
       }
-      rows[[length(rows) + 1L]] <- data.frame(
-        class = record_class,
-        input_row = as.integer(index),
-        record_id = record_id,
-        action = action,
-        payload_json = canonical_json(payload),
-        content_digest = logical_record_content_digest(payload),
-        changed_fields_json = changed_fields_json(changed),
-        expected_revision_id = if (nrow(current_row) == 0L) {
-          NA_character_
-        } else {
-          current_row$revision_id[[1L]]
-        },
-        expected_revision_number = if (nrow(current_row) == 0L) {
-          NA_real_
-        } else {
-          as.numeric(current_row$revision_number[[1L]])
-        },
-        expected_content_digest = if (nrow(current_row) == 0L) {
-          NA_character_
-        } else {
-          current_row$content_digest[[1L]]
-        },
-        identity_reason = scalar_character(
-          class_staged$identities[[index]]$identity_reason,
-          "unresolved"
-        ),
-        identity_evidence = scalar_character(
-          class_staged$identities[[index]]$identity_evidence,
-          canonical_json(list())
-        ),
-        stringsAsFactors = FALSE
+      cursor <- cursor + 1L
+      row_class[[cursor]] <- record_class
+      row_input[[cursor]] <- as.integer(index)
+      row_record_id[[cursor]] <- record_id
+      row_action[[cursor]] <- action
+      row_payload_json[[cursor]] <- canonical_json(payload)
+      row_content_digest[[cursor]] <- digest
+      row_changed_fields_json[[cursor]] <- changed_fields_json(changed)
+      row_identity_reason[[cursor]] <- scalar_character(
+        class_staged$identities[[index]]$identity_reason,
+        "unresolved"
       )
-      changes[[length(changes) + 1L]] <- data.frame(
-        class = record_class,
-        input_row = as.integer(index),
-        record_id = record_id,
-        action = action,
-        changed_fields = paste(changed, collapse = ", "),
-        expected_revision_id = rows[[length(rows)]]$expected_revision_id,
-        expected_revision_number = rows[[length(
-          rows
-        )]]$expected_revision_number,
-        expected_content_digest = rows[[length(rows)]]$expected_content_digest,
-        proposed_content_digest = rows[[length(rows)]]$content_digest,
-        identity_reason = rows[[length(rows)]]$identity_reason,
-        identity_evidence = rows[[length(rows)]]$identity_evidence,
-        stringsAsFactors = FALSE
+      row_identity_evidence[[cursor]] <- scalar_character(
+        class_staged$identities[[index]]$identity_evidence,
+        empty_evidence
       )
+      change_fields[[cursor]] <- paste(changed, collapse = ", ")
+      if (has_current) {
+        row_expected_revision_id[[cursor]] <- current$revision_id[[current_row]]
+        row_expected_revision_number[[cursor]] <- as.numeric(
+          current$revision_number[[current_row]]
+        )
+        row_expected_content_digest[[cursor]] <- current$content_digest[[
+          current_row
+        ]]
+      }
+    }
+    if (!is.null(created_at)) {
+      class_staged$data$created_at <- created_at
+    }
+    if (!is.null(updated_at)) {
+      class_staged$data$updated_at <- updated_at
     }
     staged[[record_class]] <- class_staged
   }
+  if (cursor == 0L) {
+    return(list(
+      staged = staged,
+      rows = empty_candidate_rows(),
+      changes = empty_plan_changes()
+    ))
+  }
+  used <- seq_len(cursor)
+  rows <- data.frame(
+    class = row_class[used],
+    input_row = row_input[used],
+    record_id = row_record_id[used],
+    action = row_action[used],
+    payload_json = row_payload_json[used],
+    content_digest = row_content_digest[used],
+    changed_fields_json = row_changed_fields_json[used],
+    expected_revision_id = row_expected_revision_id[used],
+    expected_revision_number = row_expected_revision_number[used],
+    expected_content_digest = row_expected_content_digest[used],
+    identity_reason = row_identity_reason[used],
+    identity_evidence = row_identity_evidence[used],
+    stringsAsFactors = FALSE
+  )
+  changes <- data.frame(
+    class = row_class[used],
+    input_row = row_input[used],
+    record_id = row_record_id[used],
+    action = row_action[used],
+    changed_fields = change_fields[used],
+    expected_revision_id = row_expected_revision_id[used],
+    expected_revision_number = row_expected_revision_number[used],
+    expected_content_digest = row_expected_content_digest[used],
+    proposed_content_digest = row_content_digest[used],
+    identity_reason = row_identity_reason[used],
+    identity_evidence = row_identity_evidence[used],
+    stringsAsFactors = FALSE
+  )
   list(
     staged = staged,
-    rows = if (length(rows) == 0L) {
-      empty_candidate_rows()
-    } else {
-      do.call(rbind, rows)
-    },
-    changes = if (length(changes) == 0L) {
-      empty_plan_changes()
-    } else {
-      do.call(rbind, changes)
-    }
+    rows = rows,
+    changes = changes
   )
 }
 
@@ -1049,28 +1104,6 @@ format_candidate_timestamp <- function(value) {
     ),
     sprintf(".%06dZ", microseconds)
   )
-}
-
-set_candidate_timestamps <- function(data, index, action, prior, planned_at) {
-  if ("created_at" %in% names(data)) {
-    data$created_at[[index]] <- if (is.null(prior)) {
-      planned_at
-    } else {
-      projection_coerce_timestamps(
-        scalar_character(prior$created_at)
-      )[[1L]]
-    }
-  }
-  if ("updated_at" %in% names(data)) {
-    data$updated_at[[index]] <- if (identical(action, "match")) {
-      projection_coerce_timestamps(
-        scalar_character(prior$updated_at)
-      )[[1L]]
-    } else {
-      planned_at
-    }
-  }
-  data
 }
 
 new_plan_issue <- function(

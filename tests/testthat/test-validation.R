@@ -337,6 +337,45 @@ test_that("planning preserves exact integer payloads as strings", {
   expect_identical(payload$page_end, "9007199254740994")
 })
 
+test_that("planning expands absent multivalued slots to every row", {
+  manifest <- sub(
+    "[.]linkml[.]yaml$",
+    ".graft.json",
+    example_schema_path("personinfo")
+  )
+  schema <- kg_schema(manifest)
+  store <- kg_connect_duckdb(schema, ":memory:")
+  withr::defer(kg_disconnect(store))
+  kg_init(store)
+
+  for (size in c(0L, 1L, 1000L)) {
+    plan <- graft_plan(
+      store,
+      list(
+        Person = data.frame(
+          id = sprintf("person:missing-%04d", seq_len(size)),
+          full_name = sprintf("Missing collections %04d", seq_len(size)),
+          stringsAsFactors = FALSE
+        )
+      ),
+      graft_provenance("missing-multivalued")
+    )
+    people <- graft:::commit_plan_execution(plan)$staged$records$Person
+
+    expect_identical(plan@valid, TRUE)
+    expect_length(people$aliases, size)
+    expect_length(people$employed_by, size)
+    expect_identical(
+      vapply(people$aliases, identical, logical(1), character()),
+      rep(TRUE, size)
+    )
+    expect_identical(
+      vapply(people$employed_by, identical, logical(1), character()),
+      rep(TRUE, size)
+    )
+  }
+})
+
 test_that("planning snapshot query count is independent of candidate rows", {
   store <- local_ingest_store()
   original_query <- planning_query

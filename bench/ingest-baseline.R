@@ -57,16 +57,20 @@ benchmark_ingest <- function(size, iteration) {
   kg_init(store)
 
   records <- simple_person_records(size)
-  batch <- kg_batch(
+  provenance <- graft_provenance(
     producer = "ingest-benchmark",
-    source_run_id = sprintf("records-%d-iteration-%d", size, iteration),
+    run_id = sprintf("records-%d-iteration-%d", size, iteration),
     idempotency_key = sprintf("records-%d-iteration-%d", size, iteration)
   )
 
   gc(verbose = FALSE)
-  elapsed <- system.time({
-    result <- kg_ingest(store, batch, records)
+  planning_elapsed <- system.time({
+    plan <- graft_plan(store, records, provenance)
   })[["elapsed"]]
+  commit_elapsed <- system.time({
+    result <- graft_commit(store, plan)
+  })[["elapsed"]]
+  elapsed <- planning_elapsed + commit_elapsed
 
   stopifnot(
     identical(unname(result$inserted[["Person"]]), size),
@@ -89,6 +93,8 @@ benchmark_ingest <- function(size, iteration) {
     duckdb_version = as.character(utils::packageVersion("duckdb")),
     records = size,
     iteration = iteration,
+    planning_seconds = unname(planning_elapsed),
+    commit_seconds = unname(commit_elapsed),
     elapsed_seconds = unname(elapsed),
     inserted = unname(result$inserted[["Person"]]),
     updated = unname(result$updated[["Person"]]),
