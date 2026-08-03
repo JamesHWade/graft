@@ -116,6 +116,11 @@ reference:
     desc: >
       Validate and write records in batches with provenance and idempotency.
   - contents:
+      - graft_provenance
+      - graft_plan
+      - graft_review
+      - graft_commit
+      - graft_ingest
       - kg_batch
       - kg_ingest
       - kg_write

@@ -1,5 +1,36 @@
 # Open Knowledge Format proposal import
 
+#' Review edited open knowledge as a commit plan
+#'
+#' `graft_review()` reads and validates an edited managed Open Knowledge Format
+#' bundle without changing accepted knowledge. It returns the same immutable
+#' plan type as [graft_plan()], bound to the exact bundle and accepted batch
+#' observed during review. Call [graft_commit()] after approval, then synchronize
+#' the working tree explicitly with `kg_sync_okf()`.
+#'
+#' @param store An initialized `kg_store`.
+#' @param path Optional edited bundle directory. The default uses the managed
+#'   OKF directory.
+#' @param provenance A [graft_provenance()] object describing the reviewer or
+#'   host policy proposing the change.
+#'
+#' @return An immutable `GraftCommitPlan` S7 object.
+#' @export
+graft_review <- function(store, path = NULL, provenance) {
+  proposal <- kg_plan_okf_import(store, path = path)
+  graft_plan_records(
+    store = store,
+    records = proposal$records,
+    provenance = provenance,
+    source = "okf",
+    source_preconditions = list(
+      path = proposal$path,
+      base_batch_id = proposal$base_batch_id,
+      bundle_digest = proposal$proposed_bundle_digest
+    )
+  )
+}
+
 #' Plan changes from an edited Open Knowledge Format working tree
 #'
 #' Planning reads the editable `graft.record` mappings in a complete managed
