@@ -1,7 +1,8 @@
 local_okf_store <- function(env = parent.frame()) {
   directory <- withr::local_tempdir(.local_envir = env)
   path <- file.path(directory, "knowledge.duckdb")
-  store <- local_ingest_store(path = path, env = env)
+  store <- graft_open(graft_schema(tempest_manifest_path()), path)
+  withr::defer(graft_close(store), envir = env)
   records <- valid_atomic_records()
   result <- graft_ingest(
     store,
@@ -39,5 +40,5 @@ replace_okf_line <- function(path, old, new) {
 
 local_sync_okf <- function(store, env = parent.frame()) {
   directory <- withr::local_tempdir(.local_envir = env)
-  kg_sync_okf(store, file.path(directory, "knowledge.okf"))
+  graft_sync(store, file.path(directory, "knowledge.okf"))
 }
