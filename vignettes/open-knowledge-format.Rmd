@@ -298,36 +298,6 @@ Graft maps common lifecycle values to OKF's `draft`, `stable`, and
 provenance. Export does not invent human verification: approval remains
 captured by the accepted Graft revision and its host workflow.
 
-## Hand the bundle to Tempest
-
-Tempest can read any conformant OKF bundle, including a Graft projection:
-
-```{r tempest-handoff, eval = FALSE}
-library(tempest)
-
-knowledge <- tempest_read_okf("knowledge.okf")
-tempest_okf_concepts(knowledge)
-
-resources <- tempest_okf_resources(
-  knowledge,
-  include_stale = FALSE
-)
-
-evidence <- SourceStore$new()
-invisible(lapply(resources, evidence$upsert_resource))
-
-context <- tempest_okf_context(
-  knowledge,
-  types = c("Assessment", "Business"),
-  include_stale = FALSE,
-  max_concepts = 25,
-  max_chars = 50000
-)
-```
-
-Reading remains separate from adding resources to a `SourceStore`. The host
-retains control over mutations, model tools, approval, and side effects.
-
 ## Keep authority explicit
 
 | Operation | Authority |
@@ -337,12 +307,11 @@ retains control over mutations, model tools, approval, and side effects.
 | Validate and plan the proposal | Graft |
 | Approve the exact plan | Human or explicit host policy |
 | Commit accepted knowledge | Graft write path |
-| Grant tools or authenticated connections | Tempest runtime and host policy |
+| Grant tools or authenticated connections | Consumer runtime and host policy |
 
 Even an OKF Attested Computation remains descriptive context. Graft and
-Tempest do not execute referenced code merely because a document points to it.
+OKF consumers do not execute referenced code merely because a document points
+to it.
 
 Continue with [Govern knowledge changes](knowledge-change-control.html) for
-revision history and schema evolution, or [Build a governed materials market
-radar](market-intelligence.html) for an application whose approved knowledge
-changes a later decision.
+revision history and schema evolution.

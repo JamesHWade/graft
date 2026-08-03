@@ -26,25 +26,14 @@ Imports:
     S7 (>= 0.2.2),
     yaml
 Suggests:
-    bsicons,
-    bslib (>= 0.9.0),
-    btw,
-    dsprrr,
     ellmer (>= 0.3.0),
     knitr,
     rmarkdown,
-    shiny (>= 1.11.1),
-    shinychat (>= 0.4.0),
-    tempest (>= 0.1.0),
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 Config/Needs/website: brand.yml
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
-Remotes:
-    JamesHWade/dsprrr,
-    JamesHWade/tempest,
-    posit-dev/shinychat/pkg-r
 VignetteBuilder: knitr
 BugReports: https://github.com/JamesHWade/graft/issues

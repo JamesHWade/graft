@@ -34,8 +34,7 @@ home:
 navbar:
   structure:
     left:
-      [intro, change_control, open_knowledge, market_intelligence, coworker, examples,
-      reference, news]
+      [intro, change_control, open_knowledge, examples, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
@@ -47,12 +46,6 @@ navbar:
     open_knowledge:
       text: Open knowledge
       href: articles/open-knowledge-format.html
-    market_intelligence:
-      text: Market radar
-      href: articles/market-intelligence.html
-    coworker:
-      text: Coworker
-      href: articles/coworker.html
     examples:
       text: Examples
       href: articles/examples.html
@@ -78,13 +71,6 @@ articles:
       - knowledge-change-control
       - linkml-schema
       - open-knowledge-format
-  - title: Agent applications
-    desc: >
-      Build a local agent host with typed workflows, approval-gated actions,
-      accepted memory, configurable models, and extensible tools.
-    contents:
-      - market-intelligence
-      - coworker
   - title: Examples
     desc: >
       Small, runnable domain models adapted from established LinkML projects.
@@ -184,9 +170,3 @@ reference:
       - kg_plan_okf_import
       - kg_apply_okf_import
       - kg_export_okf
-  - title: Experimental integrations
-    desc: >
-      Package-specific adapters. Most graft users do not need these functions.
-  - contents:
-      - kg_ingest_tempest_records
-      - tempest_artifact_store_graft

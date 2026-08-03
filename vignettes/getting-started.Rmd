@@ -373,8 +373,7 @@ kg_apply_okf_import(
 ```
 
 See [Work with open knowledge by default](open-knowledge-format.html) for the
-complete synchronization, review, historical-export, and Tempest handoff
-contract.
+complete synchronization, review, and historical-export contract.
 
 ## Use graft with ellmer
 

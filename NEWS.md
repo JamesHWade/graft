@@ -1,8 +1,5 @@
 # graft 0.0.0.9000
 
-* A governed Materials Market Radar example combines business, competitor, and downstream-market signals with dsprrr analysis, typed Tempest briefings and approval, configurable models and tools, a focused daily-brief and decision-room UI, and accepted-only Graft knowledge that visibly changes a later scan.
-* A local Graft Coworker example combines a shinychat tool-using assistant, dsprrr planning, typed Tempest work products, an approval inbox, local file delivery, and approved-only Graft memory. Its Tempest-native model configuration and extensible ellmer tool registry include an optional read-only `btw` tool belt.
-* A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
 * `graft_plan()`, `graft_commit()`, and `graft_ingest()` introduce a shared reviewed change boundary backed by immutable S7 provenance and commit-plan objects; `graft_review()` produces the same plan type for edited managed OKF knowledge.
 * Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
 * `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.
@@ -28,9 +25,6 @@
   identifiers, claims, and evidence.
 * `kg_history()` retrieves bounded revisions for one record and recovers its accepted state at a committed batch or time boundary.
 * `kg_init()` verifies structural-digest integrity and compiler-required physical type contracts before creating or changing store objects.
-* `kg_ingest_tempest_records()` commits mapped Tempest domain records with
-  run- and stage-stable idempotency keys, independently of Tempest deliverable
-  persistence.
 * `kg_okf_context()` gives people and agents bounded progressive disclosure over current accepted OKF knowledge and refuses stale, modified, or incompatible bundles.
 * `kg_okf_status()` reports whether a managed OKF working tree is unconfigured, missing, current, stale, locally modified, or incompatible.
 * `kg_plan_migration()` creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.
@@ -48,6 +42,3 @@
 * `kg_validate_data()` preflights the same staged identity, shape, and
   reference checks as ingestion without mutating the store.
 * `kg_write()` provides a one-class convenience wrapper over `kg_ingest()`.
-* `tempest_artifact_store_graft()` explicitly reports the upstream Tempest
-  serialization contract required before durable typed-artifact persistence
-  can be supported.
