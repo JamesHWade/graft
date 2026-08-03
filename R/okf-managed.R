@@ -66,6 +66,41 @@ okf_current_boundary <- function(store) {
   )
 }
 
+#' Synchronize the managed open-knowledge working tree
+#'
+#' `graft_sync()` replaces the configured OKF working tree with a deterministic
+#' projection of current accepted knowledge. It returns an ordinary summary
+#' list and never changes accepted records.
+#'
+#' @param store An initialized `GraftStore`.
+#' @param path Optional destination directory. The default uses the managed
+#'   path configured by [graft_open()].
+#' @param limit Maximum number of concepts to synchronize.
+#'
+#' @return An ordinary list summarizing the synchronized bundle.
+#' @export
+graft_sync <- function(store, path = NULL, limit = 5000L) {
+  store <- as_graft_store_internal(store, "store")
+  unclass(kg_sync_okf(store, path = path, limit = limit))
+}
+
+#' Inspect the managed open-knowledge working tree
+#'
+#' `graft_status()` reports whether the configured OKF working tree is current,
+#' modified, stale, missing, unconfigured, or incompatible. Inspection never
+#' changes the store or filesystem.
+#'
+#' @param store An initialized `GraftStore`.
+#' @param path Optional OKF directory. The default uses the managed path.
+#' @param deep Whether to verify the working tree's content digest.
+#'
+#' @return An ordinary status list.
+#' @export
+graft_status <- function(store, path = NULL, deep = TRUE) {
+  store <- as_graft_store_internal(store, "store")
+  unclass(kg_okf_status(store, path = path, deep = deep))
+}
+
 #' Synchronize the managed Open Knowledge Format working tree
 #'
 #' `kg_sync_okf()` atomically replaces a Graft-produced OKF bundle with a

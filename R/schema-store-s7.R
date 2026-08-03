@@ -268,18 +268,106 @@ GraftStore <- S7::new_class(
   validator = function(self) validate_graft_store_s7(self)
 )
 
-#' Load a compiled Graft schema
+#' Load or compile a Graft schema
 #'
-#' `graft_schema()` validates a compiled manifest and returns an immutable
-#' semantic schema object. Its class and slot contracts describe the compiled
-#' domain without creating runtime classes for domain records.
+#' `graft_schema()` loads a compiled `.graft.json` manifest or compiles a LinkML
+#' `.yaml` or `.yml` schema before returning an immutable semantic schema
+#' object. When `output` is omitted, a temporary compiled manifest is retained
+#' as the schema object's source path.
 #'
-#' @param path Path to a compiled `.graft.json` manifest.
+#' @param path Path to a compiled `.graft.json` manifest or LinkML YAML schema.
+#' @param output Optional durable `.graft.json` output path when compiling YAML.
 #'
 #' @return An immutable `GraftSchema` S7 object.
 #' @export
-graft_schema <- function(path) {
-  new_graft_schema(kg_schema(path))
+graft_schema <- function(path, output = NULL) {
+  path <- normalize_graft_schema_path(path)
+  lower <- tolower(path)
+  if (endsWith(lower, ".graft.json")) {
+    if (!is.null(output)) {
+      abort_schema_error(
+        "`output` is only supported when compiling a YAML schema.",
+        argument = "output",
+        schema_path = path
+      )
+    }
+    return(new_graft_schema(kg_schema(path)))
+  }
+  if (!grepl("\\.ya?ml$", lower)) {
+    abort_schema_error(
+      paste0(
+        "Unsupported schema extension for `",
+        path,
+        "`; expected `.graft.json`, `.yaml`, or `.yml`."
+      ),
+      argument = "path",
+      schema_path = path
+    )
+  }
+  output <- normalize_graft_schema_output(output)
+  new_graft_schema(kg_compile_schema(path, output))
+}
+
+normalize_graft_schema_path <- function(path) {
+  if (!is_nonempty_string(path)) {
+    abort_schema_error(
+      "`path` must be one non-empty schema path.",
+      argument = "path"
+    )
+  }
+  if (!file.exists(path) || dir.exists(path)) {
+    abort_schema_error(
+      paste0("Schema file does not exist: `", path, "`."),
+      argument = "path",
+      schema_path = path
+    )
+  }
+  normalizePath(path, winslash = "/", mustWork = TRUE)
+}
+
+normalize_graft_schema_output <- function(output) {
+  if (is.null(output)) {
+    return(normalizePath(
+      tempfile("graft-schema-", fileext = ".graft.json"),
+      winslash = "/",
+      mustWork = FALSE
+    ))
+  }
+  if (!is_nonempty_string(output)) {
+    abort_schema_error(
+      "`output` must be one non-empty `.graft.json` path or `NULL`.",
+      argument = "output"
+    )
+  }
+  output <- path.expand(output)
+  if (!endsWith(tolower(output), ".graft.json")) {
+    abort_schema_error(
+      "`output` must use the `.graft.json` extension.",
+      argument = "output",
+      output_path = output
+    )
+  }
+  parent <- dirname(output)
+  if (!dir.exists(parent)) {
+    abort_schema_error(
+      "The parent directory for `output` does not exist.",
+      argument = "output",
+      output_path = output
+    )
+  }
+  output <- normalizePath(
+    file.path(parent, basename(output)),
+    winslash = "/",
+    mustWork = FALSE
+  )
+  if (dir.exists(output)) {
+    abort_schema_error(
+      "`output` must be a file path, not a directory.",
+      argument = "output",
+      output_path = output
+    )
+  }
+  output
 }
 
 #' Open and initialize a Graft store

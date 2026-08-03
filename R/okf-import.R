@@ -6,9 +6,9 @@
 #' bundle without changing accepted knowledge. It returns the same immutable
 #' plan type as [graft_plan()], bound to the exact bundle and accepted batch
 #' observed during review. Call [graft_commit()] after approval, then synchronize
-#' the working tree explicitly with `kg_sync_okf()`.
+#' the working tree explicitly with [graft_sync()].
 #'
-#' @param store An initialized `kg_store`.
+#' @param store An initialized `GraftStore`.
 #' @param path Optional edited bundle directory. The default uses the managed
 #'   OKF directory.
 #' @param provenance A [graft_provenance()] object describing the reviewer or
@@ -17,6 +17,7 @@
 #' @return An immutable `GraftCommitPlan` S7 object.
 #' @export
 graft_review <- function(store, path = NULL, provenance) {
+  store <- as_graft_store_internal(store, "store")
   proposal <- kg_plan_okf_import(store, path = path)
   graft_plan_records(
     store = store,
@@ -161,16 +162,6 @@ kg_plan_okf_import <- function(store, path = NULL) {
     do.call(rbind, changes)
   }
   records <- okf_import_data_frames(store, changed_records)
-  if (length(records) > 0L) {
-    report <- kg_validate_data(store, records)
-    if (!isTRUE(report$valid)) {
-      abort_okf_import(
-        "The edited OKF records do not satisfy the active Graft schema.",
-        validation_report = report
-      )
-    }
-  }
-
   metadata <- read_store_metadata(store$connection)
   base_batch_id <- if (is.na(status$expected_batch_id)) {
     ""
@@ -394,7 +385,7 @@ okf_normalize_import_record <- function(record, contract) {
     }
     if (scalar_logical(slot$multivalued)) {
       values <- unlist(value, use.names = FALSE)
-      type <- canonical_slot_type(slot, operation = "okf_import")
+      type <- okf_import_slot_type(slot)
       values <- switch(
         type,
         BOOLEAN = as.logical(values),
@@ -504,7 +495,7 @@ okf_import_data_frames <- function(store, records) {
 }
 
 okf_import_scalar_column <- function(values, slot) {
-  type <- canonical_slot_type(slot, operation = "okf_import")
+  type <- okf_import_slot_type(slot)
   missing_value <- switch(
     type,
     BOOLEAN = NA,
@@ -527,6 +518,13 @@ okf_import_scalar_column <- function(values, slot) {
     DECIMAL = as.numeric(unlist(values, use.names = FALSE)),
     as.character(unlist(values, use.names = FALSE))
   )
+}
+
+okf_import_slot_type <- function(slot) {
+  toupper(scalar_character(
+    slot$duckdb_type,
+    scalar_character(slot$relational_type, "VARCHAR")
+  ))
 }
 
 empty_okf_import_changes <- function() {

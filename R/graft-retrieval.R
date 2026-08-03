@@ -19,6 +19,7 @@ graft_get <- function(
   include = c("identifiers", "claims", "evidence"),
   limits = list(identifiers = 100L, claims = 50L, evidence = 100L)
 ) {
+  store <- as_graft_store_internal(store, "store")
   validate_graft_retrieval(store)
   id <- validate_scalar_text(id, "id", condition = abort_reference_error)
   include <- validate_get_include(include)
@@ -95,6 +96,7 @@ graft_get <- function(
 #' @return A bounded data frame with a public-record list-column.
 #' @export
 graft_find <- function(store, query, class = NULL, limit = 20L) {
+  store <- as_graft_store_internal(store, "store")
   validate_graft_retrieval(store)
   query <- validate_scalar_text(query, "query")
   limit <- validate_result_limit(
@@ -249,6 +251,7 @@ graft_query <- function(
   request = list(),
   limit = 100L
 ) {
+  store <- as_graft_store_internal(store, "store")
   validate_kg_store(store)
   operation <- rlang::arg_match(operation)
   request <- validate_graft_query_request(request)
@@ -307,6 +310,7 @@ validate_graft_integrity_store <- function(store) {
 #' @return A bounded newest-first data frame with public record list-columns.
 #' @export
 graft_history <- function(store, id, as_of = NULL, limit = 100L) {
+  store <- as_graft_store_internal(store, "store")
   validate_graft_retrieval(store)
   kg_history(store, id = id, as_of = as_of, limit = limit)
 }

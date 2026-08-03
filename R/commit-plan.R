@@ -116,13 +116,14 @@ GraftCommitPlan <- S7::new_class(
 #' not persist records or batch metadata. Invalid input returns a plan whose
 #' `@valid` property is `FALSE` and whose `@issues` table describes the failure.
 #'
-#' @param store An initialized `kg_store`.
+#' @param store An initialized `GraftStore`.
 #' @param records A named list of concrete-class data frames.
 #' @param provenance A [graft_provenance()] object.
 #'
 #' @return An immutable `GraftCommitPlan` S7 object.
 #' @export
 graft_plan <- function(store, records, provenance) {
+  store <- as_graft_store_internal(store, "store")
   graft_plan_records(
     store = store,
     records = records,
@@ -193,13 +194,18 @@ graft_plan_records <- function(
 #' active schema, write capability, source state, and every expected record
 #' head. All accepted changes then commit in one DuckDB transaction.
 #'
-#' @param store An initialized, writable `kg_store`.
+#' @param store An initialized, writable `GraftStore`.
 #' @param plan A valid `GraftCommitPlan` returned by [graft_plan()] or
 #'   [graft_review()].
 #'
 #' @return A `kg_ingest_result` describing the committed observations.
 #' @export
 graft_commit <- function(store, plan) {
+  store <- as_graft_store_internal(store, "store")
+  commit_graft_plan(store, plan)
+}
+
+commit_graft_plan <- function(store, plan) {
   started <- proc.time()[["elapsed"]]
   validate_initialized_store_for_ingest(store, write = TRUE, refresh = TRUE)
   plan <- validate_graft_commit_plan(plan)
@@ -247,8 +253,14 @@ graft_commit <- function(store, plan) {
 #' @return A `kg_ingest_result` describing the committed observations.
 #' @export
 graft_ingest <- function(store, records, provenance) {
-  plan <- graft_plan(store, records, provenance)
-  graft_commit(store, plan)
+  store <- as_graft_store_internal(store, "store")
+  plan <- graft_plan_records(
+    store = store,
+    records = records,
+    provenance = provenance,
+    source = "records"
+  )
+  commit_graft_plan(store, plan)
 }
 
 new_graft_commit_plan <- function(
