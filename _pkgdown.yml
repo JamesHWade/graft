@@ -111,6 +111,15 @@ reference:
       - kg_ingest
       - kg_write
       - kg_validate_data
+  - title: Retrieval and history
+    desc: >
+      Retrieve authoritative current and historical records through the
+      bounded revision-first API.
+  - contents:
+      - graft_get
+      - graft_find
+      - graft_query
+      - graft_history
   - title: History and change control
     desc: >
       Inspect accepted revisions and apply explicitly reviewed additive schema

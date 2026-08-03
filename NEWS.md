@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* `graft_find()`, `graft_get()`, `graft_history()`, and `graft_query()` provide the revision-first v0.1 retrieval surface with bounded deterministic results, exact historical hydration, explicit integrity diagnostics, and verified graph projections.
 * `graft_plan()`, `graft_commit()`, and `graft_ingest()` introduce a shared reviewed change boundary backed by immutable S7 provenance and commit-plan objects; `graft_review()` produces the same plan type for edited managed OKF knowledge.
 * Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
 * `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.

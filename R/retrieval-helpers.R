@@ -99,7 +99,7 @@ public_scalar_slots <- function(contract) {
     \(.x) {
       !scalar_logical(.x$multivalued) &&
         !scalar_logical(.x$sensitive) &&
-        !is.na(scalar_character(.x$column))
+        !is.na(scalar_character(.x$view_column))
     },
     contract$slots
   )
@@ -130,7 +130,7 @@ slot_column <- function(contract, slot_name) {
   if (is.null(slot)) {
     return(NA_character_)
   }
-  scalar_character(slot$column)
+  scalar_character(slot$view_column)
 }
 
 validate_scalar_text <- function(
@@ -276,7 +276,7 @@ hydrate_public_record <- function(store, record_class, row) {
       " FROM ",
       quote_identifier(
         store$connection,
-        scalar_character(relation$table)
+        scalar_character(relation$view)
       ),
       " WHERE ",
       quote_identifier(store$connection, owner_column),
@@ -304,7 +304,7 @@ record_locations <- function(store, id, classes = NULL) {
   locations <- list()
   for (record_class in classes) {
     contract <- validate_public_class(store, record_class)
-    table <- scalar_character(contract$table)
+    table <- scalar_character(contract$view)
     sql <- paste0(
       "SELECT COUNT(*) AS n FROM ",
       quote_identifier(store$connection, table),

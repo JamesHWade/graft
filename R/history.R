@@ -417,15 +417,14 @@ hydrate_history_rows <- function(rows, store, limit) {
   if (truncated) {
     rows <- rows[seq_len(limit), , drop = FALSE]
   }
-  cache <- new.env(parent = emptyenv())
+  schemas <- historical_schemas(
+    store,
+    unique(rows$schema_build_digest)
+  )
   records <- vector("list", nrow(rows))
   changed_fields <- vector("list", nrow(rows))
   for (index in seq_len(nrow(rows))) {
-    schema <- historical_schema(
-      store,
-      rows$schema_build_digest[[index]],
-      cache
-    )
+    schema <- schemas[[rows$schema_build_digest[[index]]]]
     contract <- schema$manifest$classes[[rows$class[[index]]]]
     if (is.null(contract)) {
       abort_backend_error(
@@ -436,9 +435,12 @@ hydrate_history_rows <- function(rows, store, limit) {
         build_digest = rows$schema_build_digest[[index]]
       )
     }
-    records[[index]] <- public_revision_record(
+    records[[index]] <- validated_public_revision_record(
       rows$payload_json[[index]],
-      contract
+      rows$content_digest[[index]],
+      contract,
+      record_id = rows$record_id[[index]],
+      revision_id = rows$revision_id[[index]]
     )
     changed_fields[[index]] <- public_changed_fields(
       rows$changed_fields_json[[index]],
@@ -453,11 +455,38 @@ hydrate_history_rows <- function(rows, store, limit) {
   finalize_history_rows(rows, store, limit, truncated)
 }
 
-historical_schema <- function(store, build_digest, cache) {
-  if (exists(build_digest, envir = cache, inherits = FALSE)) {
-    return(get(build_digest, envir = cache, inherits = FALSE))
+historical_schemas <- function(store, build_digests) {
+  build_digests <- unique(as.character(build_digests))
+  if (length(build_digests) == 0L) {
+    return(list())
   }
-  version <- read_schema_version(store$connection, build_digest)
+  versions <- with_duckdb_error(
+    "record_history_schemas",
+    DBI::dbGetQuery(
+      store$connection,
+      paste0(
+        "SELECT structural_digest, source_digest, build_digest, ",
+        "manifest_json FROM ",
+        quote_identifier(store$connection, "_graft_schema_versions"),
+        " WHERE build_digest IN (",
+        paste(rep("?", length(build_digests)), collapse = ", "),
+        ") ORDER BY build_digest"
+      ),
+      params = as.list(build_digests)
+    )
+  )
+  schemas <- list()
+  for (build_digest in build_digests) {
+    version <- versions[versions$build_digest == build_digest, , drop = FALSE]
+    schemas[[build_digest]] <- historical_schema_version(
+      version,
+      build_digest
+    )
+  }
+  schemas
+}
+
+historical_schema_version <- function(version, build_digest) {
   if (nrow(version) != 1L) {
     abort_backend_error(
       "A revision does not have exactly one registered historical manifest.",
@@ -489,6 +518,15 @@ historical_schema <- function(store, build_digest, cache) {
       build_digest = build_digest
     )
   }
+  schema
+}
+
+historical_schema <- function(store, build_digest, cache) {
+  if (exists(build_digest, envir = cache, inherits = FALSE)) {
+    return(get(build_digest, envir = cache, inherits = FALSE))
+  }
+  version <- read_schema_version(store$connection, build_digest)
+  schema <- historical_schema_version(version, build_digest)
   assign(build_digest, schema, envir = cache)
   schema
 }
@@ -515,8 +553,50 @@ public_revision_record <- function(payload_json, contract) {
   record
 }
 
+validated_public_revision_record <- function(
+  payload_json,
+  content_digest,
+  contract,
+  record_id = NULL,
+  revision_id = NULL
+) {
+  payload <- tryCatch(
+    parse_revision_payload(payload_json),
+    error = identity
+  )
+  if (inherits(payload, "error")) {
+    abort_backend_error(
+      "A selected revision payload is not valid canonical JSON.",
+      operation = "graft_retrieval",
+      record_id = record_id,
+      revision_id = revision_id,
+      parent = payload
+    )
+  }
+  canonical <- tryCatch(
+    canonical_manifest_payload(payload, contract),
+    error = identity
+  )
+  if (
+    inherits(canonical, "error") ||
+      !identical(logical_record_content_digest(canonical), content_digest)
+  ) {
+    abort_backend_error(
+      "A selected revision payload does not match its content digest.",
+      operation = "graft_retrieval",
+      record_id = record_id,
+      revision_id = revision_id,
+      parent = if (inherits(canonical, "error")) canonical else NULL
+    )
+  }
+  public_revision_record(payload_json, contract)
+}
+
 coerce_historical_value <- function(value, slot) {
-  type <- canonical_slot_type(slot, operation = "record_history")
+  type <- toupper(scalar_character(
+    slot$duckdb_type,
+    scalar_character(slot$relational_type, "VARCHAR")
+  ))
   object_reference <- scalar_logical(slot$object_reference)
   if (is.null(value)) {
     return(NULL)
@@ -536,9 +616,28 @@ coerce_historical_value <- function(value, slot) {
       return(as.logical(item))
     }
     if (identical(type, "BIGINT")) {
+      if (is.character(item)) {
+        number <- suppressWarnings(as.numeric(item))
+        exact <- is.finite(number) &&
+          abs(number) <= 2^53 &&
+          identical(
+            format(number, scientific = FALSE, trim = TRUE),
+            item
+          )
+        if (!exact) {
+          return(item)
+        }
+        return(number)
+      }
       return(as.numeric(item))
     }
-    if (type %in% c("DOUBLE", "DECIMAL")) {
+    if (identical(type, "DECIMAL")) {
+      if (is.character(item)) {
+        return(item)
+      }
+      return(as.numeric(item))
+    }
+    if (identical(type, "DOUBLE")) {
       return(as.numeric(item))
     }
     if (identical(type, "DATE")) {
@@ -566,7 +665,10 @@ coerce_historical_value <- function(value, slot) {
       if (identical(type, "BOOLEAN")) {
         return(logical())
       }
-      if (type %in% c("BIGINT", "DOUBLE", "DECIMAL")) {
+      if (type %in% c("BIGINT", "DECIMAL")) {
+        return(character())
+      }
+      if (identical(type, "DOUBLE")) {
         return(numeric())
       }
       if (identical(type, "DATE")) {
@@ -689,7 +791,7 @@ resolve_history_boundary <- function(store, as_of) {
   )
 }
 
-shallow_integrity_issues <- function(store, limit) {
+shallow_integrity_issues <- function(store, limit, projections = TRUE) {
   connection <- store$connection
   head <- quote_identifier(connection, "_graft_record_heads")
   revision <- quote_identifier(connection, "_graft_record_revisions")
@@ -886,6 +988,9 @@ shallow_integrity_issues <- function(store, limit) {
       "WHERE o.revision_id IS NULL"
     )
   )
+  if (!isTRUE(projections)) {
+    return(execute_integrity_checks(connection, checks, limit))
+  }
   head_classes <- DBI::dbGetQuery(
     connection,
     paste0("SELECT DISTINCT class FROM ", head, " ORDER BY class")
@@ -966,6 +1071,10 @@ shallow_integrity_issues <- function(store, limit) {
       )
     )
   }
+  execute_integrity_checks(connection, checks, limit)
+}
+
+execute_integrity_checks <- function(connection, checks, limit) {
   lapply(checks, function(check) {
     if (is.data.frame(check)) {
       return(check)
@@ -980,7 +1089,7 @@ shallow_integrity_issues <- function(store, limit) {
   })
 }
 
-deep_integrity_issues <- function(store, limit) {
+deep_integrity_issues <- function(store, limit, projections = TRUE) {
   issues <- list()
   cache <- new.env(parent = emptyenv())
   add_issue <- function(issue) {
@@ -1072,6 +1181,9 @@ deep_integrity_issues <- function(store, limit) {
   }
   DBI::dbClearResult(revisions)
   revisions <- NULL
+  if (!isTRUE(projections)) {
+    return(issues)
+  }
   heads_result <- DBI::dbSendQuery(
     store$connection,
     paste0(
