@@ -1,17 +1,3 @@
-local_ingest_store <- function(
-  path = ":memory:",
-  schema = NULL,
-  env = parent.frame()
-) {
-  if (is.null(schema)) {
-    schema <- kg_schema(tempest_manifest_path())
-  }
-  store <- kg_connect_duckdb(schema, path)
-  withr::defer(kg_disconnect(store), envir = env)
-  kg_init(store)
-  store
-}
-
 local_graft_ingest_store <- function(
   path = ":memory:",
   schema = NULL,
@@ -222,62 +208,4 @@ local_retrieval_store <- function(env = parent.frame()) {
     connection = as_graft_store_internal(store)$connection,
     ids = fixture$ids
   )
-}
-
-graph_schema_with_direct_edge <- function() {
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
-  semantic <- schema$manifest$classes$SemanticClaim
-  slots <- semantic$slots[c(
-    "created_at",
-    "id",
-    "predicate",
-    "subject",
-    "updated_at"
-  )]
-  object <- semantic$slots$object_entity
-  object$name <- "object"
-  object$column <- "object"
-  object$required <- TRUE
-  slots$object <- object
-  slots <- slots[sort(names(slots))]
-  contract <- list(
-    name = "RelatedEdge",
-    is_a = "GraftEdge",
-    ancestors = c("RelatedEdge", "GraftEdge", "GraftRecord"),
-    type_uri = "https://w3id.org/tempest/RelatedEdge",
-    role = "edge",
-    statement_shape = NULL,
-    table = "related_edge",
-    id_policy = "mint",
-    label_slot = NULL,
-    search_slots = list(),
-    origin_key_slots = list(),
-    qualifier_slots = list(),
-    fixed_predicate = NULL,
-    slots = slots,
-    relations = list()
-  )
-  columns <- lapply(slots, function(slot) {
-    list(
-      name = scalar_character(slot$column),
-      type = scalar_character(slot$relational_type),
-      nullable = !scalar_logical(slot$required),
-      primary_key = scalar_logical(slot$identifier),
-      slot = scalar_character(slot$name),
-      foreign_key = slot$foreign_key
-    )
-  })
-  schema$manifest$classes$RelatedEdge <- contract
-  schema$manifest$tables$RelatedEdge <- list(
-    name = "related_edge",
-    class = "RelatedEdge",
-    role = "edge",
-    columns = columns
-  )
-  direct <- schema$manifest$graph_projections$semantic_edges$direct_edge_classes
-  schema$manifest$graph_projections$semantic_edges$direct_edge_classes <- sort(c(
-    empty_character(direct),
-    "RelatedEdge"
-  ))
-  refresh_schema_structural_digest(schema)
 }

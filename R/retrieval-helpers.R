@@ -105,34 +105,6 @@ public_scalar_slots <- function(contract) {
   )
 }
 
-public_multivalue_slots <- function(contract) {
-  Filter(
-    \(.x) {
-      scalar_logical(.x$multivalued) &&
-        !scalar_logical(.x$sensitive)
-    },
-    contract$slots
-  )
-}
-
-public_slot_names <- function(contract, multivalued = FALSE) {
-  if (isTRUE(multivalued)) {
-    return(names(Filter(
-      \(.x) !scalar_logical(.x$sensitive),
-      contract$slots
-    )))
-  }
-  names(public_scalar_slots(contract))
-}
-
-slot_column <- function(contract, slot_name) {
-  slot <- contract$slots[[slot_name]]
-  if (is.null(slot)) {
-    return(NA_character_)
-  }
-  scalar_character(slot$view_column)
-}
-
 validate_scalar_text <- function(
   value,
   argument,
@@ -224,109 +196,6 @@ trim_bounded_rows <- function(data, store, limit) {
   bounded_data_frame(data, store, limit, truncated)
 }
 
-manifest_relation_for_slot <- function(store, record_class, slot) {
-  matches <- Filter(
-    \(.x) {
-      identical(scalar_character(.x$owner_class), record_class) &&
-        identical(scalar_character(.x$slot), slot)
-    },
-    store$schema$manifest$relations
-  )
-  if (length(matches) == 0L) {
-    return(NULL)
-  }
-  matches[[1L]]
-}
-
-hydrate_public_record <- function(store, record_class, row) {
-  contract <- validate_public_class(store, record_class)
-  fields <- intersect(public_slot_names(contract), names(row))
-  output <- as.list(row[1L, fields, drop = FALSE])
-  multivalues <- public_multivalue_slots(contract)
-  for (slot_name in names(multivalues)) {
-    relation <- manifest_relation_for_slot(store, record_class, slot_name)
-    if (is.null(relation)) {
-      output[[slot_name]] <- list()
-      next
-    }
-    kind <- scalar_character(relation$kind)
-    owner_column <- if (identical(kind, "object")) "subject" else "owner_id"
-    value_column <- if (identical(kind, "object")) "object" else "value"
-    columns <- vapply(
-      relation$columns,
-      \(.x) scalar_character(.x$name),
-      character(1)
-    )
-    order <- if ("position" %in% columns) {
-      paste0(
-        " ORDER BY ",
-        quote_identifier(store$connection, "position"),
-        ", ",
-        quote_identifier(store$connection, value_column)
-      )
-    } else {
-      paste0(
-        " ORDER BY ",
-        quote_identifier(store$connection, value_column)
-      )
-    }
-    sql <- paste0(
-      "SELECT ",
-      quote_identifier(store$connection, value_column),
-      " FROM ",
-      quote_identifier(
-        store$connection,
-        scalar_character(relation$view)
-      ),
-      " WHERE ",
-      quote_identifier(store$connection, owner_column),
-      " = ?",
-      order
-    )
-    values <- with_duckdb_error(
-      "hydrate_relation",
-      DBI::dbGetQuery(
-        store$connection,
-        sql,
-        params = list(as.character(row$id[[1L]]))
-      )
-    )
-    output[[slot_name]] <- unname(values[[value_column]])
-  }
-  output
-}
-
-record_locations <- function(store, id, classes = NULL) {
-  validate_scalar_text(id, "id", condition = abort_reference_error)
-  if (is.null(classes)) {
-    classes <- public_class_names(store)
-  }
-  locations <- list()
-  for (record_class in classes) {
-    contract <- validate_public_class(store, record_class)
-    table <- scalar_character(contract$view)
-    sql <- paste0(
-      "SELECT COUNT(*) AS n FROM ",
-      quote_identifier(store$connection, table),
-      " WHERE ",
-      quote_identifier(store$connection, slot_column(contract, "id")),
-      " = ?"
-    )
-    count <- with_duckdb_error(
-      "record_location",
-      DBI::dbGetQuery(
-        store$connection,
-        sql,
-        params = list(id)
-      )
-    )$n[[1L]]
-    if (count > 0L) {
-      locations[[record_class]] <- as.integer(count)
-    }
-  }
-  locations
-}
-
 bind_public_rows <- function(rows) {
   if (length(rows) == 0L) {
     return(data.frame())
@@ -356,19 +225,4 @@ statement_classes <- function(store, shape = NULL) {
 
 role_classes <- function(store, role) {
   public_class_names(store, roles = role)
-}
-
-is_active_statement_sql <- function(store, contract, alias = NULL) {
-  if (!"status" %in% names(public_scalar_slots(contract))) {
-    return("TRUE")
-  }
-  column <- quote_identifier(store$connection, slot_column(contract, "status"))
-  if (!is.null(alias)) {
-    column <- paste0(
-      quote_identifier(store$connection, alias),
-      ".",
-      column
-    )
-  }
-  paste0("(", column, " IS NULL OR ", column, " = 'active')")
 }

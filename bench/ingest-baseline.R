@@ -35,7 +35,7 @@ manifest <- file.path("inst", "extdata", "personinfo.graft.json")
 if (!file.exists(manifest)) {
   stop("Run this benchmark from the graft package root.")
 }
-schema <- kg_schema(manifest)
+schema <- graft_schema(manifest)
 graft_version <- unname(
   read.dcf("DESCRIPTION", fields = "Version")[[1L]]
 )
@@ -52,9 +52,8 @@ simple_person_records <- function(size) {
 }
 
 benchmark_ingest <- function(size, iteration) {
-  store <- kg_connect_duckdb(schema, ":memory:", okf = "disabled")
-  on.exit(kg_disconnect(store), add = TRUE)
-  kg_init(store)
+  store <- graft_open(schema, ":memory:", okf = "disabled")
+  on.exit(graft_close(store), add = TRUE)
 
   records <- simple_person_records(size)
   provenance <- graft_provenance(

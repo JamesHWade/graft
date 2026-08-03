@@ -301,9 +301,7 @@ test_that("public commits replay safely and roll back atomically", {
       "_graft_record_heads",
       "_graft_record_observations",
       "_graft_identifiers",
-      "_graft_origins",
-      "entity",
-      "source"
+      "_graft_origins"
     ),
     \(table) nrow(DBI::dbReadTable(rollback_connection, table)),
     integer(1)
@@ -316,6 +314,7 @@ test_that("public commits replay safely and roll back atomically", {
   expect_s3_class(rollback, "graft_backend_error")
   expect_identical(rollback$stage, "projections")
   expect_identical(unname(counts), integer(length(counts)))
+  expect_equal(nrow(graft_find(rollback_store, "Rollback")), 0L)
   expect_identical(
     DBI::dbReadTable(rollback_connection, "_graft_projection_state"),
     projection_before

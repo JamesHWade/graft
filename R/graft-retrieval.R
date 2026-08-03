@@ -450,13 +450,13 @@ graft_retrieval_integrity <- function(store, limit, projections, deep) {
   validate_graft_integrity_store(store)
   connection <- store$connection
   issues <- c(
-    shallow_integrity_issues(store, limit, projections = FALSE),
+    shallow_integrity_issues(store, limit),
     list(graft_registry_integrity_issues(store, limit))
   )
   if (isTRUE(deep)) {
     issues <- c(
       issues,
-      deep_integrity_issues(store, limit, projections = FALSE)
+      deep_integrity_issues(store, limit)
     )
   }
   rows <- bind_integrity_issues(issues)

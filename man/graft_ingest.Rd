@@ -7,14 +7,14 @@
 graft_ingest(store, records, provenance)
 }
 \arguments{
-\item{store}{An initialized \code{kg_store}.}
+\item{store}{An initialized \code{GraftStore}.}
 
 \item{records}{A named list of concrete-class data frames.}
 
 \item{provenance}{A \code{\link[=graft_provenance]{graft_provenance()}} object.}
 }
 \value{
-A \code{kg_ingest_result} describing the committed observations.
+An ordinary list summarizing committed observations.
 }
 \description{
 This convenience function is equivalent to calling \code{\link[=graft_plan]{graft_plan()}} followed

@@ -7,13 +7,13 @@
 graft_commit(store, plan)
 }
 \arguments{
-\item{store}{An initialized, writable \code{kg_store}.}
+\item{store}{An initialized, writable \code{GraftStore}.}
 
 \item{plan}{A valid \code{GraftCommitPlan} returned by \code{\link[=graft_plan]{graft_plan()}} or
 \code{\link[=graft_review]{graft_review()}}.}
 }
 \value{
-A \code{kg_ingest_result} describing the committed observations.
+An ordinary list summarizing committed observations.
 }
 \description{
 Before writing, Graft rechecks the plan digest, store identity and format,

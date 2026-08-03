@@ -7,7 +7,7 @@
 graft_plan(store, records, provenance)
 }
 \arguments{
-\item{store}{An initialized \code{kg_store}.}
+\item{store}{An initialized \code{GraftStore}.}
 
 \item{records}{A named list of concrete-class data frames.}
 

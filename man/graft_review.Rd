@@ -7,7 +7,7 @@
 graft_review(store, path = NULL, provenance)
 }
 \arguments{
-\item{store}{An initialized \code{kg_store}.}
+\item{store}{An initialized \code{GraftStore}.}
 
 \item{path}{Optional edited bundle directory. The default uses the managed
 OKF directory.}
@@ -23,5 +23,5 @@ An immutable \code{GraftCommitPlan} S7 object.
 bundle without changing accepted knowledge. It returns the same immutable
 plan type as \code{\link[=graft_plan]{graft_plan()}}, bound to the exact bundle and accepted batch
 observed during review. Call \code{\link[=graft_commit]{graft_commit()}} after approval, then synchronize
-the working tree explicitly with \code{kg_sync_okf()}.
+the working tree explicitly with \code{\link[=graft_sync]{graft_sync()}}.
 }

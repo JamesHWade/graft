@@ -540,7 +540,7 @@ resolve_history_boundary <- function(store, as_of) {
   )
 }
 
-shallow_integrity_issues <- function(store, limit, projections = TRUE) {
+shallow_integrity_issues <- function(store, limit) {
   connection <- store$connection
   head <- quote_identifier(connection, "_graft_record_heads")
   revision <- quote_identifier(connection, "_graft_record_revisions")
@@ -737,89 +737,6 @@ shallow_integrity_issues <- function(store, limit, projections = TRUE) {
       "WHERE o.revision_id IS NULL"
     )
   )
-  if (!isTRUE(projections)) {
-    return(execute_integrity_checks(connection, checks, limit))
-  }
-  head_classes <- DBI::dbGetQuery(
-    connection,
-    paste0("SELECT DISTINCT class FROM ", head, " ORDER BY class")
-  )$class
-  unknown_classes <- setdiff(
-    as.character(head_classes),
-    names(store$schema$manifest$classes)
-  )
-  if (length(unknown_classes) > 0L) {
-    unknown <- DBI::dbGetQuery(
-      connection,
-      paste0(
-        "SELECT 'head_class_missing' AS issue, record_id, class, ",
-        "revision_id, NULL AS batch_id, ",
-        "'Head class is absent from the active manifest.' AS detail FROM ",
-        head,
-        " WHERE class IN (",
-        paste(rep("?", length(unknown_classes)), collapse = ", "),
-        ") LIMIT ",
-        limit + 1L
-      ),
-      params = as.list(unknown_classes)
-    )
-    checks <- c(checks, list(unknown))
-  }
-  available_tables <- duckdb_table_names(connection)
-  for (record_class in names(store$schema$manifest$classes)) {
-    contract <- store$schema$manifest$classes[[record_class]]
-    table_name <- scalar_character(contract$table)
-    if (!table_name %in% available_tables) {
-      checks <- c(
-        checks,
-        list(integrity_issue_row(
-          "current_table_missing",
-          class = record_class,
-          detail = "The active manifest's current-state table does not exist."
-        ))
-      )
-      next
-    }
-    table <- quote_identifier(connection, table_name)
-    id_column <- quote_identifier(connection, slot_column(contract, "id"))
-    class_string <- as.character(DBI::dbQuoteString(connection, record_class))
-    checks <- c(
-      checks,
-      list(
-        paste0(
-          "SELECT 'current_without_head' AS issue, t.",
-          id_column,
-          " AS record_id, ",
-          class_string,
-          " AS class, NULL AS revision_id, NULL AS batch_id, ",
-          "'Current record has no revision head.' AS detail FROM ",
-          table,
-          " t LEFT JOIN ",
-          head,
-          " h ON t.",
-          id_column,
-          " = h.record_id AND h.class = ",
-          class_string,
-          " WHERE h.record_id IS NULL"
-        ),
-        paste0(
-          "SELECT 'head_without_current' AS issue, h.record_id, h.class, ",
-          "h.revision_id, NULL AS batch_id, ",
-          "'Revision head has no current record.' AS detail FROM ",
-          head,
-          " h LEFT JOIN ",
-          table,
-          " t ON h.record_id = t.",
-          id_column,
-          " WHERE h.class = ",
-          class_string,
-          " AND t.",
-          id_column,
-          " IS NULL"
-        )
-      )
-    )
-  }
   execute_integrity_checks(connection, checks, limit)
 }
 
@@ -838,7 +755,7 @@ execute_integrity_checks <- function(connection, checks, limit) {
   })
 }
 
-deep_integrity_issues <- function(store, limit, projections = TRUE) {
+deep_integrity_issues <- function(store, limit) {
   issues <- list()
   cache <- new.env(parent = emptyenv())
   add_issue <- function(issue) {
@@ -930,96 +847,6 @@ deep_integrity_issues <- function(store, limit, projections = TRUE) {
   }
   DBI::dbClearResult(revisions)
   revisions <- NULL
-  if (!isTRUE(projections)) {
-    return(issues)
-  }
-  heads_result <- DBI::dbSendQuery(
-    store$connection,
-    paste0(
-      "SELECT h.record_id, h.class, h.revision_id, r.batch_id, ",
-      "r.schema_build_digest, r.content_digest FROM ",
-      quote_identifier(store$connection, "_graft_record_heads"),
-      " h INNER JOIN ",
-      quote_identifier(store$connection, "_graft_record_revisions"),
-      " r ON h.revision_id = r.revision_id ORDER BY h.record_id"
-    )
-  )
-  on.exit(
-    {
-      if (!is.null(heads_result)) {
-        DBI::dbClearResult(heads_result)
-      }
-    },
-    add = TRUE
-  )
-  repeat {
-    heads <- DBI::dbFetch(heads_result, n = 500L)
-    if (nrow(heads) == 0L) {
-      break
-    }
-    for (index in seq_len(nrow(heads))) {
-      schema <- tryCatch(
-        historical_schema(
-          store,
-          heads$schema_build_digest[[index]],
-          cache
-        ),
-        error = identity
-      )
-      contract <- if (inherits(schema, "error")) {
-        NULL
-      } else {
-        schema$manifest$classes[[heads$class[[index]]]]
-      }
-      if (is.null(contract)) {
-        add_issue(integrity_issue_row(
-          "head_schema_class_missing",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Head class is absent from its revision schema."
-        ))
-        next
-      }
-      payload <- tryCatch(
-        current_record_payload(
-          store,
-          list(class = heads$class[[index]], contract = contract),
-          heads$record_id[[index]]
-        ),
-        error = identity
-      )
-      if (inherits(payload, "error")) {
-        add_issue(integrity_issue_row(
-          "current_payload_unreadable",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Current typed record could not be reconstructed."
-        ))
-        next
-      }
-      if (
-        !identical(
-          logical_record_content_digest(payload),
-          heads$content_digest[[index]]
-        )
-      ) {
-        add_issue(integrity_issue_row(
-          "current_payload_drift",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Current typed record differs from its revision head."
-        ))
-      }
-    }
-  }
-  DBI::dbClearResult(heads_result)
-  heads_result <- NULL
   issues
 }
 

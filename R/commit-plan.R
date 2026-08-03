@@ -696,20 +696,3 @@ empty_plan_issues <- function() {
     stringsAsFactors = FALSE
   )
 }
-
-condition_plan_issue <- function(condition) {
-  data.frame(
-    class = scalar_character(condition$record_class, ""),
-    input_row = if (is.null(condition$input_row)) {
-      NA_integer_
-    } else {
-      as.integer(condition$input_row)
-    },
-    record_id = scalar_character(condition$record_id, ""),
-    field = scalar_character(condition$field, ""),
-    rule = scalar_character(condition$rule, ""),
-    message = conditionMessage(condition),
-    condition_class = class(condition)[[1L]],
-    stringsAsFactors = FALSE
-  )
-}

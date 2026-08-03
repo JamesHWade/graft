@@ -122,7 +122,7 @@
   <text class="copy" x="124" y="255">asks a bounded question</text>
 
   <rect class="box" x="382" y="196" width="205" height="86" rx="18"/>
-  <text class="step mono" x="406" y="228">kg_okf_context()</text>
+  <text class="step mono" x="406" y="228">graft_tools()</text>
   <text class="copy" x="406" y="255">checks current status</text>
 
   <rect class="box" x="664" y="196" width="205" height="86" rx="18"/>
