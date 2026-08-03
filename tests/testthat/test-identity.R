@@ -274,3 +274,118 @@ test_that("deterministic identity is stable and valid", {
   expect_identical(first$inserted[["Run"]], 1L)
   expect_identical(second$updated[["Run"]], 1L)
 })
+
+test_that("planning reports external identifiers resolving to different IDs", {
+  store <- local_ingest_store()
+  now <- as.POSIXct("2026-01-01", tz = "UTC")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_identifiers",
+    data.frame(
+      record_id = c(
+        test_graft_id("inchikey-record"),
+        test_graft_id("cas-record")
+      ),
+      class = "Entity",
+      namespace = c("inchikey", "cas"),
+      value = c("XLYOFNOQVPJJNP-UHFFFAOYSA-N", "50-00-0"),
+      normalized_value = c(
+        "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+        "50-00-0"
+      ),
+      status = "primary",
+      assigned_by = "fixture",
+      confidence = 1,
+      created_at = now,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  plan <- graft_plan(
+    store,
+    list(
+      Entity = data.frame(
+        preferred_name = "Conflicting identity",
+        inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+        cas_number = "CAS: 50-00-0"
+      )
+    ),
+    graft_provenance("identity-test")
+  )
+
+  expect_identical(plan@valid, FALSE)
+  matching <- which(plan@issues$rule == "consistent_exact_identity")
+  expect_gt(length(matching), 0L)
+  expect_setequal(
+    plan@issues$condition_class[matching],
+    "graft_identity_error"
+  )
+})
+
+test_that("unresolved exact and deterministic IDs are producer-independent", {
+  store <- local_ingest_store()
+  entity <- list(
+    Entity = data.frame(
+      preferred_name = "Water",
+      inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N"
+    )
+  )
+  run <- list(
+    Run = data.frame(run_identifier = "stable-run", name = "Run")
+  )
+
+  entity_a <- graft_plan(store, entity, graft_provenance("producer-a"))
+  entity_b <- graft_plan(store, entity, graft_provenance("producer-b"))
+  run_a <- graft_plan(store, run, graft_provenance("producer-a"))
+  run_b <- graft_plan(store, run, graft_provenance("producer-b"))
+
+  expect_identical(entity_a@changes$record_id, entity_b@changes$record_id)
+  expect_identical(entity_a@changes$identity_reason, "exact_identifier_mint")
+  expect_identical(run_a@changes$record_id, run_b@changes$record_id)
+  expect_identical(run_a@changes$identity_reason, "deterministic_key")
+  expect_match(run_a@changes$identity_evidence, "value_digest")
+  expect_no_match(run_a@changes$identity_evidence, "stable-run")
+  expect_no_match(run_a@changes$identity_evidence, "producer-a")
+})
+
+test_that("plan changes preserve specific agreeing identity evidence", {
+  store <- local_ingest_store()
+  record_id <- test_graft_id("agreeing-evidence")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_identifiers",
+    data.frame(
+      record_id = record_id,
+      class = "Entity",
+      namespace = "inchikey",
+      value = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+      normalized_value = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+      status = "primary",
+      assigned_by = "fixture",
+      confidence = 1,
+      created_at = as.POSIXct("2026-01-01", tz = "UTC"),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  plan <- graft_plan(
+    store,
+    list(
+      Entity = data.frame(
+        id = record_id,
+        preferred_name = "Water",
+        inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N"
+      )
+    ),
+    graft_provenance("evidence-test")
+  )
+  evidence <- jsonlite::fromJSON(
+    plan@changes$identity_evidence,
+    simplifyVector = FALSE
+  )
+  kinds <- vapply(evidence, \(.x) .x$kind, character(1))
+
+  expect_identical(plan@changes$identity_reason, "agreeing_identity")
+  expect_setequal(kinds, c("supplied_id", "external_identifier"))
+  expect_match(plan@changes$identity_evidence, "inchikey")
+})

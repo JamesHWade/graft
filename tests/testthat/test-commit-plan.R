@@ -49,6 +49,177 @@ test_that("planning is deterministic for an unchanged store snapshot", {
   expect_identical(first@plan_id, second@plan_id)
 })
 
+test_that("planning assigns match and update from one current-head snapshot", {
+  store <- local_ingest_store()
+  records <- list(
+    Entity = data.frame(
+      id = test_graft_id("head-snapshot"),
+      preferred_name = "Snapshot entity"
+    )
+  )
+  provenance <- graft_provenance("head-test")
+  inserted <- graft_plan(store, records, provenance)
+  staged_row <- graft:::commit_plan_execution(inserted)$staged$rows[1L, ]
+  prior_created <- "2025-01-02T12:34:56.123456Z"
+  prior_updated <- "2025-02-03T21:43:54.654321Z"
+  prior_payload <- jsonlite::fromJSON(
+    staged_row$payload_json,
+    simplifyVector = FALSE
+  )
+  prior_payload$created_at <- prior_created
+  prior_payload$updated_at <- prior_updated
+  staged_row$payload_json <- canonical_json(prior_payload)
+  revision_id <- test_graft_id("head-snapshot-revision")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_revisions",
+    data.frame(
+      revision_id = revision_id,
+      record_id = staged_row$record_id,
+      class = staged_row$class,
+      batch_id = test_graft_id("head-snapshot-batch"),
+      schema_build_digest = inserted@schema_build_digest,
+      revision_number = 1,
+      operation = "insert",
+      payload_json = staged_row$payload_json,
+      content_digest = staged_row$content_digest,
+      changed_fields_json = staged_row$changed_fields_json,
+      prior_revision_id = NA_character_,
+      recorded_at = inserted@planned_at,
+      commit_order = 1,
+      stringsAsFactors = FALSE
+    )
+  )
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_heads",
+    data.frame(
+      record_id = staged_row$record_id,
+      class = staged_row$class,
+      revision_id = revision_id,
+      revision_number = 1,
+      updated_at = inserted@planned_at,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  matched <- graft_plan(store, records, provenance)
+  changed <- records
+  changed$Entity$preferred_name <- "Updated snapshot entity"
+  updated <- graft_plan(store, changed, provenance)
+  matched_execution <- graft:::commit_plan_execution(matched)$staged
+  updated_execution <- graft:::commit_plan_execution(updated)$staged
+  matched_payload <- jsonlite::fromJSON(
+    matched_execution$rows$payload_json,
+    simplifyVector = FALSE
+  )
+  updated_payload <- jsonlite::fromJSON(
+    updated_execution$rows$payload_json,
+    simplifyVector = FALSE
+  )
+  expected_created <- projection_coerce_timestamps(prior_created)[[1L]]
+  expected_updated <- projection_coerce_timestamps(prior_updated)[[1L]]
+
+  expect_identical(matched@changes$action, "match")
+  expect_identical(updated@changes$action, "update")
+  expect_identical(matched@changes$expected_revision_id, revision_id)
+  expect_identical(updated@changes$expected_revision_id, revision_id)
+  expect_identical(matched@changes$expected_revision_number, 1)
+  expect_identical(updated@changes$expected_revision_number, 1)
+  expect_identical(
+    updated@changes$expected_content_digest,
+    staged_row$content_digest
+  )
+  expect_equal(
+    as.numeric(matched_execution$records$Entity$created_at),
+    as.numeric(expected_created),
+    tolerance = 1e-6
+  )
+  expect_equal(
+    as.numeric(matched_execution$records$Entity$updated_at),
+    as.numeric(expected_updated),
+    tolerance = 1e-6
+  )
+  expect_equal(
+    as.numeric(updated_execution$records$Entity$created_at),
+    as.numeric(expected_created),
+    tolerance = 1e-6
+  )
+  expect_identical(matched_payload$created_at, prior_created)
+  expect_identical(matched_payload$updated_at, prior_updated)
+  expect_identical(updated_payload$created_at, prior_created)
+})
+
+test_that("deleted heads retain identity ownership and require resurrection", {
+  store <- local_ingest_store()
+  records <- list(
+    Entity = data.frame(
+      id = test_graft_id("deleted-head"),
+      preferred_name = "Deleted entity"
+    )
+  )
+  provenance <- graft_provenance("deleted-head-test")
+  initial <- graft_plan(store, records, provenance)
+  row <- graft:::commit_plan_execution(initial)$staged$rows[1L, ]
+  revision_id <- test_graft_id("deleted-head-revision")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_revisions",
+    data.frame(
+      revision_id = revision_id,
+      record_id = row$record_id,
+      class = row$class,
+      batch_id = test_graft_id("deleted-head-batch"),
+      schema_build_digest = initial@schema_build_digest,
+      revision_number = 1,
+      operation = "delete",
+      payload_json = row$payload_json,
+      content_digest = row$content_digest,
+      changed_fields_json = row$changed_fields_json,
+      prior_revision_id = NA_character_,
+      recorded_at = initial@planned_at,
+      commit_order = 1,
+      stringsAsFactors = FALSE
+    )
+  )
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_heads",
+    data.frame(
+      record_id = row$record_id,
+      class = row$class,
+      revision_id = revision_id,
+      revision_number = 1,
+      updated_at = initial@planned_at,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  resurrection <- graft_plan(store, records, provenance)
+  wrong_class <- graft_plan(
+    store,
+    list(Source = data.frame(id = row$record_id, title = "Wrong class")),
+    provenance
+  )
+  missing_reference <- graft_plan(
+    store,
+    list(
+      Claim = data.frame(
+        id = test_graft_id("deleted-reference"),
+        statement_text = "Deleted target",
+        about = I(list(row$record_id))
+      )
+    ),
+    provenance
+  )
+
+  expect_identical(resurrection@changes$action, "update")
+  expect_identical(resurrection@changes$expected_revision_id, revision_id)
+  expect_identical(resurrection@changes$expected_revision_number, 1)
+  expect_setequal(wrong_class@issues$rule, "class_compatible_id")
+  expect_setequal(missing_reference@issues$rule, "reference_exists")
+})
+
 test_that("replay checks static binding and exact plan identity", {
   store <- local_ingest_store()
   other_store <- local_ingest_store()
@@ -170,6 +341,194 @@ test_that("invalid input returns a non-committable plan", {
     nrow(DBI::dbReadTable(store$connection, "_graft_batches")),
     0L
   )
+})
+
+test_that("commit rejects stale identifier and origin registries", {
+  identifier_store <- local_ingest_store()
+  origin_store <- local_ingest_store()
+  records <- list(
+    Entity = data.frame(
+      id = test_graft_id("registry-candidate"),
+      preferred_name = "Registry candidate"
+    )
+  )
+  provenance <- graft_provenance("registry-test")
+  identifier_plan <- graft_plan(identifier_store, records, provenance)
+  origin_plan <- graft_plan(origin_store, records, provenance)
+  now <- as.POSIXct("2026-01-01", tz = "UTC")
+  DBI::dbAppendTable(
+    identifier_store$connection,
+    "_graft_identifiers",
+    data.frame(
+      record_id = test_graft_id("registry-identifier"),
+      class = "Entity",
+      namespace = "cas",
+      value = "50-00-0",
+      normalized_value = "50-00-0",
+      status = "primary",
+      assigned_by = "fixture",
+      confidence = 1,
+      created_at = now,
+      stringsAsFactors = FALSE
+    )
+  )
+  DBI::dbAppendTable(
+    origin_store$connection,
+    "_graft_origins",
+    data.frame(
+      record_id = test_graft_id("registry-origin"),
+      class = "Entity",
+      producer = "registry-test",
+      origin_key = "changed-origin",
+      first_batch_id = test_graft_id("registry-origin-batch"),
+      created_at = now,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  identifier_condition <- catch_graft_ingest_condition(
+    graft_commit(identifier_store, identifier_plan)
+  )
+  origin_condition <- catch_graft_ingest_condition(
+    graft_commit(origin_store, origin_plan)
+  )
+
+  expect_s3_class(identifier_condition, "graft_commit_plan_stale")
+  expect_s3_class(origin_condition, "graft_commit_plan_stale")
+  expect_equal(
+    nrow(DBI::dbReadTable(identifier_store$connection, "_graft_batches")),
+    0L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(origin_store$connection, "_graft_batches")),
+    0L
+  )
+})
+
+test_that("commit head checks reject composite corruption", {
+  cases <- c("revision_id", "class", "revision_number")
+  conditions <- lapply(cases, function(case) {
+    store <- local_ingest_store()
+    records <- list(
+      Entity = data.frame(
+        id = test_graft_id(paste0("corrupt-", case)),
+        preferred_name = "Original"
+      )
+    )
+    initial <- graft_plan(store, records, graft_provenance("corruption-test"))
+    row <- graft:::commit_plan_execution(initial)$staged$rows[1L, ]
+    revision_id <- test_graft_id(paste0("corrupt-revision-", case))
+    DBI::dbAppendTable(
+      store$connection,
+      "_graft_record_revisions",
+      data.frame(
+        revision_id = revision_id,
+        record_id = row$record_id,
+        class = row$class,
+        batch_id = test_graft_id(paste0("corrupt-batch-", case)),
+        schema_build_digest = initial@schema_build_digest,
+        revision_number = 1,
+        operation = "insert",
+        payload_json = row$payload_json,
+        content_digest = row$content_digest,
+        changed_fields_json = row$changed_fields_json,
+        prior_revision_id = NA_character_,
+        recorded_at = initial@planned_at,
+        commit_order = 1,
+        stringsAsFactors = FALSE
+      )
+    )
+    DBI::dbAppendTable(
+      store$connection,
+      "_graft_record_heads",
+      data.frame(
+        record_id = row$record_id,
+        class = row$class,
+        revision_id = revision_id,
+        revision_number = 1,
+        updated_at = initial@planned_at,
+        stringsAsFactors = FALSE
+      )
+    )
+    records$Entity$preferred_name <- "Reviewed"
+    plan <- graft_plan(store, records, graft_provenance("corruption-test"))
+    if (identical(case, "revision_id")) {
+      DBI::dbExecute(
+        store$connection,
+        "UPDATE _graft_record_heads SET revision_id = ? WHERE record_id = ?",
+        params = list(test_graft_id("dangling-revision"), row$record_id)
+      )
+    } else if (identical(case, "class")) {
+      DBI::dbExecute(
+        store$connection,
+        "UPDATE _graft_record_heads SET class = ? WHERE record_id = ?",
+        params = list("Source", row$record_id)
+      )
+    } else {
+      DBI::dbExecute(
+        store$connection,
+        paste0(
+          "UPDATE _graft_record_heads SET revision_number = ? ",
+          "WHERE record_id = ?"
+        ),
+        params = list(2, row$record_id)
+      )
+    }
+    catch_graft_ingest_condition(graft_commit(store, plan))
+  })
+
+  for (condition in conditions) {
+    expect_s3_class(condition, "graft_commit_plan_stale")
+  }
+})
+
+test_that("commit rejects a head created after an insert plan", {
+  store <- local_ingest_store()
+  records <- list(
+    Entity = data.frame(
+      id = test_graft_id("unexpected-head"),
+      preferred_name = "Unexpected head"
+    )
+  )
+  plan <- graft_plan(store, records, graft_provenance("unexpected-head"))
+  row <- graft:::commit_plan_execution(plan)$staged$rows[1L, ]
+  revision_id <- test_graft_id("unexpected-head-revision")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_revisions",
+    data.frame(
+      revision_id = revision_id,
+      record_id = row$record_id,
+      class = row$class,
+      batch_id = test_graft_id("unexpected-head-batch"),
+      schema_build_digest = plan@schema_build_digest,
+      revision_number = 1,
+      operation = "insert",
+      payload_json = row$payload_json,
+      content_digest = row$content_digest,
+      changed_fields_json = row$changed_fields_json,
+      prior_revision_id = NA_character_,
+      recorded_at = plan@planned_at,
+      commit_order = 1,
+      stringsAsFactors = FALSE
+    )
+  )
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_record_heads",
+    data.frame(
+      record_id = row$record_id,
+      class = row$class,
+      revision_id = revision_id,
+      revision_number = 1,
+      updated_at = plan@planned_at,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  condition <- catch_graft_ingest_condition(graft_commit(store, plan))
+
+  expect_s3_class(condition, "graft_commit_plan_stale")
 })
 
 test_that("commit accepts a prepared plan and preserves replay behavior", {

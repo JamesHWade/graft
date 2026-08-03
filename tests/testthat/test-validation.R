@@ -251,3 +251,190 @@ test_that("duplicate IDs, origins, and generated targets fail early", {
   expect_s3_class(relation, "graft_validation_error")
   expect_identical(relation$rule, "unique_relation_target")
 })
+
+test_that("planning aggregates independent row and field issues", {
+  store <- local_ingest_store()
+  records <- list(
+    Entity = data.frame(
+      id = c(test_graft_id("issue-one"), test_graft_id("issue-two")),
+      preferred_name = c(NA_character_, NA_character_),
+      inchikey = c("invalid-one", "invalid-two")
+    ),
+    Claim = data.frame(
+      id = test_graft_id("issue-claim"),
+      statement_text = "Missing target",
+      about = I(list(test_graft_id("issue-absent")))
+    )
+  )
+
+  plan <- graft_plan(store, records, graft_provenance("validation-test"))
+
+  expect_identical(plan@valid, FALSE)
+  expect_equal(sum(plan@issues$rule == "required"), 2L)
+  expect_equal(sum(plan@issues$rule == "pattern"), 2L)
+  expect_equal(sum(plan@issues$rule == "reference_exists"), 1L)
+  expect_setequal(
+    plan@issues$condition_class,
+    c(
+      "graft_reference_error",
+      "graft_validation_error"
+    )
+  )
+})
+
+test_that("planning resolves references against the complete candidate set", {
+  store <- local_ingest_store()
+  records <- valid_atomic_records()
+  records <- records[c(
+    "ClaimEvidence",
+    "Claim",
+    "SemanticClaim",
+    "EntityMention",
+    "Source",
+    "Entity"
+  )]
+
+  plan <- graft_plan(
+    store,
+    records,
+    graft_provenance("validation-test")
+  )
+  execution <- graft:::commit_plan_execution(plan)$staged
+
+  expect_identical(plan@valid, TRUE)
+  expect_equal(nrow(execution$references), 7L)
+  expect_setequal(
+    execution$references$target_id,
+    c(
+      records$Entity$id,
+      records$Source$id,
+      records$Claim$id
+    )
+  )
+})
+
+test_that("planning preserves exact integer payloads as strings", {
+  store <- local_ingest_store()
+  records <- valid_atomic_records()
+  records$ClaimEvidence$page_start <- "9007199254740993"
+  records$ClaimEvidence$page_end <- "9007199254740994"
+
+  plan <- graft_plan(
+    store,
+    records,
+    graft_provenance("validation-test")
+  )
+  execution <- graft:::commit_plan_execution(plan)$staged
+  row <- execution$rows[
+    execution$rows$class == "ClaimEvidence",
+    ,
+    drop = FALSE
+  ]
+  payload <- jsonlite::fromJSON(row$payload_json[[1L]], simplifyVector = FALSE)
+
+  expect_identical(plan@valid, TRUE)
+  expect_identical(payload$page_start, "9007199254740993")
+  expect_identical(payload$page_end, "9007199254740994")
+})
+
+test_that("planning snapshot query count is independent of candidate rows", {
+  store <- local_ingest_store()
+  original_query <- planning_query
+  query_count <- 0L
+  local_mocked_bindings(
+    planning_query = function(...) {
+      query_count <<- query_count + 1L
+      original_query(...)
+    }
+  )
+  provenance <- graft_provenance("query-count")
+  graft_plan(
+    store,
+    list(
+      Entity = data.frame(
+        id = test_graft_id("bounded-one"),
+        preferred_name = "One"
+      )
+    ),
+    provenance
+  )
+  one_row_queries <- query_count
+  query_count <- 0L
+  count <- 1000L
+  graft_plan(
+    store,
+    list(
+      Entity = data.frame(
+        id = vapply(
+          seq_len(count),
+          \(.x) test_graft_id(paste0("bounded-", .x)),
+          character(1)
+        ),
+        preferred_name = paste("Entity", seq_len(count))
+      )
+    ),
+    provenance
+  )
+  many_row_queries <- query_count
+
+  expect_identical(one_row_queries, 4L)
+  expect_identical(many_row_queries, one_row_queries)
+})
+
+test_that("exact numeric coercion rejects lossy doubles and canonicalizes text", {
+  expect_null(coerce_exact_numeric(2^53, integer = TRUE))
+  expect_null(coerce_exact_numeric(1.25, integer = FALSE))
+  expect_identical(
+    coerce_exact_numeric(
+      c("+001.2300", "1.23", "-0.000", ".5000", "1."),
+      integer = FALSE
+    ),
+    c("1.23", "1.23", "0", "0.5", "1")
+  )
+  expect_identical(
+    coerce_exact_numeric(c("+01", "001", "-0"), integer = TRUE),
+    c("1", "1", "0")
+  )
+  expect_identical(
+    coerce_exact_numeric(c(1L, 2L), integer = FALSE),
+    c("1", "2")
+  )
+})
+
+test_that("exact integer lexemes share payload digests", {
+  store <- local_ingest_store()
+  first <- valid_atomic_records()
+  second <- first
+  first$ClaimEvidence$page_start <- "+001"
+  first$ClaimEvidence$page_end <- "0002"
+  second$ClaimEvidence$page_start <- "1"
+  second$ClaimEvidence$page_end <- "2"
+  provenance <- graft_provenance("numeric-canonicalization")
+
+  first_plan <- graft_plan(store, first, provenance)
+  second_plan <- graft_plan(store, second, provenance)
+  first_row <- first_plan@changes$class == "ClaimEvidence"
+  second_row <- second_plan@changes$class == "ClaimEvidence"
+
+  expect_identical(first_plan@valid, TRUE)
+  expect_identical(second_plan@valid, TRUE)
+  expect_identical(
+    first_plan@changes$proposed_content_digest[first_row],
+    second_plan@changes$proposed_content_digest[second_row]
+  )
+})
+
+test_that("planning rejects already-lossy BIGINT doubles", {
+  store <- local_ingest_store()
+  records <- valid_atomic_records()
+  records$ClaimEvidence$page_start <- 2^53
+
+  plan <- graft_plan(
+    store,
+    records,
+    graft_provenance("numeric-loss")
+  )
+
+  expect_identical(plan@valid, FALSE)
+  expect_setequal(plan@issues$rule, "type_bigint")
+})

@@ -141,7 +141,6 @@ graft_plan_records <- function(
   validate_initialized_store_for_ingest(store, write = FALSE, refresh = TRUE)
   provenance <- as_graft_provenance(provenance)
   metadata <- read_store_metadata(store$connection)
-  planned_at <- commit_plan_snapshot_time(store$connection, metadata)
   input_digest <- graft_sha256(
     list(records = records, provenance = provenance_data(provenance)),
     serialize = TRUE
@@ -154,48 +153,19 @@ graft_plan_records <- function(
     )
   )
   batch <- provenance_batch(provenance, temporary_batch_id)
-  failure <- NULL
-  staged <- tryCatch(
-    prepare_ingest_records(store, batch, records, planned_at),
-    graft_validation_error = function(condition) {
-      failure <<- condition
-      NULL
-    },
-    graft_identity_error = function(condition) {
-      failure <<- condition
-      NULL
-    },
-    graft_reference_error = function(condition) {
-      failure <<- condition
-      NULL
-    },
-    graft_schema_error = function(condition) {
-      failure <<- condition
-      NULL
-    }
-  )
-
-  if (is.null(failure)) {
-    plan_records <- staged_plan_records(staged)
-    changes <- staged_plan_changes(store, staged)
-    issues <- empty_plan_issues()
-    execution <- list(staged = staged)
-  } else {
-    plan_records <- list()
-    changes <- empty_plan_changes()
-    issues <- condition_plan_issue(failure)
-    execution <- NULL
-  }
-  heads <- changes[
+  candidate <- plan_candidate_records(store, batch, records, metadata)
+  heads <- candidate$changes[
     c(
       "class",
       "record_id",
       "expected_revision_id",
+      "expected_revision_number",
       "expected_content_digest"
     )
   ]
   preconditions <- list(
     heads = heads,
+    registries = candidate$registry_preconditions,
     source = source_preconditions
   )
   new_graft_commit_plan(
@@ -206,14 +176,14 @@ graft_plan_records <- function(
       store$schema$manifest$fingerprints$build_digest
     ),
     schema_structural_digest = store_schema_digest(store),
-    planned_at = planned_at,
+    planned_at = candidate$planned_at,
     provenance = provenance,
-    records = plan_records,
-    changes = changes,
-    issues = issues,
+    records = candidate$records,
+    changes = candidate$changes,
+    issues = candidate$issues,
     preconditions = preconditions,
     input_digest = input_digest,
-    execution = execution
+    execution = list(staged = candidate$execution)
   )
 }
 
@@ -424,6 +394,7 @@ validate_graft_commit_plan <- function(plan) {
 validate_commit_plan_preconditions <- function(store, plan) {
   validate_commit_plan_static_binding(store, plan)
   validate_commit_plan_heads(store, plan@preconditions$heads)
+  validate_commit_plan_registries(store, plan)
   validate_commit_plan_source(store, plan)
   invisible(plan)
 }
@@ -472,15 +443,17 @@ validate_commit_plan_replay <- function(plan, replay) {
   )
 }
 
-commit_plan_snapshot_time <- function(connection, metadata) {
-  latest <- DBI::dbGetQuery(
-    connection,
-    paste0(
-      "SELECT MAX(committed_at) AS committed_at FROM ",
-      quote_identifier(connection, "_graft_batches"),
-      " WHERE status = 'committed'"
+commit_plan_snapshot_time <- function(connection, metadata, latest = NULL) {
+  if (is.null(latest)) {
+    latest <- DBI::dbGetQuery(
+      connection,
+      paste0(
+        "SELECT MAX(committed_at) AS committed_at FROM ",
+        quote_identifier(connection, "_graft_batches"),
+        " WHERE status = 'committed'"
+      )
     )
-  )
+  }
   candidates <- as.numeric(c(
     metadata$updated_at,
     latest$committed_at[[1L]]
@@ -503,22 +476,83 @@ validate_commit_plan_heads <- function(store, heads) {
   if (nrow(heads) == 0L) {
     return(invisible(heads))
   }
+  placeholders <- paste(rep("?", nrow(heads)), collapse = ", ")
+  current_heads <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT h.record_id, h.class, h.revision_id, h.revision_number, ",
+      "r.record_id AS ledger_record_id, r.class AS ledger_class, ",
+      "r.revision_id AS ledger_revision_id, ",
+      "r.revision_number AS ledger_revision_number, r.content_digest FROM ",
+      quote_identifier(store$connection, "_graft_record_heads"),
+      " AS h LEFT JOIN ",
+      quote_identifier(store$connection, "_graft_record_revisions"),
+      " AS r ON r.record_id = h.record_id AND r.class = h.class ",
+      "AND r.revision_id = h.revision_id ",
+      "AND r.revision_number = h.revision_number ",
+      "WHERE h.record_id IN (",
+      placeholders,
+      ")"
+    ),
+    params = as.list(heads$record_id)
+  )
+  current_index <- match(heads$record_id, current_heads$record_id)
   for (index in seq_len(nrow(heads))) {
-    current <- read_record_head(store$connection, heads$record_id[[index]])
-    current_revision <- if (nrow(current) == 0L) {
+    current_row <- current_index[[index]]
+    current_revision <- if (is.na(current_row)) {
       NA_character_
     } else {
-      current$revision_id[[1L]]
+      current_heads$revision_id[[current_row]]
     }
-    current_digest <- if (nrow(current) == 0L) {
+    current_digest <- if (is.na(current_row)) {
       NA_character_
     } else {
-      current$content_digest[[1L]]
+      current_heads$content_digest[[current_row]]
     }
-    if (
-      !identical(current_revision, heads$expected_revision_id[[index]]) ||
-        !identical(current_digest, heads$expected_content_digest[[index]])
-    ) {
+    current_class <- if (is.na(current_row)) {
+      NA_character_
+    } else {
+      current_heads$class[[current_row]]
+    }
+    current_number <- if (is.na(current_row)) {
+      NA_real_
+    } else {
+      as.numeric(current_heads$revision_number[[current_row]])
+    }
+    dangling <- !is.na(current_row) &&
+      (is.na(current_heads$ledger_revision_id[[current_row]]) ||
+        !identical(
+          current_heads$ledger_record_id[[current_row]],
+          current_heads$record_id[[current_row]]
+        ) ||
+        !identical(
+          current_heads$ledger_class[[current_row]],
+          current_heads$class[[current_row]]
+        ) ||
+        !identical(
+          current_heads$ledger_revision_id[[current_row]],
+          current_heads$revision_id[[current_row]]
+        ) ||
+        !identical(
+          as.numeric(current_heads$ledger_revision_number[[current_row]]),
+          current_number
+        ))
+    expected_revision <- heads$expected_revision_id[[index]]
+    expected_number <- as.numeric(heads$expected_revision_number[[index]])
+    expected_exists <- !is.na(expected_revision)
+    observed_exists <- !is.na(current_row)
+    changed <- expected_exists != observed_exists ||
+      expected_exists &&
+        observed_exists &&
+        (!identical(current_class, heads$class[[index]]) ||
+          !identical(current_revision, expected_revision) ||
+          !identical(current_number, expected_number) ||
+          !identical(
+            current_digest,
+            heads$expected_content_digest[[index]]
+          ) ||
+          dangling)
+    if (changed) {
       abort_commit_plan(
         "graft_commit_plan_stale",
         paste0(
@@ -528,12 +562,51 @@ validate_commit_plan_heads <- function(store, heads) {
         ),
         record_id = heads$record_id[[index]],
         record_class = heads$class[[index]],
-        expected_revision_id = heads$expected_revision_id[[index]],
-        observed_revision_id = current_revision
+        expected_revision_id = expected_revision,
+        observed_revision_id = current_revision,
+        expected_revision_number = expected_number,
+        observed_revision_number = current_number,
+        dangling_head = dangling
       )
     }
   }
   invisible(heads)
+}
+
+validate_commit_plan_registries <- function(store, plan) {
+  expected <- plan@preconditions$registries
+  if (
+    !is.list(expected) ||
+      !identical(names(expected), c("identifier_digest", "origin_digest")) ||
+      !all(vapply(expected, is_graft_digest, logical(1)))
+  ) {
+    abort_commit_plan(
+      "graft_commit_plan_tampered",
+      "The identity-registry preconditions are invalid."
+    )
+  }
+  identifiers <- DBI::dbGetQuery(
+    store$connection,
+    planning_identifiers_sql(store$connection)
+  )
+  origins <- DBI::dbGetQuery(
+    store$connection,
+    planning_origins_sql(store$connection),
+    params = list(plan@provenance@producer)
+  )
+  observed <- list(
+    identifier_digest = planning_snapshot_digest(identifiers),
+    origin_digest = planning_snapshot_digest(origins)
+  )
+  if (!identical(observed, expected)) {
+    abort_commit_plan(
+      "graft_commit_plan_stale",
+      "An identity registry changed after planning.",
+      expected = expected,
+      observed = observed
+    )
+  }
+  invisible(plan)
 }
 
 validate_commit_plan_source <- function(store, plan) {
@@ -573,6 +646,16 @@ validate_commit_plan_source <- function(store, plan) {
 }
 
 commit_prepared_plan <- function(store, batch, staged, plan, started) {
+  if (identical(staged$format, candidate_stage_version)) {
+    validate_commit_plan_preconditions(store, plan)
+    abort_commit_plan(
+      "graft_commit_plan_executor_unavailable",
+      paste0(
+        "This commit plan uses the v3 canonical staged contract, but the ",
+        "bulk commit executor is not available yet."
+      )
+    )
+  }
   started_at <- ingest_now()
   with_duckdb_error(
     "commit_plan",
@@ -612,83 +695,6 @@ commit_prepared_plan <- function(store, batch, staged, plan, started) {
   )
 }
 
-staged_plan_records <- function(staged) {
-  result <- lapply(staged, function(class_staged) {
-    slots <- class_staged$contract$slots
-    columns <- lapply(names(slots), function(slot_name) {
-      slot <- slots[[slot_name]]
-      if (scalar_logical(slot$multivalued)) {
-        return(I(class_staged$multivalues[[slot_name]]))
-      }
-      column <- scalar_character(slot$column, slot_name)
-      class_staged$data[[column]]
-    })
-    names(columns) <- names(slots)
-    as.data.frame(
-      columns,
-      stringsAsFactors = FALSE,
-      check.names = FALSE,
-      optional = TRUE
-    )
-  })
-  names(result) <- names(staged)
-  result
-}
-
-staged_plan_changes <- function(store, staged) {
-  rows <- list()
-  for (record_class in names(staged)) {
-    class_staged <- staged[[record_class]]
-    for (index in seq_len(nrow(class_staged$data))) {
-      record_id <- class_staged$data$id[[index]]
-      disposition <- class_staged$disposition[[index]]
-      head <- read_record_head(store$connection, record_id)
-      validate_staged_head(head, record_class, record_id, disposition)
-      payload <- logical_record_payload(class_staged, index)
-      prior_payload <- if (nrow(head) == 0L) {
-        NULL
-      } else {
-        parse_revision_payload(head$payload_json[[1L]])
-      }
-      changed_fields <- if (identical(disposition, "matched")) {
-        character()
-      } else {
-        logical_record_changed_fields(payload, prior_payload)
-      }
-      rows[[length(rows) + 1L]] <- data.frame(
-        class = record_class,
-        input_row = as.integer(class_staged$input_row[[index]]),
-        record_id = record_id,
-        action = switch(
-          disposition,
-          inserted = "insert",
-          updated = "update",
-          matched = "match"
-        ),
-        changed_fields = paste(changed_fields, collapse = ", "),
-        expected_revision_id = if (nrow(head) == 0L) {
-          NA_character_
-        } else {
-          head$revision_id[[1L]]
-        },
-        expected_content_digest = if (nrow(head) == 0L) {
-          NA_character_
-        } else {
-          head$content_digest[[1L]]
-        },
-        proposed_content_digest = logical_record_content_digest(payload),
-        stringsAsFactors = FALSE
-      )
-    }
-  }
-  if (length(rows) == 0L) {
-    return(empty_plan_changes())
-  }
-  result <- do.call(rbind, rows)
-  rownames(result) <- NULL
-  result
-}
-
 empty_plan_changes <- function() {
   data.frame(
     class = character(),
@@ -697,8 +703,11 @@ empty_plan_changes <- function() {
     action = character(),
     changed_fields = character(),
     expected_revision_id = character(),
+    expected_revision_number = numeric(),
     expected_content_digest = character(),
     proposed_content_digest = character(),
+    identity_reason = character(),
+    identity_evidence = character(),
     stringsAsFactors = FALSE
   )
 }

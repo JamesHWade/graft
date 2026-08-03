@@ -11,28 +11,42 @@
 #' @export
 kg_validate_data <- function(store, records) {
   validate_initialized_store_for_ingest(store, write = FALSE)
+  input_digest <- graft_sha256(records, serialize = TRUE)
   batch <- new_kg_batch(
-    batch_id = new_graft_id(),
+    batch_id = deterministic_graft_id(
+      "GraftPreflight",
+      list(input_digest = input_digest)
+    ),
     producer = "graft-preflight",
     producer_version = NA_character_,
     source_run_id = NA_character_,
     idempotency_key = NA_character_,
     metadata = list()
   )
-  failure <- tryCatch(
-    {
-      prepare_ingest_records(store, batch, records)
-      NULL
-    },
-    graft_validation_error = identity,
-    graft_identity_error = identity,
-    graft_reference_error = identity,
-    graft_schema_error = identity
+  metadata <- read_store_metadata(store$connection)
+  candidate <- plan_candidate_records(
+    store,
+    batch,
+    records,
+    metadata
   )
-  if (is.null(failure)) {
+  if (nrow(candidate$issues) == 0L) {
     new_kg_validation_report()
   } else {
-    new_kg_validation_report(list(failure))
+    failures <- lapply(seq_len(nrow(candidate$issues)), function(index) {
+      issue <- candidate$issues[index, , drop = FALSE]
+      rlang::cnd(
+        class = c(issue$condition_class[[1L]], "graft_error"),
+        message = issue$message[[1L]],
+        record_class = issue$class[[1L]],
+        input_row = issue$input_row[[1L]],
+        record_id = issue$record_id[[1L]],
+        field = issue$field[[1L]],
+        rule = issue$rule[[1L]],
+        observed_value = NULL
+      )
+    })
+    new_kg_validation_report(failures)
   }
 }
 
@@ -158,7 +172,7 @@ normalize_class_records <- function(
   )
   for (slot_name in names(multivalue_slots)) {
     slot <- multivalue_slots[[slot_name]]
-    canonical_slot_type(slot, operation = "stage_record")
+    validation_slot_type(slot)
     if (!slot_name %in% names(data)) {
       data[[slot_name]] <- rep(list(NULL), nrow(data))
     } else if (!is.list(data[[slot_name]])) {
@@ -277,22 +291,18 @@ normalize_class_records <- function(
     identities[[index]] <- identity
   }
 
-  physical_slots <- vapply(
-    store$schema$manifest$tables[[record_class]]$columns,
-    \(.x) scalar_character(.x$slot, scalar_character(.x$name)),
-    character(1)
-  )
+  physical_slots <- names(scalar_slots)
   physical <- data[physical_slots]
   names(physical) <- vapply(
-    store$schema$manifest$tables[[record_class]]$columns,
-    \(.x) scalar_character(.x$name),
+    scalar_slots,
+    \(.x) scalar_character(.x$view_column),
     character(1)
   )
   disposition <- character(nrow(physical))
   for (index in seq_len(nrow(physical))) {
     current <- existing_record(
       store$connection,
-      scalar_character(contract$table),
+      scalar_character(contract$view),
       physical$id[[index]]
     )
     if (nrow(current) == 0L) {
@@ -332,7 +342,8 @@ normalize_class_records <- function(
             store$connection,
             relation,
             physical$id[[index]],
-            data[[slot_name]][[index]]
+            data[[slot_name]][[index]],
+            slots[[slot_name]]
           )
       ) {
         disposition[[index]] <- "updated"
@@ -342,7 +353,7 @@ normalize_class_records <- function(
           now,
           existing = existing_record(
             store$connection,
-            scalar_character(contract$table),
+            scalar_character(contract$view),
             physical$id[[index]]
           ),
           changed = TRUE
@@ -366,43 +377,39 @@ generated_relation_has_changes <- function(
   connection,
   relation,
   owner_id,
-  values
+  values,
+  slot
 ) {
   kind <- scalar_character(relation$kind)
   owner_column <- if (identical(kind, "object")) "subject" else "owner_id"
   value_column <- if (identical(kind, "object")) "object" else "value"
-  columns <- vapply(
-    relation$columns,
-    \(.x) scalar_character(.x$name),
-    character(1)
-  )
   selected <- value_column
-  if (scalar_logical(relation$ordered) && "position" %in% columns) {
+  if (scalar_logical(relation$ordered)) {
     selected <- c(value_column, "position")
   }
   sql <- paste0(
     "SELECT ",
     paste(quote_identifier(connection, selected), collapse = ", "),
     " FROM ",
-    quote_identifier(connection, scalar_character(relation$table)),
+    quote_identifier(connection, scalar_character(relation$view)),
     " WHERE ",
     quote_identifier(connection, owner_column),
     " = ?",
     if ("position" %in% selected) " ORDER BY position" else ""
   )
   existing <- DBI::dbGetQuery(connection, sql, params = list(owner_id))
-  slot <- relation_value_slot(relation)
-  incoming <- canonical_slot_value(values, slot)
-  stored <- canonical_slot_value(existing[[value_column]], slot)
+  incoming <- plan_canonical_slot_value(values, slot)
+  stored <- plan_canonical_slot_value(existing[[value_column]], slot)
   !identical(canonical_json(incoming), canonical_json(stored))
 }
 
 missing_slot_vector <- function(slot, n) {
-  type <- canonical_slot_type(slot, operation = "stage_record")
+  type <- validation_slot_type(slot)
   switch(
     type,
     BOOLEAN = rep(NA, n),
-    BIGINT = rep(NA_real_, n),
+    BIGINT = rep(NA_character_, n),
+    DECIMAL = rep(NA_character_, n),
     DOUBLE = rep(NA_real_, n),
     DATE = as.Date(rep(NA_character_, n)),
     TIMESTAMP = as.POSIXct(rep(NA_real_, n), origin = "1970-01-01", tz = "UTC"),
@@ -412,7 +419,7 @@ missing_slot_vector <- function(slot, n) {
 
 coerce_slot_vector <- function(x, slot, record_class) {
   slot_name <- scalar_character(slot$name)
-  type <- canonical_slot_type(slot, operation = "stage_record")
+  type <- validation_slot_type(slot)
   converted <- switch(
     type,
     VARCHAR = {
@@ -425,8 +432,8 @@ coerce_slot_vector <- function(x, slot, record_class) {
       }
     },
     DOUBLE = coerce_numeric(x, integer = FALSE),
-    DECIMAL = coerce_numeric(x, integer = FALSE),
-    BIGINT = coerce_numeric(x, integer = TRUE),
+    DECIMAL = coerce_exact_numeric(x, integer = FALSE),
+    BIGINT = coerce_exact_numeric(x, integer = TRUE),
     BOOLEAN = coerce_logical(x),
     DATE = coerce_date(x),
     TIMESTAMP = coerce_timestamp(x),
@@ -451,6 +458,88 @@ coerce_slot_vector <- function(x, slot, record_class) {
     )
   }
   converted
+}
+
+validation_slot_type <- function(slot) {
+  type <- toupper(scalar_character(slot$duckdb_type, "VARCHAR"))
+  if (scalar_logical(slot$object_reference) && !identical(type, "VARCHAR")) {
+    abort_schema_error(
+      "Object-reference fields must use DuckDB type `VARCHAR`.",
+      field = scalar_character(slot$name),
+      rule = "object_reference_varchar",
+      duckdb_type = type
+    )
+  }
+  type
+}
+
+coerce_exact_numeric <- function(x, integer = FALSE) {
+  if (is.factor(x)) {
+    x <- as.character(x)
+  }
+  if (!is.numeric(x) && !is.character(x)) {
+    return(NULL)
+  }
+  if (is.numeric(x)) {
+    missing <- is.na(x)
+    invalid <- !missing &
+      (!is.finite(x) |
+        x != trunc(x) |
+        abs(x) > 2^53 - 1)
+    if (any(invalid)) {
+      return(NULL)
+    }
+    values <- rep(NA_character_, length(x))
+    values[!missing] <- sprintf("%.0f", x[!missing])
+    return(values)
+  }
+  values <- trimws(x)
+  missing <- is.na(values)
+  pattern <- if (integer) {
+    "^[+-]?[0-9]+$"
+  } else {
+    "^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)$"
+  }
+  if (any(!missing & !grepl(pattern, values, perl = TRUE))) {
+    return(NULL)
+  }
+  result <- rep(NA_character_, length(values))
+  result[!missing] <- vapply(
+    values[!missing],
+    canonical_exact_numeric_lexeme,
+    character(1),
+    decimal = !integer
+  )
+  result
+}
+
+canonical_exact_numeric_lexeme <- function(value, decimal) {
+  negative <- startsWith(value, "-")
+  unsigned <- sub("^[+-]", "", value)
+  whole <- if (grepl(".", unsigned, fixed = TRUE)) {
+    sub("\\..*$", "", unsigned)
+  } else {
+    unsigned
+  }
+  fraction <- if (decimal && grepl(".", unsigned, fixed = TRUE)) {
+    sub("^[^.]*\\.", "", unsigned)
+  } else {
+    ""
+  }
+  whole <- sub("^0+", "", whole)
+  if (!nzchar(whole)) {
+    whole <- "0"
+  }
+  fraction <- sub("0+$", "", fraction)
+  canonical <- paste0(
+    whole,
+    if (nzchar(fraction)) paste0(".", fraction) else ""
+  )
+  if (negative && !identical(canonical, "0")) {
+    paste0("-", canonical)
+  } else {
+    canonical
+  }
 }
 
 coerce_numeric <- function(x, integer = FALSE) {
@@ -560,7 +649,7 @@ record_has_changes <- function(incoming, current, slots) {
     fields,
     function(field) {
       matching <- Filter(
-        \(slot) identical(scalar_character(slot$column), field),
+        \(slot) identical(scalar_character(slot$view_column), field),
         slots
       )
       if (length(matching) != 1L) {
@@ -683,7 +772,7 @@ validate_class_records <- function(store, staged) {
     values <- if (scalar_logical(slot$multivalued)) {
       staged$multivalues[[slot_name]]
     } else {
-      scalar[[scalar_character(slot$column, slot_name)]]
+      scalar[[scalar_character(slot$view_column, slot_name)]]
     }
     for (index in seq_len(nrow(scalar))) {
       value <- if (scalar_logical(slot$multivalued)) {
@@ -913,7 +1002,7 @@ validate_staged_references <- function(store, staged) {
       values <- if (scalar_logical(slot$multivalued)) {
         class_staged$multivalues[[slot_name]]
       } else {
-        class_staged$data[[scalar_character(slot$column, slot_name)]]
+        class_staged$data[[scalar_character(slot$view_column, slot_name)]]
       }
       for (index in seq_len(nrow(class_staged$data))) {
         targets <- if (scalar_logical(slot$multivalued)) {
