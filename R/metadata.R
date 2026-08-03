@@ -100,6 +100,9 @@ metadata_table_definitions <- function() {
         ddl_column("batch_id", "VARCHAR", nullable = FALSE),
         ddl_column("disposition", "VARCHAR", nullable = FALSE),
         ddl_column("revision_id", "VARCHAR", nullable = FALSE),
+        ddl_column("origin_key", "VARCHAR", nullable = FALSE),
+        ddl_column("matched_by", "VARCHAR", nullable = FALSE),
+        ddl_column("identity_evidence_json", "VARCHAR", nullable = FALSE),
         ddl_column("observed_at", "TIMESTAMP", nullable = FALSE)
       ),
       constraints = list(

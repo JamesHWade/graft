@@ -20,6 +20,30 @@ catch_graft_ingest_condition <- function(code) {
   tryCatch(code, graft_error = identity)
 }
 
+resign_test_commit_plan <- function(
+  plan,
+  staged = graft:::commit_plan_execution(plan)$staged,
+  changes = plan@changes,
+  preconditions = plan@preconditions
+) {
+  execution <- graft:::commit_plan_execution(plan)
+  execution$staged <- staged
+  data <- graft:::commit_plan_data(plan)
+  data$changes <- changes
+  data$preconditions <- preconditions
+  data$execution_digest <- graft_sha256(canonical_json(execution))
+  data$plan_digest <- graft_sha256(
+    canonical_json(graft:::commit_plan_digest_data(data))
+  )
+  data$plan_id <- deterministic_graft_id(
+    "GraftCommitPlan",
+    list(plan_digest = data$plan_digest)
+  )
+  attr(plan, ".execution") <- execution
+  attr(plan, ".data") <- data
+  plan
+}
+
 modified_ingest_schema <- function(schema) {
   unserialize(serialize(schema, NULL))
 }

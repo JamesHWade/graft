@@ -534,10 +534,7 @@ test_that("commit rejects a head created after an insert plan", {
 test_that("commit accepts a prepared plan and preserves replay behavior", {
   store <- local_ingest_store()
   records <- list(Entity = valid_atomic_records()$Entity)
-  provenance <- graft_provenance(
-    "workflow",
-    idempotency_key = "reviewed-change"
-  )
+  provenance <- graft_provenance("workflow")
   plan <- graft_plan(store, records, provenance)
 
   first <- graft_commit(store, plan)
@@ -556,6 +553,341 @@ test_that("commit accepts a prepared plan and preserves replay behavior", {
   expect_identical(replay$batch_id, first$batch_id)
   expect_identical(replay$replay, TRUE)
   expect_identical(after, before)
+})
+
+test_that("executor rejects malformed staged rows before writing", {
+  mutations <- list(
+    duplicate = function(plan) {
+      staged <- graft:::commit_plan_execution(plan)$staged
+      staged$rows <- rbind(staged$rows, staged$rows)
+      resign_test_commit_plan(plan, staged = staged)
+    },
+    action = function(plan) {
+      staged <- graft:::commit_plan_execution(plan)$staged
+      staged$rows$action <- "update"
+      changes <- plan@changes
+      changes$action <- "update"
+      resign_test_commit_plan(plan, staged = staged, changes = changes)
+    },
+    content = function(plan) {
+      staged <- graft:::commit_plan_execution(plan)$staged
+      payload <- jsonlite::fromJSON(
+        staged$rows$payload_json,
+        simplifyVector = FALSE
+      )
+      payload$preferred_name <- "Unreviewed content"
+      staged$rows$payload_json <- canonical_json(payload)
+      staged$rows$content_digest <- logical_record_content_digest(payload)
+      resign_test_commit_plan(plan, staged = staged)
+    }
+  )
+
+  for (case in names(mutations)) {
+    store <- local_ingest_store()
+    plan <- graft_plan(
+      store,
+      list(
+        Entity = data.frame(
+          id = test_graft_id(paste0("malformed-", case)),
+          preferred_name = "Reviewed content"
+        )
+      ),
+      graft_provenance(paste0("malformed-", case))
+    )
+    malformed <- mutations[[case]](plan)
+
+    condition <- catch_graft_ingest_condition(
+      graft_commit(store, malformed)
+    )
+    authority <- setdiff(
+      graft_authoritative_table_names,
+      c("_graft_store", "_graft_schema_versions")
+    )
+    counts <- vapply(
+      authority,
+      \(table) nrow(DBI::dbReadTable(store$connection, table)),
+      integer(1)
+    )
+
+    expect_s3_class(condition, "graft_commit_plan_invalid")
+    expect_identical(unname(counts), integer(length(counts)))
+  }
+})
+
+test_that("executor enforces match and head invariants before writing", {
+  store <- local_ingest_store()
+  record_id <- test_graft_id("malformed-match")
+  records <- list(
+    Entity = data.frame(id = record_id, preferred_name = "Reviewed content")
+  )
+  provenance <- graft_provenance("malformed-match")
+  graft_ingest(store, records, provenance)
+  before <- lapply(
+    graft_authoritative_table_names,
+    \(table) DBI::dbReadTable(store$connection, table)
+  )
+  names(before) <- graft_authoritative_table_names
+  plan <- graft_plan(store, records, provenance)
+  staged <- graft:::commit_plan_execution(plan)$staged
+  payload <- jsonlite::fromJSON(
+    staged$rows$payload_json,
+    simplifyVector = FALSE
+  )
+  payload$preferred_name <- "Changed match"
+  staged$rows$payload_json <- canonical_json(payload)
+  staged$rows$content_digest <- logical_record_content_digest(payload)
+  changes <- plan@changes
+  changes$proposed_content_digest <- staged$rows$content_digest
+  malformed <- resign_test_commit_plan(
+    plan,
+    staged = staged,
+    changes = changes
+  )
+
+  condition <- catch_graft_ingest_condition(graft_commit(store, malformed))
+  after <- lapply(
+    graft_authoritative_table_names,
+    \(table) DBI::dbReadTable(store$connection, table)
+  )
+  names(after) <- graft_authoritative_table_names
+
+  expect_s3_class(condition, "graft_commit_plan_invalid")
+  expect_identical(after, before)
+})
+
+test_that("bulk commit persists insert, update, match, and identity evidence", {
+  store <- local_ingest_store()
+  first_records <- list(
+    Entity = data.frame(
+      preferred_name = "Water",
+      inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+      .graft_origin_key = "water-42",
+      check.names = FALSE
+    )
+  )
+  first <- graft_ingest(
+    store,
+    first_records,
+    graft_provenance("bulk-test", idempotency_key = "bulk-insert")
+  )
+  updated_records <- first_records
+  updated_records$Entity$preferred_name <- "Heavy water"
+  second <- graft_ingest(
+    store,
+    updated_records,
+    graft_provenance("bulk-test", idempotency_key = "bulk-update")
+  )
+  third <- graft_ingest(
+    store,
+    updated_records,
+    graft_provenance("bulk-test", idempotency_key = "bulk-match")
+  )
+  revisions <- DBI::dbGetQuery(
+    store$connection,
+    "SELECT * FROM _graft_record_revisions ORDER BY commit_order"
+  )
+  observations <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT observation.* FROM _graft_record_observations AS observation ",
+      "INNER JOIN _graft_batches AS batch USING (batch_id) ",
+      "ORDER BY batch.commit_order"
+    )
+  )
+  evidence <- lapply(
+    observations$identity_evidence_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+
+  expect_identical(first$inserted, c(Entity = 1L))
+  expect_identical(second$updated, c(Entity = 1L))
+  expect_identical(third$matched, c(Entity = 1L))
+  expect_identical(revisions$revision_number, c(1, 2))
+  expect_identical(revisions$operation, c("insert", "update"))
+  expect_match(revisions$revision_id, graft_id_pattern, all = TRUE)
+  expect_identical(
+    revisions$prior_revision_id,
+    c(NA_character_, revisions$revision_id[[1L]])
+  )
+  expect_identical(
+    observations$disposition,
+    c("inserted", "updated", "matched")
+  )
+  expect_identical(observations$origin_key, rep("water-42", 3L))
+  expect_identical(
+    observations$matched_by,
+    c("exact_identifier_mint", "agreeing_identity", "agreeing_identity")
+  )
+  expect_length(evidence, 3L)
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_identifiers")),
+    1L
+  )
+  expect_equal(
+    nrow(DBI::dbReadTable(store$connection, "_graft_origins")),
+    1L
+  )
+  expect_identical(
+    DBI::dbReadTable(store$connection, "entity")$preferred_name,
+    "Heavy water"
+  )
+})
+
+test_that("every bulk stage rolls back a multi-class commit", {
+  stages <- c(
+    "revisions",
+    "heads",
+    "observations",
+    "identifiers",
+    "origins",
+    "projections",
+    "batch"
+  )
+  for (stage in stages) {
+    store <- local_ingest_store()
+    records <- valid_atomic_records()[c("Entity", "Source")]
+    plan <- graft_plan(
+      store,
+      records,
+      graft_provenance(
+        "rollback-test",
+        idempotency_key = paste0("rollback-", stage)
+      )
+    )
+    projection_state <- DBI::dbReadTable(
+      store$connection,
+      "_graft_projection_state"
+    )
+    withr::local_options(
+      graft.commit_executor_failure_stage = stage
+    )
+
+    condition <- catch_graft_ingest_condition(graft_commit(store, plan))
+
+    authority <- setdiff(
+      graft_authoritative_table_names,
+      c("_graft_store", "_graft_schema_versions")
+    )
+    rows <- vapply(
+      authority,
+      \(table) nrow(DBI::dbReadTable(store$connection, table)),
+      integer(1)
+    )
+    expect_s3_class(condition, "graft_backend_error")
+    expect_identical(condition$stage, stage)
+    expect_identical(unname(rows), integer(length(rows)))
+    expect_identical(
+      DBI::dbReadTable(store$connection, "_graft_projection_state"),
+      projection_state
+    )
+    expect_equal(nrow(DBI::dbReadTable(store$connection, "entity")), 0L)
+    expect_equal(nrow(DBI::dbReadTable(store$connection, "source")), 0L)
+  }
+})
+
+test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
+  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  about <- schema$manifest$classes$Claim$slots$about
+  about$object_reference <- FALSE
+  about$range <- "decimal"
+  about$duckdb_type <- "DECIMAL"
+  schema$manifest$classes$Claim$slots$about <- about
+  relation_index <- which(vapply(
+    schema$manifest$relations,
+    function(relation) {
+      identical(scalar_character(relation$owner_class), "Claim") &&
+        identical(scalar_character(relation$slot), "about")
+    },
+    logical(1)
+  ))
+  schema$manifest$relations[[relation_index]]$kind <- "value"
+  schema$manifest$classes$Claim$slots$confidence$range <- "integer"
+  schema$manifest$classes$Claim$slots$confidence$duckdb_type <- "BIGINT"
+  schema$manifest$classes$Claim$slots$confidence$minimum_value <- NULL
+  schema$manifest$classes$Claim$slots$confidence$maximum_value <- NULL
+  schema <- refresh_schema_structural_digest(schema)
+  store <- local_ingest_store(schema = schema)
+  record_id <- test_graft_id("exact-commit")
+
+  result <- graft_ingest(
+    store,
+    list(
+      Claim = data.frame(
+        id = record_id,
+        statement_text = "Exact numbers",
+        confidence = "9223372036854775807",
+        about = I(list("12345678901234.567"))
+      )
+    ),
+    graft_provenance("exact-commit")
+  )
+  payload <- projection_parse_payload(
+    DBI::dbReadTable(
+      store$connection,
+      "_graft_record_revisions"
+    )$payload_json[[1L]]
+  )
+  bigint <- DBI::dbGetQuery(
+    store$connection,
+    "SELECT CAST(confidence AS VARCHAR) AS value FROM claim"
+  )
+  decimal <- DBI::dbGetQuery(
+    store$connection,
+    "SELECT CAST(value AS VARCHAR) AS value FROM claim__about"
+  )
+
+  expect_identical(result$inserted, c(Claim = 1L))
+  expect_identical(payload$confidence, "9223372036854775807")
+  expect_identical(payload$about[[1L]], "12345678901234.567")
+  expect_identical(bigint$value, "9223372036854775807")
+  expect_identical(decimal$value, "12345678901234.567")
+})
+
+test_that("bulk commit statements are independent of candidate row count", {
+  one_store <- local_ingest_store()
+  many_store <- local_ingest_store()
+  one_plan <- graft_plan(
+    one_store,
+    list(
+      Entity = data.frame(
+        id = test_graft_id("statement-one"),
+        preferred_name = "One"
+      )
+    ),
+    graft_provenance("statement-count")
+  )
+  count <- 1000L
+  many_plan <- graft_plan(
+    many_store,
+    list(
+      Entity = data.frame(
+        id = vapply(
+          seq_len(count),
+          \(index) test_graft_id(paste0("statement-", index)),
+          character(1)
+        ),
+        preferred_name = paste("Entity", seq_len(count))
+      )
+    ),
+    graft_provenance("statement-count")
+  )
+  statements <- 0L
+  local_mocked_bindings(
+    commit_executor_statement_hook = function(...) {
+      statements <<- statements + 1L
+      invisible(NULL)
+    }
+  )
+
+  graft_commit(one_store, one_plan)
+  one_statements <- statements
+  statements <- 0L
+  many <- graft_commit(many_store, many_plan)
+  many_statements <- statements
+
+  expect_identical(many_statements, one_statements)
+  expect_identical(sum(many$inserted), count)
 })
 
 test_that("commit rejects tampered and cross-store plans before writing", {

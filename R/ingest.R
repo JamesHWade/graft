@@ -23,7 +23,6 @@ kg_ingest <- function(
   mode = "upsert",
   validate = "fast"
 ) {
-  started <- proc.time()[["elapsed"]]
   validate_ingest_options(mode, validate)
   validate_initialized_store_for_ingest(store, write = TRUE)
   batch <- as_kg_batch(batch)
@@ -35,57 +34,48 @@ kg_ingest <- function(
     return(replay)
   }
 
-  started_at <- ingest_now()
-  result <- with_duckdb_error(
-    "ingest",
-    DBI::dbWithTransaction(store$connection, {
-      verify_initialized_store(store, activate = TRUE)
-      metadata <- read_store_metadata(store$connection)
-      build_digest <- scalar_character(
-        store$schema$manifest$fingerprints$build_digest
-      )
-      if (!identical(metadata$active_build_digest, build_digest)) {
-        abort_backend_error(
-          "The active store schema does not match the ingestion schema.",
-          operation = "ingest",
-          active_build_digest = metadata$active_build_digest,
-          build_digest = build_digest
-        )
-      }
-      commit_order <- next_metadata_order(
-        store$connection,
-        "_graft_batches",
-        "commit_order"
-      )
-      insert_started_batch(
-        store$connection,
-        batch,
-        started_at,
-        build_digest,
-        commit_order
-      )
-      staged <- prepare_ingest_records(store, batch, records, started_at)
-      staged <- write_staged_revisions(
-        store,
-        batch,
-        staged,
-        started_at,
-        commit_order
-      )
-      write_staged_records(store, staged, started_at)
-      write_staged_identifiers(store, batch, staged, started_at)
-      write_staged_lineage(store, batch, staged, started_at)
-      result <- result_from_staged(
-        batch$batch_id,
-        staged,
-        proc.time()[["elapsed"]] - started
-      )
-      committed_at <- ingest_now()
-      commit_batch(store$connection, batch, result, committed_at)
-      result
-    })
+  provenance <- graft_provenance(
+    producer = batch$producer,
+    version = legacy_batch_optional(batch$producer_version),
+    run_id = legacy_batch_optional(batch$source_run_id),
+    idempotency_key = legacy_batch_optional(batch$idempotency_key),
+    metadata = batch$metadata
   )
-  result
+  plan <- graft_plan(store, records, provenance)
+  if (!isTRUE(plan@valid)) {
+    abort_legacy_plan_issue(plan)
+  }
+  graft_commit(store, plan)
+}
+
+legacy_batch_optional <- function(value) {
+  if (length(value) == 0L || is.na(value[[1L]])) NULL else value[[1L]]
+}
+
+abort_legacy_plan_issue <- function(plan) {
+  issue <- plan@issues[1L, , drop = FALSE]
+  optional <- function(value) {
+    value <- scalar_character(value, "")
+    if (nzchar(value)) value else NULL
+  }
+  condition_class <- scalar_character(
+    issue$condition_class[[1L]],
+    "graft_validation_error"
+  )
+  graft_abort(
+    condition_class,
+    issue$message[[1L]],
+    record_class = optional(issue$class[[1L]]),
+    input_row = if (is.na(issue$input_row[[1L]])) {
+      NULL
+    } else {
+      issue$input_row[[1L]]
+    },
+    record_id = optional(issue$record_id[[1L]]),
+    field = optional(issue$field[[1L]]),
+    rule = optional(issue$rule[[1L]]),
+    issues = plan@issues
+  )
 }
 
 #' Ingest one concrete record class
@@ -259,24 +249,19 @@ batch_metadata_json <- function(metadata, result = NULL) {
 }
 
 find_committed_replay <- function(connection, batch) {
-  if (is.na(batch$idempotency_key)) {
-    return(NULL)
-  }
   sql <- paste0(
     "SELECT batch_id, metadata_json FROM ",
     quote_identifier(connection, "_graft_batches"),
-    " WHERE ",
+    " WHERE status = 'committed' AND (batch_id = ? OR (",
     quote_identifier(connection, "producer"),
     " = ? AND ",
     quote_identifier(connection, "idempotency_key"),
-    " = ? AND ",
-    quote_identifier(connection, "status"),
-    " = 'committed'"
+    " = ?))"
   )
   rows <- DBI::dbGetQuery(
     connection,
     sql,
-    params = list(batch$producer, batch$idempotency_key)
+    params = list(batch$batch_id, batch$producer, batch$idempotency_key)
   )
   if (nrow(rows) == 0L) {
     return(NULL)
@@ -337,7 +322,7 @@ derive_replay_result <- function(connection, batch_id) {
     connection,
     paste0(
       "SELECT class, COUNT(*) AS n FROM ",
-      quote_identifier(connection, "_graft_record_origins"),
+      quote_identifier(connection, "_graft_origins"),
       " WHERE first_batch_id = ? GROUP BY class"
     ),
     params = list(batch_id)

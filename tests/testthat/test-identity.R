@@ -48,6 +48,72 @@ test_that("entity and source identifiers reconcile exactly", {
   )
 })
 
+test_that("authoritative identifiers have one deterministic primary", {
+  store <- local_ingest_store()
+
+  graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        preferred_name = "Water",
+        inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+        cas_number = "7732-18-5"
+      )
+    ),
+    graft_provenance("identifier-status")
+  )
+  registry <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT namespace, status FROM _graft_identifiers ",
+      "ORDER BY namespace"
+    )
+  )
+
+  expect_identical(registry$namespace, c("cas", "inchikey"))
+  expect_identical(registry$status, c("primary", "equivalent"))
+})
+
+test_that("a later authoritative identifier is equivalent", {
+  store <- local_ingest_store()
+  record_id <- test_graft_id("later-identifier")
+  provenance <- graft_provenance("identifier-status")
+
+  graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        id = record_id,
+        preferred_name = "Water",
+        inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N"
+      )
+    ),
+    provenance
+  )
+  graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        id = record_id,
+        preferred_name = "Water",
+        inchikey = "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+        cas_number = "7732-18-5"
+      )
+    ),
+    provenance
+  )
+  registry <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT namespace, status FROM _graft_identifiers ",
+      "ORDER BY namespace"
+    )
+  )
+
+  expect_identical(registry$namespace, c("cas", "inchikey"))
+  expect_identical(registry$status, c("equivalent", "primary"))
+})
+
 test_that("Source canonical URLs reconcile superficial HTTP variants", {
   store <- local_ingest_store()
   first <- kg_write(
@@ -192,10 +258,13 @@ test_that("an internal ID cannot conflict with exact identity", {
   )
 
   expect_s3_class(condition, "graft_identity_error")
-  expect_identical(condition$rule, "internal_external_identity_agreement")
+  expect_in(
+    "internal_external_identity_agreement",
+    condition$issues$rule
+  )
 })
 
-test_that("authoritative ingestion promotes a candidate identifier", {
+test_that("commit never reassigns a candidate identifier", {
   store <- local_ingest_store()
   candidate_record_id <- test_graft_id("candidate-record")
   kg_write(
@@ -228,22 +297,73 @@ test_that("authoritative ingestion promotes a candidate identifier", {
     )
   )
 
-  result <- kg_write(
-    store,
-    kg_batch("authoritative", idempotency_key = "promote-candidate"),
-    "Entity",
-    data.frame(
-      preferred_name = "Authoritative record",
-      cas_number = "CAS: 50-00-0"
+  condition <- catch_graft_ingest_condition(
+    kg_write(
+      store,
+      kg_batch("authoritative", idempotency_key = "promote-candidate"),
+      "Entity",
+      data.frame(
+        preferred_name = "Authoritative record",
+        cas_number = "CAS: 50-00-0"
+      )
     )
   )
   entities <- DBI::dbReadTable(store$connection, "entity")
   registry <- DBI::dbReadTable(store$connection, "_graft_identifiers")
-  authoritative_id <- setdiff(entities$id, candidate_record_id)
 
-  expect_identical(result$inserted[["Entity"]], 1L)
-  expect_length(authoritative_id, 1L)
-  expect_identical(registry$record_id, authoritative_id)
+  expect_s3_class(condition, "graft_identity_error")
+  expect_identical(condition$rule, "active_identifier_agreement")
+  expect_identical(entities$id, candidate_record_id)
+  expect_identical(registry$record_id, candidate_record_id)
+  expect_identical(registry$status, "candidate")
+  expect_identical(registry$value, "50-00-0")
+  expect_identical(registry$assigned_by, "resolver")
+  expect_identical(registry$confidence, 0.4)
+  expect_identical(registry$created_at, candidate_created_at)
+})
+
+test_that("commit promotes a candidate identifier for the same record", {
+  store <- local_ingest_store()
+  record_id <- test_graft_id("same-candidate-record")
+  kg_write(
+    store,
+    kg_batch("seed", idempotency_key = "same-candidate-record"),
+    "Entity",
+    data.frame(id = record_id, preferred_name = "Candidate record")
+  )
+  candidate_created_at <- as.POSIXct("2025-01-01", tz = "UTC")
+  DBI::dbAppendTable(
+    store$connection,
+    "_graft_identifiers",
+    data.frame(
+      record_id = record_id,
+      class = "Entity",
+      namespace = "cas",
+      value = "50-00-0",
+      normalized_value = "50-00-0",
+      status = "candidate",
+      assigned_by = "resolver",
+      confidence = 0.4,
+      created_at = candidate_created_at,
+      stringsAsFactors = FALSE
+    )
+  )
+
+  result <- graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        id = record_id,
+        preferred_name = "Authoritative record",
+        cas_number = "CAS: 50-00-0"
+      )
+    ),
+    graft_provenance("authoritative")
+  )
+  registry <- DBI::dbReadTable(store$connection, "_graft_identifiers")
+
+  expect_identical(result$updated, c(Entity = 1L))
+  expect_identical(registry$record_id, record_id)
   expect_identical(registry$status, "primary")
   expect_identical(registry$value, "CAS: 50-00-0")
   expect_identical(registry$assigned_by, "authoritative")

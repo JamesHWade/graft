@@ -865,7 +865,11 @@ resolve_candidate_identities <- function(manifest, batch, staged, snapshot) {
       )
     }
   }
-  mapped_identifiers <- map_candidate_identifiers(identifiers, assigned)
+  mapped_identifiers <- map_candidate_identifiers(
+    identifiers,
+    assigned,
+    snapshot$identifiers
+  )
   identifier_keys <- paste(
     mapped_identifiers$class,
     mapped_identifiers$namespace,
@@ -1048,10 +1052,10 @@ candidate_identifier_matches <- function(identifiers, stored) {
   by_key <- split(as.character(stored$record_id), stored_keys)
   for (index in seq_len(nrow(identifiers))) {
     candidate_id <- identifiers$candidate_id[[index]]
-    matches[[candidate_id]] <- unique(c(
+    matches[candidate_id] <- list(unique(c(
       matches[[candidate_id]],
       by_key[[input_keys[[index]]]]
-    ))
+    )))
   }
   matches
 }
@@ -1268,12 +1272,52 @@ candidate_identity_seed <- function(staged, candidates, row, producer) {
   list(producer = producer, input_row = input_row, values = values)
 }
 
-map_candidate_identifiers <- function(identifiers, assigned) {
+map_candidate_identifiers <- function(identifiers, assigned, stored) {
   if (nrow(identifiers) == 0L) {
     return(empty_candidate_identifiers())
   }
   identifiers$record_id <- assigned[identifiers$candidate_id]
-  identifiers$status <- "primary"
+  identifier_key <- paste(
+    identifiers$class,
+    identifiers$namespace,
+    identifiers$normalized_value,
+    sep = "\u001f"
+  )
+  stored_key <- paste(
+    stored$class,
+    stored$namespace,
+    stored$normalized_value,
+    sep = "\u001f"
+  )
+  stored_index <- match(identifier_key, stored_key)
+  same_record <- !is.na(stored_index) &
+    stored$record_id[stored_index] == identifiers$record_id
+  record_key <- paste(
+    identifiers$class,
+    identifiers$record_id,
+    sep = "\u001f"
+  )
+  stored_primary <- stored$status == "primary"
+  primary_record_key <- paste(
+    stored$class[stored_primary],
+    stored$record_id[stored_primary],
+    sep = "\u001f"
+  )
+  has_primary <- record_key %in% primary_record_key
+  identifiers$status <- rep("equivalent", nrow(identifiers))
+  identifiers$status[same_record & has_primary] <- stored$status[
+    stored_index[same_record & has_primary]
+  ]
+  order <- order(
+    identifiers$class,
+    identifiers$record_id,
+    identifiers$namespace,
+    identifiers$normalized_value,
+    identifiers$slot,
+    method = "radix"
+  )
+  needs_primary <- !has_primary[order] & !duplicated(record_key[order])
+  identifiers$status[order[needs_primary]] <- "primary"
   identifiers$assigned_by <- "authoritative"
   identifiers
 }

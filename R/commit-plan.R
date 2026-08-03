@@ -646,53 +646,13 @@ validate_commit_plan_source <- function(store, plan) {
 }
 
 commit_prepared_plan <- function(store, batch, staged, plan, started) {
-  if (identical(staged$format, candidate_stage_version)) {
-    validate_commit_plan_preconditions(store, plan)
+  if (!identical(staged$format, candidate_stage_version)) {
     abort_commit_plan(
-      "graft_commit_plan_executor_unavailable",
-      paste0(
-        "This commit plan uses the v3 canonical staged contract, but the ",
-        "bulk commit executor is not available yet."
-      )
+      "graft_commit_plan_invalid",
+      "The commit plan does not use the canonical staged contract."
     )
   }
-  started_at <- ingest_now()
-  with_duckdb_error(
-    "commit_plan",
-    DBI::dbWithTransaction(store$connection, {
-      verify_initialized_store(store, activate = TRUE)
-      validate_commit_plan_preconditions(store, plan)
-      commit_order <- next_metadata_order(
-        store$connection,
-        "_graft_batches",
-        "commit_order"
-      )
-      insert_started_batch(
-        store$connection,
-        batch,
-        started_at,
-        plan@schema_build_digest,
-        commit_order
-      )
-      staged <- write_staged_revisions(
-        store,
-        batch,
-        staged,
-        started_at,
-        commit_order
-      )
-      write_staged_records(store, staged, started_at)
-      write_staged_identifiers(store, batch, staged, started_at)
-      write_staged_lineage(store, batch, staged, started_at)
-      result <- result_from_staged(
-        batch$batch_id,
-        staged,
-        proc.time()[["elapsed"]] - started
-      )
-      commit_batch(store$connection, batch, result, ingest_now())
-      result
-    })
-  )
+  commit_candidate_plan(store, batch, staged, plan, started)
 }
 
 empty_plan_changes <- function() {

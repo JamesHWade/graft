@@ -230,6 +230,9 @@ test_that("initialization creates v3 authority and generated projections", {
       "batch_id",
       "disposition",
       "revision_id",
+      "origin_key",
+      "matched_by",
+      "identity_evidence_json",
       "observed_at"
     )
   )
