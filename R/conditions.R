@@ -42,20 +42,6 @@ abort_schema_mismatch <- function(diff, call = rlang::caller_env()) {
   )
 }
 
-abort_migration_error <- function(
-  subclass,
-  message,
-  ...,
-  call = rlang::caller_env()
-) {
-  graft_abort(
-    subclass,
-    message,
-    ...,
-    call = call
-  )
-}
-
 abort_backend_error <- function(
   message,
   ...,

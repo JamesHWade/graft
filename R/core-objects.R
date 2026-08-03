@@ -37,41 +37,6 @@ new_kg_schema_diff <- function(
   )
 }
 
-new_kg_migration_plan <- function(
-  plan_version,
-  store_id,
-  store_format_version,
-  from_build_digest,
-  from_structural_digest,
-  to_build_digest,
-  to_structural_digest,
-  classification,
-  changes,
-  operations,
-  manifest_json,
-  plan_digest,
-  migration_id
-) {
-  structure(
-    list(
-      plan_version = plan_version,
-      store_id = store_id,
-      store_format_version = store_format_version,
-      from_build_digest = from_build_digest,
-      from_structural_digest = from_structural_digest,
-      to_build_digest = to_build_digest,
-      to_structural_digest = to_structural_digest,
-      classification = classification,
-      changes = changes,
-      operations = operations,
-      manifest_json = manifest_json,
-      plan_digest = plan_digest,
-      migration_id = migration_id
-    ),
-    class = "kg_migration_plan"
-  )
-}
-
 new_kg_store <- function(
   schema,
   connection,

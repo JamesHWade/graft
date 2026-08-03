@@ -50,28 +50,6 @@ print.kg_schema_diff <- function(x, ...) {
 }
 
 #' @export
-print.kg_migration_plan <- function(x, ...) {
-  cat(
-    "<kg_migration_plan> ",
-    x$classification,
-    " ",
-    x$migration_id,
-    "\n",
-    sep = ""
-  )
-  cat("  from:       ", x$from_build_digest, "\n", sep = "")
-  cat("  to:         ", x$to_build_digest, "\n", sep = "")
-  cat("  changes:    ", nrow(x$changes), "\n", sep = "")
-  rules <- sort(unique(x$changes$rule), method = "radix")
-  if (length(rules) > 0L) {
-    cat("  rules:      ", paste(rules, collapse = ", "), "\n", sep = "")
-  }
-  cat("  operations: ", length(x$operations), "\n", sep = "")
-  cat("  digest:     ", x$plan_digest, "\n", sep = "")
-  invisible(x)
-}
-
-#' @export
 print.kg_store_check <- function(x, ...) {
   status <- if (isTRUE(x$valid)) "valid" else "invalid"
   mode <- if (isTRUE(x$deep)) "deep" else "shallow"

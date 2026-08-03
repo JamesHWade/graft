@@ -933,7 +933,7 @@ test_that("reserved projections and invalid types leave stores blank", {
 
 test_that("fresh initialization refuses invalid manifest integrity atomically", {
   base <- kg_schema(tempest_manifest_path())
-  stale <- migration_schema_copy(base, "stale-fresh", structural = FALSE)
+  stale <- modified_schema(base)
   stale$manifest$classes$Entity$slots$description$sensitive <- TRUE
   stale_store <- kg_connect_duckdb(stale)
   withr::defer(kg_disconnect(stale_store))
