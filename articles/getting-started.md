@@ -161,7 +161,7 @@ OKF path by default, so `knowledge.duckdb` is paired with
 
 store <- kg_connect_duckdb(schema, ":memory:")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpkjVrcr/duckdb
+#> ℹ /tmp/RtmpTtcV2r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -215,7 +215,7 @@ kg_ingest(
   ),
   foundations
 )
-#> <kg_ingest_result> committed graft:01KYZPVEYAR1Z70V06BN89156B
+#> <kg_ingest_result> committed graft:01KZ2GHNGFR1Z70V06BN89156B
 #>   inserted: 2
 #>   updated:  0
 #>   matched:  0
@@ -267,7 +267,7 @@ kg_write(
     about = I(list(material_id))
   )
 )
-#> <kg_ingest_result> committed graft:01KYZPVFY1Q2GY08F99AMH9TQ1
+#> <kg_ingest_result> committed graft:01KZ2GHPNRQ2GY08F99AMH9TQ1
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -304,7 +304,7 @@ kg_write(
     excerpt = "Crystallinity (%) for the LLDPE sample: 37."
   )
 )
-#> <kg_ingest_result> committed graft:01KYZPVGT892H6D99E1M5Y9W65
+#> <kg_ingest_result> committed graft:01KZ2GHQQ692H6D99E1M5Y9W65
 #>   inserted: 1
 #>   updated:  0
 #>   matched:  0
@@ -325,9 +325,9 @@ Search is useful for discovery:
 
 kg_find(store, "LLDPE", limit = 5)
 #>                                 id    class
-#> 1 graft:01KYZPVFA278J8TW5CCRM2CHPK   Source
-#> 2 graft:01KYZPVF9QC500CHZ4PA036PQ1 Material
-#> 3 graft:01KYZPVG9HXYMNMFJVDDVKRXM5    Claim
+#> 1 graft:01KZ2GHNY978J8TW5CCRM2CHPK   Source
+#> 2 graft:01KZ2GHNXYC500CHZ4PA036PQ1 Material
+#> 3 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5    Claim
 #>                                                                          label
 #> 1                                  Controlled DSC study of LLDPE crystallinity
 #> 2                                      Linear low-density polyethylene (LLDPE)
@@ -344,7 +344,7 @@ Hydration starts from one stable ID and returns bounded related records:
 
 material <- kg_get(store, material_id)
 material
-#> <kg_record> Material graft:01KYZPVF9QC500CHZ4PA036PQ1
+#> <kg_record> Material graft:01KZ2GHNXYC500CHZ4PA036PQ1
 #>   identifiers: 1
 #>   claims: 1
 #>   evidence: 1
@@ -414,7 +414,7 @@ kg_records(store, "Claim") |>
 #> # A tibble: 1 × 3
 #>   id                               statement_text                     confidence
 #>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KYZPVG9HXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95
+#> 1 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95
 ```
 
 [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
@@ -435,7 +435,7 @@ kg_select(
   limit = 10
 )
 #>                                 id
-#> 1 graft:01KYZPVG9HXYMNMFJVDDVKRXM5
+#> 1 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5
 #>                                                                 statement_text
 #> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
 #>   confidence

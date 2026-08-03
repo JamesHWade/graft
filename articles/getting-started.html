@@ -233,7 +233,7 @@ OKF path by default, so <code>knowledge.duckdb</code> is paired with
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">":memory:"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; duckdb keeps downloaded extensions and secrets in a temporary directory:</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpkjVrcr/duckdb</span></span>
+<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpTtcV2r/duckdb</span></span>
 <span><span class="co">#&gt; This is removed when the R session ends.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Secrets are lost.</span></span>
@@ -282,7 +282,7 @@ does not duplicate its observations.</p>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="va">foundations</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KYZPVEYAR1Z70V06BN89156B</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KZ2GHNGFR1Z70V06BN89156B</span></span>
 <span><span class="co">#&gt;   inserted: 2</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -326,7 +326,7 @@ as <code>about</code>, is represented as a list-column:</p>
 <span>    about <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">material_id</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KYZPVFY1Q2GY08F99AMH9TQ1</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KZ2GHPNRQ2GY08F99AMH9TQ1</span></span>
 <span><span class="co">#&gt;   inserted: 1</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -359,7 +359,7 @@ as <code>about</code>, is represented as a list-column:</p>
 <span>    excerpt <span class="op">=</span> <span class="st">"Crystallinity (%) for the LLDPE sample: 37."</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KYZPVGT892H6D99E1M5Y9W65</span></span>
+<span><span class="co">#&gt; &lt;kg_ingest_result&gt; committed graft:01KZ2GHQQ692H6D99E1M5Y9W65</span></span>
 <span><span class="co">#&gt;   inserted: 1</span></span>
 <span><span class="co">#&gt;   updated:  0</span></span>
 <span><span class="co">#&gt;   matched:  0</span></span>
@@ -376,9 +376,9 @@ graft IDs can submit all related classes in one atomic
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_find.html">kg_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"LLDPE"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                 id    class</span></span>
-<span><span class="co">#&gt; 1 graft:01KYZPVFA278J8TW5CCRM2CHPK   Source</span></span>
-<span><span class="co">#&gt; 2 graft:01KYZPVF9QC500CHZ4PA036PQ1 Material</span></span>
-<span><span class="co">#&gt; 3 graft:01KYZPVG9HXYMNMFJVDDVKRXM5    Claim</span></span>
+<span><span class="co">#&gt; 1 graft:01KZ2GHNY978J8TW5CCRM2CHPK   Source</span></span>
+<span><span class="co">#&gt; 2 graft:01KZ2GHNXYC500CHZ4PA036PQ1 Material</span></span>
+<span><span class="co">#&gt; 3 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5    Claim</span></span>
 <span><span class="co">#&gt;                                                                          label</span></span>
 <span><span class="co">#&gt; 1                                  Controlled DSC study of LLDPE crystallinity</span></span>
 <span><span class="co">#&gt; 2                                      Linear low-density polyethylene (LLDPE)</span></span>
@@ -392,7 +392,7 @@ records:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">material</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_get.html">kg_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">material_id</span><span class="op">)</span></span>
 <span><span class="va">material</span></span>
-<span><span class="co">#&gt; &lt;kg_record&gt; Material graft:01KYZPVF9QC500CHZ4PA036PQ1</span></span>
+<span><span class="co">#&gt; &lt;kg_record&gt; Material graft:01KZ2GHNXYC500CHZ4PA036PQ1</span></span>
 <span><span class="co">#&gt;   identifiers: 1</span></span>
 <span><span class="co">#&gt;   claims: 1</span></span>
 <span><span class="co">#&gt;   evidence: 1</span></span>
@@ -495,7 +495,7 @@ table:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 3</span></span></span>
 <span><span class="co">#&gt;   id                               statement_text                     confidence</span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                            <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> graft:01KYZPVG9HXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95</span></span></code></pre></div>
 <p><code><a href="../reference/kg_select.html">kg_select()</a></code> is the safer collected interface when a
 caller should choose fields and filters but must not provide SQL:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
@@ -511,7 +511,7 @@ caller should choose fields and filters but must not provide SQL:</p>
 <span>  limit <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                 id</span></span>
-<span><span class="co">#&gt; 1 graft:01KYZPVG9HXYMNMFJVDDVKRXM5</span></span>
+<span><span class="co">#&gt; 1 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5</span></span>
 <span><span class="co">#&gt;                                                                 statement_text</span></span>
 <span><span class="co">#&gt; 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.</span></span>
 <span><span class="co">#&gt;   confidence</span></span>

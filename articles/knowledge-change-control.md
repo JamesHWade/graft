@@ -31,7 +31,7 @@ manifest_v1 <- system.file(
 schema_v1 <- kg_schema(manifest_v1)
 store <- kg_connect_duckdb(schema_v1, ":memory:")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpKwdb5j/duckdb
+#> ℹ /tmp/RtmpwM2mW7/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -142,8 +142,8 @@ kg_changes(store, record_id = initiative_id)[
 #> 1            2               2    update         status
 #> 2            1               1    insert   id, labe....
 #>                           batch_id
-#> 1 graft:01KYZPVNQ7QP8ZR98JRJEWGEYP
-#> 2 graft:01KYZPVNC0R1Z70V06BN89156B
+#> 1 graft:01KZ2GHX2NQP8ZR98JRJEWGEYP
+#> 2 graft:01KZ2GHWP9R1Z70V06BN89156B
 #>                                                       schema_build_digest
 #> 1 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #> 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
@@ -158,8 +158,8 @@ kg_history(store, initiative_id)[
   c("revision_number", "operation", "changed_fields", "recorded_at")
 ]
 #>   revision_number operation changed_fields         recorded_at
-#> 1               2    update         status 2026-08-01 22:24:34
-#> 2               1    insert   id, labe.... 2026-08-01 22:24:34
+#> 1               2    update         status 2026-08-03 00:32:06
+#> 2               1    insert   id, labe.... 2026-08-03 00:32:05
 ```
 
 ## Recover state at a commit boundary
@@ -235,13 +235,13 @@ operations before approval.
 
 plan <- kg_plan_migration(store, schema_v2)
 plan
-#> <kg_migration_plan> additive graft-migration-71fa3add988cba8752700127c1fdb85e2a43868dc53260557049dcf1ee46dd5b
+#> <kg_migration_plan> additive graft-migration-6c6afd8784d36659312e5e5369c2875c416e36b821e5d291d9b4535948be4356
 #>   from:       sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a
 #>   to:         sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124
 #>   changes:    2
 #>   rules:      nullable_column_added, optional_slot_added
 #>   operations: 1
-#>   digest:     sha256:71fa3add988cba8752700127c1fdb85e2a43868dc53260557049dcf1ee46dd5b
+#>   digest:     sha256:6c6afd8784d36659312e5e5369c2875c416e36b821e5d291d9b4535948be4356
 
 plan$changes[
   c("path", "object_type", "classification", "rule")

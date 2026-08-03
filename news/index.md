@@ -4,8 +4,9 @@
 
 - A governed Materials Market Radar example combines business,
   competitor, and downstream-market signals with dsprrr analysis, typed
-  Tempest briefings and approval, configurable models and tools, and
-  accepted-only Graft knowledge that visibly changes a later scan.
+  Tempest briefings and approval, configurable models and tools, a
+  focused daily-brief and decision-room UI, and accepted-only Graft
+  knowledge that visibly changes a later scan.
 - A local Graft Coworker example combines a shinychat tool-using
   assistant, dsprrr planning, typed Tempest work products, an approval
   inbox, local file delivery, and approved-only Graft memory. Its
@@ -132,7 +133,7 @@
 - [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
   creates seven read-only ellmer tools over bounded Graft retrieval
   APIs, including progressive access to current accepted OKF knowledge,
-  with structured results and no arbitrary SQL surface.
+  with JSON-compatible structured results and no arbitrary SQL surface.
 - [`kg_unresolved()`](https://jameshwade.github.io/graft/reference/kg_unresolved.md)
   returns bounded unresolved mention records.
 - [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)

@@ -26,5 +26,6 @@ objects.
 
 ## Details
 
-Every tool returns the native graft result in `result` plus explicit
-`truncated`, `limit`, and `store_schema_digest` fields.
+Every tool returns a JSON-compatible representation of the graft result
+in `result` plus explicit `truncated`, `limit`, and
+`store_schema_digest` fields.
