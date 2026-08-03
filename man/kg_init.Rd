@@ -13,10 +13,9 @@ kg_init(store)
 \code{store}, invisibly.
 }
 \description{
-Initialization creates client tables from the compiled manifest plus the
-package-owned metadata tables and three generated graph views. It is
-atomic and idempotent. Before any store mutation, Graft verifies the
-manifest's declared structural digest and compiler-required physical type
-contracts. Existing stores must also be structurally compatible with the
-active schema.
+Initialization creates the package-owned revision ledger and generated
+class, multivalue, current-record, and graph projections. It is atomic and
+idempotent. Before any store mutation, Graft verifies the manifest's
+declared structural digest and projection contracts. Existing stores must
+also be structurally compatible with the active schema.
 }

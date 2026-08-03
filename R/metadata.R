@@ -1,4 +1,17 @@
-graft_store_format_version <- "2.0.0"
+graft_store_format_version <- "3.0.0"
+
+graft_authoritative_table_names <- c(
+  "_graft_store",
+  "_graft_schema_versions",
+  "_graft_batches",
+  "_graft_origins",
+  "_graft_identifiers",
+  "_graft_record_revisions",
+  "_graft_record_heads",
+  "_graft_record_observations"
+)
+
+graft_projection_metadata_table_names <- "_graft_projection_state"
 
 metadata_table_definitions <- function() {
   list(
@@ -40,63 +53,6 @@ metadata_table_definitions <- function() {
         c("source_digest")
       )
     ),
-    `_graft_schema_activations` = list(
-      columns = list(
-        ddl_column(
-          "activation_id",
-          "VARCHAR",
-          nullable = FALSE,
-          primary_key = TRUE
-        ),
-        ddl_column("build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("previous_build_digest", "VARCHAR"),
-        ddl_column("reason", "VARCHAR", nullable = FALSE),
-        ddl_column("activation_order", "BIGINT", nullable = FALSE),
-        ddl_column("activated_at", "TIMESTAMP", nullable = FALSE)
-      ),
-      constraints = list(
-        c("activation_order")
-      ),
-      indexes = list(
-        c("build_digest")
-      )
-    ),
-    `_graft_migrations` = list(
-      columns = list(
-        ddl_column(
-          "migration_id",
-          "VARCHAR",
-          nullable = FALSE,
-          primary_key = TRUE
-        ),
-        ddl_column("plan_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("from_build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("to_build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column(
-          "from_structural_digest",
-          "VARCHAR",
-          nullable = FALSE
-        ),
-        ddl_column(
-          "to_structural_digest",
-          "VARCHAR",
-          nullable = FALSE
-        ),
-        ddl_column("classification", "VARCHAR", nullable = FALSE),
-        ddl_column("changes_json", "VARCHAR", nullable = FALSE),
-        ddl_column("operations_json", "VARCHAR", nullable = FALSE),
-        ddl_column("application_order", "BIGINT", nullable = FALSE),
-        ddl_column("applied_at", "TIMESTAMP", nullable = FALSE)
-      ),
-      constraints = list(
-        c("plan_digest"),
-        c("application_order")
-      ),
-      indexes = list(
-        c("from_build_digest"),
-        c("to_build_digest")
-      )
-    ),
     `_graft_batches` = list(
       columns = list(
         ddl_column("batch_id", "VARCHAR", nullable = FALSE, primary_key = TRUE),
@@ -121,7 +77,7 @@ metadata_table_definitions <- function() {
         c("status")
       )
     ),
-    `_graft_record_origins` = list(
+    `_graft_origins` = list(
       columns = list(
         ddl_column("record_id", "VARCHAR", nullable = FALSE),
         ddl_column("class", "VARCHAR", nullable = FALSE),
@@ -269,13 +225,6 @@ insert_store_metadata <- function(store) {
 register_initial_schema <- function(store) {
   now <- as.POSIXct(Sys.time(), tz = "UTC")
   register_schema_version(store$connection, store$schema, now)
-  insert_schema_activation(
-    store$connection,
-    store$schema,
-    previous_build_digest = NA_character_,
-    reason = "initial",
-    now = now
-  )
   invisible(store)
 }
 
@@ -323,31 +272,6 @@ register_schema_version <- function(connection, schema, now = Sys.time()) {
   invisible(schema)
 }
 
-insert_schema_activation <- function(
-  connection,
-  schema,
-  previous_build_digest,
-  reason,
-  now = Sys.time()
-) {
-  activation_order <- next_metadata_order(
-    connection,
-    "_graft_schema_activations",
-    "activation_order"
-  )
-  row <- data.frame(
-    activation_id = new_graft_id(now),
-    build_digest = scalar_character(schema$manifest$fingerprints$build_digest),
-    previous_build_digest = previous_build_digest,
-    reason = reason,
-    activation_order = activation_order,
-    activated_at = as.POSIXct(now, tz = "UTC"),
-    stringsAsFactors = FALSE
-  )
-  DBI::dbAppendTable(connection, "_graft_schema_activations", row)
-  invisible(schema)
-}
-
 activate_schema <- function(
   connection,
   schema,
@@ -355,9 +279,9 @@ activate_schema <- function(
   now = Sys.time()
 ) {
   metadata <- read_store_metadata(connection)
-  previous_build_digest <- scalar_character(metadata$active_build_digest)
+  active_build_digest <- scalar_character(metadata$active_build_digest)
   build_digest <- scalar_character(schema$manifest$fingerprints$build_digest)
-  if (identical(previous_build_digest, build_digest)) {
+  if (identical(active_build_digest, build_digest)) {
     return(invisible(schema))
   }
   now <- as.POSIXct(now, tz = "UTC")
@@ -381,13 +305,6 @@ activate_schema <- function(
       canonical_manifest_json(manifest),
       now
     )
-  )
-  insert_schema_activation(
-    connection,
-    schema,
-    previous_build_digest,
-    reason,
-    now
   )
   invisible(schema)
 }

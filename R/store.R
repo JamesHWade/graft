@@ -191,12 +191,11 @@ validate_store_writable <- function(store, operation = "write") {
 
 #' Initialize or verify a graft store
 #'
-#' Initialization creates client tables from the compiled manifest plus the
-#' package-owned metadata tables and three generated graph views. It is
-#' atomic and idempotent. Before any store mutation, Graft verifies the
-#' manifest's declared structural digest and compiler-required physical type
-#' contracts. Existing stores must also be structurally compatible with the
-#' active schema.
+#' Initialization creates the package-owned revision ledger and generated
+#' class, multivalue, current-record, and graph projections. It is atomic and
+#' idempotent. Before any store mutation, Graft verifies the manifest's
+#' declared structural digest and projection contracts. Existing stores must
+#' also be structurally compatible with the active schema.
 #'
 #' @param store A `kg_store` object.
 #'
@@ -205,18 +204,17 @@ validate_store_writable <- function(store, operation = "write") {
 kg_init <- function(store) {
   validate_kg_store(store)
   validate_manifest_integrity(store$schema)
-  validate_manifest_physical_names(store$schema)
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
     if (isTRUE(store$read_only)) {
       verify_initialized_store(store)
-      verify_graph_views(store$connection)
+      verify_projection_views(store$connection, store$schema)
     } else {
       with_duckdb_error(
         "initialize_existing_store",
         DBI::dbWithTransaction(store$connection, {
           verify_initialized_store(store)
-          create_graph_views(store$connection, store$schema)
+          rebuild_projection_views(store$connection, store$schema)
         })
       )
     }
@@ -251,10 +249,9 @@ kg_init <- function(store) {
     "initialize",
     DBI::dbWithTransaction(store$connection, {
       create_metadata_tables(store$connection)
-      create_manifest_tables(store$connection, store$schema)
-      create_graph_views(store$connection, store$schema)
       insert_store_metadata(store)
       register_initial_schema(store)
+      rebuild_projection_views(store$connection, store$schema)
     })
   )
   mark_store_verified(store)
