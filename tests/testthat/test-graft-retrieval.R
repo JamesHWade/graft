@@ -1,13 +1,19 @@
 test_that("BR-21 current retrieval uses the ledger and active sensitivity", {
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  schema <- modified_ingest_schema(
+    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
+  )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
   fixture <- retrieval_fixture_records()
-  store <- local_ingest_store(schema = schema)
-  kg_ingest(
+  store <- local_graft_ingest_store(schema = schema)
+  connection <- as_graft_store_internal(store)$connection
+  graft_ingest(
     store,
-    kg_batch("retrieval-sensitive", idempotency_key = "retrieval-sensitive"),
-    fixture$records
+    fixture$records,
+    graft_provenance(
+      "retrieval-sensitive",
+      idempotency_key = "retrieval-sensitive"
+    )
   )
 
   current <- graft_get(store, fixture$ids$entity, include = character())
@@ -20,10 +26,10 @@ test_that("BR-21 current retrieval uses the ledger and active sensitivity", {
   expect_length(intersect("description", names(history$record[[1L]])), 0L)
 
   DBI::dbExecute(
-    store$connection,
+    connection,
     paste0(
       "UPDATE ",
-      quote_identifier(store$connection, "_graft_projection_entity"),
+      quote_identifier(connection, "_graft_projection_entity"),
       " SET preferred_name = 'Projection lie'"
     )
   )
@@ -42,10 +48,13 @@ test_that("BR-22 history respects deterministic commit boundaries", {
   first <- graft_history(local$store, local$ids$entity, limit = 1L)
   update <- fixture$records$Entity[1L, , drop = FALSE]
   update$preferred_name <- "Polyethylene revised"
-  kg_ingest(
+  graft_ingest(
     local$store,
-    kg_batch("retrieval-update", idempotency_key = "retrieval-update"),
-    list(Entity = update)
+    list(Entity = update),
+    graft_provenance(
+      "retrieval-update",
+      idempotency_key = "retrieval-update"
+    )
   )
 
   current <- graft_get(local$store, local$ids$entity, include = character())
@@ -177,10 +186,10 @@ test_that("BR-25 evidence preserves exact source and locator details", {
 test_that("BR-26 integrity distinguishes authority from stale projections", {
   local <- local_retrieval_store()
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     paste0(
       "UPDATE ",
-      quote_identifier(local$store$connection, "_graft_projection_entity"),
+      quote_identifier(local$connection, "_graft_projection_entity"),
       " SET preferred_name = 'Projection lie'"
     )
   )
@@ -206,10 +215,10 @@ test_that("BR-26 integrity distinguishes authority from stale projections", {
 
   broken <- local_retrieval_store()
   DBI::dbExecute(
-    broken$store$connection,
+    broken$connection,
     paste0(
       "DELETE FROM ",
-      quote_identifier(broken$store$connection, "_graft_schema_versions")
+      quote_identifier(broken$connection, "_graft_schema_versions")
     )
   )
   missing_schema <- graft_query(
@@ -227,14 +236,14 @@ test_that("BR-26 integrity distinguishes authority from stale projections", {
 
   identity <- local_retrieval_store()
   identifier <- DBI::dbGetQuery(
-    identity$store$connection,
+    identity$connection,
     "SELECT * FROM _graft_identifiers ORDER BY record_id LIMIT 1"
   )
   identifier$record_id <- test_graft_id("missing-identity")
   identifier$value <- "missing-identity"
   identifier$normalized_value <- "missing-identity"
   DBI::dbAppendTable(
-    identity$store$connection,
+    identity$connection,
     "_graft_identifiers",
     identifier
   )
@@ -249,13 +258,13 @@ test_that("BR-26 integrity distinguishes authority from stale projections", {
   chain <- local_retrieval_store()
   update <- retrieval_fixture_records()$records$Entity[1L, , drop = FALSE]
   update$preferred_name <- "Chain update"
-  kg_ingest(
+  graft_ingest(
     chain$store,
-    kg_batch("chain-update", idempotency_key = "chain-update"),
-    list(Entity = update)
+    list(Entity = update),
+    graft_provenance("chain-update", idempotency_key = "chain-update")
   )
   DBI::dbExecute(
-    chain$store$connection,
+    chain$connection,
     paste0(
       "UPDATE _graft_record_revisions SET prior_revision_id = ",
       "'graft:00000000000000000000000000' ",
@@ -275,15 +284,15 @@ test_that("BR-26 integrity distinguishes authority from stale projections", {
 test_that("BR-26 authoritative ledger corruption blocks public reads", {
   local <- local_retrieval_store()
   revisions <- DBI::dbReadTable(
-    local$store$connection,
+    local$connection,
     "_graft_record_revisions"
   )
   target <- revisions[revisions$record_id == local$ids$entity, , drop = FALSE]
-  batch <- DBI::dbReadTable(local$store$connection, "_graft_batches")
+  batch <- DBI::dbReadTable(local$connection, "_graft_batches")
   batch_id <- target$batch_id[[1L]]
 
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_batches SET status = 'started' WHERE batch_id = ?",
     params = list(batch_id)
   )
@@ -295,13 +304,13 @@ test_that("BR-26 authoritative ledger corruption blocks public reads", {
   )
   expect_in("orphan_revision_batch", uncommitted$issue)
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_batches SET status = 'committed' WHERE batch_id = ?",
     params = list(batch_id)
   )
 
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     paste0(
       "UPDATE _graft_record_revisions SET commit_order = commit_order + 1 ",
       "WHERE revision_id = ?"
@@ -316,13 +325,13 @@ test_that("BR-26 authoritative ledger corruption blocks public reads", {
   )
   expect_in("revision_commit_order_mismatch", metadata$issue)
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_record_revisions SET commit_order = ? WHERE revision_id = ?",
     params = list(target$commit_order[[1L]], target$revision_id[[1L]])
   )
 
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_record_revisions SET operation = 'update' WHERE revision_id = ?",
     params = list(target$revision_id[[1L]])
   )
@@ -334,13 +343,13 @@ test_that("BR-26 authoritative ledger corruption blocks public reads", {
   )
   expect_in("revision_operation_mismatch", operation$issue)
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_record_revisions SET operation = 'insert' WHERE revision_id = ?",
     params = list(target$revision_id[[1L]])
   )
 
   DBI::dbExecute(
-    local$store$connection,
+    local$connection,
     "UPDATE _graft_record_revisions SET content_digest = ? WHERE revision_id = ?",
     params = list(
       paste0("sha256:", strrep("0", 64L)),
@@ -362,11 +371,11 @@ test_that("BR-26 authoritative ledger corruption blocks public reads", {
 
   missing <- local_retrieval_store()
   missing_batch_id <- DBI::dbGetQuery(
-    missing$store$connection,
+    missing$connection,
     "SELECT batch_id FROM _graft_batches ORDER BY commit_order LIMIT 1"
   )$batch_id[[1L]]
   DBI::dbExecute(
-    missing$store$connection,
+    missing$connection,
     "DELETE FROM _graft_batches WHERE batch_id = ?",
     params = list(missing_batch_id)
   )
@@ -382,7 +391,7 @@ test_that("BR-26 authoritative ledger corruption blocks public reads", {
 })
 
 test_that("BR-21 selected reads do not deep-scan unrelated history", {
-  store <- local_ingest_store()
+  store <- local_graft_ingest_store()
   count <- 200L
   ids <- vapply(
     seq_len(count),
@@ -391,14 +400,17 @@ test_that("BR-21 selected reads do not deep-scan unrelated history", {
     },
     character(1)
   )
-  kg_ingest(
+  graft_ingest(
     store,
-    kg_batch("unrelated-history", idempotency_key = "unrelated-history"),
     list(
       Entity = data.frame(
         id = ids,
         preferred_name = paste("Entity", seq_len(count))
       )
+    ),
+    graft_provenance(
+      "unrelated-history",
+      idempotency_key = "unrelated-history"
     )
   )
   original_validate <- validated_public_revision_record
@@ -423,7 +435,7 @@ test_that("BR-21 selected reads do not deep-scan unrelated history", {
 })
 
 test_that("BR-21 retrieval JSON works with extension loading disabled", {
-  schema <- kg_schema(tempest_manifest_path())
+  schema <- graft_schema(tempest_manifest_path())
   connection <- DBI::dbConnect(
     duckdb::duckdb(shared_home = FALSE),
     dbdir = ":memory:",
@@ -433,13 +445,16 @@ test_that("BR-21 retrieval JSON works with extension loading disabled", {
     )
   )
   withr::defer(DBI::dbDisconnect(connection, shutdown = TRUE))
-  store <- kg_connect_duckdb(schema, connection = connection)
-  kg_init(store)
+  store <- graft_open(schema, connection = connection, okf = "disabled")
+  withr::defer(graft_close(store))
   fixture <- retrieval_fixture_records()
-  kg_ingest(
+  graft_ingest(
     store,
-    kg_batch("offline-retrieval", idempotency_key = "offline-retrieval"),
-    fixture$records
+    fixture$records,
+    graft_provenance(
+      "offline-retrieval",
+      idempotency_key = "offline-retrieval"
+    )
   )
   DBI::dbExecute(connection, "SET autoload_known_extensions = false")
   DBI::dbExecute(connection, "SET autoinstall_known_extensions = false")
@@ -467,10 +482,13 @@ test_that("BR-21 retrieval JSON works with extension loading disabled", {
 
 test_that("BR-23 exact pagination cannot be starved by false payload hits", {
   withr::local_options(list(graft.retrieval_page_size = 2L))
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  schema <- modified_ingest_schema(
+    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
+  )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
-  store <- local_ingest_store(schema = schema)
+  store <- local_graft_ingest_store(schema = schema)
+  connection <- as_graft_store_internal(store)$connection
   entity_ids <- sort(vapply(
     seq_len(8L),
     \(index) test_graft_id(paste0("pagination-entity-", index)),
@@ -569,10 +587,10 @@ test_that("BR-23 exact pagination cannot be starved by false payload hits", {
     SemanticClaim = semantic,
     ClaimEvidence = evidence
   )
-  kg_ingest(
+  graft_ingest(
     store,
-    kg_batch("pagination", idempotency_key = "pagination"),
-    records
+    records,
+    graft_provenance("pagination", idempotency_key = "pagination")
   )
   private_identifiers <- data.frame(
     record_id = ids$target,
@@ -586,7 +604,7 @@ test_that("BR-23 exact pagination cannot be starved by false payload hits", {
     created_at = as.POSIXct(Sys.time(), tz = "UTC")
   )
   DBI::dbAppendTable(
-    store$connection,
+    connection,
     "_graft_identifiers",
     private_identifiers
   )
@@ -632,7 +650,9 @@ test_that("BR-23 exact pagination cannot be starved by false payload hits", {
 })
 
 test_that("BR-22 exact BIGINT and DECIMAL history remains lossless", {
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
+  schema <- modified_ingest_schema(
+    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
+  )
   schema$manifest$classes$SemanticClaim$slots$temperature$range <- "decimal"
   schema$manifest$classes$SemanticClaim$slots$temperature$duckdb_type <-
     "DECIMAL"
@@ -645,11 +665,14 @@ test_that("BR-22 exact BIGINT and DECIMAL history remains lossless", {
   fixture$records$ClaimEvidence$page_start <- exact_bigint
   fixture$records$ClaimEvidence$page_end <- exact_bigint
   fixture$records$SemanticClaim$temperature <- exact_decimal
-  store <- local_ingest_store(schema = schema)
-  kg_ingest(
+  store <- local_graft_ingest_store(schema = schema)
+  graft_ingest(
     store,
-    kg_batch("exact-retrieval", idempotency_key = "exact-retrieval"),
-    fixture$records
+    fixture$records,
+    graft_provenance(
+      "exact-retrieval",
+      idempotency_key = "exact-retrieval"
+    )
   )
 
   bigint <- graft_get(

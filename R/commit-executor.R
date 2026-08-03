@@ -30,7 +30,7 @@ commit_candidate_transaction <- function(store, batch, staged, plan, started) {
     "_graft_batches",
     "commit_order"
   )
-  recorded_at <- ingest_now()
+  recorded_at <- commit_now()
   authority <- assemble_candidate_authority(
     staged,
     batch,
@@ -74,7 +74,7 @@ commit_candidate_transaction <- function(store, batch, staged, plan, started) {
     staged$rows,
     proc.time()[["elapsed"]] - started
   )
-  committed_at <- ingest_now()
+  committed_at <- commit_now()
   commit_executor_append(
     store$connection,
     "_graft_batches",
@@ -675,7 +675,7 @@ result_from_candidate_rows <- function(batch_id, rows, duration) {
     ),
     classes
   )
-  new_kg_ingest_result(
+  new_commit_result(
     batch_id = batch_id,
     inserted = count("insert"),
     updated = count("update"),
@@ -701,7 +701,7 @@ committed_batch_row <- function(
     producer_version = batch$producer_version,
     source_run_id = batch$source_run_id,
     idempotency_key = batch$idempotency_key,
-    metadata_json = batch_metadata_json(batch$metadata, result),
+    metadata_json = commit_batch_metadata_json(batch$metadata, result),
     started_at = started_at,
     committed_at = committed_at,
     status = "committed",

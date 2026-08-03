@@ -3,14 +3,14 @@ local_okf_store <- function(env = parent.frame()) {
   path <- file.path(directory, "knowledge.duckdb")
   store <- local_ingest_store(path = path, env = env)
   records <- valid_atomic_records()
-  result <- kg_ingest(
+  result <- graft_ingest(
     store,
-    kg_batch(
+    records,
+    graft_provenance(
       producer = "okf-test",
-      producer_version = "1.0.0",
+      version = "1.0.0",
       idempotency_key = "initial"
-    ),
-    records
+    )
   )
   list(
     store = store,

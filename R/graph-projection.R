@@ -44,7 +44,7 @@ verify_graph_views <- function(connection) {
       paste0(
         "The initialized read-only store is missing generated graph view(s): ",
         paste(missing, collapse = ", "),
-        ". Reopen it writable and call `kg_init()`."
+        ". Reopen it as a writable GraftStore."
       ),
       operation = "verify_graph_views",
       missing_views = missing
@@ -636,57 +636,6 @@ graph_empty_provenance_edges_sql <- function() {
     "CAST(NULL AS VARCHAR) AS object, ",
     "CAST(NULL AS VARCHAR) AS source_table WHERE FALSE"
   )
-}
-
-#' Access the graph node projection
-#'
-#' `kg_nodes()` returns the generated, manifest-driven node projection. It is
-#' lazy and never collects implicitly.
-#'
-#' @param store An initialized `kg_store`.
-#'
-#' @return A lazy dbplyr table with node identifiers, classes, labels, roles,
-#'   statement shapes, type URIs, and creation times.
-#' @export
-kg_nodes <- function(store) {
-  validate_retrieval_store(store)
-  result <- dplyr::tbl(store$connection, "_graft_nodes")
-  attr(result, "store_schema_digest") <- store_schema_digest(store)
-  result
-}
-
-#' Access a graph edge projection
-#'
-#' `kg_edges()` returns semantic edges, provenance edges, or their normalized
-#' union. Semantic edges are only direct edge records and entity-valued
-#' semantic statements. Narrative statements and literal objects are never
-#' semantic edges. The result is lazy and never collects implicitly.
-#'
-#' @param store An initialized `kg_store`.
-#' @param projection One of `"semantic"`, `"provenance"`, or `"combined"`.
-#'
-#' @return A lazy dbplyr table. The combined projection adds `edge_class` and
-#'   `created_at` columns to provenance rows to match the semantic schema.
-#' @export
-kg_edges <- function(
-  store,
-  projection = c("semantic", "provenance", "combined")
-) {
-  validate_retrieval_store(store)
-  projection <- rlang::arg_match(projection)
-  if (identical(projection, "semantic")) {
-    result <- dplyr::tbl(store$connection, "_graft_edges")
-  } else if (identical(projection, "provenance")) {
-    result <- dplyr::tbl(store$connection, "_graft_provenance_edges")
-  } else {
-    result <- dplyr::tbl(
-      store$connection,
-      dbplyr::sql(graph_combined_edges_sql(store$connection))
-    )
-  }
-  attr(result, "graft_projection") <- projection
-  attr(result, "store_schema_digest") <- store_schema_digest(store)
-  result
 }
 
 graph_combined_edges_sql <- function(connection) {

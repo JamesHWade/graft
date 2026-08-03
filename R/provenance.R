@@ -87,7 +87,7 @@ graft_provenance <- function(
   idempotency_key = NULL,
   metadata = list()
 ) {
-  producer <- batch_scalar(producer, "producer", required = TRUE)
+  producer <- provenance_required_string(producer, "producer")
   version <- graft_optional_string(version, "version")
   run_id <- graft_optional_string(run_id, "run_id")
   idempotency_key <- graft_optional_string(
@@ -124,6 +124,23 @@ graft_provenance <- function(
     idempotency_key = idempotency_key,
     metadata = metadata
   ))
+}
+
+provenance_required_string <- function(x, field) {
+  if (
+    is.character(x) &&
+      length(x) == 1L &&
+      !is.na(x) &&
+      nzchar(trimws(x))
+  ) {
+    return(trimws(x))
+  }
+  abort_validation_error(
+    paste0("`", field, "` must be one non-empty string."),
+    field = field,
+    rule = "scalar_character",
+    observed_value = x
+  )
 }
 
 provenance_data <- function(x) {
@@ -169,9 +186,9 @@ as_graft_provenance <- function(
   x
 }
 
-provenance_batch <- function(provenance, batch_id) {
+commit_batch_from_provenance <- function(provenance, batch_id) {
   provenance <- as_graft_provenance(provenance, "provenance")
-  new_kg_batch(
+  new_commit_batch(
     batch_id = batch_id,
     producer = provenance@producer,
     producer_version = provenance@version,

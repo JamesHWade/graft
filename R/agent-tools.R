@@ -13,7 +13,14 @@
 #' @export
 graft_tools <- function(store) {
   check_graft_tools_dependency()
-  store <- as_graft_store_internal(store, "store")
+  if (!S7::S7_inherits(store, GraftStore)) {
+    abort_backend_error(
+      "`store` must be a GraftStore object.",
+      operation = "graft_tools",
+      argument = "store"
+    )
+  }
+  as_graft_store_internal(store, "store")
   annotations <- graft_tool_annotations()
 
   list(

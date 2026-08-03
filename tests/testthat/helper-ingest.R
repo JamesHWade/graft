@@ -12,6 +12,19 @@ local_ingest_store <- function(
   store
 }
 
+local_graft_ingest_store <- function(
+  path = ":memory:",
+  schema = NULL,
+  env = parent.frame()
+) {
+  if (is.null(schema)) {
+    schema <- graft_schema(tempest_manifest_path())
+  }
+  store <- graft_open(schema, path, okf = "disabled")
+  withr::defer(graft_close(store), envir = env)
+  store
+}
+
 test_graft_id <- function(seed) {
   deterministic_graft_id("TestFixture", list(seed = seed))
 }
@@ -191,13 +204,20 @@ retrieval_fixture_records <- function() {
 
 local_retrieval_store <- function(env = parent.frame()) {
   fixture <- retrieval_fixture_records()
-  store <- local_ingest_store(env = env)
-  kg_ingest(
+  store <- local_graft_ingest_store(env = env)
+  graft_ingest(
     store,
-    kg_batch("retrieval-fixture", idempotency_key = "retrieval-fixture"),
-    fixture$records
+    fixture$records,
+    graft_provenance(
+      "retrieval-fixture",
+      idempotency_key = "retrieval-fixture"
+    )
   )
-  list(store = store, ids = fixture$ids)
+  list(
+    store = store,
+    connection = as_graft_store_internal(store)$connection,
+    ids = fixture$ids
+  )
 }
 
 graph_schema_with_direct_edge <- function() {

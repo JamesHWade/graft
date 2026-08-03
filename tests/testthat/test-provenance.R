@@ -13,6 +13,20 @@ test_that("graft provenance validates and freezes its public properties", {
   expect_identical(provenance@run_id, "run-42")
   expect_identical(provenance@idempotency_key, "result-42")
   expect_identical(provenance@metadata, list(stage = "reviewed"))
+  batch <- graft:::commit_batch_from_provenance(provenance, "batch-42")
+  expect_type(batch, "list")
+  expect_identical(is.object(batch), FALSE)
+  expect_named(
+    batch,
+    c(
+      "batch_id",
+      "producer",
+      "producer_version",
+      "source_run_id",
+      "idempotency_key",
+      "metadata"
+    )
+  )
   expect_snapshot(error = TRUE, provenance@producer <- "other")
 })
 
@@ -37,6 +51,6 @@ test_that("graft provenance is revalidated at API boundaries", {
   )
   expect_snapshot(
     error = TRUE,
-    graft:::provenance_batch(tampered, "batch-id")
+    graft:::commit_batch_from_provenance(tampered, "batch-id")
   )
 })

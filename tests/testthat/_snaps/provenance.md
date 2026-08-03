@@ -11,7 +11,7 @@
     Code
       graft_provenance("")
     Condition
-      Error in `batch_scalar()`:
+      Error in `provenance_required_string()`:
       ! `producer` must be one non-empty string.
 
 ---
@@ -44,7 +44,7 @@
 ---
 
     Code
-      graft:::provenance_batch(tampered, "batch-id")
+      graft:::commit_batch_from_provenance(tampered, "batch-id")
     Condition
       Error in `as_graft_provenance()`:
       ! `provenance` is an invalid GraftProvenance object; create a new one.

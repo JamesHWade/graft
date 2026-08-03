@@ -34,7 +34,7 @@ test_that("planning is deterministic for an unchanged store snapshot", {
   )
   clock <- 0L
   local_mocked_bindings(
-    ingest_now = function() {
+    commit_now = function() {
       clock <<- clock + 1L
       as.POSIXct("2030-01-01", tz = "UTC") + clock * 3600
     }
@@ -261,32 +261,31 @@ test_that("replay checks static binding and exact plan identity", {
     )
   }
   seed_replay <- function(target_store, plan) {
-    batch <- provenance_batch(plan@provenance, plan@plan_id)
+    batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
     commit_order <- next_metadata_order(
       target_store$connection,
       "_graft_batches",
       "commit_order"
     )
-    insert_started_batch(
-      target_store$connection,
-      batch,
-      plan@planned_at,
-      plan@schema_build_digest,
-      commit_order
-    )
     empty_counts <- stats::setNames(integer(), character())
-    result <- new_kg_ingest_result(
+    result <- new_commit_result(
       batch_id = plan@plan_id,
       inserted = empty_counts,
       updated = empty_counts,
       matched = empty_counts,
       observed = empty_counts
     )
-    commit_batch(
+    DBI::dbAppendTable(
       target_store$connection,
-      batch,
-      result,
-      plan@planned_at
+      "_graft_batches",
+      committed_batch_row(
+        batch,
+        plan,
+        result,
+        plan@planned_at,
+        plan@planned_at,
+        commit_order
+      )
     )
   }
   plan <- make_plan(store, "accepted")
@@ -1008,7 +1007,7 @@ test_that("commit rejects a stale expected record head", {
 
 test_that("OKF review produces the ordinary commit-plan type", {
   fixture <- local_okf_store()
-  bundle <- kg_sync_okf(fixture$store)
+  bundle <- graft_sync(fixture$store)
   entity_path <- okf_fixture_concept(
     bundle,
     "Entity",
@@ -1032,11 +1031,13 @@ test_that("OKF review produces the ordinary commit-plan type", {
   expect_s7_class(plan, graft:::GraftCommitPlan)
   expect_identical(plan@source, "okf")
   expect_identical(plan@changes$action, "update")
-  expect_s3_class(result, "kg_ingest_result")
+  expect_type(result, "list")
+  expect_identical(is.object(result), FALSE)
   expect_identical(
-    kg_get(
+    graft_get(
       fixture$store,
-      fixture$records$Entity$id
+      fixture$records$Entity$id,
+      include = character()
     )$record$preferred_name,
     "Reviewed polyethylene"
   )

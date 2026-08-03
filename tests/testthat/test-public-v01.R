@@ -20,7 +20,7 @@ test_that("v0.1 public API completes the governed knowledge loop", {
   )
 
   plan <- graft_plan(store, records, provenance)
-  graft_commit(store, plan)
+  committed <- graft_commit(store, plan)
   current <- graft_get(store, record_id, include = character())
   found <- graft_find(store, "polyethylene")
   lookup <- graft_query(
@@ -34,6 +34,8 @@ test_that("v0.1 public API completes the governed knowledge loop", {
   history <- graft_history(store, record_id)
 
   expect_identical(plan@valid, TRUE)
+  expect_type(committed, "list")
+  expect_identical(is.object(committed), FALSE)
   expect_identical(current$record$preferred_name, "Polyethylene")
   expect_identical(found$id, record_id)
   expect_identical(lookup$record_id, record_id)
@@ -83,10 +85,12 @@ test_that("v0.1 public API completes the governed knowledge loop", {
       idempotency_key = "public-review"
     )
   )
-  graft_commit(store, review)
+  reviewed <- graft_commit(store, review)
   graft_sync(store)
   expect_identical(review@source, "okf")
   expect_identical(review@valid, TRUE)
+  expect_type(reviewed, "list")
+  expect_identical(is.object(reviewed), FALSE)
   expect_identical(
     graft_get(store, record_id, include = character())$record$preferred_name,
     "Polyethylene resin"
@@ -203,6 +207,18 @@ test_that("graft_schema validates source and output boundaries", {
   expect_s3_class(manifest_output_error, "graft_schema_error")
 })
 
+test_that("graft_tools requires a GraftStore", {
+  schema <- graft_schema(tempest_manifest_path())
+  store <- graft_open(schema)
+  withr::defer(graft_close(store))
+
+  legacy <- as_graft_store_internal(store)
+  condition <- rlang::catch_cnd(graft_tools(legacy))
+
+  expect_s3_class(condition, "graft_backend_error")
+  expect_match(conditionMessage(condition), "GraftStore")
+})
+
 test_that("OKF review rejects post-review bundle and store changes", {
   schema <- graft_schema(tempest_manifest_path())
   directory <- withr::local_tempdir()
@@ -249,9 +265,6 @@ test_that("OKF review rejects post-review bundle and store changes", {
   }
 
   edit_concept("preferred_name: Review base", "preferred_name: Reviewed")
-  local_mocked_bindings(
-    kg_validate_data = \(...) stop("duplicate semantic validation")
-  )
   review <- graft_review(
     store,
     provenance = graft_provenance(

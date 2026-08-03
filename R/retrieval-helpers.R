@@ -23,7 +23,7 @@ graft_retrieval_limits <- list(
 )
 
 validate_retrieval_store <- function(store, refresh = FALSE) {
-  validate_initialized_store_for_ingest(
+  validate_initialized_store(
     store,
     write = FALSE,
     refresh = refresh

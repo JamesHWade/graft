@@ -22,8 +22,8 @@ graft_get <- function(
   store <- as_graft_store_internal(store, "store")
   validate_graft_retrieval(store)
   id <- validate_scalar_text(id, "id", condition = abort_reference_error)
-  include <- validate_get_include(include)
-  limits <- validate_get_limits(limits)
+  include <- validate_graft_get_include(include)
+  limits <- validate_graft_get_limits(limits)
   row <- graft_current_rows(store, ids = id, limit = 1L)
   if (nrow(row) == 0L) {
     abort_reference_error(
@@ -127,7 +127,7 @@ graft_find <- function(store, query, class = NULL, limit = 20L) {
     )
     params <- c(
       params,
-      list(paste0("%", escape_like(tolower(query)), "%"))
+      list(paste0("%", escape_graft_like(tolower(query)), "%"))
     )
   }
   if (length(branches) == 0L) {
@@ -288,7 +288,7 @@ validate_graft_integrity_store <- function(store) {
   validate_kg_store(store)
   if (!duckdb_table_exists(store$connection, "_graft_store")) {
     abort_backend_error(
-      "The kg_store must be initialized with `kg_init()` before retrieval.",
+      "The GraftStore must be initialized by `graft_open()` before retrieval.",
       operation = "graft_retrieval_integrity",
       store_path = store$path
     )
@@ -312,7 +312,7 @@ validate_graft_integrity_store <- function(store) {
 graft_history <- function(store, id, as_of = NULL, limit = 100L) {
   store <- as_graft_store_internal(store, "store")
   validate_graft_retrieval(store)
-  kg_history(store, id = id, as_of = as_of, limit = limit)
+  graft_history_engine(store, id = id, as_of = as_of, limit = limit)
 }
 
 retrieval_query <- function(connection, sql, params = NULL) {
@@ -671,6 +671,227 @@ graft_sql_string <- function(connection, value) {
   as.character(DBI::dbQuoteString(connection, value))
 }
 
+validate_graft_get_include <- function(include) {
+  allowed <- c("identifiers", "claims", "evidence")
+  if (
+    !is.character(include) ||
+      anyNA(include) ||
+      !all(nzchar(include)) ||
+      anyDuplicated(include)
+  ) {
+    abort_validation_error(
+      "`include` must contain unique related-data names.",
+      field = "include",
+      rule = "unique_supported_values",
+      observed_value = include
+    )
+  }
+  unknown <- setdiff(include, allowed)
+  if (length(unknown) > 0L) {
+    abort_validation_error(
+      paste0(
+        "Unsupported `include` value(s): ",
+        paste(unknown, collapse = ", "),
+        "."
+      ),
+      field = "include",
+      rule = "supported_values",
+      observed_value = unknown
+    )
+  }
+  include
+}
+
+validate_graft_get_limits <- function(limits) {
+  defaults <- list(identifiers = 100L, claims = 50L, evidence = 100L)
+  if (!is.list(limits) || (length(limits) > 0L && is.null(names(limits)))) {
+    abort_limit_error(
+      "`limits` must be a named list.",
+      argument = "limits",
+      requested_limit = limits
+    )
+  }
+  unknown <- setdiff(names(limits), names(defaults))
+  if (length(unknown) > 0L || !all(nzchar(names(limits)))) {
+    abort_limit_error(
+      paste0(
+        "Unknown related-data limit(s): ",
+        paste(unknown, collapse = ", "),
+        "."
+      ),
+      argument = "limits",
+      requested_limit = limits
+    )
+  }
+  defaults[names(limits)] <- limits
+  defaults$identifiers <- validate_result_limit(
+    defaults$identifiers,
+    "limits$identifiers",
+    graft_retrieval_limits$identifiers
+  )
+  defaults$claims <- validate_result_limit(
+    defaults$claims,
+    "limits$claims",
+    graft_retrieval_limits$get_claims
+  )
+  defaults$evidence <- validate_result_limit(
+    defaults$evidence,
+    "limits$evidence",
+    graft_retrieval_limits$get_evidence
+  )
+  defaults
+}
+
+escape_graft_like <- function(value) {
+  value <- gsub("\\\\", "\\\\\\\\", value)
+  value <- gsub("%", "\\\\%", value, fixed = TRUE)
+  gsub("_", "\\\\_", value, fixed = TRUE)
+}
+
+graft_lookup_engine <- function(store, namespace, value, class = NULL) {
+  namespace <- validate_scalar_text(namespace, "namespace")
+  value <- validate_scalar_text(value, "value")
+  versions <- store$schema$manifest$identifier_normalization_versions
+  if (!namespace %in% names(versions)) {
+    abort_validation_error(
+      paste0(
+        "Unknown identifier namespace `",
+        namespace,
+        "` for the active manifest."
+      ),
+      field = "namespace",
+      rule = "manifest_identifier_namespace",
+      observed_value = namespace
+    )
+  }
+  eligible <- graft_identifier_namespace_classes(store, namespace)
+  if (length(eligible) == 0L) {
+    abort_validation_error(
+      paste0(
+        "Identifier namespace `",
+        namespace,
+        "` is not declared by a public concrete class."
+      ),
+      field = "namespace",
+      rule = "public_identifier_namespace",
+      observed_value = namespace
+    )
+  }
+  if (!is.null(class)) {
+    validate_public_class(store, class)
+    if (!class %in% eligible) {
+      abort_validation_error(
+        paste0(
+          "Class `",
+          class,
+          "` does not declare identifier namespace `",
+          namespace,
+          "`."
+        ),
+        record_class = class,
+        field = "namespace",
+        rule = "class_identifier_namespace",
+        observed_value = namespace
+      )
+    }
+    eligible <- class
+  }
+  normalized <- normalize_graft_identifier(store, namespace, value)
+  if (is.na(normalized) || !nzchar(normalized)) {
+    abort_validation_error(
+      "`value` is empty after identifier normalization.",
+      field = "value",
+      rule = "normalized_identifier",
+      observed_value = value,
+      namespace = namespace
+    )
+  }
+  placeholders <- paste(rep("?", length(eligible)), collapse = ", ")
+  rows <- retrieval_query(
+    store$connection,
+    paste0(
+      "SELECT record_id, class, namespace, value, normalized_value, ",
+      "status, assigned_by, confidence, created_at FROM ",
+      quote_identifier(store$connection, "_graft_identifiers"),
+      " WHERE namespace = ? AND normalized_value = ?",
+      " AND status IN ('primary', 'equivalent')",
+      " AND class IN (",
+      placeholders,
+      ") ORDER BY class, record_id, status, created_at"
+    ),
+    params = c(list(namespace, normalized), as.list(eligible))
+  )
+  duplicate <- split(rows$record_id, rows$class)
+  inconsistent <- names(Filter(
+    \(.x) length(unique(.x)) > 1L,
+    duplicate
+  ))
+  if (length(inconsistent) > 0L) {
+    abort_identity_error(
+      paste0(
+        "The active identifier maps to multiple records in class `",
+        inconsistent[[1L]],
+        "`."
+      ),
+      record_class = inconsistent[[1L]],
+      field = "value",
+      rule = "unique_active_identifier",
+      observed_value = value,
+      namespace = namespace,
+      normalized_value = normalized,
+      matched_record_ids = unique(duplicate[[inconsistent[[1L]]]])
+    )
+  }
+  bounded_data_frame(
+    rows,
+    store,
+    limit = max(1L, length(eligible)),
+    truncated = FALSE
+  )
+}
+
+graft_identifier_namespace_classes <- function(store, namespace) {
+  classes <- store$schema$manifest$classes
+  keep <- vapply(
+    classes,
+    function(contract) {
+      any(vapply(
+        contract$slots,
+        \(.x) {
+          !scalar_logical(.x$sensitive) &&
+            identical(
+              scalar_character(.x$external_identifier),
+              namespace
+            )
+        },
+        logical(1)
+      ))
+    },
+    logical(1)
+  )
+  names(classes)[keep]
+}
+
+normalize_graft_identifier <- function(store, namespace, value) {
+  version <- scalar_character(
+    store$schema$manifest$identifier_normalization_versions[[namespace]]
+  )
+  if (!identical(version, "1")) {
+    abort_schema_error(
+      paste0(
+        "Identifier normalization contract `",
+        namespace,
+        "` version `",
+        version,
+        "` is not supported by this Graft runtime."
+      ),
+      namespace = namespace,
+      normalization_version = version
+    )
+  }
+  normalize_external_identifier(namespace, value)
+}
+
 empty_graft_find <- function(store, limit) {
   result <- data.frame(
     id = character(),
@@ -765,7 +986,7 @@ graft_claim_rows <- function(
     hard_limit = graft_retrieval_limits$claims
   )
   predicate <- validate_optional_scalar_text(predicate, "predicate")
-  include_superseded <- validate_include_superseded(include_superseded)
+  include_superseded <- validate_graft_include_superseded(include_superseded)
   classes <- statement_classes(store)
   branches <- list()
   params <- list()
@@ -782,7 +1003,7 @@ graft_claim_rows <- function(
       params,
       list(paste0(
         "%",
-        escape_like(tolower(canonical_json(entity_id))),
+        escape_graft_like(tolower(canonical_json(entity_id))),
         "%"
       ))
     )
@@ -818,6 +1039,22 @@ graft_claim_rows <- function(
     result <- result[seq_len(limit), , drop = FALSE]
   }
   bounded_data_frame(result, store, limit, truncated)
+}
+
+validate_graft_include_superseded <- function(include_superseded) {
+  if (
+    !is.logical(include_superseded) ||
+      length(include_superseded) != 1L ||
+      is.na(include_superseded)
+  ) {
+    abort_validation_error(
+      "`include_superseded` must be `TRUE` or `FALSE`.",
+      field = "include_superseded",
+      rule = "scalar_logical",
+      observed_value = include_superseded
+    )
+  }
+  include_superseded
 }
 
 graft_claim_result_matches <- function(
@@ -998,7 +1235,7 @@ graft_evidence_rows <- function(
       branch_params <- c(
         branch_params,
         lapply(statement_ids, \(id) {
-          paste0("%", escape_like(tolower(canonical_json(id))), "%")
+          paste0("%", escape_graft_like(tolower(canonical_json(id))), "%")
         })
       )
     }
@@ -1011,13 +1248,13 @@ graft_evidence_rows <- function(
         branch_params,
         list(paste0(
           "%",
-          escape_like(tolower(canonical_json(source_id))),
+          escape_graft_like(tolower(canonical_json(source_id))),
           "%"
         ))
       )
     }
     if (!is.null(support_type)) {
-      validate_evidence_support_type(store, contract, support_type)
+      validate_graft_evidence_support_type(store, contract, support_type)
       where <- c(
         where,
         "LOWER(current.payload_json) LIKE ? ESCAPE '\\'"
@@ -1026,7 +1263,7 @@ graft_evidence_rows <- function(
         branch_params,
         list(paste0(
           "%",
-          escape_like(tolower(canonical_json(support_type))),
+          escape_graft_like(tolower(canonical_json(support_type))),
           "%"
         ))
       )
@@ -1194,8 +1431,8 @@ graft_evidence_result_row <- function(
     )
   }
   source_contract <- store$schema$manifest$classes[[source$class]]
-  uri_slot <- source_uri_slot(source_contract)
-  title_slot <- source_title_slot(source_contract)
+  uri_slot <- graft_source_uri_slot(source_contract)
+  title_slot <- graft_source_title_slot(source_contract)
   result <- data.frame(
     evidence_class = evidence_class,
     id = as.character(retrieval_record_scalar(record, "id")),
@@ -1230,6 +1467,63 @@ graft_evidence_result_row <- function(
   result$record <- I(list(record))
   result$source_record <- I(list(source$record))
   result
+}
+
+validate_graft_evidence_support_type <- function(
+  store,
+  contract,
+  support_type
+) {
+  slot <- contract$slots$support_type
+  enum <- scalar_character(slot$enum)
+  if (is.na(enum)) {
+    return(invisible(support_type))
+  }
+  allowed <- vapply(
+    store$schema$manifest$enums[[enum]]$permissible_values,
+    \(.x) scalar_character(.x$value),
+    character(1)
+  )
+  if (!support_type %in% allowed) {
+    abort_validation_error(
+      paste0("Unknown evidence support type `", support_type, "`."),
+      record_class = scalar_character(contract$name),
+      field = "support_type",
+      rule = "enum",
+      observed_value = support_type,
+      allowed_values = allowed
+    )
+  }
+  invisible(support_type)
+}
+
+graft_source_uri_slot <- function(contract) {
+  slots <- public_scalar_slots(contract)
+  external <- names(Filter(
+    \(.x) {
+      identical(
+        scalar_character(.x$external_identifier),
+        "canonical_url"
+      )
+    },
+    slots
+  ))
+  candidates <- unique(c(external, "uri", "url"))
+  candidates <- candidates[candidates %in% names(slots)]
+  if (length(candidates) == 0L) NA_character_ else candidates[[1L]]
+}
+
+graft_source_title_slot <- function(contract) {
+  candidates <- c(
+    scalar_character(contract$label_slot),
+    "title",
+    "label",
+    "name"
+  )
+  candidates <- candidates[
+    !is.na(candidates) & candidates %in% names(public_scalar_slots(contract))
+  ]
+  if (length(candidates) == 0L) NA_character_ else candidates[[1L]]
 }
 
 empty_graft_evidence <- function(store, limit) {
@@ -1321,7 +1615,7 @@ graft_query_lookup <- function(store, request, limit) {
     limit,
     hard_limit = graft_retrieval_limits$identifiers
   )
-  result <- kg_lookup(
+  result <- graft_lookup_engine(
     store,
     namespace = request$namespace,
     value = request$value,
@@ -1402,7 +1696,7 @@ graft_query_neighbors <- function(store, request) {
   )
   validate_request_members(request, allowed, "id")
   verify_projection_views(store$connection, store$schema)
-  result <- kg_neighbors(
+  result <- graft_neighbors_engine(
     store,
     id = request$id,
     predicate = request_value(request, "predicate"),
@@ -1412,7 +1706,7 @@ graft_query_neighbors <- function(store, request) {
     max_nodes = request_value(request, "max_nodes", graph_result_limits$nodes),
     max_edges = request_value(request, "max_edges", graph_result_limits$edges)
   )
-  unclass(result)
+  result
 }
 
 graft_query_traverse <- function(store, request) {
@@ -1427,7 +1721,7 @@ graft_query_traverse <- function(store, request) {
   )
   validate_request_members(request, allowed, c("from", "via"))
   verify_projection_views(store$connection, store$schema)
-  result <- kg_traverse(
+  result <- graft_traverse_engine(
     store,
     from = request$from,
     via = request$via,
@@ -1437,7 +1731,7 @@ graft_query_traverse <- function(store, request) {
     max_nodes = request_value(request, "max_nodes", graph_result_limits$nodes),
     max_edges = request_value(request, "max_edges", graph_result_limits$edges)
   )
-  unclass(result)
+  result
 }
 
 graft_query_unresolved <- function(store, request, limit) {
@@ -1473,7 +1767,7 @@ graft_query_unresolved <- function(store, request, limit) {
         params,
         list(paste0(
           "%",
-          escape_like(tolower(canonical_json(source_id))),
+          escape_graft_like(tolower(canonical_json(source_id))),
           "%"
         ))
       )

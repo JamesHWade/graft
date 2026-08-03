@@ -1,414 +1,211 @@
-test_that("kg_tools returns exactly seven safe read-only ToolDefs", {
+test_that("graft_tools exposes four read-only ToolDefs", {
   fixture <- local_retrieval_store()
-  tools <- kg_tools(fixture$store)
-  expected <- c(
-    "kg_describe",
-    "kg_open_knowledge",
-    "kg_find",
-    "kg_get",
-    "kg_neighbors",
-    "kg_claims",
-    "kg_select"
-  )
+  tools <- graft_tools(fixture$store)
+  expected <- c("graft_find", "graft_get", "graft_query", "graft_history")
 
   expect_named(tools, expected)
-  expect_identical(length(tools), 7L)
+  expect_identical(length(tools), 4L)
   expect_identical(
     vapply(tools, inherits, logical(1), "ellmer::ToolDef"),
-    stats::setNames(rep(TRUE, 7L), expected)
+    stats::setNames(rep(TRUE, 4L), expected)
   )
   expect_identical(
-    vapply(
-      tools,
-      \(.x) agent_tool_prop(.x, "name"),
-      character(1)
-    ),
-    stats::setNames(expected, expected)
-  )
-  expected_annotations <- list(
-    read_only_hint = TRUE,
-    open_world_hint = FALSE,
-    idempotent_hint = TRUE,
-    destructive_hint = FALSE
-  )
-  expect_identical(
-    lapply(tools, \(.x) agent_tool_prop(.x, "annotations")),
-    rep(list(expected_annotations), 7L) |>
+    lapply(tools, \(tool) agent_tool_prop(tool, "annotations")),
+    rep(
+      list(list(
+        read_only_hint = TRUE,
+        open_world_hint = FALSE,
+        idempotent_hint = TRUE,
+        destructive_hint = FALSE
+      )),
+      4L
+    ) |>
       stats::setNames(expected)
   )
+})
+
+test_that("graft_tools schemas are closed and hard bounded", {
+  fixture <- local_retrieval_store()
   arguments <- lapply(
-    tools,
-    \(.x) agent_tool_prop(.x, "arguments")
+    graft_tools(fixture$store),
+    \(tool) agent_tool_prop(tool, "arguments")
   )
+  properties <- lapply(
+    arguments,
+    \(argument) agent_tool_prop(argument, "properties")
+  )
+
   expect_identical(
     vapply(
       arguments,
-      \(.x) agent_tool_prop(.x, "additional_properties"),
+      \(argument) agent_tool_prop(argument, "additional_properties"),
       logical(1)
     ),
-    stats::setNames(rep(FALSE, 7L), expected)
+    stats::setNames(rep(FALSE, 4L), names(arguments))
   )
-  exposed <- unique(unlist(lapply(
-    arguments,
-    \(.x) names(agent_tool_prop(.x, "properties"))
-  )))
   expect_identical(
-    intersect(
-      exposed,
-      c("sql", "query_sql", "path", "file", "url", "network", "connection")
-    ),
-    character()
+    agent_tool_prop(properties$graft_find$limit, "json")$maximum,
+    graft_retrieval_limits$find
+  )
+  expect_identical(
+    agent_tool_prop(properties$graft_history$limit, "json")$maximum,
+    graft_retrieval_limits$history
+  )
+  expect_identical(
+    agent_tool_prop(properties$graft_query$operation, "values"),
+    graft_tool_query_operations()
+  )
+
+  request <- agent_tool_prop(properties$graft_query$request, "json")
+  expect_identical(request$additionalProperties, FALSE)
+  expect_identical(request$properties$hops$maximum, 2L)
+  expect_identical(request$properties$max_hops$maximum, 2L)
+  expect_identical(request$properties$max_nodes$maximum, 500L)
+  expect_identical(request$properties$max_edges$maximum, 2000L)
+
+  limits <- agent_tool_prop(properties$graft_get$limits, "properties")
+  expect_identical(
+    agent_tool_prop(limits$identifiers, "json")$maximum,
+    graft_retrieval_limits$identifiers
+  )
+  expect_identical(
+    agent_tool_prop(limits$claims, "json")$maximum,
+    graft_retrieval_limits$get_claims
+  )
+  expect_identical(
+    agent_tool_prop(limits$evidence, "json")$maximum,
+    graft_retrieval_limits$get_evidence
   )
 })
 
-test_that("kg_tools checks its optional ellmer dependency first", {
+test_that("graft_tools delegates through the public retrieval API", {
+  fixture <- local_retrieval_store()
+  store <- fixture$store
+  calls <- character()
+  digest <- paste0("sha256:", strrep("a", 64L))
+  tabular_result <- function(id, limit) {
+    result <- data.frame(id = id)
+    attr(result, "truncated") <- FALSE
+    attr(result, "limit") <- limit
+    attr(result, "store_schema_digest") <- digest
+    result
+  }
   local_mocked_bindings(
-    check_agent_tools_dependency = function() {
-      rlang::abort(
-        "ellmer is unavailable",
-        class = "graft_test_dependency_error"
+    graft_find = function(observed_store, query, class, limit) {
+      expect_identical(observed_store, store)
+      calls <<- c(calls, "graft_find")
+      tabular_result(query, limit)
+    },
+    graft_get = function(observed_store, id, include, limits) {
+      expect_identical(observed_store, store)
+      calls <<- c(calls, "graft_get")
+      list(
+        id = id,
+        truncated = list(
+          identifiers = FALSE,
+          claims = FALSE,
+          evidence = FALSE
+        ),
+        limits = limits,
+        store_schema_digest = digest
       )
+    },
+    graft_query = function(observed_store, operation, request, limit) {
+      expect_identical(observed_store, store)
+      calls <<- c(calls, "graft_query")
+      tabular_result(operation, limit)
+    },
+    graft_history = function(observed_store, id, as_of, limit) {
+      expect_identical(observed_store, store)
+      calls <<- c(calls, "graft_history")
+      tabular_result(id, limit)
     }
   )
-
-  expect_error(
-    kg_tools(NULL),
-    class = "graft_test_dependency_error"
-  )
-})
-
-test_that("ToolDef schemas encode defaults, enums, and hard caps", {
-  fixture <- local_retrieval_store()
-  tools <- kg_tools(fixture$store)
-  properties <- lapply(
-    tools,
-    \(.x) {
-      arguments <- agent_tool_prop(.x, "arguments")
-      agent_tool_prop(arguments, "properties")
-    }
-  )
-  find <- properties$kg_find
-  get <- properties$kg_get
-  neighbors <- properties$kg_neighbors
-  open <- properties$kg_open_knowledge
-  select <- properties$kg_select
-
-  expect_named(open, c("query", "types", "limit", "max_chars"))
-  expect_identical(agent_tool_prop(open$query, "required"), FALSE)
-  expect_identical(agent_tool_prop(open$types, "required"), FALSE)
-  expect_identical(agent_tool_prop(open$limit, "json")$maximum, 100L)
-  expect_identical(
-    agent_tool_prop(open$max_chars, "json")$maximum,
-    100000L
-  )
-
-  expect_named(find, c("query", "class", "limit"))
-  expect_identical(agent_tool_prop(find$query, "required"), TRUE)
-  expect_identical(agent_tool_prop(find$class, "required"), FALSE)
-  expect_identical(agent_tool_prop(find$limit, "required"), FALSE)
-  expect_identical(agent_tool_prop(find$limit, "json")$maximum, 1000L)
-
-  expect_named(get, c("id", "include", "limits"))
-  expect_identical(
-    agent_tool_prop(
-      agent_tool_prop(get$include, "items"),
-      "values"
-    ),
-    c("identifiers", "claims", "evidence")
-  )
-  expect_identical(agent_tool_prop(get$limits, "required"), FALSE)
-  limit_properties <- agent_tool_prop(get$limits, "properties")
-  expect_identical(
-    agent_tool_prop(limit_properties$evidence, "json")$maximum,
-    2000L
-  )
-
-  expect_named(
-    neighbors,
-    c(
-      "id",
-      "predicate",
-      "direction",
-      "hops",
-      "projection",
-      "max_nodes",
-      "max_edges"
-    )
-  )
-  expect_identical(
-    agent_tool_prop(neighbors$direction, "values"),
-    c("both", "out", "in")
-  )
-  expect_identical(agent_tool_prop(neighbors$hops, "json")$maximum, 2L)
-  expect_identical(
-    agent_tool_prop(neighbors$max_nodes, "json")$maximum,
-    500L
-  )
-  expect_identical(
-    agent_tool_prop(neighbors$max_edges, "json")$maximum,
-    2000L
-  )
-
-  expect_named(
-    select,
-    c("class", "fields", "filters", "order_by", "limit")
-  )
-  filter_schema <- agent_tool_prop(
-    agent_tool_prop(select$filters, "items"),
-    "json"
-  )
-  order_schema <- agent_tool_prop(
-    agent_tool_prop(select$order_by, "items"),
-    "json"
-  )
-  expect_identical(filter_schema$additionalProperties, FALSE)
-  expect_identical(
-    unlist(filter_schema$required, use.names = FALSE),
-    c("field", "operator")
-  )
-  expect_setequal(
-    unlist(filter_schema$properties$operator$enum),
-    c(
-      "eq",
-      "ne",
-      "in",
-      "contains",
-      "starts_with",
-      "gt",
-      "gte",
-      "lt",
-      "lte",
-      "is_null",
-      "not_null"
-    )
-  )
-  value_schema <- filter_schema$properties$value
-  expect_named(value_schema, "anyOf")
-  expect_length(value_schema$anyOf, 6L)
-  expect_named(value_schema$anyOf[[6L]]$items, "anyOf")
-  expect_length(value_schema$anyOf[[6L]]$items$anyOf, 4L)
-  expect_identical(order_schema$additionalProperties, FALSE)
-  expect_identical(
-    unlist(order_schema$properties$direction$enum),
-    c("asc", "desc")
-  )
-  expect_identical(
-    agent_tool_prop(select$limit, "json")$maximum,
-    1000L
-  )
-
-  expect_identical(eval(formals(tools$kg_find)$limit), 20)
-  expect_identical(eval(formals(tools$kg_open_knowledge)$limit), 10)
-  expect_identical(
-    eval(formals(tools$kg_get)$include),
-    c(
-      "identifiers",
-      "claims",
-      "evidence"
-    )
-  )
-  expect_identical(eval(formals(tools$kg_neighbors)$direction), "both")
-  expect_identical(eval(formals(tools$kg_neighbors)$projection), "semantic")
-  expect_identical(eval(formals(tools$kg_claims)$limit), 100)
-  expect_identical(eval(formals(tools$kg_select)$filters), list())
-})
-
-test_that("kg_select tool accepts integer and mixed numeric filter values", {
-  fixture <- local_retrieval_store()
-  tool <- kg_tools(fixture$store)$kg_select
-
-  integer <- tool(
-    class = "SemanticClaim",
-    fields = c("id", "temperature"),
-    filters = list(list(
-      field = "temperature",
-      operator = "eq",
-      value = 23L
-    ))
-  )
-  mixed <- tool(
-    class = "SemanticClaim",
-    fields = c("id", "temperature"),
-    filters = list(list(
-      field = "temperature",
-      operator = "in",
-      value = c(22L, 23)
-    ))
-  )
-
-  expect_identical(integer$result$id, fixture$ids$semantic_claim)
-  expect_identical(integer$result$temperature, 23)
-  expect_identical(mixed$result$id, fixture$ids$semantic_claim)
-  expect_identical(mixed$result$temperature, 23)
-})
-
-test_that("ToolDefs invoke directly and return universal metadata", {
-  fixture <- local_retrieval_store()
-  local_sync_okf(fixture$store)
-  tools <- kg_tools(fixture$store)
+  tools <- graft_tools(store)
   outputs <- list(
-    kg_describe = tools$kg_describe(token_budget = 40),
-    kg_open_knowledge = tools$kg_open_knowledge(
-      query = "polyethylene",
-      types = "Entity"
-    ),
-    kg_find = tools$kg_find(query = "polyethylene"),
-    kg_get = tools$kg_get(id = fixture$ids$entity),
-    kg_neighbors = tools$kg_neighbors(id = fixture$ids$entity),
-    kg_claims = tools$kg_claims(entity_id = fixture$ids$entity),
-    kg_select = tools$kg_select(
-      class = "Entity",
-      fields = c("id", "preferred_name")
-    )
+    tools$graft_find(query = "needle", limit = 2L),
+    tools$graft_get(id = fixture$ids$entity, include = character()),
+    tools$graft_query(operation = "identifiers", limit = 3L),
+    tools$graft_history(id = fixture$ids$entity, limit = 4L)
   )
-  digest <- graft:::store_schema_digest(fixture$store)
 
+  expect_identical(
+    calls,
+    c("graft_find", "graft_get", "graft_query", "graft_history")
+  )
   for (output in outputs) {
     expect_named(
       output,
       c("result", "truncated", "limit", "store_schema_digest")
     )
-    expect_identical(length(output$truncated), 1L)
-    expect_type(output$truncated, "logical")
+    expect_identical(output$truncated, FALSE)
     expect_identical(output$store_schema_digest, digest)
-    expect_identical(is.null(output$limit), FALSE)
   }
-  expect_type(outputs$kg_describe$result, "list")
-  expect_type(outputs$kg_open_knowledge$result, "list")
-  expect_s3_class(outputs$kg_find$result, "data.frame")
-  expect_type(outputs$kg_get$result, "list")
-  expect_type(outputs$kg_neighbors$result, "list")
-  expect_s3_class(outputs$kg_claims$result, "data.frame")
-  expect_s3_class(outputs$kg_select$result, "data.frame")
-
-  serialized <- vapply(
-    outputs,
-    \(output) as.character(jsonlite::toJSON(output, auto_unbox = TRUE)),
-    character(1)
-  )
-  expect_named(serialized, names(outputs))
-  expect_identical(
-    vapply(serialized, nzchar, logical(1)),
-    stats::setNames(rep(TRUE, length(outputs)), names(outputs))
-  )
-
-  expect_identical(outputs$kg_describe$limit, 40L)
-  expect_identical(
-    outputs$kg_open_knowledge$limit,
-    list(
-      concepts = 10L,
-      characters = 20000L,
-      bundle_bytes = 20L * 1024L^2
-    )
-  )
-  expect_identical(outputs$kg_find$limit, 20L)
-  expect_named(
-    outputs$kg_get$limit,
-    c("identifiers", "claims", "evidence")
-  )
-  expect_identical(
-    outputs$kg_neighbors$limit,
-    list(nodes = 500L, edges = 2000L, hops = 1L)
-  )
-  expect_identical(outputs$kg_claims$limit, 100L)
-  expect_identical(outputs$kg_select$limit, 100L)
-  expect_identical(outputs$kg_neighbors$result$projection, "semantic")
 })
 
-test_that("ToolDef envelopes report truncation and preserve native limits", {
+test_that("graft_tools has no mutation surface and leaves the store unchanged", {
   fixture <- local_retrieval_store()
-  tools <- kg_tools(fixture$store)
-
-  found <- tools$kg_find(query = "polyethylene", limit = 1)
-  record <- tools$kg_get(
-    id = fixture$ids$entity,
-    limits = list(claims = 1L)
+  tools <- graft_tools(fixture$store)
+  arguments <- lapply(
+    tools,
+    \(tool) agent_tool_prop(tool, "arguments")
   )
-  neighbors <- tools$kg_neighbors(
-    id = fixture$ids$entity,
-    projection = "combined",
-    max_nodes = 1
-  )
-  claims <- tools$kg_claims(
-    entity_id = fixture$ids$entity,
-    limit = 1
-  )
-  selected <- tools$kg_select(
-    class = "Entity",
-    fields = "id",
-    limit = 1
+  exposed <- unique(unlist(lapply(
+    arguments,
+    \(argument) names(agent_tool_prop(argument, "properties"))
+  )))
+  before <- DBI::dbGetQuery(
+    fixture$connection,
+    paste(
+      "SELECT COUNT(*) AS batches,",
+      "COALESCE(MAX(commit_order), 0) AS commit_order FROM _graft_batches"
+    )
   )
 
-  expect_identical(found$truncated, TRUE)
-  expect_identical(found$limit, 1L)
-  expect_identical(record$truncated, TRUE)
-  expect_identical(record$limit$claims, 1L)
-  expect_identical(neighbors$truncated, TRUE)
+  tools$graft_find(query = "polyethylene")
+  tools$graft_get(id = fixture$ids$entity, include = character())
+  tools$graft_query(
+    operation = "identifiers",
+    request = list(id = fixture$ids$entity)
+  )
+  tools$graft_history(id = fixture$ids$entity)
+  after <- DBI::dbGetQuery(
+    fixture$connection,
+    paste(
+      "SELECT COUNT(*) AS batches,",
+      "COALESCE(MAX(commit_order), 0) AS commit_order FROM _graft_batches"
+    )
+  )
+  cap <- catch_graft_ingest_condition(
+    tools$graft_find(query = "polyethylene", limit = 1001L)
+  )
+  arbitrary <- catch_graft_ingest_condition(
+    tools$graft_query(
+      operation = "claims",
+      request = list(id = fixture$ids$entity, sql = "SELECT *")
+    )
+  )
+
   expect_identical(
-    neighbors$limit,
-    list(nodes = 1L, edges = 2000L, hops = 1L)
+    intersect(
+      exposed,
+      c(
+        "records",
+        "provenance",
+        "plan",
+        "commit",
+        "ingest",
+        "sql",
+        "path",
+        "url",
+        "network",
+        "connection",
+        "write"
+      )
+    ),
+    character()
   )
-  expect_identical(claims$truncated, TRUE)
-  expect_identical(claims$limit, 1L)
-  expect_identical(selected$truncated, TRUE)
-  expect_identical(selected$limit, 1L)
-})
-
-test_that("ToolDef calls retain graft runtime validation and hard caps", {
-  fixture <- local_retrieval_store()
-  tools <- kg_tools(fixture$store)
-
-  bad_field <- catch_graft_ingest_condition(
-    tools$kg_select(class = "Entity", fields = "private_sql")
-  )
-  bad_operator <- catch_graft_ingest_condition(
-    tools$kg_select(
-      class = "Entity",
-      fields = "id",
-      filters = list(list(
-        field = "id",
-        operator = "sql",
-        value = fixture$ids$entity
-      ))
-    )
-  )
-  sql_member <- catch_graft_ingest_condition(
-    tools$kg_select(
-      class = "Entity",
-      fields = "id",
-      filters = list(list(
-        field = "id",
-        operator = "eq",
-        value = fixture$ids$entity,
-        sql = "OR TRUE"
-      ))
-    )
-  )
-  find_cap <- catch_graft_ingest_condition(
-    tools$kg_find(query = "x", limit = 1001)
-  )
-  graph_cap <- catch_graft_ingest_condition(
-    tools$kg_neighbors(id = fixture$ids$entity, max_edges = 2001)
-  )
-  describe_cap <- catch_graft_ingest_condition(
-    tools$kg_describe(token_budget = 10001)
-  )
-  okf_cap <- catch_graft_ingest_condition(
-    tools$kg_open_knowledge(limit = 101)
-  )
-
-  expect_s3_class(bad_field, "graft_validation_error")
-  expect_identical(bad_field$rule, "public_scalar_field")
-  expect_s3_class(bad_operator, "graft_validation_error")
-  expect_identical(bad_operator$rule, "supported_filter_operator")
-  expect_s3_class(sql_member, "graft_validation_error")
-  expect_identical(sql_member$rule, "filter_shape")
-  expect_s3_class(find_cap, "graft_limit_error")
-  expect_identical(find_cap$hard_limit, 1000L)
-  expect_s3_class(graph_cap, "graft_limit_error")
-  expect_identical(graph_cap$hard_limit, 2000L)
-  expect_s3_class(describe_cap, "graft_limit_error")
-  expect_identical(describe_cap$hard_limit, 10000L)
-  expect_s3_class(okf_cap, "graft_limit_error")
-  expect_identical(okf_cap$hard_limit, 100L)
+  expect_identical(before, after)
+  expect_s3_class(cap, "graft_limit_error")
+  expect_s3_class(arbitrary, "graft_validation_error")
 })

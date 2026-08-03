@@ -139,7 +139,7 @@ graft_plan_records <- function(
   source,
   source_preconditions = list()
 ) {
-  validate_initialized_store_for_ingest(store, write = FALSE, refresh = TRUE)
+  validate_initialized_store(store, write = FALSE, refresh = TRUE)
   provenance <- as_graft_provenance(provenance)
   metadata <- read_store_metadata(store$connection)
   input_digest <- graft_sha256(
@@ -153,7 +153,7 @@ graft_plan_records <- function(
       input_digest = input_digest
     )
   )
-  batch <- provenance_batch(provenance, temporary_batch_id)
+  batch <- commit_batch_from_provenance(provenance, temporary_batch_id)
   candidate <- plan_candidate_records(store, batch, records, metadata)
   heads <- candidate$changes[
     c(
@@ -198,7 +198,7 @@ graft_plan_records <- function(
 #' @param plan A valid `GraftCommitPlan` returned by [graft_plan()] or
 #'   [graft_review()].
 #'
-#' @return A `kg_ingest_result` describing the committed observations.
+#' @return An ordinary list summarizing committed observations.
 #' @export
 graft_commit <- function(store, plan) {
   store <- as_graft_store_internal(store, "store")
@@ -207,7 +207,7 @@ graft_commit <- function(store, plan) {
 
 commit_graft_plan <- function(store, plan) {
   started <- proc.time()[["elapsed"]]
-  validate_initialized_store_for_ingest(store, write = TRUE, refresh = TRUE)
+  validate_initialized_store(store, write = TRUE, refresh = TRUE)
   plan <- validate_graft_commit_plan(plan)
   if (!isTRUE(plan@valid)) {
     abort_commit_plan(
@@ -224,7 +224,7 @@ commit_graft_plan <- function(store, plan) {
     )
   }
   validate_commit_plan_static_binding(store, plan)
-  batch <- provenance_batch(plan@provenance, plan@plan_id)
+  batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
   replay <- find_committed_replay(store$connection, batch)
   if (!is.null(replay)) {
     validate_commit_plan_replay(plan, replay)
@@ -250,7 +250,7 @@ commit_graft_plan <- function(store, plan) {
 #'
 #' @inheritParams graft_plan
 #'
-#' @return A `kg_ingest_result` describing the committed observations.
+#' @return An ordinary list summarizing committed observations.
 #' @export
 graft_ingest <- function(store, records, provenance) {
   store <- as_graft_store_internal(store, "store")
