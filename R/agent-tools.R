@@ -4,8 +4,9 @@
 #' one initialized store. The tools expose only graft's bounded retrieval
 #' functions; they do not accept SQL, file paths, URLs, or network options.
 #'
-#' Every tool returns the native graft result in `result` plus explicit
-#' `truncated`, `limit`, and `store_schema_digest` fields.
+#' Every tool returns a JSON-compatible representation of the graft result in
+#' `result` plus explicit `truncated`, `limit`, and `store_schema_digest`
+#' fields.
 #'
 #' @param store An initialized `kg_store`.
 #'
@@ -490,9 +491,16 @@ agent_tool_result <- function(
   store_schema_digest
 ) {
   list(
-    result = result,
+    result = agent_tool_json_result(result),
     truncated = isTRUE(truncated),
     limit = limit,
     store_schema_digest = store_schema_digest
   )
+}
+
+agent_tool_json_result <- function(result) {
+  if (is.list(result) && !is.data.frame(result)) {
+    return(unclass(result))
+  }
+  result
 }

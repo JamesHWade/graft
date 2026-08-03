@@ -1,6 +1,6 @@
 # graft 0.0.0.9000
 
-* A governed Materials Market Radar example combines business, competitor, and downstream-market signals with dsprrr analysis, typed Tempest briefings and approval, configurable models and tools, and accepted-only Graft knowledge that visibly changes a later scan.
+* A governed Materials Market Radar example combines business, competitor, and downstream-market signals with dsprrr analysis, typed Tempest briefings and approval, configurable models and tools, a focused daily-brief and decision-room UI, and accepted-only Graft knowledge that visibly changes a later scan.
 * A local Graft Coworker example combines a shinychat tool-using assistant, dsprrr planning, typed Tempest work products, an approval inbox, local file delivery, and approved-only Graft memory. Its Tempest-native model configuration and extensible ellmer tool registry include an optional read-only `btw` tool belt.
 * A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
 * Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
@@ -42,7 +42,7 @@
   with manifest validation and no arbitrary SQL.
 * `kg_store_info()` reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; `kg_capabilities()` reports static backend capabilities.
 * `kg_sync_okf()` atomically materializes current accepted state into the store's managed OKF working tree without replacing unrelated directories.
-* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with structured results and no arbitrary SQL surface.
+* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with JSON-compatible structured results and no arbitrary SQL surface.
 * `kg_unresolved()` returns bounded unresolved mention records.
 * `kg_validate_data()` preflights the same staged identity, shape, and
   reference checks as ingestion without mutating the store.

@@ -70,7 +70,6 @@ mi_app_server <- function(
 
     output$briefing_view <- shiny::renderUI({
       mi_app_briefing_view(
-        worker(),
         current_snapshot(),
         current_progress(),
         length(configured_tools)
@@ -167,6 +166,15 @@ mi_app_server <- function(
           ),
           type = "message"
         )
+      },
+      ignoreInit = TRUE
+    )
+
+    shiny::observeEvent(
+      input$open_review,
+      {
+        bslib::nav_select("active_view", "review", session = session)
+        focus_after_flush("mi-review-state")
       },
       ignoreInit = TRUE
     )

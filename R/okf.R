@@ -725,10 +725,10 @@ okf_record_body <- function(
     NULL
   }
   if (!is.null(statement)) {
-    citation_marks <- paste0("[^", sources$labels, "]", collapse = "")
+    citation_marks <- okf_citation_marks(sources$labels)
     lines <- c(lines, "", "## Statement", "", paste0(statement, citation_marks))
   } else if (!is.null(description)) {
-    citation_marks <- paste0("[^", sources$labels, "]", collapse = "")
+    citation_marks <- okf_citation_marks(sources$labels)
     lines <- c(lines, "", "## Summary", "", paste0(description, citation_marks))
   }
 
@@ -778,6 +778,13 @@ okf_record_body <- function(
     lines <- c(lines, "", footnotes)
   }
   paste(lines, collapse = "\n")
+}
+
+okf_citation_marks <- function(labels) {
+  if (length(labels) == 0L) {
+    return("")
+  }
+  paste0("[^", labels, "]", collapse = "")
 }
 
 okf_heading_text <- function(value) {

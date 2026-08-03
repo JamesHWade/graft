@@ -243,6 +243,13 @@ mi_app_metric <- function(label, value, detail, icon) {
   )
 }
 
+mi_app_display_date <- function(date) {
+  if (is.null(date) || !nzchar(date)) {
+    return("Awaiting scan")
+  }
+  format(as.Date(date), "%B %e, %Y")
+}
+
 mi_app_scan_controls <- function(progress, tool_count, can_run = TRUE) {
   next_bundle <- progress$next_bundle
   available <- !is.null(next_bundle)
@@ -274,15 +281,6 @@ mi_app_scan_controls <- function(progress, tool_count, can_run = TRUE) {
     ),
     shiny::tags$div(
       class = "mi-scan-actions",
-      bslib::input_switch(
-        "use_model",
-        "Use configured model",
-        value = FALSE
-      ),
-      shiny::tags$span(
-        class = "mi-tool-count",
-        paste(tool_count, if (tool_count == 1L) "tool" else "tools")
-      ),
       bslib::input_task_button(
         "run_scan",
         if (!can_run) {
@@ -294,6 +292,27 @@ mi_app_scan_controls <- function(progress, tool_count, can_run = TRUE) {
         },
         icon = bsicons::bs_icon("radar", `aria-hidden` = "true"),
         disabled = if (enabled) NULL else NA
+      ),
+      shiny::tags$details(
+        class = "mi-run-settings",
+        shiny::tags$summary(
+          bsicons::bs_icon("sliders", `aria-hidden` = "true"),
+          "Run settings"
+        ),
+        shiny::tags$div(
+          bslib::input_switch(
+            "use_model",
+            "Use configured model",
+            value = FALSE
+          ),
+          shiny::tags$span(
+            class = "mi-tool-count",
+            paste(tool_count, if (tool_count == 1L) "tool" else "tools")
+          ),
+          shiny::tags$p(
+            "Model selection stays in Tempest; tools come from the app registry."
+          )
+        )
       )
     )
   )
@@ -349,24 +368,77 @@ mi_app_briefing_card <- function(snapshot) {
     full_screen = TRUE,
     bslib::card_header(
       shiny::tags$div(
-        shiny::tags$span(class = "mi-eyebrow", "Executive briefing"),
+        shiny::tags$span(class = "mi-eyebrow", "Daily brief"),
         shiny::tags$h2(id = "mi-briefing-state", content$headline)
       ),
       mi_app_status_badge(snapshot$status)
     ),
     bslib::card_body(
       class = "mi-brief-body",
-      shiny::tags$p(class = "mi-lede", content$summary),
       shiny::tags$div(
-        class = "mi-insight-grid",
+        class = "mi-brief-sections",
         shiny::tags$section(
-          shiny::tags$h3("Why it matters"),
-          shiny::tags$p(content$implication)
+          shiny::tags$span(class = "mi-section-number", "01"),
+          shiny::tags$div(
+            shiny::tags$h3("What changed"),
+            shiny::tags$p(class = "mi-lede", content$summary)
+          )
         ),
         shiny::tags$section(
-          shiny::tags$h3("Continuity"),
-          shiny::tags$p(content$continuity)
+          shiny::tags$span(class = "mi-section-number", "02"),
+          shiny::tags$div(
+            shiny::tags$h3("Why it matters"),
+            shiny::tags$p(content$implication)
+          )
         )
+      ),
+      shiny::tags$section(
+        class = paste(
+          "mi-memory-effect",
+          if (isTRUE(content$memory_used)) "is-applied" else "is-first-read"
+        ),
+        shiny::tags$div(
+          class = "mi-memory-heading",
+          bsicons::bs_icon(
+            if (isTRUE(content$memory_used)) "layers-fill" else "layers",
+            `aria-hidden` = "true"
+          ),
+          shiny::tags$div(
+            shiny::tags$span(class = "mi-eyebrow", "Governed continuity"),
+            shiny::tags$h3("What accepted memory changed")
+          ),
+          shiny::tags$span(
+            class = "mi-memory-badge",
+            if (isTRUE(content$memory_used)) {
+              "Accepted memory applied"
+            } else {
+              "First read"
+            }
+          )
+        ),
+        shiny::tags$p(content$continuity)
+      ),
+      shiny::tags$section(
+        class = "mi-next-step",
+        shiny::tags$div(
+          class = "mi-next-step-icon",
+          bsicons::bs_icon("arrow-up-right", `aria-hidden` = "true")
+        ),
+        shiny::tags$div(
+          shiny::tags$span(class = "mi-eyebrow", "Proposed next step"),
+          shiny::tags$strong(content$action$title),
+          shiny::tags$small(
+            paste(content$action$owner, "· due", content$action$due_date)
+          )
+        ),
+        if (length(snapshot$pending) > 0L) {
+          shiny::actionButton(
+            "open_review",
+            "Review decision",
+            icon = bsicons::bs_icon("arrow-right", `aria-hidden` = "true"),
+            class = "btn-primary"
+          )
+        }
       ),
       shiny::tags$details(
         class = "mi-full-brief",
@@ -375,6 +447,56 @@ mi_app_briefing_card <- function(snapshot) {
           mi_app_scope_markdown_headings(snapshot$briefing$markdown)
         ))
       )
+    )
+  )
+}
+
+mi_app_brief_metrics <- function(snapshot) {
+  content <- snapshot$change_set
+  if (is.null(content)) {
+    return(list(
+      mi_app_metric("Materiality", "—", "Available after the scan", "flag"),
+      mi_app_metric("Confidence", "—", "Available after the scan", "bullseye"),
+      mi_app_metric(
+        "Evidence",
+        "—",
+        "Sources stay linked",
+        "file-earmark-text"
+      ),
+      mi_app_metric("Memory effect", "—", "Accepted knowledge only", "layers")
+    ))
+  }
+  list(
+    mi_app_metric(
+      "Materiality",
+      tools::toTitleCase(content$materiality),
+      "Requires a human decision",
+      "flag"
+    ),
+    mi_app_metric(
+      "Confidence",
+      paste0(round(content$confidence * 100), "%"),
+      "Planner assessment",
+      "bullseye"
+    ),
+    mi_app_metric(
+      "Evidence",
+      length(content$observations),
+      paste(
+        length(content$sources),
+        if (length(content$sources) == 1L) "linked source" else "linked sources"
+      ),
+      "file-earmark-text"
+    ),
+    mi_app_metric(
+      "Memory effect",
+      if (isTRUE(content$memory_used)) "Applied" else "First read",
+      if (isTRUE(content$memory_used)) {
+        "Accepted Graft history informed this brief"
+      } else {
+        "No accepted thesis informed this brief"
+      },
+      "layers"
     )
   )
 }
@@ -427,16 +549,12 @@ mi_app_evidence_card <- function(snapshot) {
   )
 }
 
-mi_app_briefing_view <- function(
-  worker,
-  snapshot,
-  progress,
-  tool_count
-) {
-  business_count <- nrow(mi_worker_records(worker, "Business"))
-  assessment_count <- nrow(mi_worker_records(worker, "Assessment"))
-  action_count <- nrow(mi_worker_records(worker, "IntelligenceAction"))
-  pending_count <- length(snapshot$pending)
+mi_app_briefing_view <- function(snapshot, progress, tool_count) {
+  current_date <- mi_or(
+    snapshot$scan_date,
+    if (!is.null(progress$next_bundle)) progress$next_bundle$scan_date
+  )
+  metrics <- mi_app_brief_metrics(snapshot)
   shiny::tagList(
     shiny::tags$header(
       class = "mi-hero",
@@ -444,19 +562,19 @@ mi_app_briefing_view <- function(
         shiny::tags$span(class = "mi-eyebrow", "Morning intelligence"),
         shiny::tags$h1(
           id = "mi-page-title",
-          "See the market as a connected system."
+          "Your daily market brief."
         ),
         shiny::tags$p(
           paste(
-            "Signals become useful only when they connect to a business,",
-            "competitor, downstream market, accountable action, and outcome."
+            "A source-linked view of what changed across Dow's businesses,",
+            "competitors, and downstream markets—then one bounded decision."
           )
         )
       ),
       shiny::tags$div(
         class = "mi-hero-date",
-        shiny::tags$span("Demo horizon"),
-        shiny::tags$strong("July 2026")
+        shiny::tags$span("Briefing date"),
+        shiny::tags$strong(mi_app_display_date(current_date))
       )
     ),
     mi_app_scan_controls(
@@ -467,34 +585,10 @@ mi_app_briefing_view <- function(
     bslib::layout_column_wrap(
       width = "220px",
       fill = FALSE,
-      mi_app_metric(
-        "Portfolio coverage",
-        business_count,
-        "Global businesses in the graph",
-        "boxes"
-      ),
-      mi_app_metric(
-        "Accepted theses",
-        assessment_count,
-        "Reviewed assessments in Graft",
-        "check2-circle"
-      ),
-      mi_app_metric(
-        "Open actions",
-        action_count,
-        "Owner-assigned follow-ups",
-        "arrow-up-right-circle"
-      ),
-      mi_app_metric(
-        "Review inbox",
-        pending_count,
-        if (pending_count == 1L) {
-          "Assessment needs a decision"
-        } else {
-          "Nothing waiting for approval"
-        },
-        "inbox"
-      )
+      metrics[[1L]],
+      metrics[[2L]],
+      metrics[[3L]],
+      metrics[[4L]]
     ),
     bslib::layout_columns(
       col_widths = c(8, 4),
@@ -601,12 +695,15 @@ mi_app_review_view <- function(snapshot) {
   shiny::tagList(
     shiny::tags$header(
       class = "mi-section-header",
-      shiny::tags$span(class = "mi-eyebrow", "Approval boundary"),
-      shiny::tags$h2(id = "mi-review-title", "Review before interpretation"),
+      shiny::tags$span(class = "mi-eyebrow", "Decision room"),
+      shiny::tags$h2(
+        id = "mi-review-title",
+        "Decide what becomes organizational memory"
+      ),
       shiny::tags$p(
         paste(
-          "The public evidence is inspectable now. The assessment, action,",
-          "and durable organizational memory remain pending."
+          "Trace the line from source-faithful observations to interpretation",
+          "and action before anything enters Graft."
         )
       )
     ),
@@ -623,21 +720,63 @@ mi_app_review_view <- function(snapshot) {
         class = "mi-review-card",
         bslib::card_header(
           shiny::tags$div(
-            shiny::tags$span(class = "mi-eyebrow", "Proposed assessment"),
+            shiny::tags$span(class = "mi-eyebrow", "Decision packet"),
             shiny::tags$h3(id = "mi-review-state", content$headline)
           ),
           mi_app_status_badge("awaiting_approval")
         ),
         bslib::card_body(
           shiny::tags$div(
-            class = "mi-review-grid",
-            shiny::tags$section(
-              shiny::tags$h4("Assessment"),
-              shiny::tags$p(content$summary),
-              shiny::tags$h4("Implication"),
-              shiny::tags$p(content$implication)
+            class = "mi-review-flow",
+            shiny::tags$article(
+              class = "mi-review-layer is-observed",
+              shiny::tags$header(
+                shiny::tags$span(class = "mi-review-step", "01"),
+                shiny::tags$div(
+                  shiny::tags$span(class = "mi-eyebrow", "Evidence"),
+                  shiny::tags$h4("Observed")
+                )
+              ),
+              shiny::tags$p(
+                class = "mi-layer-intro",
+                "Source-faithful signals; no organizational judgment yet."
+              ),
+              shiny::tags$ol(
+                class = "mi-review-observations",
+                lapply(
+                  content$observations,
+                  \(observation) {
+                    shiny::tags$li(
+                      shiny::tags$span(
+                        class = paste0(
+                          "mi-direction is-",
+                          observation$direction
+                        ),
+                        observation$direction
+                      ),
+                      shiny::tags$p(observation$statement)
+                    )
+                  }
+                )
+              ),
+              shiny::tags$div(
+                class = "mi-review-sources",
+                shiny::tags$h5("Linked sources"),
+                mi_app_source_list(content$sources)
+              )
             ),
-            shiny::tags$aside(
+            shiny::tags$article(
+              class = "mi-review-layer is-interpreted",
+              shiny::tags$header(
+                shiny::tags$span(class = "mi-review-step", "02"),
+                shiny::tags$div(
+                  shiny::tags$span(class = "mi-eyebrow", "Assessment"),
+                  shiny::tags$h4("Interpreted")
+                )
+              ),
+              shiny::tags$p(class = "mi-layer-intro", content$summary),
+              shiny::tags$h5("Why it matters"),
+              shiny::tags$p(content$implication),
               shiny::tags$dl(
                 shiny::tags$div(
                   shiny::tags$dt("Materiality"),
@@ -648,7 +787,39 @@ mi_app_review_view <- function(snapshot) {
                   shiny::tags$dd(
                     paste0(round(content$confidence * 100), "%")
                   )
+                )
+              ),
+              shiny::tags$section(
+                class = "mi-review-memory",
+                shiny::tags$span("Effect of accepted memory"),
+                shiny::tags$p(content$continuity)
+              )
+            ),
+            shiny::tags$article(
+              class = "mi-review-layer is-proposed",
+              shiny::tags$header(
+                shiny::tags$span(class = "mi-review-step", "03"),
+                shiny::tags$div(
+                  shiny::tags$span(class = "mi-eyebrow", "Next step"),
+                  shiny::tags$h4("Proposed")
+                )
+              ),
+              shiny::tags$p(
+                class = "mi-layer-intro",
+                "A bounded follow-up with an accountable owner and date."
+              ),
+              shiny::tags$div(
+                class = "mi-proposed-action",
+                bsicons::bs_icon(
+                  "arrow-right-circle",
+                  `aria-hidden` = "true"
                 ),
+                shiny::tags$div(
+                  shiny::tags$span("Action"),
+                  shiny::tags$strong(content$action$title)
+                )
+              ),
+              shiny::tags$dl(
                 shiny::tags$div(
                   shiny::tags$dt("Owner"),
                   shiny::tags$dd(content$action$owner)
@@ -661,11 +832,39 @@ mi_app_review_view <- function(snapshot) {
             )
           ),
           shiny::tags$section(
-            class = "mi-proposed-action",
-            bsicons::bs_icon("arrow-right-circle", `aria-hidden` = "true"),
+            class = "mi-review-consequences",
+            `aria-labelledby` = "mi-consequences-title",
+            shiny::tags$h4(
+              id = "mi-consequences-title",
+              "What your decision does"
+            ),
             shiny::tags$div(
-              shiny::tags$span("Proposed action"),
-              shiny::tags$strong(content$action$title)
+              shiny::tags$article(
+                class = "is-approve",
+                bsicons::bs_icon("check2-circle", `aria-hidden` = "true"),
+                shiny::tags$div(
+                  shiny::tags$strong("Approve and save"),
+                  shiny::tags$p(
+                    paste(
+                      "Commit this assessment, action, evidence, and run to",
+                      "Graft. Future briefs may use it."
+                    )
+                  )
+                )
+              ),
+              shiny::tags$article(
+                class = "is-reject",
+                bsicons::bs_icon("x-circle", `aria-hidden` = "true"),
+                shiny::tags$div(
+                  shiny::tags$strong("Reject proposal"),
+                  shiny::tags$p(
+                    paste(
+                      "Record the rejection in Tempest. Accepted Graft memory",
+                      "remains unchanged."
+                    )
+                  )
+                )
+              )
             )
           ),
           shiny::tags$label(
@@ -686,13 +885,13 @@ mi_app_review_view <- function(snapshot) {
           class = "mi-review-actions",
           shiny::actionButton(
             "reject_assessment",
-            "Reject",
+            "Reject proposal",
             icon = bsicons::bs_icon("x-lg", `aria-hidden` = "true"),
             class = "btn-outline-danger"
           ),
           shiny::actionButton(
             "approve_assessment",
-            "Approve into Graft",
+            "Approve and save to Graft",
             icon = bsicons::bs_icon("check2", `aria-hidden` = "true"),
             class = "btn-success"
           )

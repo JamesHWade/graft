@@ -85,13 +85,18 @@ radar <- system.file(
 shiny::runApp(file.path(radar, "app"))
 ```
 
-The five views expose separate parts of the contract:
+The five views expose separate parts of the contract. The primary path stays
+deliberately quiet: read the daily brief, inspect what accepted memory changed,
+and open the decision room only when a proposal needs judgment.
 
-- **Briefing** shows the current evidence packet and source-linked narrative.
+- **Briefing** separates what changed, why it matters, the effect of accepted
+  memory, and one proposed next step. Materiality, confidence, and evidence
+  counts remain visible without competing with the narrative.
 - **Portfolio map** shows enterprise overlap, business-specific competitors,
   and downstream lenses.
-- **Review** shows the exact assessment and accountable action proposed for
-  durable storage.
+- **Review** presents observed evidence, analyst interpretation, and proposed
+  action as distinct layers. It states the Graft consequence of approval or
+  rejection before the user decides.
 - **Knowledge** contains only approved assessments and open actions.
 - **Audit** separates Tempest workflow events from accepted Graft runs.
 

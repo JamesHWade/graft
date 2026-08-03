@@ -60,6 +60,19 @@ test_that("kg_export_okf writes a deterministic source-linked bundle", {
   )
   frontmatter <- graft:::okf_parse_frontmatter(claim_path)
   body <- paste(readLines(claim_path, warn = FALSE), collapse = "\n")
+  entity_path <- file.path(
+    first_path,
+    "concepts",
+    "Entity",
+    paste0(
+      utils::URLencode(fixture$ids$lldpe, reserved = TRUE),
+      ".md"
+    )
+  )
+  entity_body <- paste(
+    readLines(entity_path, warn = FALSE),
+    collapse = "\n"
+  )
 
   expect_identical(frontmatter$type, "Claim")
   expect_identical(frontmatter$status, "stable")
@@ -81,6 +94,7 @@ test_that("kg_export_okf writes a deterministic source-linked bundle", {
   expect_match(body, "## Relationships", fixed = TRUE)
   expect_match(body, "/concepts/Entity/", fixed = TRUE)
   expect_match(body, "[^source-", fixed = TRUE)
+  expect_length(grep("[^]", entity_body, fixed = TRUE), 0L)
 })
 
 test_that("kg_export_okf recovers a historical accepted boundary", {

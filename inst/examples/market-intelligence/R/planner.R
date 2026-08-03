@@ -14,6 +14,19 @@ mi_text <- function(value, field) {
   trimws(value)
 }
 
+mi_iso_date <- function(value, field) {
+  value <- mi_text(value, field)
+  parsed <- suppressWarnings(as.Date(value, format = "%Y-%m-%d"))
+  if (
+    !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", value) ||
+      is.na(parsed) ||
+      !identical(format(parsed, "%Y-%m-%d"), value)
+  ) {
+    stop(paste0("`", field, "` must be a valid ISO date (YYYY-MM-DD)."))
+  }
+  value
+}
+
 mi_read_json <- function(path) {
   jsonlite::fromJSON(path, simplifyVector = FALSE)
 }
@@ -166,6 +179,7 @@ mi_model_planner <- function(chat) {
         "Return one bounded owner-assigned action.",
         "Use materiality values monitor, material, or urgent.",
         "Return confidence as a number between zero and one.",
+        "Return due_date as a valid ISO date in YYYY-MM-DD format.",
         "Return memory_used as yes only when accepted memory changed the readout.",
         "The Markdown briefing must include sources and the approval boundary."
       )
@@ -212,6 +226,7 @@ mi_run_planner <- function(planner, request, bundle, memory) {
       paste0("planner$", field)
     )
   }
+  result$due_date <- mi_iso_date(result$due_date, "planner$due_date")
   result$materiality <- match.arg(
     tolower(result$materiality),
     c("monitor", "material", "urgent")

@@ -323,6 +323,7 @@ mi_worker_snapshot <- function(worker) {
       run_id = NULL,
       status = "ready",
       bundle_id = NULL,
+      scan_date = NULL,
       request = NULL,
       planning_engine = NULL,
       briefing = NULL,
@@ -339,6 +340,7 @@ mi_worker_snapshot <- function(worker) {
     run_id = run_id,
     status = tempest::tempest_run_status(run),
     bundle_id = metadata$bundle$bundle_id,
+    scan_date = metadata$bundle$scan_date,
     request = metadata$request,
     planning_engine = metadata$planning_engine,
     briefing = list(
