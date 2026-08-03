@@ -246,8 +246,25 @@ validate_manifest_projection_contracts <- function(manifest, subclass) {
 
     slots <- contract$slots
     for (slot_name in names(slots)) {
+      slot <- slots[[slot_name]]
+      if (!identical(scalar_character(slot$name), slot_name)) {
+        abort_schema_integrity(
+          paste0(
+            "Slot `",
+            record_class,
+            ".",
+            slot_name,
+            "` name must match its manifest key."
+          ),
+          record_class = record_class,
+          slot = slot_name,
+          declared_name = scalar_character(slot$name),
+          rule = "slot_name_contract",
+          subclass = subclass
+        )
+      }
       validate_compiler_slot_type(
-        slots[[slot_name]],
+        slot,
         slot_name,
         record_class,
         subclass

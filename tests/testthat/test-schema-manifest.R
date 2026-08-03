@@ -74,6 +74,20 @@ test_that("manifest integrity validates projection contracts", {
   expect_identical(condition$rule, "generated_relation_contract")
 })
 
+test_that("manifest integrity rejects scalar slot name mismatches", {
+  schema <- kg_schema(tempest_manifest_path())
+  tampered <- unserialize(serialize(schema, NULL))
+  tampered$manifest$classes$Entity$slots$description$name <- "renamed"
+  tampered <- refresh_schema_structural_digest(tampered)
+
+  condition <- rlang::catch_cnd(validate_manifest_integrity(tampered))
+
+  expect_s3_class(condition, "graft_schema_integrity_error")
+  expect_identical(condition$rule, "slot_name_contract")
+  expect_identical(condition$record_class, "Entity")
+  expect_identical(condition$slot, "description")
+})
+
 test_that("narrative claims do not require artificial predicates", {
   schema <- kg_schema(tempest_manifest_path())
   claim_slots <- kg_slots(schema, "Claim")$slot
