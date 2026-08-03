@@ -5,126 +5,90 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft keeps records produced by R workflows consistent, connected, and
-traceable across runs. It reconciles identities, validates related data as they
-are written, preserves claims with exact source evidence, and provides bounded
-retrieval for analysts, applications, and AI tools.
+graft turns records from R workflows into governed, traceable knowledge. A
+LinkML schema defines the domain contract. Every accepted change carries
+provenance, passes through a reviewable plan, and becomes an immutable revision.
+Bounded retrieval, history, and a readable Open Knowledge Format (OKF) working
+tree are derived from that accepted ledger.
 
-Graft is OKF-first and Graft-backed. People and agents work with a plain
-Markdown [Open Knowledge
-Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-(OKF) directory. A compiled LinkML contract and DuckDB revision ledger remain
-underneath to enforce identity, validation, history, and approval.
+[![Graft architecture: LinkML supplies the contract, DuckDB stores accepted revisions and provenance, and OKF provides a readable working surface.](man/figures/okf-linkml-duckdb-system.svg)](man/figures/okf-linkml-duckdb-system.svg)
 
-[![Architecture diagram with Graft at the center. LinkML supplies the domain contract, OKF provides the readable working surface, and DuckDB holds accepted revisions and provenance.](man/figures/okf-linkml-duckdb-system.svg)](man/figures/okf-linkml-duckdb-system.svg)
-
-Start with the [getting started
-guide](https://jameshwade.github.io/graft/articles/getting-started.html) to
-build a small store and query its records, claims, and evidence.
-The [LinkML schema
-article](https://jameshwade.github.io/graft/articles/linkml-schema.html) starts
-from an ordinary schema with no graft-specific imports or annotations.
-The [examples
-page](https://jameshwade.github.io/graft/articles/examples.html) applies the
-same workflow to chemistry and environmental biology.
-
-The current storage backend is embedded DuckDB, which keeps a graft store local
-and available through DBI and dbplyr. Python and `linkml-runtime` are required
-only to compile a schema; loading a committed manifest and using a store run in
-R:
+## A complete change
 
 ```r
 library(graft)
 
-manifest <- system.file(
+schema <- graft_schema(system.file(
   "extdata",
   "personinfo.graft.json",
   package = "graft"
-)
-schema <- kg_schema(manifest)
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
-kg_init(store)
+))
+store <- graft_open(schema, "knowledge.duckdb")
 
-kg_ingest(
-  store,
-  kg_batch(
-    producer = "directory-import",
-    source_run_id = "run-42",
-    idempotency_key = "daily-planet-v1"
+provenance <- graft_provenance(
+  producer = "directory-import",
+  run_id = "run-42",
+  idempotency_key = "daily-planet-v1"
+)
+
+records <- list(
+  Organization = data.frame(
+    id = "org:daily-planet",
+    name = "Daily Planet"
   ),
-  list(
-    Organization = data.frame(
-      id = "org:daily-planet",
-      name = "Daily Planet"
-    ),
-    Person = data.frame(
-      id = "person:clark-kent",
-      full_name = "Clark Kent",
-      employed_by = I(list("org:daily-planet"))
-    )
+  Person = data.frame(
+    id = "person:clark-kent",
+    full_name = "Clark Kent",
+    employed_by = I(list("org:daily-planet"))
   )
 )
 
-kg_get(store, "person:clark-kent")
+plan <- graft_plan(store, records, provenance)
+plan@changes
+plan@issues
 
-# Creates the managed sibling directory knowledge.okf
-kg_sync_okf(store)
-kg_okf_status(store)
+if (plan@valid) {
+  graft_commit(store, plan)
+}
+
+graft_get(store, "person:clark-kent")
+graft_find(store, "Clark", class = "Person")
+graft_history(store, "person:clark-kent")
+
+graft_sync(store)
+graft_status(store)
+graft_close(store)
 ```
 
-The batch is atomic, its relationship is validated, and reusing the same
-producer and idempotency key does not create another observation. Functions
-that collect records or graph results require a limit and report whether the
-result was truncated. `kg_tools()` exposes seven read-only ellmer tools,
-including progressive access to the current accepted OKF working tree:
+Planning is read-only. Committing rechecks the plan against the store and
+active contract before accepting all changes atomically. Use `graft_ingest()`
+when the same process may plan and commit without a separate review step.
 
-```r
-chat <- ellmer::chat_anthropic()
-chat$set_tools(kg_tools(store))
-```
+The revision ledger is the authority for accepted record content. Current
+records, search results, graph projections, and the OKF working tree are
+rebuildable views. Editing OKF therefore creates a proposal: `graft_review()`
+turns the edits into an ordinary plan, and `graft_commit()` is still the only
+acceptance boundary.
 
-## Work in open knowledge
+## Public API
 
-A file-backed `knowledge.duckdb` store manages the sibling `knowledge.okf`
-directory by default. Synchronization is explicit so a filesystem failure
-cannot be mistaken for a failed database transaction:
+The v0.1 surface is deliberately small:
 
-```r
-bundle <- kg_sync_okf(store)
-bundle
+- Contract: `graft_schema()`
+- Store lifecycle: `graft_open()`, `graft_close()`
+- Provenance and changes: `graft_provenance()`, `graft_plan()`,
+  `graft_commit()`, `graft_ingest()`
+- Retrieval and history: `graft_get()`, `graft_find()`, `graft_query()`,
+  `graft_history()`
+- Open knowledge: `graft_sync()`, `graft_status()`, `graft_review()`
+- Read-only agent access: `graft_tools()`
 
-kg_okf_context(store)
-kg_okf_context(
-  store,
-  query = "Daily Planet",
-  types = "Organization"
-)
-```
-
-Each concept remains readable Markdown, object references become links, and
-source records become OKF source citations. The `graft` frontmatter extension
-retains exact record, revision, batch, and schema identity. If a person or
-agent edits the structured `graft.record` mapping, the edit is still only a
-proposal:
-
-```r
-plan <- kg_plan_okf_import(store)
-plan
-
-result <- kg_apply_okf_import(
-  store,
-  plan,
-  kg_batch(
-    producer = "human:reviewer",
-    idempotency_key = "approved-okf-edit-1"
-  )
-)
-```
-
-Planning is read-only. Application revalidates the plan, bundle, store,
-schema, and accepted batch before committing through the ordinary Graft write
-path. Historical or selected snapshots remain available through
-`kg_export_okf()`. Read [Work with open knowledge by
-default](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
-for managed synchronization, agent retrieval, proposal review, historical
-export.
+Start with the [getting started
+guide](https://jameshwade.github.io/graft/articles/getting-started.html). The
+[LinkML contract
+article](https://jameshwade.github.io/graft/articles/linkml-schema.html)
+explains schemas, [change
+control](https://jameshwade.github.io/graft/articles/knowledge-change-control.html)
+explains plans and history, and the [OKF
+article](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
+explains synchronization and review.

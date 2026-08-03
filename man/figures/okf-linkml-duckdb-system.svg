@@ -145,7 +145,7 @@
   <rect class="pill" x="551" y="510" width="90" height="34" rx="17"/>
   <text class="pill-text" x="596" y="533" text-anchor="middle">identify</text>
   <rect class="pill" x="651" y="510" width="108" height="34" rx="17"/>
-  <text class="pill-text" x="705" y="533" text-anchor="middle">approve</text>
+  <text class="pill-text" x="705" y="533" text-anchor="middle">plan</text>
 
   <rect class="node" x="70" y="615" width="1060" height="94" rx="24"/>
   <ellipse cx="132" cy="650" rx="26" ry="10" fill="none" stroke="var(--forest)" stroke-width="3"/>
@@ -170,7 +170,7 @@
   <text class="small" x="940" y="418" text-anchor="middle">work in readable files</text>
   <path class="connector" d="M1080 420 C1100 390 1100 350 1080 316" marker-end="url(#arrow)"/>
 
-  <text class="label" x="213" y="414" text-anchor="middle">Applications</text>
+  <text class="label" x="213" y="414" text-anchor="middle">R workflows</text>
   <text class="small" x="213" y="441" text-anchor="middle">call bounded Graft APIs</text>
   <path class="connector" d="M300 455 L382 455" marker-end="url(#arrow)"/>
 </svg>

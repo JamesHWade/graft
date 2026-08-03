@@ -24,31 +24,31 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Traceable knowledge for R workflows"
+  title: "graft: Governed, traceable knowledge for R workflows"
   description: >
-    Keep records consistent across runs, preserve claims with exact evidence,
-    and provide bounded, schema-aware retrieval to analysts and AI tools.
+    Validate workflow records against a LinkML contract, review changes before
+    acceptance, preserve exact revision history, and retrieve knowledge through
+    bounded R and agent interfaces.
   sidebar:
     structure: [links, license, authors, dev]
 
 navbar:
   structure:
-    left:
-      [intro, change_control, open_knowledge, examples, reference, news]
+    left: [intro, contract, change_control, open_knowledge, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
+    contract:
+      text: LinkML contract
+      href: articles/linkml-schema.html
     change_control:
       text: Change control
       href: articles/knowledge-change-control.html
     open_knowledge:
       text: Open knowledge
       href: articles/open-knowledge-format.html
-    examples:
-      text: Examples
-      href: articles/examples.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/JamesHWade/graft/
@@ -64,118 +64,47 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Follow one workflow from domain contract to traceable retrieval, or start
-      from an ordinary LinkML schema and see how graft applies it in R.
+      Follow the complete provider-free workflow, then go deeper into the
+      contract, change-control, and readable open-knowledge boundaries.
     contents:
       - getting-started
-      - knowledge-change-control
       - linkml-schema
+      - knowledge-change-control
       - open-knowledge-format
-  - title: Examples
-    desc: >
-      Small, runnable domain models adapted from established LinkML projects.
-    contents:
-      - examples
 
 reference:
-  - title: Schema
+  - title: Contract and store
     desc: >
-      Compile and inspect LinkML schemas and their generated manifests.
-  - contents:
-      - kg_compile_schema
-      - kg_schema
-      - kg_schema_diff
-      - kg_classes
-      - kg_slots
-      - kg_enums
-      - kg_schema_info
-  - title: Store lifecycle
+      Load a LinkML-derived contract and manage the lifecycle of its Graft
+      store.
+    contents:
+      - graft_schema
+      - graft_open
+      - graft_close
+  - title: Provenance and changes
     desc: >
-      Open, initialize, inspect, and close a DuckDB store.
-  - contents:
-      - kg_connect_duckdb
-      - kg_init
-      - kg_disconnect
-      - kg_store_info
-      - kg_capabilities
-  - title: Ingestion and validation
-    desc: >
-      Validate and write records in batches with provenance and idempotency.
-  - contents:
+      Describe candidate origins, plan reviewable changes, and accept them
+      through the single atomic commit path.
+    contents:
       - graft_provenance
       - graft_plan
       - graft_review
       - graft_commit
       - graft_ingest
-      - kg_batch
-      - kg_ingest
-      - kg_write
-      - kg_validate_data
   - title: Retrieval and history
     desc: >
-      Retrieve authoritative current and historical records through the
-      bounded revision-first API.
-  - contents:
+      Retrieve current and historical accepted knowledge through bounded,
+      contract-aware operations.
+    contents:
       - graft_get
       - graft_find
       - graft_query
       - graft_history
-  - title: History and change control
+  - title: Open knowledge and agents
     desc: >
-      Inspect accepted revisions and apply explicitly reviewed additive schema
-      migrations.
-  - contents:
-      - kg_batches
-      - kg_changes
-      - kg_history
-      - kg_check_store
-      - kg_plan_migration
-      - kg_apply_migration
-  - title: Records and identity
-    desc: >
-      Read records, search declared text fields, and resolve external
-      identifiers.
-  - contents:
-      - kg_records
-      - kg_find
-      - kg_get
-      - kg_lookup
-      - kg_identifiers
-      - kg_unresolved
-  - title: Claims and evidence
-    desc: >
-      Inspect claims and the stored sources and locations that support or
-      challenge them.
-  - contents:
-      - kg_claims
-      - kg_evidence
-      - kg_competing_claims
-  - title: Graph projections
-    desc: >
-      Inspect graph nodes and edges or traverse a limited neighborhood.
-  - contents:
-      - kg_nodes
-      - kg_edges
-      - kg_neighbors
-      - kg_traverse
-      - kg_subgraph
-  - title: Structured access
-    desc: >
-      Inspect the retrieval contract, run field-and-filter queries, and create
-      ellmer tools.
-  - contents:
-      - kg_context
-      - kg_select
-      - kg_tools
-  - title: Open knowledge
-    desc: >
-      Synchronize, read, review, and exchange the managed human- and
-      agent-readable OKF working tree without replacing the governing schema
-      or ledger.
-  - contents:
-      - kg_sync_okf
-      - kg_okf_status
-      - kg_okf_context
-      - kg_plan_okf_import
-      - kg_apply_okf_import
-      - kg_export_okf
+      Synchronize and inspect the readable OKF working tree or create read-only
+      tools backed by accepted retrieval.
+    contents:
+      - graft_sync
+      - graft_status
+      - graft_tools
