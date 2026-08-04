@@ -1,0 +1,151 @@
+---
+title: "Understand graft's architecture"
+description: >
+  See how the domain contract, accepted revision ledger, derived projections,
+  and selective S7 objects fit around one acceptance boundary.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Understand graft's architecture}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+graft is organized around one question: **what was accepted?** The answer is
+the immutable revision ledger. Everything else either constrains a proposed
+change before acceptance or derives a useful view after acceptance.
+
+<figure class="graft-article-figure">
+<p class="graft-swipe-hint">Swipe to explore the diagram &rarr;</p>
+<div class="graft-diagram-scroll">
+<img
+  class="graft-architecture-visual"
+  src="../reference/figures/okf-linkml-duckdb-system.svg"
+  alt="LinkML defines the contract, DuckDB stores accepted revisions and provenance, and OKF provides a readable projection."
+>
+</div>
+<figcaption>
+Contract, accepted authority, and readable projection stay distinct.
+</figcaption>
+</figure>
+
+This is the package's simplifying idea. It avoids parallel mutation APIs,
+storage-shaped user functions, and ambiguity between a readable file and an
+accepted record.
+
+## The four architectural roles
+
+### The contract defines meaning
+
+A LinkML schema defines concrete classes, identifiers, required and
+multivalued fields, scalar ranges, relationships, and retrieval policy. graft
+compiles that schema into a canonical `.graft.json` contract with stable
+digests.
+
+The contract governs planning, revision acceptance, retrieval, and projection
+generation. It does not prescribe a separate R class for every domain class.
+
+### A plan makes the proposal inspectable
+
+`graft_plan()` accepts candidate data frames and explicit provenance. It
+normalizes values, resolves identity, validates the complete connected set,
+compares candidates with accepted heads, and returns inserts, updates, matches,
+and collected issues.
+
+Planning is read-only. The plan binds its result to the store identity, schema
+digest, expected record heads, idempotency state, and a deterministic digest.
+That binding makes review meaningful instead of advisory.
+
+### The ledger records acceptance
+
+`graft_commit()` is the only internal acceptance path. Immediately before
+mutation it rechecks the plan, store, contract, write capability, idempotency
+state, and expected heads. The full batch commits in one transaction.
+
+Each accepted revision retains its record content, predecessor, changed
+fields, schema digest, accepted batch, and producer provenance. Historical
+state is therefore recovered from accepted facts rather than reconstructed
+from logs or current tables.
+
+### Projections serve readers
+
+Current record heads, identifiers, search data, semantic relationships, and
+the Open Knowledge Format (OKF) working tree are derived from accepted
+revisions and the active contract. A projection may be rebuilt or repaired; it
+never becomes a second authority for record content.
+
+## Why S7 is selective
+
+S7 helps where the package must protect durable invariants:
+
+- `GraftSchema` owns a validated compiled contract and its digests.
+- `GraftProvenance` owns producer and idempotency semantics.
+- `GraftCommitPlan` owns the candidate change set and commit preconditions.
+- `GraftStore` owns store identity and private connection state.
+
+These objects form the trusted boundary between user intent and mutation.
+Properties make important state explicit, constructors establish invariants,
+and dispatch stays narrow.
+
+S7 would add ceremony without benefit at the ordinary data boundary. Domain
+records remain data frames, collections remain named lists, and retrieval
+results remain data frames or lists. LinkML remains the domain type system;
+graft does not mirror every LinkML class with an R class hierarchy.
+
+## Storage is an implementation boundary
+
+The current store uses embedded DuckDB, but the public API speaks in lifecycle
+operations:
+
+- define and open;
+- propose and accept;
+- retrieve and inspect; and
+- synchronize and integrate.
+
+No public function exposes internal table names or accepts raw SQL. The store
+owns its connection, transactions, format version, migrations, and projection
+maintenance behind a small internal backend boundary. This keeps a future
+backend change from becoming a public API redesign.
+
+## Failure behavior is part of the design
+
+The architecture is useful because its failures are explicit:
+
+- invalid candidates return reviewable issues and cannot commit;
+- an altered plan fails digest verification;
+- a changed contract or record head makes a plan stale;
+- a transaction failure accepts none of the batch;
+- an OKF edit remains a proposal until reviewed and committed;
+- projection drift can be detected and repaired from revisions; and
+- retrieval limits and truncation are reported rather than hidden.
+
+There is no force flag that turns a failed precondition into acceptance.
+Callers create a fresh plan against the new state.
+
+## The complete lifecycle
+
+<figure class="graft-article-figure">
+<p class="graft-swipe-hint">Swipe to explore the diagram &rarr;</p>
+<div class="graft-diagram-scroll">
+<img
+  class="graft-architecture-visual"
+  src="../reference/figures/okf-acceptance-loop.svg"
+  alt="Accepted revisions synchronize to readable files; edits return through review and commit."
+>
+</div>
+<figcaption>
+Readable files remain proposals until they pass the ordinary commit boundary.
+</figcaption>
+</figure>
+
+For code, start with [Getting started](getting-started.html). Then read
+[Change control](knowledge-change-control.html) for commit preconditions,
+[Retrieval and history](retrieval.html) for the read surface, and [Open
+knowledge](open-knowledge-format.html) for the filesystem proposal loop.

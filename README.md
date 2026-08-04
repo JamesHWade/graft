@@ -5,11 +5,12 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft turns records from R workflows into governed, traceable knowledge. A
-LinkML schema defines the domain contract. Every accepted change carries
-provenance, passes through a reviewable plan, and becomes an immutable revision.
-Bounded retrieval, history, and a readable Open Knowledge Format (OKF) working
-tree are derived from that accepted ledger.
+graft turns candidate records from R workflows into governed, traceable
+knowledge changes. A LinkML schema defines the domain contract. Every accepted
+change carries provenance, passes through a read-only plan, and becomes an
+immutable revision through one atomic commit path. Bounded retrieval, history,
+and a readable Open Knowledge Format (OKF) working tree are derived from that
+accepted ledger.
 
 [![Graft architecture: LinkML supplies the contract, DuckDB stores accepted revisions and provenance, and OKF provides a readable working surface.](man/figures/okf-linkml-duckdb-system.svg)](man/figures/okf-linkml-duckdb-system.svg)
 
@@ -83,12 +84,15 @@ The v0.1 surface is deliberately small:
 - Open knowledge: `graft_sync()`, `graft_status()`, `graft_review()`
 - Read-only agent access: `graft_tools()`
 
-Start with the [getting started
-guide](https://jameshwade.github.io/graft/articles/getting-started.html). The
-[LinkML contract
-article](https://jameshwade.github.io/graft/articles/linkml-schema.html)
-explains schemas, [change
+Start with the [10-minute getting started
+guide](https://jameshwade.github.io/graft/articles/getting-started.html). Then
+read [architecture](https://jameshwade.github.io/graft/articles/architecture.html)
+for the authority and projection model, [change
 control](https://jameshwade.github.io/graft/articles/knowledge-change-control.html)
-explains plans and history, and the [OKF
-article](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
-explains synchronization and review.
+for plans and commit preconditions, [retrieval and
+history](https://jameshwade.github.io/graft/articles/retrieval.html) for the read
+surface, and [open
+knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
+for synchronization and file review. [The v0.1
+design](https://jameshwade.github.io/graft/articles/v01-design.html) explains the
+intentional pre-production cutover.

@@ -24,31 +24,37 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Governed, traceable knowledge for R workflows"
+  title: "graft: Reviewable knowledge changes for R workflows"
   description: >
-    Validate workflow records against a LinkML contract, review changes before
-    acceptance, preserve exact revision history, and retrieve knowledge through
-    bounded R and agent interfaces.
+    Define records with LinkML, inspect a read-only change plan, accept it
+    atomically, and retrieve current knowledge with its immutable history.
   sidebar:
     structure: [links, license, authors, dev]
 
 navbar:
   structure:
-    left: [intro, contract, change_control, open_knowledge, reference, news]
+    left: [intro, concepts, design, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
-    contract:
-      text: LinkML contract
-      href: articles/linkml-schema.html
-    change_control:
-      text: Change control
-      href: articles/knowledge-change-control.html
-    open_knowledge:
-      text: Open knowledge
-      href: articles/open-knowledge-format.html
+    concepts:
+      text: Concepts
+      menu:
+        - text: Architecture
+          href: articles/architecture.html
+        - text: LinkML contract
+          href: articles/linkml-schema.html
+        - text: Change control
+          href: articles/knowledge-change-control.html
+        - text: Retrieval and history
+          href: articles/retrieval.html
+        - text: Open knowledge
+          href: articles/open-knowledge-format.html
+    design:
+      text: v0.1 design
+      href: articles/v01-design.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/JamesHWade/graft/
@@ -64,47 +70,55 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Follow the complete provider-free workflow, then go deeper into the
-      contract, change-control, and readable open-knowledge boundaries.
+      Complete one provider-free workflow, then understand the package's
+      deliberately small design.
     contents:
       - getting-started
+      - architecture
+      - v01-design
+  - title: Core concepts
+    desc: >
+      Go deeper into the domain contract, acceptance boundary, retrieval
+      operations, and readable open-knowledge projection.
+    contents:
       - linkml-schema
       - knowledge-change-control
+      - retrieval
       - open-knowledge-format
 
 reference:
-  - title: Contract and store
+  - title: Define and open
     desc: >
-      Load a LinkML-derived contract and manage the lifecycle of its Graft
-      store.
+      Load the domain contract and manage the store that accepts knowledge
+      under it.
     contents:
       - graft_schema
       - graft_open
       - graft_close
-  - title: Provenance and changes
+  - title: Propose and accept
     desc: >
-      Describe candidate origins, plan reviewable changes, and accept them
-      through the single atomic commit path.
+      Describe a candidate's origin, plan the change without writing, and
+      accept it through one atomic commit path.
     contents:
       - graft_provenance
       - graft_plan
-      - graft_review
       - graft_commit
       - graft_ingest
-  - title: Retrieval and history
+  - title: Retrieve and inspect
     desc: >
-      Retrieve current and historical accepted knowledge through bounded,
-      contract-aware operations.
+      Read current and historical accepted knowledge through bounded,
+      contract-aware operations and projections.
     contents:
       - graft_get
       - graft_find
       - graft_query
       - graft_history
-  - title: Open knowledge and agents
+  - title: Synchronize and integrate
     desc: >
-      Synchronize and inspect the readable OKF working tree or create read-only
-      tools backed by accepted retrieval.
+      Synchronize the readable working tree, review file edits as proposals,
+      and expose accepted retrieval to agents.
     contents:
       - graft_sync
       - graft_status
+      - graft_review
       - graft_tools
