@@ -148,6 +148,62 @@ test_that("the tracked manifest schema follows the live v2 contract", {
   )
 })
 
+test_that("bundled LinkML provenance is byte-stable across platforms", {
+  file_digest <- function(path) {
+    size <- file.info(path)$size
+    bytes <- readBin(path, what = "raw", n = size)
+    graft_sha256(bytes)
+  }
+  extdata <- system.file("extdata", package = "graft")
+  manifests <- list.files(
+    extdata,
+    pattern = "\\.graft\\.json$",
+    full.names = TRUE
+  )
+  expect_gt(length(manifests), 0L)
+  core_digest <- file_digest(graft_core_schema_path())
+
+  for (manifest_path in manifests) {
+    manifest <- jsonlite::fromJSON(manifest_path, simplifyVector = FALSE)
+    roots <- which(vapply(
+      manifest$schema$source_files,
+      \(source_file) isTRUE(source_file$root),
+      logical(1)
+    ))
+    expect_identical(
+      length(roots),
+      1L,
+      info = basename(manifest_path)
+    )
+    source_path <- sub(
+      "\\.graft\\.json$",
+      ".linkml.yaml",
+      manifest_path
+    )
+    expect_identical(
+      manifest$schema$source_files[[roots]]$content_digest,
+      file_digest(source_path),
+      info = basename(manifest_path)
+    )
+    expect_identical(
+      manifest$compiler$script_digest,
+      graft_linkml_compiler_digest(),
+      info = basename(manifest_path)
+    )
+    core_sources <- Filter(
+      \(source_file) identical(source_file$name, "graft-core"),
+      manifest$schema$source_files
+    )
+    if (length(core_sources) > 0L) {
+      expect_identical(
+        core_sources[[1L]]$content_digest,
+        core_digest,
+        info = basename(manifest_path)
+      )
+    }
+  }
+})
+
 test_that("manifest validation rejects duplicate JSON object keys", {
   manifest <- graft_schema(data_dict_personinfo_export_path())@manifest
 
@@ -278,6 +334,8 @@ test_that("manifest headers enforce generic container and provenance shapes", {
   expect_s3_class(condition, "graft_schema_error")
   expect_identical(condition$rule, "schema_source_contract")
 
+  invalid_script_digest <- manifest$compiler
+  invalid_script_digest$script_digest <- "not-a-digest"
   compiler_variants <- list(
     list(),
     list(
@@ -286,7 +344,7 @@ test_that("manifest headers enforce generic container and provenance shapes", {
       script_digest = manifest$compiler$script_digest
     ),
     c(manifest$compiler, private = "value"),
-    within(manifest$compiler, script_digest <- "not-a-digest")
+    invalid_script_digest
   )
   for (compiler in compiler_variants) {
     malformed <- manifest
@@ -914,7 +972,10 @@ test_that("LinkML provenance is pinned and internally reproducible", {
   no_root <- manifest
   no_root$schema$source_files <- lapply(
     no_root$schema$source_files,
-    \(source_file) within(source_file, root <- FALSE)
+    \(source_file) {
+      source_file$root <- FALSE
+      source_file
+    }
   )
   condition <- rlang::catch_cnd(validate_manifest_header(no_root, "fixture"))
   expect_s3_class(condition, "graft_schema_error")

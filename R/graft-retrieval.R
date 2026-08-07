@@ -1572,7 +1572,7 @@ validate_graft_query_request <- function(request) {
   if (
     length(request) > 0L &&
       (anyNA(names(request)) ||
-        any(!nzchar(names(request))) ||
+        !all(nzchar(names(request))) ||
         anyDuplicated(names(request)))
   ) {
     abort_validation_error(

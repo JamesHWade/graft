@@ -110,7 +110,7 @@ assemble_candidate_authority <- function(
   )
   revision_ids <- rows$expected_revision_id
   revision_ids[changed] <- revisions$revision_id
-  if (anyNA(revision_ids) || any(!nzchar(revision_ids))) {
+  if (anyNA(revision_ids) || !all(nzchar(revision_ids))) {
     abort_commit_plan(
       "graft_commit_plan_invalid",
       "Every staged observation must resolve to a revision ID."
@@ -177,9 +177,9 @@ validate_candidate_execution_rows <- function(rows, plan) {
   if (
     !is.data.frame(rows) ||
       !all(required %in% names(rows)) ||
-      any(!rows$action %in% c("insert", "update", "match")) ||
+      !all(rows$action %in% c("insert", "update", "match")) ||
       anyNA(rows$record_id) ||
-      any(!nzchar(rows$record_id))
+      !all(nzchar(rows$record_id))
   ) {
     abort_commit_plan(
       "graft_commit_plan_invalid",
@@ -264,7 +264,7 @@ validate_candidate_execution_rows <- function(rows, plan) {
     identical(payload_digests, rows$content_digest)
   if (
     !correlated ||
-      any(!vapply(rows$content_digest, is_graft_digest, logical(1)))
+      !all(vapply(rows$content_digest, is_graft_digest, logical(1)))
   ) {
     abort_candidate_execution_rows()
   }
@@ -295,10 +295,10 @@ validate_candidate_execution_rows <- function(rows, plan) {
     rows$content_digest == rows$expected_content_digest
   if (
     anyNA(c(valid_insert, valid_existing, valid_update, valid_match)) ||
-      any(!valid_insert) ||
-      any(!valid_existing) ||
-      any(!valid_update) ||
-      any(!valid_match)
+      !all(valid_insert) ||
+      !all(valid_existing) ||
+      !all(valid_update) ||
+      !all(valid_match)
   ) {
     abort_candidate_execution_rows()
   }
@@ -478,7 +478,7 @@ assemble_candidate_identifiers <- function(identifiers, recorded_at) {
 assemble_candidate_origins <- function(origins, batch, recorded_at) {
   if (
     anyNA(origins$origin_key) ||
-      any(!nzchar(origins$origin_key)) ||
+      !all(nzchar(origins$origin_key)) ||
       any(origins$producer != batch$producer)
   ) {
     abort_commit_plan(

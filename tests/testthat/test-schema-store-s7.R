@@ -26,7 +26,10 @@ test_that("GraftSchema exposes immutable semantic contracts", {
   manifest$schema$name <- "tampered"
   expect_identical(schema@name, "tempest-artifacts")
 
-  setter <- rlang::catch_cnd(schema@name <- "tampered")
+  mutate_schema_name <- function() {
+    schema@name <- "tampered"
+  }
+  setter <- rlang::catch_cnd(mutate_schema_name())
   expect_s3_class(setter, "error")
   expect_match(conditionMessage(setter), "read-only")
 })
@@ -167,7 +170,10 @@ test_that("GraftStore rejects malformed state and property mutation", {
   store <- graft_open(schema, okf = "disabled")
   withr::defer(graft_close(store))
 
-  setter <- rlang::catch_cnd(store@read_only <- TRUE)
+  mutate_store_read_only <- function() {
+    store@read_only <- TRUE
+  }
+  setter <- rlang::catch_cnd(mutate_store_read_only())
   expect_s3_class(setter, "error")
   expect_match(conditionMessage(setter), "read-only")
 

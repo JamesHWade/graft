@@ -143,7 +143,7 @@ ClassContract <- S7::new_class(
     if (
       !is.character(data$search_slots) ||
         anyNA(data$search_slots) ||
-        any(!nzchar(data$search_slots)) ||
+        !all(nzchar(data$search_slots)) ||
         anyDuplicated(data$search_slots)
     ) {
       return("@search_slots must contain unique non-empty strings")
@@ -151,7 +151,7 @@ ClassContract <- S7::new_class(
     if (
       !is.list(data$slots) ||
         is.null(names(data$slots)) ||
-        any(!nzchar(names(data$slots))) ||
+        !all(nzchar(names(data$slots))) ||
         anyDuplicated(names(data$slots)) ||
         !all(vapply(
           data$slots,

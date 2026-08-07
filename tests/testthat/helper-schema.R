@@ -55,34 +55,6 @@ data_dict_test_source <- function(dictionary, content_digest = NULL) {
   data_dict_manifest_source(dictionary, content_digest)
 }
 
-example_schema_path <- function(name) {
-  filename <- paste0(name, ".linkml.yaml")
-  development_path <- test_path(
-    "..",
-    "..",
-    "inst",
-    "extdata",
-    filename
-  )
-  if (file.exists(development_path)) {
-    return(normalizePath(
-      development_path,
-      winslash = "/",
-      mustWork = TRUE
-    ))
-  }
-
-  installed_path <- system.file(
-    "extdata",
-    filename,
-    package = "graft"
-  )
-  if (!nzchar(installed_path)) {
-    stop("The installed example schema is unavailable.", call. = FALSE)
-  }
-  normalizePath(installed_path, winslash = "/", mustWork = TRUE)
-}
-
 invalid_schema_path <- function(name) {
   materialize_test_schema_import(
     test_path("fixtures", "invalid-records", name)

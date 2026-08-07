@@ -37,8 +37,3 @@ replace_okf_line <- function(path, old, new) {
   writeLines(replaced, path, useBytes = TRUE)
   invisible(path)
 }
-
-local_sync_okf <- function(store, env = parent.frame()) {
-  directory <- withr::local_tempdir(.local_envir = env)
-  graft_sync(store, file.path(directory, "knowledge.okf"))
-}

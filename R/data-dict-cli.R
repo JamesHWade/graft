@@ -549,7 +549,7 @@ validate_resolved_data_dict <- function(document, path) {
     } else if (
       !is.list(document$tables) ||
         is.data.frame(document$tables) ||
-        any(!vapply(document$tables, is.list, logical(1)))
+        !all(vapply(document$tables, is.list, logical(1)))
     ) {
       invalid <- c(invalid, "tables")
     }

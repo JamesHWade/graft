@@ -639,7 +639,7 @@ data_dict_compile_tables <- function(dictionary, source) {
   }
   table_views <- vapply(table_names, projection_snake_case, character(1))
   if (
-    any(!nzchar(table_views)) ||
+    !all(nzchar(table_views)) ||
       any(startsWith(table_views, "_graft_")) ||
       anyDuplicated(tolower(table_views))
   ) {
@@ -690,7 +690,7 @@ data_dict_compile_tables <- function(dictionary, source) {
       )
     }
     views <- vapply(names_for_table, projection_snake_case, character(1))
-    if (any(!nzchar(views)) || anyDuplicated(tolower(views))) {
+    if (!all(nzchar(views)) || anyDuplicated(tolower(views))) {
       data_dict_abort(
         paste0(
           "Columns for table `",
@@ -1180,7 +1180,7 @@ data_dict_enum_contract <- function(name, values, field) {
       rule = "enum_values"
     )
   }
-  if (any(!vapply(values, data_dict_is_string, logical(1)))) {
+  if (!all(vapply(values, data_dict_is_string, logical(1)))) {
     data_dict_abort(
       "Enum values must be encoded as a flat string array.",
       field = field,
@@ -1192,7 +1192,7 @@ data_dict_enum_contract <- function(name, values, field) {
     !is.character(values) ||
       length(values) == 0L ||
       anyNA(values) ||
-      any(!nzchar(trimws(values))) ||
+      !all(nzchar(trimws(values))) ||
       anyDuplicated(values)
   ) {
     data_dict_abort(

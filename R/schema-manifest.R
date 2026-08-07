@@ -198,11 +198,6 @@ manifest_json_nullable_number <- function(value) {
       is.finite(value))
 }
 
-manifest_json_string_array <- function(value) {
-  manifest_json_array(value) &&
-    all(vapply(value, manifest_json_string, logical(1)))
-}
-
 manifest_json_nonblank_string_array <- function(value) {
   manifest_json_array(value) &&
     all(vapply(value, manifest_json_nonblank_string, logical(1)))
@@ -283,8 +278,8 @@ manifest_slot_shape_problem <- function(slot, field) {
   }
   string_fields <- c("name", "range", "duckdb_type")
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         slot[string_fields],
         manifest_json_nonblank_string,
         logical(1)
@@ -318,7 +313,7 @@ manifest_slot_shape_problem <- function(slot, field) {
     ),
     names(slot)
   )
-  if (any(!vapply(slot[boolean_fields], manifest_json_boolean, logical(1)))) {
+  if (!all(vapply(slot[boolean_fields], manifest_json_boolean, logical(1)))) {
     return(manifest_contract_problem(
       "Manifest slot flags must be JSON booleans.",
       field
@@ -335,8 +330,8 @@ manifest_slot_shape_problem <- function(slot, field) {
     names(slot)
   )
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         slot[nullable_strings],
         manifest_json_nullable_string,
         logical(1)
@@ -353,8 +348,8 @@ manifest_slot_shape_problem <- function(slot, field) {
     names(slot)
   )
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         slot[nonblank_nullable],
         manifest_json_nullable_nonblank_string,
         logical(1)
@@ -437,8 +432,8 @@ manifest_class_shape_problem <- function(class, field) {
   }
   string_fields <- c("name", "view")
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         class[string_fields],
         manifest_json_nonblank_string,
         logical(1)
@@ -483,8 +478,8 @@ manifest_class_shape_problem <- function(class, field) {
     names(class)
   )
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         class[nullable_strings],
         manifest_json_nullable_nonblank_string,
         logical(1)
@@ -533,8 +528,8 @@ manifest_class_shape_problem <- function(class, field) {
     names(class)
   )
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         class[array_fields],
         manifest_json_nonblank_string_array,
         logical(1)
@@ -554,8 +549,8 @@ manifest_class_shape_problem <- function(class, field) {
   }
   if (
     length(class$slots) > 0L &&
-      any(
-        !vapply(names(class$slots), manifest_json_nonblank_string, logical(1))
+      !all(
+        vapply(names(class$slots), manifest_json_nonblank_string, logical(1))
       )
   ) {
     return(manifest_contract_problem(
@@ -644,8 +639,8 @@ manifest_relation_shape_problem <- function(relation, field) {
   }
   string_fields <- required[!required %in% c("kind", "ordered")]
   if (
-    any(
-      !vapply(
+    !all(
+      vapply(
         relation[string_fields],
         manifest_json_nonblank_string,
         logical(1)
@@ -1586,7 +1581,7 @@ manifest_semantic_contract_problem <- function(manifest, data_dict) {
       character(1)
     )
     if (
-      any(!nzchar(trimws(values))) ||
+      !all(nzchar(trimws(values))) ||
         anyDuplicated(values)
     ) {
       return(manifest_contract_problem(
@@ -1815,7 +1810,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
     values <- manifest[[field]]
     if (
       length(values) > 0L &&
-        any(!vapply(names(values), manifest_json_nonblank_string, logical(1)))
+        !all(vapply(names(values), manifest_json_nonblank_string, logical(1)))
     ) {
       return(problem(
         paste0("Every `", field, "` key must be a nonblank string."),
@@ -2145,8 +2140,8 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
   )
   if (
     !setequal(names(fingerprints), fingerprint_fields) ||
-      any(
-        !vapply(
+      !all(
+        vapply(
           fingerprints[fingerprint_fields],
           is_graft_digest,
           logical(1)
@@ -2442,9 +2437,9 @@ validate_manifest_dictionary_header <- function(manifest, path) {
       !is_nonempty_string(dictionary$adapter_version) ||
       !is.list(dictionary$requirements) ||
       length(dictionary$requirements) == 0L ||
-      any(!vapply(dictionary$requirements, is_nonempty_string, logical(1))) ||
+      !all(vapply(dictionary$requirements, is_nonempty_string, logical(1))) ||
       !is.list(dictionary$preserved) ||
-      any(!vapply(dictionary$preserved, is_nonempty_string, logical(1))) ||
+      !all(vapply(dictionary$preserved, is_nonempty_string, logical(1))) ||
       !data_dict_mapped_contract_is_valid(dictionary$mapped) ||
       !is.list(dictionary$not_enforced) ||
       length(dictionary$not_enforced) == 0L
@@ -2522,8 +2517,8 @@ validate_manifest_dictionary_header <- function(manifest, path) {
       !identical(defaults$role, "node") ||
       !identical(defaults$id_policy, "require") ||
       !identical(defaults$id_format, "linkml") ||
-      any(
-        !vapply(
+      !all(
+        vapply(
           dictionary$not_enforced,
           data_dict_loss_is_valid,
           logical(1)
@@ -3032,7 +3027,7 @@ validate_manifest_projection_contracts <- function(manifest, subclass) {
     )
     if (
       anyNA(view_columns) ||
-        any(!nzchar(trimws(view_columns))) ||
+        !all(nzchar(trimws(view_columns))) ||
         anyDuplicated(tolower(view_columns))
     ) {
       abort_schema_integrity(
