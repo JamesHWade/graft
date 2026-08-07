@@ -72,24 +72,33 @@ test_that("structural digest excludes compiler provenance", {
     convert = TRUE
   )
   variant$compile_schema(tempest_schema_path(), variant_output)
-  variant_schema <- graft_schema(variant_output)
+  variant_manifest <- jsonlite::fromJSON(
+    variant_output,
+    simplifyVector = FALSE
+  )
 
   expect_identical(
     base@structural_digest,
-    variant_schema@structural_digest
+    variant_manifest$fingerprints$structural_digest
   )
   expect_identical(
     base@source_digest,
-    variant_schema@source_digest
+    variant_manifest$fingerprints$source_digest
   )
   expect_identical(
-    identical(base@build_digest, variant_schema@build_digest),
+    identical(
+      base@build_digest,
+      variant_manifest$fingerprints$build_digest
+    ),
     FALSE
   )
   expect_identical(
-    variant_schema@manifest$compiler$version,
+    variant_manifest$compiler$version,
     "0.3.1"
   )
+  condition <- rlang::catch_cnd(graft_schema(variant_output))
+  expect_s3_class(condition, "graft_schema_error")
+  expect_identical(condition$rule, "compiler_contract")
 })
 
 test_that("invalid statement shapes and qualifiers fail clearly", {
@@ -164,6 +173,463 @@ test_that("plain LinkML schemas compile without graft annotations", {
   expect_setequal(person$search_slots, c("full_name"))
   expect_in("created_at", names(person$slots))
   expect_in("updated_at", names(person$slots))
+})
+
+test_that("plain LinkML class roles remain explicit compiler contracts", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "explicit-role.linkml.yaml")
+  source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+  person <- match("  Person:", source)
+  source <- append(
+    source,
+    c(
+      "    annotations:",
+      "      graft.role:",
+      "        tag: graft.role",
+      "        value: metadata"
+    ),
+    after = person
+  )
+  writeLines(source, schema_path)
+
+  schema <- graft_schema(
+    schema_path,
+    file.path(directory, "explicit-role.graft.json")
+  )
+
+  expect_identical(schema@manifest$classes$Person$role, "metadata")
+  expect_null(schema@manifest$classes$Person$statement_shape)
+})
+
+test_that("LinkML slot usage overrides are class-local", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "slot-usage.linkml.yaml")
+  source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+  person <- match("  Person:", source)
+  source <- append(
+    source,
+    c(
+      "    slot_usage:",
+      "      full_name:",
+      "        pattern: '^[A-Z]'",
+      "        annotations:",
+      "          graft.external_identifier:",
+      "            tag: graft.external_identifier",
+      "            value: custom"
+    ),
+    after = person
+  )
+  writeLines(source, schema_path)
+
+  schema <- graft_schema(
+    schema_path,
+    file.path(directory, "slot-usage.graft.json")
+  )
+  local <- schema@manifest$classes$Person$slots$full_name
+  global <- schema@manifest$slots$full_name
+
+  expect_identical(local$pattern, "^[A-Z]")
+  expect_identical(local$external_identifier, "custom")
+  expect_null(global$pattern)
+  expect_null(global$external_identifier)
+  expect_identical(
+    schema@manifest$identifier_normalization_versions$custom,
+    "1"
+  )
+})
+
+test_that("LinkML class mixins fail at the compiler boundary", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "mixin.linkml.yaml")
+  source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+  person <- match("  Person:", source)
+  source <- append(
+    source,
+    c(
+      "    mixins:",
+      "      - HasTag"
+    ),
+    after = person
+  )
+  source <- c(
+    source,
+    "",
+    "  HasTag:",
+    "    mixin: true",
+    "    attributes:",
+    "      tag:"
+  )
+  writeLines(source, schema_path)
+
+  condition <- rlang::catch_cnd(graft_schema(
+    schema_path,
+    file.path(directory, "mixin.graft.json")
+  ))
+
+  expect_s3_class(condition, "graft_schema_error")
+  expect_match(
+    conditionMessage(condition),
+    "LinkML class mixins are not supported by graft-table-v1",
+    fixed = TRUE
+  )
+})
+
+test_that("unsupported LinkML semantics fail closed", {
+  skip_if_no_linkml_runtime()
+  cases <- list(
+    slot_constraint = function(source) {
+      field <- match("      full_name:", source)
+      append(source, "        equals_string: Clark Kent", after = field)
+    },
+    slot_identity_prefix = function(source) {
+      field <- match("      full_name:", source)
+      append(
+        source,
+        c(
+          "        id_prefixes:",
+          "          - personinfo",
+          "        id_prefixes_are_closed: true"
+        ),
+        after = field
+      )
+    },
+    slot_type_mapping = function(source) {
+      field <- match("      full_name:", source)
+      append(
+        source,
+        c(
+          "        type_mappings:",
+          "          - framework: python",
+          "            type: integer"
+        ),
+        after = field
+      )
+    },
+    class_unique_key = function(source) {
+      person <- match("  Person:", source)
+      append(
+        source,
+        c(
+          "    unique_keys:",
+          "      full_name_key:",
+          "        unique_key_slots:",
+          "          - full_name"
+        ),
+        after = person
+      )
+    },
+    class_identity_prefix = function(source) {
+      person <- match("  Person:", source)
+      append(
+        source,
+        c(
+          "    id_prefixes:",
+          "      - personinfo",
+          "    id_prefixes_are_closed: true"
+        ),
+        after = person
+      )
+    },
+    schema_slot_names_unique = function(source) {
+      name <- match("name: personinfo", source)
+      append(source, "slot_names_unique: true", after = name)
+    },
+    schema_identifier_prefix = function(source) {
+      c(source, "id_prefixes:", "  - personinfo")
+    },
+    schema_closed_identifier_prefixes = function(source) {
+      c(source, "id_prefixes_are_closed: true")
+    },
+    schema_graft_annotation = function(source) {
+      c(
+        source,
+        "annotations:",
+        "  graft.role:",
+        "    tag: graft.role",
+        "    value: node"
+      )
+    },
+    custom_type = function(source) {
+      c(
+        source,
+        "",
+        "types:",
+        "  PositiveCode:",
+        "    typeof: string",
+        "    pattern: '^X'"
+      )
+    },
+    custom_type_id_spoof = function(source) {
+      source[[grep("^id:", source)[[1L]]]] <-
+        "id: https://w3id.org/linkml/types"
+      c(
+        source,
+        "",
+        "types:",
+        "  PositiveCode:",
+        "    typeof: string",
+        "    pattern: '^X'"
+      )
+    },
+    unsupported_builtin_range = function(source) {
+      person <- match("  Person:", source)
+      append(
+        source,
+        c(
+          "    slot_usage:",
+          "      age:",
+          "        range: ncname"
+        ),
+        after = person
+      )
+    },
+    enum_inheritance = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  BaseStatus:",
+        "    permissible_values:",
+        "      active:",
+        "  Status:",
+        "    inherits: BaseStatus",
+        "    permissible_values:",
+        "      pending:"
+      )
+    },
+    enum_uri = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    enum_uri: sdo:status",
+        "    permissible_values:",
+        "      active:"
+      )
+    },
+    enum_identifier_prefix = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    id_prefixes:",
+        "      - personinfo",
+        "    permissible_values:",
+        "      active:"
+      )
+    },
+    enum_closed_identifier_prefixes = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    id_prefixes_are_closed: true",
+        "    permissible_values:",
+        "      active:"
+      )
+    },
+    enum_graft_annotation = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    annotations:",
+        "      graft.role:",
+        "        tag: graft.role",
+        "        value: node",
+        "    permissible_values:",
+        "      active:"
+      )
+    },
+    permissible_value_graft_annotation = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    permissible_values:",
+        "      active:",
+        "        annotations:",
+        "          graft.sensitive:",
+        "            tag: graft.sensitive",
+        "            value: true"
+      )
+    },
+    permissible_value_hierarchy = function(source) {
+      c(
+        source,
+        "",
+        "enums:",
+        "  Status:",
+        "    permissible_values:",
+        "      base:",
+        "      child:",
+        "        is_a: base"
+      )
+    }
+  )
+
+  for (name in names(cases)) {
+    directory <- withr::local_tempdir()
+    schema_path <- file.path(directory, paste0(name, ".linkml.yaml"))
+    output <- file.path(directory, paste0(name, ".graft.json"))
+    source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+    writeLines(cases[[name]](source), schema_path)
+
+    condition <- rlang::catch_cnd(graft_schema(schema_path, output))
+
+    expect_s3_class(condition, "graft_schema_error")
+    expect_match(conditionMessage(condition), "unsupported", ignore.case = TRUE)
+    expect_identical(file.exists(output), FALSE)
+  }
+})
+
+test_that("manifest validation precedes LinkML artifact publication", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "empty-identifier.linkml.yaml")
+  output <- file.path(directory, "empty-identifier.graft.json")
+  source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+  field <- match("      full_name:", source)
+  source <- append(
+    source,
+    c(
+      "        annotations:",
+      "          graft.external_identifier:",
+      "            tag: graft.external_identifier",
+      "            value: ''"
+    ),
+    after = field
+  )
+  writeLines(source, schema_path)
+  writeLines("previous validated artifact", output)
+
+  condition <- rlang::catch_cnd(graft_schema(schema_path, output))
+
+  expect_s3_class(condition, "graft_schema_error")
+  expect_identical(condition$rule, "manifest_shape_contract")
+  expect_identical(
+    readLines(output, warn = FALSE),
+    "previous validated artifact"
+  )
+})
+
+test_that("fixed predicates remain one truth from plan to projection", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "fixed-edge.linkml.yaml")
+  writeLines(
+    c(
+      "id: https://example.org/fixed-edge",
+      "name: fixed-edge",
+      "prefixes:",
+      "  ex: https://example.org/",
+      "  linkml: https://w3id.org/linkml/",
+      "imports:",
+      "  - graft-core.linkml",
+      "default_prefix: ex",
+      "classes:",
+      "  FixedEdge:",
+      "    is_a: GraftEdge",
+      "    annotations:",
+      "      graft.fixed_predicate:",
+      "        tag: graft.fixed_predicate",
+      "        value: ex:fixed"
+    ),
+    schema_path
+  )
+  expect_identical(
+    file.copy(
+      graft_core_schema_path(),
+      file.path(directory, "graft-core.linkml.yaml")
+    ),
+    TRUE
+  )
+  schema <- graft_schema(
+    schema_path,
+    file.path(directory, "fixed-edge.graft.json")
+  )
+  store <- graft_open(schema, okf = "disabled")
+  withr::defer(graft_close(store))
+
+  plan <- graft_plan(
+    store,
+    list(
+      FixedEdge = data.frame(
+        id = test_graft_id("fixed-edge"),
+        subject = test_graft_id("fixed-subject"),
+        predicate = "ex:conflict",
+        object = test_graft_id("fixed-object")
+      )
+    ),
+    graft_provenance(
+      "fixed-predicate-test",
+      idempotency_key = "fixed-predicate-conflict"
+    )
+  )
+
+  expect_identical(plan@valid, FALSE)
+  expect_in("fixed_predicate", plan@issues$rule)
+})
+
+test_that("LinkML compilation publishes only validated manifests", {
+  skip_if_no_linkml_runtime()
+  directory <- withr::local_tempdir()
+  schema_path <- file.path(directory, "invalid-role.linkml.yaml")
+  output <- file.path(directory, "invalid-role.graft.json")
+  source <- readLines(plain_linkml_schema_path(), warn = FALSE)
+  person <- match("  Person:", source)
+  source <- append(
+    source,
+    c(
+      "    annotations:",
+      "      graft.role:",
+      "        tag: graft.role",
+      "        value: statement"
+    ),
+    after = person
+  )
+  writeLines(source, schema_path)
+  writeLines("previous validated artifact", output)
+
+  condition <- rlang::catch_cnd(graft_schema(schema_path, output))
+
+  expect_s3_class(condition, "graft_schema_error")
+  expect_identical(condition$rule, "class_role_contract")
+  expect_identical(
+    readLines(output, warn = FALSE),
+    "previous validated artifact"
+  )
+  expect_length(
+    list.files(directory, pattern = "[.]graft[.]json-stage-"),
+    0L
+  )
+})
+
+test_that("LinkML output validation protects the source", {
+  skip_if_no_linkml_runtime()
+  source <- plain_linkml_schema_path()
+  before <- readBin(source, what = "raw", n = file.info(source)$size)
+
+  condition <- rlang::catch_cnd(graft_schema(source, source))
+
+  expect_s3_class(condition, "graft_schema_error")
+  expect_match(
+    conditionMessage(condition),
+    "`output` must use the `.graft.json` extension",
+    fixed = TRUE
+  )
+  expect_identical(
+    readBin(source, what = "raw", n = file.info(source)$size),
+    before
+  )
 })
 
 test_that("plain LinkML identifiers compile to projection contracts", {

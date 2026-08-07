@@ -28,7 +28,7 @@ change before acceptance or derives a useful view after acceptance.
 <img
   class="graft-architecture-visual"
   src="../reference/figures/okf-linkml-duckdb-system.svg"
-  alt="LinkML defines the contract, DuckDB stores accepted revisions and provenance, and OKF provides a readable projection."
+  alt="A LinkML or data-dict contract compiles into Graft. OKF exchanges readable proposals and projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB."
 >
 </div>
 <figcaption>
@@ -44,13 +44,39 @@ accepted record.
 
 ### The contract defines meaning
 
-A LinkML schema defines concrete classes, identifiers, required and
-multivalued fields, scalar ranges, relationships, and retrieval policy. graft
-compiles that schema into a canonical `.graft.json` contract with stable
-digests.
+A source contract comes from LinkML or data-dict. LinkML supplies rich class,
+ontology, and graph semantics. The strict `graft-table-v1` data-dict profile
+supplies flat tables, public IDs, supported field types, enums, scalar
+foreign-key validation, and restricted-field policy. graft compiles either
+source into one canonical `.graft.json` runtime contract with stable digests.
 
 The contract governs planning, revision acceptance, retrieval, and projection
-generation. It does not prescribe a separate R class for every domain class.
+generation. A provider never becomes the revision ledger or a second write
+path. The data-dict adapter also does not turn scalar foreign keys into graph
+traversal edges; use LinkML when graph meaning is part of the contract.
+
+Provider-specific lowering can preserve metadata without enforcing it. In
+particular, data-dict assertions, non-primary unique constraints, relationship
+cardinality and joins, and units do not become Graft acceptance rules.
+Representative examples and ranges, dataset and table origins, and table
+source locators are removed from the public manifest, although their raw values
+still affect source and build digests. Those digests permit equality tests and
+offline guessing of low-entropy values; redaction is not a secrecy boundary.
+Other retained schema fields are public contract metadata and can expose
+observed or sensitive values embedded manually.
+
+The strict profile rejects scalar and list `number(id)` columns in favor of
+quoted strings and fails closed on unsafe JSON numeric tokens before lossy
+conversion. Omitted datetime zones require RFC 3339 `Z` or `±HH:MM` per
+character value;
+`time_zone: UTC` requires zoneless input interpreted as UTC. Both accept no
+more than six fractional digits and accept `POSIXt` instants, while `Date`
+values and `naive` or named-zone declarations are rejected.
+`export-data`-derived rows and profiles are also rejected, blocking those
+observations rather than promising general metadata scrubbing. For YAML, one
+captured byte snapshot feeds preflight, CLI export, and the source/build
+fingerprints. The compiled mapping report records known defaults and losses,
+but is not exhaustive.
 
 ### A plan makes the proposal inspectable
 
@@ -76,10 +102,10 @@ from logs or current tables.
 
 ### Projections serve readers
 
-Current record heads, identifiers, search data, semantic relationships, and
-the Open Knowledge Format (OKF) working tree are derived from accepted
-revisions and the active contract. A projection may be rebuilt or repaired; it
-never becomes a second authority for record content.
+Current record heads, identifiers, search data, contract-declared semantic
+relationships, and the Open Knowledge Format (OKF) working tree are derived
+from accepted revisions and the active contract. A projection may be rebuilt
+or repaired; it never becomes a second authority for record content.
 
 ## Why S7 is selective
 
@@ -96,8 +122,9 @@ and dispatch stays narrow.
 
 S7 would add ceremony without benefit at the ordinary data boundary. Domain
 records remain data frames, collections remain named lists, and retrieval
-results remain data frames or lists. LinkML remains the domain type system;
-graft does not mirror every LinkML class with an R class hierarchy.
+results remain data frames or lists. The compiled manifest remains the domain
+type system; graft does not mirror every source class or table with an R class
+hierarchy.
 
 ## Storage is an implementation boundary
 

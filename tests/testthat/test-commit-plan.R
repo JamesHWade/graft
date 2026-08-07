@@ -807,40 +807,29 @@ test_that("every bulk stage rolls back a multi-class commit", {
 })
 
 test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
-  schema <- modified_ingest_schema(
-    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
-  )
-  about <- schema$manifest$classes$Claim$slots$about
-  about$object_reference <- FALSE
-  about$range <- "decimal"
-  about$duckdb_type <- "DECIMAL"
-  schema$manifest$classes$Claim$slots$about <- about
-  relation_index <- which(vapply(
-    schema$manifest$relations,
-    function(relation) {
-      identical(scalar_character(relation$owner_class), "Claim") &&
-        identical(scalar_character(relation$slot), "about")
-    },
-    logical(1)
+  schema <- as_graft_schema_internal(graft_schema(
+    plain_linkml_schema_path(),
+    withr::local_tempfile(fileext = ".graft.json")
   ))
-  schema$manifest$relations[[relation_index]]$kind <- "value"
-  schema$manifest$classes$Claim$slots$confidence$range <- "integer"
-  schema$manifest$classes$Claim$slots$confidence$duckdb_type <- "BIGINT"
-  schema$manifest$classes$Claim$slots$confidence$minimum_value <- NULL
-  schema$manifest$classes$Claim$slots$confidence$maximum_value <- NULL
+  aliases <- schema$manifest$classes$Person$slots$aliases
+  aliases$range <- "decimal"
+  aliases$duckdb_type <- "DECIMAL"
+  schema$manifest$classes$Person$slots$aliases <- aliases
+  schema$manifest$slots$aliases$range <- "decimal"
+  schema$manifest$slots$aliases$duckdb_type <- "DECIMAL"
   schema <- refresh_schema_structural_digest(schema)
   schema <- new_graft_schema(schema)
   store <- local_graft_ingest_store(schema = schema)
-  record_id <- test_graft_id("exact-commit")
+  record_id <- "person:exact-commit"
 
   result <- graft_ingest(
     store,
     list(
-      Claim = data.frame(
+      Person = data.frame(
         id = record_id,
-        statement_text = "Exact numbers",
-        confidence = "9223372036854775807",
-        about = I(list("12345678901234.567"))
+        full_name = "Exact numbers",
+        age = "9223372036854775807",
+        aliases = I(list("12345678901234.567"))
       )
     ),
     graft_provenance("exact-commit")
@@ -853,16 +842,16 @@ test_that("bulk commit preserves exact BIGINT and DECIMAL projections", {
   )
   bigint <- DBI::dbGetQuery(
     graft_test_connection(store),
-    "SELECT CAST(confidence AS VARCHAR) AS value FROM claim"
+    "SELECT CAST(age AS VARCHAR) AS value FROM person"
   )
   decimal <- DBI::dbGetQuery(
     graft_test_connection(store),
-    "SELECT CAST(value AS VARCHAR) AS value FROM claim__about"
+    "SELECT CAST(value AS VARCHAR) AS value FROM person__aliases"
   )
 
-  expect_identical(result$inserted, c(Claim = 1L))
-  expect_identical(payload$confidence, "9223372036854775807")
-  expect_identical(payload$about[[1L]], "12345678901234.567")
+  expect_identical(result$inserted, c(Person = 1L))
+  expect_identical(payload$age, "9223372036854775807")
+  expect_identical(payload$aliases[[1L]], "12345678901234.567")
   expect_identical(bigint$value, "9223372036854775807")
   expect_identical(decimal$value, "12345678901234.567")
 })

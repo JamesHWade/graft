@@ -398,6 +398,14 @@ normalize_candidate_value <- function(source, index, slot, record_class) {
       )
     ))
   }
+  missing_candidate <- if (is.factor(raw)) as.character(raw) else raw
+  if (
+    !multivalued &&
+      !scalar_logical(slot$identifier) &&
+      is_missing_value(missing_candidate)
+  ) {
+    return(list(value = NULL, issue = NULL))
+  }
   if (scalar_logical(slot$object_reference)) {
     if (is.factor(raw)) {
       raw <- as.character(raw)
@@ -425,13 +433,22 @@ normalize_candidate_value <- function(source, index, slot, record_class) {
   converted <- coerce_candidate_vector(raw, slot)
   if (is.null(converted) || length(converted) != length(raw)) {
     type <- validation_slot_type(slot)
+    range <- scalar_character(slot$range)
+    issue_type <- if (
+      identical(type, "VARCHAR") &&
+        range %in% c("uri", "uriorcurie")
+    ) {
+      range
+    } else {
+      tolower(type)
+    }
     return(list(
       value = NULL,
       issue = new_plan_issue(
         record_class = record_class,
         input_row = index,
         field = slot_name,
-        rule = paste0("type_", tolower(type)),
+        rule = paste0("type_", issue_type),
         message = paste0(
           "Field `",
           record_class,
@@ -444,13 +461,22 @@ normalize_candidate_value <- function(source, index, slot, record_class) {
       )
     ))
   }
+  if (
+    !multivalued &&
+      !scalar_logical(slot$identifier) &&
+      is_missing_value(converted)
+  ) {
+    return(list(value = NULL, issue = NULL))
+  }
   list(value = converted, issue = NULL)
 }
 
 coerce_candidate_vector <- function(x, slot) {
   switch(
     validation_slot_type(slot),
-    VARCHAR = if (is.factor(x)) {
+    VARCHAR = if (scalar_character(slot$range) %in% c("uri", "uriorcurie")) {
+      coerce_linkml_reference(x, scalar_character(slot$range))
+    } else if (is.factor(x)) {
       as.character(x)
     } else if (is.character(x)) {
       x
@@ -460,7 +486,10 @@ coerce_candidate_vector <- function(x, slot) {
     BIGINT = coerce_exact_numeric(x, integer = TRUE),
     BOOLEAN = coerce_logical(x),
     DATE = coerce_date(x),
-    TIMESTAMP = coerce_timestamp(x),
+    TIMESTAMP = coerce_timestamp(
+      x,
+      datetime_format = scalar_character(slot$datetime_format)
+    ),
     TIME = coerce_time(x),
     NULL
   )
@@ -560,6 +589,27 @@ validate_candidate_constraints <- function(
 ) {
   issues <- list()
   slot_name <- scalar_character(slot$name)
+  fixed_predicate <- scalar_character(staged$contract$fixed_predicate)
+  if (
+    identical(slot_name, "predicate") &&
+      !is.na(fixed_predicate) &&
+      any(as.character(value) != fixed_predicate)
+  ) {
+    issues[[length(issues) + 1L]] <- new_plan_issue(
+      record_class = staged$class,
+      input_row = index,
+      record_id = staged$data$id[[index]],
+      field = slot_name,
+      rule = "fixed_predicate",
+      message = paste0(
+        "Field `",
+        staged$class,
+        ".predicate` must equal its fixed predicate `",
+        fixed_predicate,
+        "`."
+      )
+    )
+  }
   enum_name <- scalar_character(slot$enum)
   if (!is.na(enum_name)) {
     allowed <- vapply(
@@ -601,9 +651,13 @@ validate_candidate_constraints <- function(
       )
     )
   }
+  numeric_value <- suppressWarnings(as.numeric(value))
   if (
     !is.null(slot$minimum_value) &&
-      any(as.numeric(value) < as.numeric(slot$minimum_value))
+      any(
+        numeric_value < as.numeric(slot$minimum_value),
+        na.rm = TRUE
+      )
   ) {
     issues[[length(issues) + 1L]] <- new_plan_issue(
       record_class = staged$class,
@@ -622,7 +676,10 @@ validate_candidate_constraints <- function(
   }
   if (
     !is.null(slot$maximum_value) &&
-      any(as.numeric(value) > as.numeric(slot$maximum_value))
+      any(
+        numeric_value > as.numeric(slot$maximum_value),
+        na.rm = TRUE
+      )
   ) {
     issues[[length(issues) + 1L]] <- new_plan_issue(
       record_class = staged$class,
@@ -645,8 +702,15 @@ validate_candidate_constraints <- function(
 validate_candidate_invariants <- function(staged) {
   issues <- list()
   data <- staged$data
+  is_statement <- identical(
+    scalar_character(staged$contract$role),
+    "statement"
+  )
   for (index in seq_len(nrow(data))) {
-    if (all(c("valid_from", "valid_to") %in% names(data))) {
+    if (
+      is_statement &&
+        all(c("valid_from", "valid_to") %in% names(data))
+    ) {
       from <- data$valid_from[[index]]
       to <- data$valid_to[[index]]
       if (!is.na(from) && !is.na(to) && from > to) {
@@ -689,7 +753,7 @@ validate_candidate_invariants <- function(staged) {
         )
       }
     }
-    if ("superseded_by" %in% names(data)) {
+    if (is_statement && "superseded_by" %in% names(data)) {
       target <- data$superseded_by[[index]]
       if (!is.na(target) && identical(target, data$id[[index]])) {
         issues[[length(issues) + 1L]] <- new_plan_issue(

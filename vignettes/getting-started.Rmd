@@ -46,9 +46,10 @@ store <- graft_open(
 )
 ```
 
-The LinkML-derived contract defines the classes, required fields, stable
-identifiers, and relationships. Loading a compiled `.graft.json` contract and
-operating a store are R-only; Python is needed only to compile LinkML YAML.
+The bundled contract was compiled from LinkML and defines the classes, required
+fields, stable identifiers, and relationships. Loading a compiled
+`.graft.json` contract and operating a store are R-only. Source contracts may
+come from LinkML or the strict data-dict table profile.
 
 ## 2. Describe the candidate change
 
@@ -166,6 +167,8 @@ supplied by the caller remains owned by the caller.
   derived projections, and selective use of S7.
 - [LinkML contract](linkml-schema.html) covers compilation and schema
   inspection.
+- [data-dict contract](data-dict-schema.html) covers the optional table-first
+  adapter, resolved JSON, and its explicit semantic limits.
 - [Change control](knowledge-change-control.html) covers stale plans, updates,
   history, and integrity checks.
 - [Retrieval and history](retrieval.html) maps each read function to its job.

@@ -79,9 +79,10 @@ contract digests, producer semantics, commit preconditions, store identity,
 and connection state.
 
 Records remain ordinary data frames, record sets remain named lists, and read
-results remain ordinary lists or data frames. LinkML already supplies the
-domain type system. Mirroring each domain class in S7 would create two class
-systems without strengthening the acceptance boundary.
+results remain ordinary lists or data frames. The compiled LinkML or data-dict
+contract already supplies the domain type system. Mirroring each domain class
+in S7 would create two class systems without strengthening the acceptance
+boundary.
 
 ## Intentional non-goals
 
@@ -90,7 +91,7 @@ v0.1 does not promise:
 - backward compatibility with the unreleased `kg_*` API;
 - in-place migration from development store formats;
 - mutation through SQL, agent tools, or OKF files;
-- an ORM that maps every LinkML class to an R class;
+- an ORM that maps every contract class or table to an R class;
 - automatic contract transformations for historical payloads; or
 - bundled workflow applications.
 

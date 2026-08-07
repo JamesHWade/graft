@@ -7,16 +7,20 @@
 graft_schema(path, output = NULL)
 }
 \arguments{
-\item{path}{Path to a compiled \code{.graft.json} manifest or LinkML YAML schema.}
+\item{path}{Path to a compiled \code{.graft.json} manifest, a LinkML YAML schema,
+a \code{data-dict.yaml} contract, or resolved data-dict JSON.}
 
-\item{output}{Optional durable \code{.graft.json} output path when compiling YAML.}
+\item{output}{Optional durable \code{.graft.json} output path when compiling a
+source contract.}
 }
 \value{
 An immutable \code{GraftSchema} S7 object.
 }
 \description{
 \code{graft_schema()} loads a compiled \code{.graft.json} manifest or compiles a LinkML
-\code{.yaml} or \code{.yml} schema before returning an immutable semantic schema
-object. When \code{output} is omitted, a temporary compiled manifest is retained
-as the schema object's source path.
+or \href{https://data-dict.tidyverse.org/}{data-dict} contract before returning an
+immutable semantic schema object. Data-dict YAML compilation requires the
+optional \code{data-dict} CLI; a resolved \code{export-spec} JSON document does not.
+When \code{output} is omitted, a temporary compiled manifest is retained as the
+schema object's source path.
 }

@@ -57,16 +57,7 @@ hex_to_graft_id <- function(hex) {
 }
 
 canonical_identity_value <- function(x) {
-  as.character(jsonlite::toJSON(
-    x,
-    auto_unbox = TRUE,
-    null = "null",
-    na = "null",
-    digits = NA,
-    POSIXt = "ISO8601",
-    UTC = TRUE,
-    pretty = FALSE
-  ))
+  canonical_json(x)
 }
 
 normalize_external_identifier <- function(namespace, value) {

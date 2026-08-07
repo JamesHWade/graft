@@ -70,8 +70,6 @@ slots:
     range: string
   temperature:
     range: float
-    unit:
-      ucum_code: Cel
   run_identifier:
     range: string
     required: true

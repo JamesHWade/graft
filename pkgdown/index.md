@@ -4,10 +4,10 @@
 <p class="graft-eyebrow">Revision-first knowledge for R workflows</p>
 <h2 data-toc-skip>Review what changes. Preserve why. Retrieve what was accepted.</h2>
 <p class="graft-hero-copy">
-    graft turns candidate records into governed knowledge. A LinkML contract
-    defines what is valid, a read-only plan shows exactly what would change,
-    and one atomic commit path preserves every accepted revision with its
-    provenance.
+    graft turns candidate records into governed knowledge. A LinkML or
+    data-dict source compiles into the contract that defines what is valid, a
+    read-only plan shows exactly what would change, and one atomic commit path
+    preserves every accepted revision with its provenance.
 </p>
 <div class="graft-actions">
 <a class="btn btn-primary" href="articles/getting-started.html">Run the 10-minute workflow</a>
@@ -33,7 +33,7 @@ ledger.
 <div class="graft-flow-step">
 <span class="graft-flow-number">01</span>
 <strong>Contract</strong>
-<span>Define identity, fields, and relationships with LinkML.</span>
+<span>Define identity, fields, and relationships with LinkML or data-dict.</span>
 </div>
 <div class="graft-flow-step">
 <span class="graft-flow-number">02</span>
@@ -67,9 +67,10 @@ ledger.
 <div class="graft-split">
 <div>
 <p class="graft-section-lead">
-LinkML supplies the domain contract. DuckDB stores accepted revisions and
-provenance. Current records, search, graph relationships, and the readable OKF
-working tree are rebuildable projections&mdash;never alternate write paths.
+A compiled domain contract supplies meaning. DuckDB stores accepted revisions
+and provenance. Current records, search, contract-declared graph
+relationships, and the readable OKF working tree are rebuildable
+projections&mdash;never alternate write paths.
 </p>
 <p>
 This makes the important question easy to answer: <em>what, exactly, was
@@ -83,7 +84,7 @@ ordinary proposal through <code>graft_review()</code> and still passes through
 <img
   class="graft-architecture-visual"
   src="reference/figures/okf-linkml-duckdb-system.svg"
-  alt="LinkML defines the contract, DuckDB stores accepted revisions and provenance, and OKF provides a readable projection."
+  alt="A LinkML or data-dict contract compiles into Graft. OKF exchanges readable proposals and projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB."
 >
 <figcaption>Contract, authority, and readable projection stay distinct.</figcaption>
 </figure>
@@ -146,8 +147,30 @@ graft_close(store)
 
 The complete guide explains each decision, adds a connected record, and shows
 search, advanced retrieval, history, and the readable OKF surface. Loading the
-compiled example contract and operating the store are R-only; Python is needed
-only when compiling LinkML YAML.
+compiled example contract and operating the store are R-only. Source contracts
+can be compiled from LinkML or from data-dict YAML or trusted resolved
+`export-spec` JSON. A source provider defines meaning; it never becomes the
+accepted ledger or another write path.
+
+Use [LinkML](articles/linkml-schema.html) for inheritance and rich graph
+semantics. Use [data-dict](articles/data-dict-schema.html) for a strict,
+table-first contract with descriptions, glossary metadata, enums, and scalar
+foreign-key validation. Its CLI-assisted YAML path runs `export-spec`, not
+upstream metadata or data validation, and scalar foreign keys are not graph
+traversal edges. YAML source-spec and resolved JSON export-format versions are
+tracked separately, and Graft re-hashes the selected CLI around export and
+version discovery. YAML bytes are captured once so preflight, CLI export, and
+the source/build fingerprints share one immutable snapshot.
+
+The data-dict manifest is public contract metadata. Column examples and ranges,
+dataset and table origins, and table source locators are removed, although
+their raw values still bind source and build digests. Those digests permit
+equality tests and offline guessing of low-entropy values; redaction is not a
+secrecy boundary. Other retained fields can expose observed or sensitive
+values embedded manually. The strict profile rejects `number(id)` in scalar or
+list form, fails closed on unsafe JSON numeric tokens before lossy conversion,
+and enforces its supported datetime forms. The [data-dict
+guide](articles/data-dict-schema.html) documents the exact boundary.
 
 ## Choose your path
 

@@ -75,7 +75,6 @@ slots:
     maximum_value: 1
   status:
     range: StatementStatus
-    ifabsent: string(active)
   valid_from:
     range: datetime
   valid_to:

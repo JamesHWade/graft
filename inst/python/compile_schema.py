@@ -60,6 +60,122 @@ ROLE_VALUES = {
     "metadata",
 }
 ID_POLICY_VALUES = {"require", "mint", "resolve_exact", "deterministic"}
+UNSUPPORTED_SLOT_SEMANTICS = {
+    "abstract",
+    "all_members",
+    "all_of",
+    "any_of",
+    "apply_to",
+    "array",
+    "asymmetric",
+    "bindings",
+    "children_are_mutually_disjoint",
+    "designates_type",
+    "disjoint_with",
+    "domain",
+    "enum_range",
+    "equals_expression",
+    "equals_number",
+    "equals_string",
+    "equals_string_in",
+    "exact_cardinality",
+    "exactly_one_of",
+    "has_member",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "ifabsent",
+    "implicit_prefix",
+    "inherited",
+    "inverse",
+    "irreflexive",
+    "is_a",
+    "is_class_field",
+    "key",
+    "list_elements_unique",
+    "locally_reflexive",
+    "maximum_cardinality",
+    "minimum_cardinality",
+    "mixin",
+    "mixins",
+    "none_of",
+    "path_rule",
+    "range_expression",
+    "readonly",
+    "recommended",
+    "reflexive",
+    "relational_role",
+    "shared",
+    "string_serialization",
+    "structured_pattern",
+    "subproperty_of",
+    "symmetric",
+    "transitive",
+    "transitive_form_of",
+    "type_mappings",
+    "reflexive_transitive_form_of",
+    "union_of",
+    "unit",
+    "value_presence",
+    "values_from",
+}
+UNSUPPORTED_CLASS_SEMANTICS = {
+    "all_of",
+    "any_of",
+    "apply_to",
+    "children_are_mutually_disjoint",
+    "classification_rules",
+    "defining_slots",
+    "disjoint_with",
+    "exactly_one_of",
+    "extra_slots",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "none_of",
+    "represents_relationship",
+    "rules",
+    "slot_conditions",
+    "slot_names_unique",
+    "string_serialization",
+    "subclass_of",
+    "tree_root",
+    "union_of",
+    "unique_keys",
+    "values_from",
+}
+UNSUPPORTED_ENUM_SEMANTICS = {
+    "abstract",
+    "apply_to",
+    "code_set",
+    "code_set_tag",
+    "code_set_version",
+    "concepts",
+    "enum_uri",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "include",
+    "inherits",
+    "is_a",
+    "matches",
+    "minus",
+    "mixin",
+    "mixins",
+    "pv_formula",
+    "reachable_from",
+    "string_serialization",
+    "values_from",
+}
+UNSUPPORTED_SCHEMA_SEMANTICS = {
+    "bindings",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "slot_names_unique",
+}
+UNSUPPORTED_PERMISSIBLE_VALUE_SEMANTICS = {
+    "is_a",
+    "mixins",
+    "unit",
+}
+LINKML_TYPES_SCHEMA_ID = "https://w3id.org/linkml/types"
 PRIMITIVE_SQL_TYPES = {
     "boolean": "BOOLEAN",
     "date": "DATE",
@@ -70,10 +186,63 @@ PRIMITIVE_SQL_TYPES = {
     "integer": "BIGINT",
     "time": "TIME",
 }
+SUPPORTED_PRIMITIVE_RANGES = set(PRIMITIVE_SQL_TYPES) | {
+    "string",
+    "uri",
+    "uriorcurie",
+}
 
 
 class GraftCompilerError(ValueError):
     """Raised when a LinkML schema violates the graft semantic contract."""
+
+
+def _linkml_field_is_set(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (str, bytes, list, tuple, set, dict)):
+        return len(value) > 0
+    return True
+
+
+def _reject_unsupported_linkml_fields(
+    element: Any, fields: set[str], label: str
+) -> None:
+    unsupported = sorted(
+        field
+        for field in fields
+        if _linkml_field_is_set(getattr(element, field, None))
+    )
+    if unsupported:
+        raise GraftCompilerError(
+            f"{label} uses LinkML semantic field(s) unsupported by "
+            f"graft-table-v1: {', '.join(unsupported)}."
+        )
+
+
+def _validate_schema_semantics(schema_view: SchemaView) -> None:
+    schema_view.all_schema(imports=True)
+    for schema_key, schema in schema_view.schema_map.items():
+        label = f"Schema {schema.name}"
+        _reject_unsupported_linkml_fields(
+            schema,
+            UNSUPPORTED_SCHEMA_SEMANTICS,
+            label,
+        )
+        _validate_annotation_names(label, _annotation_map(schema), set())
+        custom_types = sorted(
+            str(name)
+            for name in (schema.types or {})
+            if not (
+                str(schema_key) == "linkml:types"
+                and str(schema.id) == LINKML_TYPES_SCHEMA_ID
+            )
+        )
+        if custom_types:
+            raise GraftCompilerError(
+                f"{label} defines custom LinkML type(s) unsupported by "
+                f"graft-table-v1: {', '.join(custom_types)}."
+            )
 
 
 def _canonical_json(value: Any) -> str:
@@ -152,7 +321,7 @@ def _inherited_class_annotations(
 ) -> dict[str, Any]:
     result: dict[str, Any] = {}
     ancestors = schema_view.class_ancestors(
-        class_name, imports=True, mixins=True, reflexive=True
+        class_name, imports=True, mixins=False, reflexive=True
     )
     for ancestor_name in reversed(ancestors):
         result.update(_annotation_map(schema_view.get_class(ancestor_name)))
@@ -230,6 +399,19 @@ def _duckdb_type(range_name: str, enum_names: set[str]) -> str:
     return PRIMITIVE_SQL_TYPES.get(range_name, "VARCHAR")
 
 
+def _validate_slot_range(
+    label: str,
+    range_name: str,
+    class_names: set[str],
+    enum_names: set[str],
+) -> None:
+    if range_name not in class_names | enum_names | SUPPORTED_PRIMITIVE_RANGES:
+        raise GraftCompilerError(
+            f"{label} uses LinkML range {range_name!r}, which is unsupported "
+            "by graft-table-v1."
+        )
+
+
 def _slot_contract(
     schema_view: SchemaView,
     class_name: str,
@@ -237,11 +419,27 @@ def _slot_contract(
     class_names: set[str],
     enum_names: set[str],
 ) -> dict[str, Any]:
+    if slot.inlined is True:
+        raise GraftCompilerError(
+            f"Slot {class_name}.{slot.name} uses inlined: true, which is "
+            "unsupported by graft-table-v1."
+        )
+    _reject_unsupported_linkml_fields(
+        slot,
+        UNSUPPORTED_SLOT_SEMANTICS,
+        f"Slot {class_name}.{slot.name}",
+    )
     annotations = _annotation_map(slot)
     _validate_annotation_names(
         f"Slot {class_name}.{slot.name}", annotations, SUPPORTED_SLOT_ANNOTATIONS
     )
     range_name = str(slot.range or "string")
+    _validate_slot_range(
+        f"Slot {class_name}.{slot.name}",
+        range_name,
+        class_names,
+        enum_names,
+    )
     object_range = range_name in class_names
     multivalued = bool(slot.multivalued)
     ordered = bool(slot.list_elements_ordered or slot.inlined_as_list)
@@ -396,10 +594,28 @@ def _inferred_search_slots(slots: list[dict[str, Any]]) -> list[str]:
 def _enum_contract(schema_view: SchemaView) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for name, enum_definition in sorted(schema_view.all_enums().items()):
+        _reject_unsupported_linkml_fields(
+            enum_definition,
+            UNSUPPORTED_ENUM_SEMANTICS,
+            f"Enum {name}",
+        )
+        _validate_annotation_names(
+            f"Enum {name}", _annotation_map(enum_definition), set()
+        )
         values = []
         for value_name, permissible_value in sorted(
             (enum_definition.permissible_values or {}).items()
         ):
+            _reject_unsupported_linkml_fields(
+                permissible_value,
+                UNSUPPORTED_PERMISSIBLE_VALUE_SEMANTICS,
+                f"Permissible value {name}.{value_name}",
+            )
+            _validate_annotation_names(
+                f"Permissible value {name}.{value_name}",
+                _annotation_map(permissible_value),
+                set(),
+            )
             values.append(
                 {
                     "value": str(value_name),
@@ -451,6 +667,16 @@ def _class_contracts(
     schema_view: SchemaView,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     all_classes = schema_view.all_classes(imports=True)
+    mixin_classes = sorted(
+        str(name)
+        for name, class_definition in all_classes.items()
+        if bool(class_definition.mixin) or bool(class_definition.mixins)
+    )
+    if mixin_classes:
+        raise GraftCompilerError(
+            "LinkML class mixins are not supported by graft-table-v1; "
+            f"found: {', '.join(mixin_classes)}."
+        )
     class_names = {str(name) for name in all_classes}
     enum_names = {str(name) for name in schema_view.all_enums(imports=True)}
     classes: dict[str, Any] = {}
@@ -458,6 +684,11 @@ def _class_contracts(
 
     for name, class_definition in sorted(all_classes.items()):
         name = str(name)
+        _reject_unsupported_linkml_fields(
+            class_definition,
+            UNSUPPORTED_CLASS_SEMANTICS,
+            f"Class {name}",
+        )
         direct_annotations = _annotation_map(class_definition)
         _validate_annotation_names(
             f"Class {name}", direct_annotations, SUPPORTED_CLASS_ANNOTATIONS
@@ -468,7 +699,7 @@ def _class_contracts(
         ancestors = [
             str(value)
             for value in schema_view.class_ancestors(
-                name, imports=True, mixins=True, reflexive=True
+                name, imports=True, mixins=False, reflexive=True
             )
         ]
         annotations = _inherited_class_annotations(schema_view, name)
@@ -637,11 +868,27 @@ def _global_slot_contract(
     result: dict[str, Any] = {}
     for name, slot in sorted(schema_view.all_slots(imports=True).items()):
         name = str(name)
+        if slot.inlined is True:
+            raise GraftCompilerError(
+                f"Slot {name} uses inlined: true, which is unsupported by "
+                "graft-table-v1."
+            )
+        _reject_unsupported_linkml_fields(
+            slot,
+            UNSUPPORTED_SLOT_SEMANTICS,
+            f"Slot {name}",
+        )
         annotations = _annotation_map(slot)
         _validate_annotation_names(
             f"Slot {name}", annotations, SUPPORTED_SLOT_ANNOTATIONS
         )
         range_name = str(slot.range or "string")
+        _validate_slot_range(
+            f"Slot {name}",
+            range_name,
+            class_names,
+            enum_names,
+        )
         result[name] = {
             "name": name,
             "range": range_name,
@@ -768,11 +1015,12 @@ def _graph_projections(
     }
 
 
-def _normalization_contract(slots: dict[str, Any]) -> dict[str, str]:
+def _normalization_contract(classes: dict[str, Any]) -> dict[str, str]:
     namespaces = sorted(
         {
             str(slot["external_identifier"])
-            for slot in slots.values()
+            for class_contract in classes.values()
+            for slot in class_contract["slots"].values()
             if slot["external_identifier"]
         }
     )
@@ -805,6 +1053,7 @@ def compile_schema(schema_path: str, output_path: str | None = None) -> str:
     # All compiler logic below reads LinkML through the SchemaView and its
     # resolved import closure.
     schema_view.all_schema(imports=True)
+    _validate_schema_semantics(schema_view)
     classes, relations = _class_contracts(schema_view)
     enums = _enum_contract(schema_view)
     class_names = {str(name) for name in schema_view.all_classes(imports=True)}
@@ -812,7 +1061,7 @@ def compile_schema(schema_path: str, output_path: str | None = None) -> str:
     slots = _global_slot_contract(schema_view, class_names, enum_names)
     validations = _validation_invariants(classes)
     graph_projections = _graph_projections(classes, relations)
-    normalization = _normalization_contract(slots)
+    normalization = _normalization_contract(classes)
     source_files, source_digest = _source_contract(schema_view, root_path)
 
     structural_contract = {

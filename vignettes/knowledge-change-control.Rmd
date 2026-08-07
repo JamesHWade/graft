@@ -42,7 +42,8 @@ graft uses S7 selectively where an object carries durable invariants:
 - `GraftStore` owns store identity and private connection state.
 
 Domain records remain ordinary data frames. Retrieval results remain ordinary
-data frames or lists. graft does not create an S7 class for every LinkML class.
+data frames or lists. graft does not create an S7 class for every contract
+class.
 
 ```{r setup}
 library(graft)
@@ -85,7 +86,7 @@ plan <- graft_plan(store, records, provenance)
 Planning is deterministic for the same contract, store snapshot, records, and
 provenance. It performs the work needed for an informed review:
 
-- normalize values and validate the LinkML shapes;
+- normalize values and validate the compiled contract shapes;
 - resolve stable record identity;
 - validate references across the complete candidate set;
 - compare candidates with current accepted heads;
@@ -221,7 +222,7 @@ revisions; it never becomes a second source of record content.
 
 ## Evolve the contract explicitly
 
-A LinkML contract can evolve, but contract evolution is not an in-place rewrite
+A domain contract can evolve, but contract evolution is not an in-place rewrite
 of accepted payloads. A new contract version must be registered, current
 revisions must be interpretable under it, and derived projections must be
 rebuilt. Historical revisions retain the exact schema digest under which they

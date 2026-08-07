@@ -26,8 +26,9 @@ template:
 home:
   title: "graft: Reviewable knowledge changes for R workflows"
   description: >
-    Define records with LinkML, inspect a read-only change plan, accept it
-    atomically, and retrieve current knowledge with its immutable history.
+    Define records with LinkML or data-dict, inspect a read-only change plan,
+    accept it atomically, and retrieve current knowledge with its immutable
+    history.
   sidebar:
     structure: [links, license, authors, dev]
 
@@ -46,6 +47,8 @@ navbar:
           href: articles/architecture.html
         - text: LinkML contract
           href: articles/linkml-schema.html
+        - text: data-dict contract
+          href: articles/data-dict-schema.html
         - text: Change control
           href: articles/knowledge-change-control.html
         - text: Retrieval and history
@@ -82,6 +85,7 @@ articles:
       operations, and readable open-knowledge projection.
     contents:
       - linkml-schema
+      - data-dict-schema
       - knowledge-change-control
       - retrieval
       - open-knowledge-format

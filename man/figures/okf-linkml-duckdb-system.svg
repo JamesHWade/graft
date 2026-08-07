@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
-  <title id="title">How OKF, LinkML, and DuckDB fit together in Graft</title>
-  <desc id="desc">Graft sits at the center. A LinkML schema compiles into its runtime contract, Open Knowledge Format provides the readable working surface for people and agents, and DuckDB holds accepted revisions and provenance.</desc>
+  <title id="title">How contract providers, OKF, Graft, and DuckDB exchange knowledge</title>
+  <desc id="desc">A LinkML or data-dict contract compiles into Graft. Open Knowledge Format exchanges readable proposals and accepted projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB.</desc>
   <style>
     :root {
       --bg: #f7faf8;
@@ -121,9 +121,9 @@
   <circle cx="122" cy="157" r="24" fill="var(--amber)" opacity="0.16"/>
   <path d="M111 143h18l10 10v22h-28z M129 143v11h10" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linejoin="round"/>
   <text class="eyebrow" x="158" y="151">DOMAIN CONTRACT</text>
-  <text class="title" x="105" y="207">LinkML</text>
+  <text class="title" x="105" y="207">LinkML or data-dict</text>
   <text class="subtitle" x="105" y="239">Defines meaning before storage</text>
-  <text class="small" x="105" y="273">classes · slots · identity · ranges</text>
+  <text class="small" x="105" y="273">classes/tables · fields · identity</text>
   <text class="small" x="105" y="298">relationships · sensitivity</text>
 
   <rect class="node-soft" x="770" y="105" width="360" height="210" rx="24"/>

@@ -496,9 +496,10 @@ read_schema_version <- function(connection, build_digest) {
 }
 
 compiled_schema_from_json <- function(manifest_json) {
+  manifest_text <- scalar_character(manifest_json)
   manifest <- tryCatch(
     jsonlite::fromJSON(
-      scalar_character(manifest_json),
+      manifest_text,
       simplifyVector = FALSE
     ),
     error = function(error) {
@@ -512,6 +513,26 @@ compiled_schema_from_json <- function(manifest_json) {
       )
     }
   )
+  duplicate <- duplicate_json_object_key(manifest)
+  if (!is.null(duplicate)) {
+    abort_backend_error(
+      paste0(
+        "The stored manifest contains duplicate JSON object key `",
+        duplicate$key,
+        "`."
+      ),
+      operation = "read_store_metadata",
+      field = duplicate$path,
+      rule = "duplicate_json_key"
+    )
+  }
+  if (!identical(canonical_manifest_json(manifest), manifest_text)) {
+    abort_backend_error(
+      "The stored manifest JSON is not in its canonical representation.",
+      operation = "read_store_metadata",
+      rule = "stored_manifest_canonical_json"
+    )
+  }
   validate_manifest_header(manifest, "<stored manifest>")
   new_compiled_schema(manifest)
 }
@@ -521,16 +542,31 @@ canonical_manifest_json <- function(manifest) {
 }
 
 canonical_json <- function(x) {
+  x <- normalize_json_signed_zero(x)
   as.character(jsonlite::toJSON(
     x,
     auto_unbox = TRUE,
     null = "null",
     na = "null",
-    digits = NA,
+    digits = 17,
     POSIXt = "ISO8601",
     UTC = TRUE,
     pretty = FALSE
   ))
+}
+
+normalize_json_signed_zero <- function(value) {
+  if (is.numeric(value)) {
+    value[!is.na(value) & value == 0] <- 0
+    return(value)
+  }
+  if (!is.list(value) || is.null(value)) {
+    return(value)
+  }
+  for (index in seq_along(value)) {
+    value[index] <- list(normalize_json_signed_zero(value[[index]]))
+  }
+  value
 }
 
 new_store_id <- function() {

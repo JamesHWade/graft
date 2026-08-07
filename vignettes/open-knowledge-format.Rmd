@@ -26,7 +26,7 @@ diff without needing a database client.
 
 Readable files are useful, but they are not a second source of truth. In graft:
 
-- LinkML is the domain contract.
+- The compiled Graft manifest is the domain contract.
 - The revision ledger is the authority for accepted knowledge.
 - OKF is a deterministic projection and proposal surface.
 - `graft_review()` and `graft_commit()` are the route from edited files back to
@@ -151,7 +151,7 @@ review@issues
 
 `graft_review()` reads a stable snapshot, compares the proposed records with
 current accepted revisions, and applies the same normalization, identity, and
-LinkML validation as `graft_plan()`. The returned `GraftCommitPlan` is bound to
+contract validation as `graft_plan()`. The returned `GraftCommitPlan` is bound to
 the exact bundle digest, accepted base, active schema, and store.
 
 Only complete managed bundles can be reviewed. Removing concept documents is

@@ -1,0 +1,101 @@
+$version: 0.1.0
+$learn_more: https://data-dict.tidyverse.org/
+name: personinfo
+label: Person information
+description: >
+  People, organizations, and employment relationships derived from the
+  LinkML PersonInfo fixture used by graft.
+details: >
+  The multivalued Person.employed_by object reference is normalized into the
+  person_employment table because data-dict does not permit foreign-key
+  constraints on list columns.
+origin: ../../plain-linkml/personinfo.linkml.yaml
+version:
+  number: 0.1.0
+tables:
+  - name: person
+    label: People
+    description: Each row is one person known to the example directory.
+    columns:
+      - name: id
+        label: Person ID
+        description: Stable identifier for the person.
+        type: string
+        constraints: [primary_key]
+        examples: ["person:clark-kent", "person:lois-lane"]
+      - name: full_name
+        label: Full name
+        description: Preferred display name for the person.
+        type: string
+        constraints: [required]
+        examples: ["Clark Kent", "Lois Lane"]
+      - name: aliases
+        description: Alternative names used for the person.
+        type: list(string)
+        examples: ["Superman", "Kal-El", "Smallville"]
+      - name: age
+        description: Age in completed years, when known.
+        type: number
+        examples: [0, 18, 35, 65, 100]
+        constraints:
+          - assert: age >= 0
+            description: Age cannot be negative.
+
+  - name: organization
+    label: Organizations
+    description: Each row is one organization that can employ a person.
+    columns:
+      - name: id
+        label: Organization ID
+        description: Stable identifier for the organization.
+        type: string
+        constraints: [primary_key]
+        examples: ["org:daily-planet", "org:justice-league"]
+      - name: name
+        label: Organization name
+        description: Preferred display name for the organization.
+        type: string
+        constraints: [required]
+        examples: ["Daily Planet", "Justice League"]
+
+  - name: person_employment
+    label: Employment relationships
+    description: >
+      Each row links one person to one organization that employs them.
+    details: >
+      This bridge preserves the LinkML slot's multivalued object-reference
+      meaning, but data-dict cannot express its original slot URI.
+    columns:
+      - name: id
+        description: Stable identifier for the employment relationship.
+        type: string
+        constraints: [primary_key]
+        examples:
+          - "employment:clark-kent:daily-planet"
+          - "employment:lois-lane:daily-planet"
+      - name: person_id
+        description: Person participating in the employment relationship.
+        type: string
+        constraints: [required, foreign_key]
+        examples: ["person:clark-kent", "person:lois-lane"]
+      - name: organization_id
+        description: Organization that employs the person.
+        type: string
+        constraints: [required, foreign_key]
+        examples: ["org:daily-planet", "org:justice-league"]
+
+relationships:
+  - join: person_employment.person_id = person.id
+    cardinality: many-to-one
+    description: Resolves each employment row to its person.
+  - join: person_employment.organization_id = organization.id
+    cardinality: many-to-one
+    description: Resolves each employment row to its organization.
+
+glossary:
+  stable identifier: >
+    An identifier whose value continues to denote the same logical record
+    across accepted changes.
+  employment relationship: >
+    A directed association from a person to an organization that employs the
+    person.

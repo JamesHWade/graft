@@ -18,13 +18,46 @@ knitr::opts_chunk$set(
 )
 ```
 
-LinkML is graft's domain type system. It defines the classes and fields that a
-workflow may submit, which values are required, how records are identified,
-and which fields refer to other records. The same compiled contract governs
-planning, accepted revisions, retrieval, history, and readable projections.
+LinkML is graft's richer ontology- and graph-oriented contract provider. It
+defines the classes and fields that a workflow may submit, which values are
+required, how records are identified, and which fields refer to other records.
+graft compiles it into the same canonical runtime contract used by every
+provider. That compiled contract governs planning, accepted revisions,
+retrieval, history, and readable projections; LinkML itself is never the
+revision ledger.
+
+Choose LinkML when you need inheritance, class and slot ontology URIs,
+permissible-value meanings, polymorphic references, graph traversal
+relationships, or Graft-specific record and statement semantics. For a strict
+table-first alternative with richer dictionary metadata, see
+[Use a data-dict contract with graft](data-dict-schema.html).
 
 An ordinary LinkML schema is enough. It does not need to import a graft base
 schema or define a parallel set of R classes.
+
+The v0.1 compiler intentionally supports a strict LinkML profile. Direct
+`is_a` inheritance and class-local `slot_usage` overrides are supported, but
+class mixins are rejected at compilation because a flattened mixin ancestry
+cannot be independently validated as a single parent chain in the canonical
+manifest. Replace a mixin with explicit inheritance or concrete slots before
+compiling it for graft.
+
+The compiler also rejects LinkML validation, defaulting, composition, and
+serialization fields that the canonical manifest does not preserve. This
+includes class rules and unique keys; slot equality, cardinality, expression,
+default, unit, member, identifier-prefix, and structured-pattern fields; schema
+bindings and slot-name constraints; and enum identity or enum and
+permissible-value inheritance.
+Custom LinkML types are also rejected because their inherited constraints do
+not have a lossless `graft-table-v1` representation. Supported primitive ranges
+are `boolean`, `date`, `datetime`, `decimal`, `double`, `float`, `integer`,
+`string`, `time`, `uri`, and `uriorcurie`; other LinkML built-ins are rejected
+until Graft can execute their lexical semantics. URI and URI-or-CURIE values
+must be complete RFC 3986 ASCII URIs, or prefixed CURIEs for `uriorcurie`, with
+valid percent escapes. Relative references are rejected.
+Supported requiredness, scalar or list shape, enum membership, pattern, and
+numeric bounds remain executable Graft validation rules. The strict boundary
+prevents a source constraint from looking active after it has been dropped.
 
 ## Write the domain contract
 
@@ -75,8 +108,9 @@ refer to organizations.
 
 ## Compile or load once
 
-`graft_schema()` accepts either LinkML YAML or a compiled `.graft.json`
-contract.
+`graft_schema()` accepts LinkML YAML, data-dict YAML or trusted resolved
+`export-spec` JSON, and a compiled `.graft.json` contract. This article follows
+the LinkML path.
 
 ```{r compile}
 library(graft)
@@ -135,9 +169,13 @@ person@slots$employed_by@range
 compiled LinkML contract. They make schema inspection predictable while domain
 records remain ordinary data frames.
 
-The complete canonical manifest is available as `schema@manifest` for tooling
-that needs lower-level contract details. Prefer the typed properties when they
-cover the question.
+The complete canonical Graft manifest is available as `schema@manifest` for
+tooling that needs lower-level contract details. It is not necessarily a copy
+of the source-provider document: for example, data-dict manifests intentionally
+redact representative values, dataset and table origins, and table source
+locators. Other retained provider metadata remains public and can contain
+values embedded manually. Prefer the typed properties when they cover the
+question.
 
 ## Validate a connected candidate set
 
@@ -214,6 +252,10 @@ graft_query(
 `graft_query()` exposes fixed, bounded operations rather than storage-specific
 queries. A relationship projection is rebuildable from accepted revisions and
 the contract; it is not a second place to write knowledge.
+
+This graph behavior is a reason to choose LinkML. Under the strict data-dict
+profile, scalar foreign keys are checked as references but do not become graph
+traversal edges.
 
 ## Change the contract deliberately
 

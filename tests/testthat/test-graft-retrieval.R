@@ -3,6 +3,14 @@ test_that("BR-21 current retrieval uses the ledger and active sensitivity", {
     as_graft_schema_internal(graft_schema(tempest_manifest_path()))
   )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema$manifest$classes$Entity$search_slots <- as.list(setdiff(
+    unlist(
+      schema$manifest$classes$Entity$search_slots,
+      use.names = FALSE
+    ),
+    "description"
+  ))
+  schema$manifest$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
   schema <- new_graft_schema(schema)
   fixture <- retrieval_fixture_records()
@@ -487,6 +495,14 @@ test_that("BR-23 exact pagination cannot be starved by false payload hits", {
     as_graft_schema_internal(graft_schema(tempest_manifest_path()))
   )
   schema$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  schema$manifest$classes$Entity$search_slots <- as.list(setdiff(
+    unlist(
+      schema$manifest$classes$Entity$search_slots,
+      use.names = FALSE
+    ),
+    "description"
+  ))
+  schema$manifest$slots$description$sensitive <- TRUE
   schema <- refresh_schema_structural_digest(schema)
   schema <- new_graft_schema(schema)
   store <- local_graft_ingest_store(schema = schema)

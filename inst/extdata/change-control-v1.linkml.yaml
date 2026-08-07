@@ -15,7 +15,7 @@ slots:
   preferred_name:
     range: string
     required: true
-  status:
+  record_status:
     range: string
   portfolio_id:
     range: string
@@ -29,7 +29,7 @@ classes:
     is_a: GraftNode
     slots:
       - preferred_name
-      - status
+      - record_status
       - portfolio_id
     annotations:
       graft.id_policy:
@@ -40,4 +40,4 @@ classes:
         value: preferred_name
       graft.search_slots:
         tag: graft.search_slots
-        value: "preferred_name, status"
+        value: "preferred_name, record_status"

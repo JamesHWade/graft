@@ -3,8 +3,14 @@ compile_schema_manifest <- function(schema, output = NULL) {
   schema <- normalize_schema_input(schema)
   output <- normalize_manifest_output(schema, output)
   compiler <- graft_compiler_path()
+  stage <- tempfile(
+    pattern = paste0(".", basename(output), "-stage-"),
+    tmpdir = dirname(output),
+    fileext = ".graft.json"
+  )
+  on.exit(unlink(stage, force = TRUE), add = TRUE)
 
-  tryCatch(
+  compiled <- tryCatch(
     {
       reticulate::py_require("linkml-runtime>=1.9,<2")
       compiler_module <- reticulate::import_from_path(
@@ -12,7 +18,10 @@ compile_schema_manifest <- function(schema, output = NULL) {
         path = dirname(compiler),
         convert = TRUE
       )
-      compiler_module$compile_schema(schema, output)
+      compiler_module$compile_schema(schema, stage)
+      compiled <- load_schema_manifest(stage)
+      new_graft_schema(compiled)
+      compiled
     },
     error = function(error) {
       abort_schema_error(
@@ -24,12 +33,63 @@ compile_schema_manifest <- function(schema, output = NULL) {
         ),
         schema_path = schema,
         output_path = output,
+        field = error$field,
+        rule = error$rule,
+        parent = error,
         call = error_call
       )
     }
   )
 
-  load_schema_manifest(output)
+  install_compiled_manifest(stage, output, call = error_call)
+  compiled$path <- normalizePath(output, winslash = "/", mustWork = TRUE)
+  compiled
+}
+
+install_compiled_manifest <- function(stage, output, call) {
+  if (dir.exists(output)) {
+    abort_schema_error(
+      "The compiled manifest output path is an existing directory.",
+      output_path = output,
+      call = call
+    )
+  }
+  if (!file.exists(output)) {
+    if (!file.rename(stage, output)) {
+      abort_schema_error(
+        "Could not install the validated compiled manifest.",
+        output_path = output,
+        call = call
+      )
+    }
+    return(invisible(output))
+  }
+
+  backup <- tempfile(
+    pattern = paste0(".", basename(output), "-backup-"),
+    tmpdir = dirname(output)
+  )
+  if (!file.rename(output, backup)) {
+    abort_schema_error(
+      "Could not stage the existing compiled manifest for replacement.",
+      output_path = output,
+      call = call
+    )
+  }
+  installed <- file.rename(stage, output)
+  if (!installed) {
+    restored <- file.rename(backup, output)
+    abort_schema_error(
+      paste0(
+        "Could not install the validated compiled manifest",
+        if (restored) "." else " or restore the previous output."
+      ),
+      output_path = output,
+      call = call
+    )
+  }
+  unlink(backup, force = TRUE)
+  invisible(output)
 }
 
 normalize_schema_input <- function(schema) {

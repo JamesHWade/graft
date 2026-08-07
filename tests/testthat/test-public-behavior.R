@@ -67,6 +67,40 @@ test_that("graft_plan reports detailed source-row validation issues", {
   )
 })
 
+test_that("graft_plan normalizes optional empty strings before persistence", {
+  store <- local_graft_ingest_store()
+  id <- \(index) sprintf("graft:%026d", index)
+  claim_ids <- c(id(2L), id(3L))
+  plan <- graft_plan(
+    store,
+    list(
+      Entity = data.frame(id = id(1L), preferred_name = "Entity"),
+      Claim = data.frame(
+        id = claim_ids,
+        statement_text = c("Empty", "Whitespace"),
+        claim_type = c("", "   "),
+        about = I(list(id(1L), id(1L)))
+      )
+    ),
+    graft_provenance("missing-enum", idempotency_key = "missing-enum")
+  )
+
+  expect_identical(plan@valid, TRUE)
+  expect_identical(
+    plan@records$Claim$claim_type,
+    c(NA_character_, NA_character_)
+  )
+  graft_commit(store, plan)
+  retrieved <- lapply(
+    claim_ids,
+    \(record_id) graft_get(store, record_id, include = character())
+  )
+  expect_identical(
+    lapply(retrieved, \(record) record$record$claim_type),
+    list(NULL, NULL)
+  )
+})
+
 test_that("exact identifiers and origins reconcile through public operations", {
   store <- local_graft_ingest_store()
   first <- graft_ingest(

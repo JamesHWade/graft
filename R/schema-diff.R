@@ -33,7 +33,7 @@ canonical_schema_value <- function(value) {
   }
   value_names <- names(value)
   if (!is.null(value_names) && all(nzchar(value_names))) {
-    value <- value[order(value_names)]
+    value <- value[order(value_names, method = "radix")]
   }
   lapply(value, canonical_schema_value)
 }

@@ -37,6 +37,10 @@ SlotContract <- S7::new_class(
     external_identifier = S7::new_property(
       S7::class_character,
       getter = \(self) slot_contract_data(self)$external_identifier
+    ),
+    datetime_format = S7::new_property(
+      S7::class_character,
+      getter = \(self) slot_contract_data(self)$datetime_format
     )
   ),
   constructor = function(data) {
@@ -68,6 +72,13 @@ SlotContract <- S7::new_class(
     }
     if (!is_optional_string(data$external_identifier)) {
       return("@external_identifier must be one string or missing")
+    }
+    if (
+      !is_optional_string(data$datetime_format) ||
+        (!is.na(data$datetime_format) &&
+          !data$datetime_format %in% c("offset", "local_utc"))
+    ) {
+      return("@datetime_format must be offset, local_utc, or missing")
     }
     NULL
   }
@@ -271,12 +282,16 @@ GraftStore <- S7::new_class(
 #' Load or compile a Graft schema
 #'
 #' `graft_schema()` loads a compiled `.graft.json` manifest or compiles a LinkML
-#' `.yaml` or `.yml` schema before returning an immutable semantic schema
-#' object. When `output` is omitted, a temporary compiled manifest is retained
-#' as the schema object's source path.
+#' or [data-dict](https://data-dict.tidyverse.org/) contract before returning an
+#' immutable semantic schema object. Data-dict YAML compilation requires the
+#' optional `data-dict` CLI; a resolved `export-spec` JSON document does not.
+#' When `output` is omitted, a temporary compiled manifest is retained as the
+#' schema object's source path.
 #'
-#' @param path Path to a compiled `.graft.json` manifest or LinkML YAML schema.
-#' @param output Optional durable `.graft.json` output path when compiling YAML.
+#' @param path Path to a compiled `.graft.json` manifest, a LinkML YAML schema,
+#'   a `data-dict.yaml` contract, or resolved data-dict JSON.
+#' @param output Optional durable `.graft.json` output path when compiling a
+#'   source contract.
 #'
 #' @return An immutable `GraftSchema` S7 object.
 #' @export
@@ -286,19 +301,23 @@ graft_schema <- function(path, output = NULL) {
   if (endsWith(lower, ".graft.json")) {
     if (!is.null(output)) {
       abort_schema_error(
-        "`output` is only supported when compiling a YAML schema.",
+        "`output` is only supported when compiling a source contract.",
         argument = "output",
         schema_path = path
       )
     }
     return(new_graft_schema(load_schema_manifest(path)))
   }
+  if (is_data_dict_document(path)) {
+    output <- normalize_graft_schema_output(output)
+    return(new_graft_schema(compile_data_dict_source(path, output)))
+  }
   if (!grepl("\\.ya?ml$", lower)) {
     abort_schema_error(
       paste0(
         "Unsupported schema extension for `",
         path,
-        "`; expected `.graft.json`, `.yaml`, or `.yml`."
+        "`; expected `.graft.json`, data-dict `.json`, `.yaml`, or `.yml`."
       ),
       argument = "path",
       schema_path = path
@@ -536,7 +555,8 @@ slot_contract_field_names <- function() {
     "sensitive",
     "object_reference",
     "identifier",
-    "external_identifier"
+    "external_identifier",
+    "datetime_format"
   )
 }
 
@@ -582,7 +602,8 @@ graft_slot_contract <- function(name, slot) {
     sensitive = scalar_logical(slot$sensitive),
     object_reference = scalar_logical(slot$object_reference),
     identifier = scalar_logical(slot$identifier),
-    external_identifier = scalar_character(slot$external_identifier)
+    external_identifier = scalar_character(slot$external_identifier),
+    datetime_format = scalar_character(slot$datetime_format)
   ))
 }
 

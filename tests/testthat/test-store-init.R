@@ -91,6 +91,14 @@ test_that("stores reject structural schema changes", {
 
   changed <- as_graft_schema_internal(schema)
   changed$manifest$classes$Entity$slots$description$sensitive <- TRUE
+  changed$manifest$classes$Entity$search_slots <- as.list(setdiff(
+    unlist(
+      changed$manifest$classes$Entity$search_slots,
+      use.names = FALSE
+    ),
+    "description"
+  ))
+  changed$manifest$slots$description$sensitive <- TRUE
   changed <- refresh_schema_structural_digest(changed)
   incompatible <- new_graft_schema(changed)
 
@@ -117,8 +125,13 @@ test_that("compiler-only rebuilds activate without changing store identity", {
   graft_close(store)
 
   rebuilt <- as_graft_schema_internal(schema)
-  rebuilt$manifest$fingerprints$source_digest <- graft_sha256("new source")
-  rebuilt$manifest$fingerprints$build_digest <- graft_sha256("new build")
+  rebuilt$manifest$schema$source_files[[1L]]$content_digest <-
+    graft_sha256("new source")
+  rebuilt$manifest$fingerprints$source_digest <- graft_linkml_source_digest(
+    rebuilt$manifest$schema$source_files
+  )
+  rebuilt$manifest$fingerprints$build_digest <-
+    manifest_build_digest(rebuilt$manifest)
   rebuilt <- new_graft_schema(rebuilt)
   reopened <- graft_open(rebuilt, path, okf = "disabled")
   withr::defer(graft_close(reopened))
