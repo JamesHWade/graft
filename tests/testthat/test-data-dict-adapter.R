@@ -1474,7 +1474,7 @@ test_that("data-dict doubles retain distinct exact values through the ledger", {
     list(
       Measurement = data.frame(
         id = c("measurement:underflow-1", "measurement:underflow-2"),
-        value = c("1e-9999", "2.5e-324")
+        value = c("1e-9999", "-1e-9999")
       )
     ),
     graft_provenance("double-test", idempotency_key = "double-underflow")
