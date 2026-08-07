@@ -1,6 +1,5 @@
 data_dict_adapter_version <- "0.1.0"
 data_dict_export_format_version <- "0.1.0"
-data_dict_adapter_digest_cache <- new.env(parent = emptyenv())
 
 compile_data_dict_manifest <- function(
   dictionary,
@@ -111,6 +110,38 @@ compile_data_dict_manifest <- function(
 }
 
 data_dict_adapter_script_digest <- function() {
+  data_dict_file_digest(data_dict_adapter_source_path())
+}
+
+data_dict_adapter_source_path <- function() {
+  path <- system.file(
+    "schema",
+    "graft-data-dict-adapter.source.json",
+    package = "graft"
+  )
+  if (!nzchar(path)) {
+    development_path <- file.path(
+      "inst",
+      "schema",
+      "graft-data-dict-adapter.source.json"
+    )
+    if (file.exists(development_path)) {
+      path <- development_path
+    }
+  }
+  if (!nzchar(path) || !file.exists(path)) {
+    abort_schema_error(
+      "The Graft data-dict adapter source artifact is unavailable."
+    )
+  }
+  normalizePath(path, winslash = "/", mustWork = TRUE)
+}
+
+data_dict_adapter_live_digest <- function() {
+  graft_sha256(canonical_json(data_dict_adapter_source_payload()))
+}
+
+data_dict_adapter_source_payload <- function() {
   namespace <- environment(compile_data_dict_manifest)
   namespace_bindings <- mget(
     ls(namespace, all.names = TRUE),
@@ -125,13 +156,6 @@ data_dict_adapter_script_digest <- function() {
     manifest_version = graft_manifest_version,
     projection_mapping_version = graft_projection_mapping_version
   )
-  cache_key <- list(functions = functions, versions = versions)
-  if (
-    exists("key", envir = data_dict_adapter_digest_cache, inherits = FALSE) &&
-      identical(data_dict_adapter_digest_cache$key, cache_key)
-  ) {
-    return(data_dict_adapter_digest_cache$digest)
-  }
   source <- lapply(
     functions,
     \(fn) {
@@ -147,13 +171,10 @@ data_dict_adapter_script_digest <- function() {
       )
     }
   )
-  result <- graft_sha256(canonical_json(c(
+  c(
     versions,
     list(functions = source)
-  )))
-  data_dict_adapter_digest_cache$key <- cache_key
-  data_dict_adapter_digest_cache$digest <- result
-  result
+  )
 }
 
 data_dict_validate_root <- function(dictionary) {

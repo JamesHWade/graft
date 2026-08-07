@@ -1530,8 +1530,20 @@ test_that("data-dict compilation is independent of collation locale", {
   expect_identical(alternative_locale$manifest, c_locale$manifest)
 })
 
-test_that("the adapter digest covers transitive implementation helpers", {
-  observed <- data_dict_adapter_script_digest()
+test_that("the committed adapter source matches the live implementation", {
+  skip_if(
+    identical(Sys.getenv("R_COVR"), "true"),
+    "covr instruments live function bodies"
+  )
+
+  expect_identical(
+    data_dict_adapter_script_digest(),
+    data_dict_adapter_live_digest()
+  )
+})
+
+test_that("the live adapter digest covers transitive implementation helpers", {
+  observed <- data_dict_adapter_live_digest()
   local_mocked_bindings(
     duplicate_json_object_key = \(value, path = "$") {
       list(key = "changed", path = path)
@@ -1539,7 +1551,7 @@ test_that("the adapter digest covers transitive implementation helpers", {
   )
 
   expect_identical(
-    identical(data_dict_adapter_script_digest(), observed),
+    identical(data_dict_adapter_live_digest(), observed),
     FALSE
   )
 })
