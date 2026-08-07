@@ -4,7 +4,10 @@ test_that("GraftSchema exposes immutable semantic contracts", {
   expect_identical(S7::S7_inherits(schema, GraftSchema), TRUE)
   expect_identical(schema@name, "tempest-artifacts")
   expect_identical(schema@version, "0.1.0")
-  expect_identical(schema@path, normalizePath(tempest_manifest_path()))
+  expect_identical(
+    schema@path,
+    normalizePath(tempest_manifest_path(), winslash = "/", mustWork = TRUE)
+  )
   expect_named(
     schema@digests,
     c("build_digest", "source_digest", "structural_digest"),
