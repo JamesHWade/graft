@@ -7,8 +7,8 @@
 graft_schema(path, output = NULL)
 }
 \arguments{
-\item{path}{Path to a compiled \code{.graft.json} manifest, a LinkML YAML schema,
-a \code{data-dict.yaml} contract, or resolved data-dict JSON.}
+\item{path}{Path to a data-dict YAML or resolved JSON contract, a LinkML YAML
+schema, or a compiled \code{.graft.json} manifest.}
 
 \item{output}{Optional durable \code{.graft.json} output path when compiling a
 source contract.}
@@ -17,10 +17,23 @@ source contract.}
 An immutable \code{GraftSchema} S7 object.
 }
 \description{
-\code{graft_schema()} loads a compiled \code{.graft.json} manifest or compiles a LinkML
-or \href{https://data-dict.tidyverse.org/}{data-dict} contract before returning an
-immutable semantic schema object. Data-dict YAML compilation requires the
-optional \code{data-dict} CLI; a resolved \code{export-spec} JSON document does not.
-When \code{output} is omitted, a temporary compiled manifest is retained as the
-schema object's source path.
+\code{graft_schema()} turns a
+\href{https://data-dict.tidyverse.org/}{data-dict} or LinkML source into the
+contract used to validate records, or loads an existing \code{.graft.json}
+contract. A trusted resolved data-dict \code{export-spec} document compiles in R.
+Data-dict YAML requires the optional \code{data-dict} CLI, while LinkML YAML
+requires Python and \code{linkml-runtime}. When compiling a source contract
+without \code{output}, Graft retains a temporary compiled manifest for the
+returned schema object. Loading an existing \code{.graft.json} keeps its original
+path.
+}
+\examples{
+dictionary <- system.file(
+  "extdata",
+  "team-directory.data-dict.json",
+  package = "graft",
+  mustWork = TRUE
+)
+schema <- graft_schema(dictionary)
+schema@name
 }

@@ -24,40 +24,44 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Reviewable knowledge changes for R workflows"
+  title: "graft: Connected knowledge from R tables"
   description: >
-    Define records with LinkML or data-dict, inspect a read-only change plan,
-    accept it atomically, and retrieve current knowledge with its immutable
-    history.
+    Start with related R tables and a data-dict contract, create a new local
+    store, review changes before writing, and keep current records with their
+    accepted history.
   sidebar:
     structure: [links, license, authors, dev]
 
 navbar:
   structure:
-    left: [intro, concepts, design, reference, news]
+    left: [intro, learn, design, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
-    concepts:
-      text: Concepts
+    learn:
+      text: Learn
       menu:
-        - text: Architecture
-          href: articles/architecture.html
-        - text: LinkML contract
-          href: articles/linkml-schema.html
-        - text: data-dict contract
+        - text: Start with data-dict
           href: articles/data-dict-schema.html
-        - text: Change control
+        - text: Review knowledge changes
           href: articles/knowledge-change-control.html
-        - text: Retrieval and history
+        - text: Retrieve records and history
           href: articles/retrieval.html
+        - text: Add graph semantics with LinkML
+          href: articles/linkml-schema.html
         - text: Open knowledge
           href: articles/open-knowledge-format.html
     design:
-      text: v0.1 design
-      href: articles/v01-design.html
+      text: Design
+      menu:
+        - text: Architecture
+          href: articles/architecture.html
+        - text: Contract compilers
+          href: articles/contract-compilers.html
+        - text: v0.1 design notes
+          href: articles/v01-design.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/JamesHWade/graft/
@@ -73,36 +77,43 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Complete one provider-free workflow, then understand the package's
-      deliberately small design.
+      Build a new store from related tables with a data-dict contract.
     contents:
       - getting-started
-      - architecture
-      - v01-design
-  - title: Core concepts
-    desc: >
-      Go deeper into the domain contract, acceptance boundary, retrieval
-      operations, and readable open-knowledge projection.
-    contents:
-      - linkml-schema
       - data-dict-schema
+  - title: Use graft
+    desc: >
+      Review and accept changes, then retrieve current and historical records.
+    contents:
       - knowledge-change-control
       - retrieval
+  - title: Add richer representations
+    desc: >
+      Add semantic graph relationships with LinkML or synchronize a readable
+      working tree.
+    contents:
+      - linkml-schema
       - open-knowledge-format
+  - title: Design and internals
+    desc: >
+      Understand storage and projection boundaries, contract compilation, and
+      the choices behind the v0.1 package design.
+    contents:
+      - architecture
+      - contract-compilers
+      - v01-design
 
 reference:
   - title: Define and open
     desc: >
-      Load the domain contract and manage the store that accepts knowledge
-      under it.
+      Compile or load a contract, then create, open, and close a store.
     contents:
       - graft_schema
       - graft_open
       - graft_close
   - title: Propose and accept
     desc: >
-      Describe a candidate's origin, plan the change without writing, and
-      accept it through one atomic commit path.
+      Record where candidates came from, inspect a plan, and commit it.
     contents:
       - graft_provenance
       - graft_plan
@@ -110,8 +121,7 @@ reference:
       - graft_ingest
   - title: Retrieve and inspect
     desc: >
-      Read current and historical accepted knowledge through bounded,
-      contract-aware operations and projections.
+      Read current records, search results, fixed projections, and history.
     contents:
       - graft_get
       - graft_find
@@ -119,8 +129,8 @@ reference:
       - graft_history
   - title: Synchronize and integrate
     desc: >
-      Synchronize the readable working tree, review file edits as proposals,
-      and expose accepted retrieval to agents.
+      Synchronize readable files, review file edits, and provide read-only
+      tools to an agent host.
     contents:
       - graft_sync
       - graft_status

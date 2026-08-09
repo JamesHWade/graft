@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
   <title id="title">How contract providers, OKF, Graft, and DuckDB exchange knowledge</title>
-  <desc id="desc">A LinkML or data-dict contract compiles into Graft. Open Knowledge Format exchanges readable proposals and accepted projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB.</desc>
+  <desc id="desc">A data-dict or LinkML contract compiles into Graft. Open Knowledge Format exchanges readable proposals and accepted projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB.</desc>
   <style>
     :root {
       --bg: #f7faf8;
@@ -115,13 +115,13 @@
 
   <rect x="12" y="12" width="1176" height="736" rx="28" fill="var(--bg)" stroke="var(--border)" stroke-width="2"/>
 
-  <text class="eyebrow" x="600" y="56" text-anchor="middle">ONE KNOWLEDGE SYSTEM · THREE DISTINCT JOBS</text>
+  <text class="eyebrow" x="600" y="56" text-anchor="middle">CONTRACT · REVIEW · ACCEPTED HISTORY</text>
 
   <rect class="node-warm" x="70" y="105" width="360" height="210" rx="24"/>
   <circle cx="122" cy="157" r="24" fill="var(--amber)" opacity="0.16"/>
   <path d="M111 143h18l10 10v22h-28z M129 143v11h10" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linejoin="round"/>
   <text class="eyebrow" x="158" y="151">DOMAIN CONTRACT</text>
-  <text class="title" x="105" y="207">LinkML or data-dict</text>
+  <text class="title" x="105" y="207">data-dict or LinkML</text>
   <text class="subtitle" x="105" y="239">Defines meaning before storage</text>
   <text class="small" x="105" y="273">classes/tables · fields · identity</text>
   <text class="small" x="105" y="298">relationships · sensitivity</text>
@@ -137,9 +137,9 @@
 
   <rect class="node" x="390" y="350" width="420" height="230" rx="28" filter="url(#shadow)"/>
   <rect x="390" y="350" width="12" height="230" rx="6" fill="var(--forest)"/>
-  <text class="eyebrow" x="445" y="397">GOVERNING RUNTIME</text>
+  <text class="eyebrow" x="445" y="397">REVIEW AND ACCEPT</text>
   <text class="title" x="445" y="448">graft</text>
-  <text class="subtitle" x="445" y="480">Connects readable work to accepted state</text>
+  <text class="subtitle" x="445" y="480">Checks proposals and records revisions</text>
   <rect class="pill" x="445" y="510" width="96" height="34" rx="17"/>
   <text class="pill-text" x="493" y="533" text-anchor="middle">validate</text>
   <rect class="pill" x="551" y="510" width="90" height="34" rx="17"/>

@@ -1,0 +1,206 @@
+{
+  "$version": "0.1.0",
+  "name": "team_directory",
+  "label": "Team directory",
+  "description": "People, organizations, and the employment records that connect them.\n",
+  "learn_more": "https://data-dict.tidyverse.org/",
+  "version": {
+    "number": "0.1.0"
+  },
+  "tables": [
+    {
+      "name": "organization",
+      "label": "Organizations",
+      "description": "Each row is one organization.",
+      "columns": [
+        {
+          "name": "id",
+          "label": "Organization ID",
+          "description": "Stable identifier for the organization.",
+          "type": "string",
+          "constraints": [
+            "primary_key",
+            "unique",
+            "required"
+          ],
+          "referenced_by": [
+            {
+              "table": "employment",
+              "column": "organization_id"
+            }
+          ],
+          "examples": [
+            "org:daily-planet",
+            "org:justice-league"
+          ]
+        },
+        {
+          "name": "name",
+          "label": "Organization name",
+          "description": "Current display name for the organization.",
+          "type": "string",
+          "constraints": [
+            "required"
+          ],
+          "examples": [
+            "Daily Planet",
+            "Justice League"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "person",
+      "label": "People",
+      "description": "Each row is one person.",
+      "columns": [
+        {
+          "name": "id",
+          "label": "Person ID",
+          "description": "Stable identifier for the person.",
+          "type": "string",
+          "constraints": [
+            "primary_key",
+            "unique",
+            "required"
+          ],
+          "referenced_by": [
+            {
+              "table": "employment",
+              "column": "person_id"
+            }
+          ],
+          "examples": [
+            "person:lois-lane",
+            "person:clark-kent"
+          ]
+        },
+        {
+          "name": "full_name",
+          "label": "Full name",
+          "description": "Current display name for the person.",
+          "type": "string",
+          "constraints": [
+            "required"
+          ],
+          "examples": [
+            "Lois Lane",
+            "Clark Kent"
+          ]
+        },
+        {
+          "name": "job_title",
+          "label": "Job title",
+          "description": "Current job title, when known.",
+          "type": "string",
+          "examples": [
+            "Reporter",
+            "Investigative editor"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "employment",
+      "label": "Employment",
+      "description": "Each row connects one person to one organization.",
+      "columns": [
+        {
+          "name": "id",
+          "label": "Employment ID",
+          "description": "Stable identifier for the employment record.",
+          "type": "string",
+          "constraints": [
+            "primary_key",
+            "unique",
+            "required"
+          ],
+          "examples": [
+            "employment:lois-lane:daily-planet",
+            "employment:clark-kent:daily-planet"
+          ]
+        },
+        {
+          "name": "person_id",
+          "label": "Person ID",
+          "description": "Person in this employment record.",
+          "type": "string",
+          "constraints": [
+            "foreign_key",
+            "required"
+          ],
+          "references": {
+            "table": "person",
+            "column": "id"
+          },
+          "examples": [
+            "person:lois-lane",
+            "person:clark-kent"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "label": "Organization ID",
+          "description": "Organization in this employment record.",
+          "type": "string",
+          "constraints": [
+            "foreign_key",
+            "required"
+          ],
+          "references": {
+            "table": "organization",
+            "column": "id"
+          },
+          "examples": [
+            "org:daily-planet",
+            "org:justice-league"
+          ]
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "description": "Resolves each employment record to its person.",
+      "cardinality": "many-to-one",
+      "declared_cardinality": "many-to-one",
+      "pairs": [
+        {
+          "left": {
+            "table": "employment",
+            "column": "person_id"
+          },
+          "right": {
+            "table": "person",
+            "column": "id"
+          }
+        }
+      ],
+      "join": "employment.person_id = person.id"
+    },
+    {
+      "description": "Resolves each employment record to its organization.",
+      "cardinality": "many-to-one",
+      "declared_cardinality": "many-to-one",
+      "pairs": [
+        {
+          "left": {
+            "table": "employment",
+            "column": "organization_id"
+          },
+          "right": {
+            "table": "organization",
+            "column": "id"
+          }
+        }
+      ],
+      "join": "employment.organization_id = organization.id"
+    }
+  ],
+  "glossary": [
+    {
+      "term": "stable identifier",
+      "definition": "An identifier that continues to denote the same record across imports.\n"
+    }
+  ]
+}

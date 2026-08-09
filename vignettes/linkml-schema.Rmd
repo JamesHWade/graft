@@ -1,11 +1,11 @@
 ---
-title: "Use a LinkML contract with graft"
+title: "Add graph semantics with LinkML"
 description: >
-  Compile or load a LinkML domain contract, inspect its S7 representation, and
-  use it to validate records and bounded retrieval.
+  Use LinkML when a table contract needs ontology identifiers, inheritance, or
+  semantic statements that produce a bounded graph projection.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Use a LinkML contract with graft}
+  %\VignetteIndexEntry{Add graph semantics with LinkML}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,138 +14,152 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = TRUE
 )
+library(graft)
 ```
 
-LinkML is graft's richer ontology- and graph-oriented contract provider. It
-defines the classes and fields that a workflow may submit, which values are
-required, how records are identified, and which fields refer to other records.
-graft compiles it into the same canonical runtime contract used by every
-provider. That compiled contract governs planning, accepted revisions,
-retrieval, history, and readable projections; LinkML itself is never the
-revision ledger.
+Start with data-dict when the domain is naturally a set of tables. It gives
+Graft table and column descriptions, primary keys, supported value rules, and
+scalar foreign keys that can be checked before records are accepted.
 
-Choose LinkML when you need inheritance, class and slot ontology URIs,
-permissible-value meanings, polymorphic references, graph traversal
-relationships, or Graft-specific record and statement semantics. For a strict
-table-first alternative with richer dictionary metadata, see
-[Use a data-dict contract with graft](data-dict-schema.html).
+LinkML is the next step when the contract must express meaning beyond those
+tables. It can define ontology identifiers, inheritance, polymorphic ranges,
+and Graft semantic-statement roles. Both providers compile to the same
+`.graft.json` runtime contract and use the same plan, commit, history, and
+retrieval functions.
 
-An ordinary LinkML schema is enough. It does not need to import a graft base
-schema or define a parallel set of R classes.
+There is an important distinction: a checked reference is not automatically a
+graph edge. Graft validates ordinary LinkML object-reference slots, just as it
+validates supported data-dict foreign keys. The semantic graph projection is
+driven by classes declared as graph-producing edges or semantic statements.
 
-The v0.1 compiler intentionally supports a strict LinkML profile. Direct
-`is_a` inheritance and class-local `slot_usage` overrides are supported, but
-class mixins are rejected at compilation because a flattened mixin ancestry
-cannot be independently validated as a single parent chain in the canonical
-manifest. Replace a mixin with explicit inheritance or concrete slots before
-compiling it for graft.
+| Need | Start with |
+|---|---|
+| Tables, columns, keys, enums, and checked scalar foreign keys | data-dict |
+| Class and slot ontology identifiers | LinkML |
+| Reusable inheritance or polymorphic references | LinkML |
+| Subject-predicate-object statements in the semantic graph | LinkML with Graft semantic roles |
 
-The compiler also rejects LinkML validation, defaulting, composition, and
-serialization fields that the canonical manifest does not preserve. This
-includes class rules and unique keys; slot equality, cardinality, expression,
-default, unit, member, identifier-prefix, and structured-pattern fields; schema
-bindings and slot-name constraints; and enum identity or enum and
-permissible-value inheritance.
-Custom LinkML types are also rejected because their inherited constraints do
-not have a lossless `graft-table-v1` representation. Supported primitive ranges
-are `boolean`, `date`, `datetime`, `decimal`, `double`, `float`, `integer`,
-`string`, `time`, `uri`, and `uriorcurie`; other LinkML built-ins are rejected
-until Graft can execute their lexical semantics. URI and URI-or-CURIE values
-must be complete RFC 3986 ASCII URIs, or prefixed CURIEs for `uriorcurie`, with
-valid percent escapes. Relative references are rejected.
-Supported requiredness, scalar or list shape, enum membership, pattern, and
-numeric bounds remain executable Graft validation rules. The strict boundary
-prevents a source constraint from looking active after it has been dropped.
+## Add ontology identifiers and inheritance
 
-## Write the domain contract
-
-This small schema is based on the LinkML PersonInfo tutorial:
+An ordinary LinkML schema can introduce shared fields through inheritance and
+attach stable ontology identifiers to classes and slots:
 
 ```yaml
-id: https://w3id.org/graft/examples/personinfo
-name: personinfo
+id: https://w3id.org/example/team-directory
+name: team_directory
 version: 0.1.0
 prefixes:
   linkml: https://w3id.org/linkml/
   sdo: https://schema.org/
+  team: https://w3id.org/example/team-directory/
+default_prefix: team
+default_range: string
 imports:
   - linkml:types
 
 classes:
-  Person:
-    class_uri: sdo:Person
-    attributes:
-      id:
-        identifier: true
-        required: true
-      full_name:
-        required: true
-      aliases:
-        multivalued: true
-      age:
-        range: integer
-        minimum_value: 0
-      employed_by:
-        range: Organization
-        multivalued: true
-        inlined: false
-
-  Organization:
-    class_uri: sdo:Organization
+  NamedThing:
+    abstract: true
     attributes:
       id:
         identifier: true
         required: true
       name:
         required: true
+
+  Person:
+    is_a: NamedThing
+    class_uri: sdo:Person
+    attributes:
+      works_for:
+        range: Organization
+        inlined: false
+
+  Organization:
+    is_a: NamedThing
+    class_uri: sdo:Organization
 ```
 
-This contract says that both classes require explicit identifiers, that names
-are required, that age cannot be negative, and that `employed_by` values must
-refer to organizations.
+This contract reuses identity and name fields and validates `works_for` as an
+organization reference. That reference alone does not create a traversal edge.
+Use a graph-producing statement when the relationship must participate in the
+semantic graph.
 
-## Compile or load once
+## Declare a semantic statement
 
-`graft_schema()` accepts LinkML YAML, data-dict YAML or trusted resolved
-`export-spec` JSON, and a compiled `.graft.json` contract. This article follows
-the LinkML path.
+Graft ships a small LinkML core for schemas that need record and statement
+roles. To run a complete graph example without introducing another
+team-directory fixture, the rest of this guide switches deliberately to the
+bundled materials domain. It defines nodes and a semantic statement:
 
-```{r compile}
+```yaml
+classes:
+  Material:
+    is_a: GraftNode
+    slots:
+      - preferred_name
+      - description
+      - cas_number
+
+  Measurement:
+    is_a: GraftSemanticStatement
+    slots:
+      - measurement_method
+      - temperature
+```
+
+`GraftSemanticStatement` supplies `subject`, `predicate`, `object_entity`, and
+`object_value`. A concrete statement must have exactly one object
+representation. Accepted entity-valued statements produce the semantic edges
+used by bounded neighbor retrieval. Narrative statements remain searchable
+claims but are excluded from that semantic edge projection.
+
+This richer behavior is why LinkML follows, rather than replaces, the simpler
+data-dict path. Use it when the domain actually needs semantic graph meaning.
+
+## Compile once, then run in R
+
+`graft_schema()` compiles LinkML YAML and its import closure into a canonical
+`.graft.json` manifest:
+
+```{r compile, eval = FALSE}
 library(graft)
 
 schema <- graft_schema(
-  "personinfo.linkml.yaml",
-  output = "personinfo.graft.json"
+  system.file(
+    "extdata",
+    "materials.linkml.yaml",
+    package = "graft",
+    mustWork = TRUE
+  ),
+  output = "materials.graft.json"
 )
 ```
 
-Compiling YAML resolves the LinkML import closure and creates a canonical
-manifest with stable source, structure, and build digests. Compilation requires
-Python and `linkml-runtime`. Commit the YAML and compiled manifest together when
-reproducible use without Python matters.
+Compilation requires Python and `linkml-runtime`. Graft rejects source
+semantics that its runtime contract cannot preserve instead of silently
+downgrading them. [Contract compiler boundaries](contract-compilers.html)
+lists the supported LinkML profile and the exact compilation dependencies.
 
-Loading the compiled contract is an R-only operation:
-
-```{r load}
-schema <- graft_schema("personinfo.graft.json")
-```
-
-The package includes the compiled example used in this article:
+Loading a compiled manifest and operating a store are R-only:
 
 ```{r package-contract}
 schema <- graft_schema(system.file(
   "extdata",
-  "personinfo.graft.json",
-  package = "graft"
+  "materials.graft.json",
+  package = "graft",
+  mustWork = TRUE
 ))
 ```
 
-## Inspect semantic properties
+Commit the LinkML source and compiled manifest together when users or deployed
+workflows should run without Python.
 
-`graft_schema()` returns an immutable S7 `GraftSchema`. Its properties expose
-stable semantic information without requiring separate inspection functions.
+## Inspect what the contract enables
+
+The typed schema properties expose the parts most applications need:
 
 ```{r inspect}
 schema@name
@@ -153,47 +167,46 @@ schema@version
 schema@structural_digest
 names(schema@classes)
 
-person <- schema@classes$Person
-person@label_slot
-person@search_slots
-names(person@slots)
+material <- schema@classes$Material
+material@role
+material@label_slot
+material@search_slots
 
-person@slots$id@identifier
-person@slots$full_name@required
-person@slots$aliases@multivalued
-person@slots$employed_by@object_reference
-person@slots$employed_by@range
+measurement <- schema@classes$Measurement
+measurement@role
+measurement@statement_shape
+measurement@slots$subject@object_reference
+measurement@slots$object_entity@object_reference
 ```
 
-`ClassContract` and `SlotContract` are invariant-rich internal views of the
-compiled LinkML contract. They make schema inspection predictable while domain
-records remain ordinary data frames.
+The complete manifest is available as `schema@manifest` for lower-level
+tooling. Domain records remain ordinary data frames; the S7 schema object
+protects the compiled contract and its digests.
 
-The complete canonical Graft manifest is available as `schema@manifest` for
-tooling that needs lower-level contract details. It is not necessarily a copy
-of the source-provider document: for example, data-dict manifests intentionally
-redact representative values, dataset and table origins, and table source
-locators. Other retained provider metadata remains public and can contain
-values embedded manually. Prefer the typed properties when they cover the
-question.
+## Accept and traverse semantic statements
 
-## Validate a connected candidate set
+The materials contract can accept two nodes and a semantic statement in one
+plan:
 
-Open a store with the schema, then submit records by concrete class:
-
-```{r records}
+```{r records, message = FALSE}
 store <- graft_open(schema, ":memory:", okf = "disabled")
 
+polyethylene_id <- "graft:40X0M02WR9Z55QWFDJYTNS3KX8"
+water_id <- "graft:64W8ZFH68S76XQ2MWW0H46Q9Y6"
+
 records <- list(
-  Organization = data.frame(
-    id = "org:daily-planet",
-    name = "Daily Planet"
+  Material = data.frame(
+    id = c(polyethylene_id, water_id),
+    preferred_name = c("Polyethylene", "Water"),
+    cas_number = c("9002-88-4", "7732-18-5")
   ),
-  Person = data.frame(
-    id = "person:clark-kent",
-    full_name = "Clark Kent",
-    aliases = I(list(c("Superman", "Kal-El"))),
-    employed_by = I(list("org:daily-planet"))
+  Measurement = data.frame(
+    id = "graft:0D6WMEBSAMAS7JRQWGT5W44ASR",
+    subject = polyethylene_id,
+    predicate = "materials:testedWith",
+    object_entity = water_id,
+    measurement_method = "immersion",
+    temperature = 23
   )
 )
 
@@ -201,72 +214,54 @@ plan <- graft_plan(
   store,
   records,
   graft_provenance(
-    producer = "linkml-example",
-    idempotency_key = "personinfo-v1"
+    producer = "materials-example",
+    idempotency_key = "materials-v1"
   )
 )
 
 plan@valid
-plan@changes
+plan@changes[, c("class", "record_id", "action"), drop = FALSE]
 plan@issues
-```
 
-Planning validates the complete candidate set before anything is accepted.
-The organization and person can therefore arrive together: the relationship
-is checked against both accepted records and candidates in the same plan.
-
-List-columns represent multivalued LinkML fields. Scalar fields use ordinary
-atomic columns. The data-frame boundary stays familiar even though the schema,
-provenance, plan, and store use S7 to protect their invariants.
-
-```{r commit}
 if (plan@valid) {
-  graft_commit(store, plan)
+  result <- graft_commit(store, plan)
 }
+result$inserted
 ```
 
-## Let the contract govern retrieval
+Because `Measurement` is a semantic statement, the bounded neighbor operation
+can return its subject, object, and predicate:
 
-The compiled contract identifies public search fields, labels, relationships,
-and sensitive fields. Retrieval applies those rules to the active accepted
-revisions.
-
-```{r retrieval}
-graft_find(store, "Clark", class = "Person", limit = 5)
-
-person <- graft_get(store, "person:clark-kent")
-person$record
-
-graft_query(
+```{r neighbors}
+neighbors <- graft_query(
   store,
   operation = "neighbors",
   request = list(
-    id = "person:clark-kent",
+    id = polyethylene_id,
     projection = "semantic",
+    hops = 1,
     max_nodes = 25,
     max_edges = 50
   )
 )
+
+neighbors$nodes[, c("id", "label"), drop = FALSE]
+neighbors$edges[, c("subject", "predicate", "object"), drop = FALSE]
 ```
 
-`graft_query()` exposes fixed, bounded operations rather than storage-specific
-queries. A relationship projection is rebuildable from accepted revisions and
-the contract; it is not a second place to write knowledge.
+The graph is a derived read view of accepted revisions. It is not a separate
+place to insert or edit relationships.
 
-This graph behavior is a reason to choose LinkML. Under the strict data-dict
-profile, scalar foreign keys are checked as references but do not become graph
-traversal edges.
+## Change the contract explicitly
 
-## Change the contract deliberately
-
-Schema digests are part of every plan and accepted revision. Editing the
+Every plan and accepted revision records the active schema digest. Editing the
 LinkML source therefore creates a new contract version rather than silently
 changing the meaning of existing knowledge.
 
-Under v0.1, graft can register a compatible semantic contract and rebuild its
-derived views. A change that requires transforming accepted payloads calls for
+During v0.1 development, Graft can register a compatible semantic contract and
+rebuild its derived views. A change that transforms accepted payloads requires
 rebuilding the development store from source records. Historical revisions
-always retain the exact contract digest that governed their acceptance.
+retain the contract digest that governed their acceptance.
 
 ```{r close}
 graft_close(store)

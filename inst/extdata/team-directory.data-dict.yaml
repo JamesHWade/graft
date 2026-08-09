@@ -1,0 +1,85 @@
+$version: 0.1.0
+$learn_more: https://data-dict.tidyverse.org/
+name: team_directory
+label: Team directory
+description: >
+  People, organizations, and the employment records that connect them.
+version:
+  number: 0.1.0
+
+tables:
+  - name: organization
+    label: Organizations
+    description: Each row is one organization.
+    columns:
+      - name: id
+        label: Organization ID
+        description: Stable identifier for the organization.
+        type: string
+        constraints: [primary_key]
+        examples: ["org:daily-planet", "org:justice-league"]
+      - name: name
+        label: Organization name
+        description: Current display name for the organization.
+        type: string
+        constraints: [required]
+        examples: ["Daily Planet", "Justice League"]
+
+  - name: person
+    label: People
+    description: Each row is one person.
+    columns:
+      - name: id
+        label: Person ID
+        description: Stable identifier for the person.
+        type: string
+        constraints: [primary_key]
+        examples: ["person:lois-lane", "person:clark-kent"]
+      - name: full_name
+        label: Full name
+        description: Current display name for the person.
+        type: string
+        constraints: [required]
+        examples: ["Lois Lane", "Clark Kent"]
+      - name: job_title
+        label: Job title
+        description: Current job title, when known.
+        type: string
+        examples: ["Reporter", "Investigative editor"]
+
+  - name: employment
+    label: Employment
+    description: Each row connects one person to one organization.
+    columns:
+      - name: id
+        label: Employment ID
+        description: Stable identifier for the employment record.
+        type: string
+        constraints: [primary_key]
+        examples:
+          - "employment:lois-lane:daily-planet"
+          - "employment:clark-kent:daily-planet"
+      - name: person_id
+        label: Person ID
+        description: Person in this employment record.
+        type: string
+        constraints: [required, foreign_key]
+        examples: ["person:lois-lane", "person:clark-kent"]
+      - name: organization_id
+        label: Organization ID
+        description: Organization in this employment record.
+        type: string
+        constraints: [required, foreign_key]
+        examples: ["org:daily-planet", "org:justice-league"]
+
+relationships:
+  - join: employment.person_id = person.id
+    cardinality: many-to-one
+    description: Resolves each employment record to its person.
+  - join: employment.organization_id = organization.id
+    cardinality: many-to-one
+    description: Resolves each employment record to its organization.
+
+glossary:
+  stable identifier: >
+    An identifier that continues to denote the same record across imports.

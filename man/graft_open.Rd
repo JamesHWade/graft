@@ -30,7 +30,8 @@ graft_open(
 A \code{GraftStore} S7 object ready for use.
 }
 \description{
-\code{graft_open()} opens a DuckDB store and initializes a blank writable store or
-verifies an existing store in one call. Graft closes connections it creates;
-caller-supplied connections remain owned by the caller.
+\code{graft_open()} creates a blank writable DuckDB store when \code{path} does not
+exist, or verifies an existing store in one call. No pre-existing database
+is required. Graft closes connections it creates; caller-supplied
+connections remain owned by the caller.
 }
