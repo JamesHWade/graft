@@ -223,9 +223,8 @@ plan@valid
 plan@changes[, c("class", "record_id", "action"), drop = FALSE]
 plan@issues
 
-if (plan@valid) {
-  result <- graft_commit(store, plan)
-}
+stopifnot(plan@valid)
+result <- graft_commit(store, plan)
 result$inserted
 ```
 
