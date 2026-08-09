@@ -4,19 +4,6 @@ graft_graph_view_names <- c(
   "_graft_provenance_edges"
 )
 
-drop_graph_views <- function(connection) {
-  for (name in graft_graph_view_names) {
-    DBI::dbExecute(
-      connection,
-      paste0(
-        "DROP VIEW IF EXISTS ",
-        quote_identifier(connection, name)
-      )
-    )
-  }
-  invisible(connection)
-}
-
 create_graph_views <- function(connection, schema) {
   definitions <- graph_view_definitions(connection, schema)
   for (name in names(definitions)) {
@@ -44,7 +31,7 @@ verify_graph_views <- function(connection) {
       paste0(
         "The initialized read-only store is missing generated graph view(s): ",
         paste(missing, collapse = ", "),
-        ". Reopen it writable and call `kg_init()`."
+        ". Reopen it as a writable GraftStore."
       ),
       operation = "verify_graph_views",
       missing_views = missing
@@ -139,7 +126,7 @@ graph_node_select_sql <- function(connection, record_class, contract) {
     " AS type_uri, CAST(",
     created_at,
     " AS TIMESTAMP) AS created_at FROM ",
-    quote_identifier(connection, scalar_character(contract$table))
+    quote_identifier(connection, scalar_character(contract$view))
   )
 }
 
@@ -163,7 +150,7 @@ graph_label_expression <- function(connection, contract) {
       !scalar_logical(slot$multivalued) &&
         !scalar_logical(slot$sensitive) &&
         !scalar_logical(slot$object_reference) &&
-        !is.na(scalar_character(slot$column))
+        !is.na(scalar_character(slot$view_column))
     },
     candidates
   )
@@ -294,11 +281,11 @@ graph_edge_select_sql <- function(
     " AS VARCHAR) AS object, ",
     graph_sql_string(connection, record_class),
     " AS edge_class, ",
-    graph_sql_string(connection, scalar_character(contract$table)),
+    graph_sql_string(connection, scalar_character(contract$view)),
     " AS source_table, CAST(",
     created_at,
     " AS TIMESTAMP) AS created_at FROM ",
-    quote_identifier(connection, scalar_character(contract$table))
+    quote_identifier(connection, scalar_character(contract$view))
   )
 }
 
@@ -453,7 +440,7 @@ graph_provenance_edges_view_sql <- function(connection, schema) {
 }
 
 graph_relation_provenance_select_sql <- function(connection, relation) {
-  table <- scalar_character(relation$table)
+  view <- scalar_character(relation$view)
   id <- quote_identifier(connection, "id")
   paste0(
     "SELECT CONCAT(CAST(",
@@ -465,9 +452,9 @@ graph_relation_provenance_select_sql <- function(connection, relation) {
     " AS predicate, CAST(",
     quote_identifier(connection, "object"),
     " AS VARCHAR) AS object, ",
-    graph_sql_string(connection, table),
+    graph_sql_string(connection, view),
     " AS source_table FROM ",
-    quote_identifier(connection, table)
+    quote_identifier(connection, view)
   )
 }
 
@@ -491,7 +478,7 @@ graph_scalar_provenance_select_sql <- function(
   subject <- graph_slot_identifier(connection, contract, subject_slot)
   object <- graph_slot_identifier(connection, contract, object_slot)
   edge_owner <- graph_slot_identifier(connection, contract, edge_owner_slot)
-  table <- scalar_character(contract$table)
+  view <- scalar_character(contract$view)
   paste0(
     "SELECT CONCAT(CAST(",
     edge_owner,
@@ -504,9 +491,9 @@ graph_scalar_provenance_select_sql <- function(
     " AS predicate, CAST(",
     object,
     " AS VARCHAR) AS object, ",
-    graph_sql_string(connection, table),
+    graph_sql_string(connection, view),
     " AS source_table FROM ",
-    quote_identifier(connection, table),
+    quote_identifier(connection, view),
     " WHERE ",
     subject,
     " IS NOT NULL AND ",
@@ -542,7 +529,7 @@ graph_role_class_names <- function(schema, role) {
 
 graph_slot_identifier <- function(connection, contract, slot_name) {
   slot <- contract$slots[[slot_name]]
-  column <- scalar_character(slot$column)
+  column <- scalar_character(slot$view_column)
   if (is.null(slot) || is.na(column)) {
     abort_schema_error(
       paste0(
@@ -566,7 +553,7 @@ graph_optional_slot_expression <- function(
   type
 ) {
   slot <- contract$slots[[slot_name]]
-  column <- scalar_character(slot$column)
+  column <- scalar_character(slot$view_column)
   if (is.null(slot) || is.na(column)) {
     return(paste0("CAST(NULL AS ", safe_duckdb_type(type), ")"))
   }
@@ -636,57 +623,6 @@ graph_empty_provenance_edges_sql <- function() {
     "CAST(NULL AS VARCHAR) AS object, ",
     "CAST(NULL AS VARCHAR) AS source_table WHERE FALSE"
   )
-}
-
-#' Access the graph node projection
-#'
-#' `kg_nodes()` returns the generated, manifest-driven node projection. It is
-#' lazy and never collects implicitly.
-#'
-#' @param store An initialized `kg_store`.
-#'
-#' @return A lazy dbplyr table with node identifiers, classes, labels, roles,
-#'   statement shapes, type URIs, and creation times.
-#' @export
-kg_nodes <- function(store) {
-  validate_retrieval_store(store)
-  result <- dplyr::tbl(store$connection, "_graft_nodes")
-  attr(result, "store_schema_digest") <- store_schema_digest(store)
-  result
-}
-
-#' Access a graph edge projection
-#'
-#' `kg_edges()` returns semantic edges, provenance edges, or their normalized
-#' union. Semantic edges are only direct edge records and entity-valued
-#' semantic statements. Narrative statements and literal objects are never
-#' semantic edges. The result is lazy and never collects implicitly.
-#'
-#' @param store An initialized `kg_store`.
-#' @param projection One of `"semantic"`, `"provenance"`, or `"combined"`.
-#'
-#' @return A lazy dbplyr table. The combined projection adds `edge_class` and
-#'   `created_at` columns to provenance rows to match the semantic schema.
-#' @export
-kg_edges <- function(
-  store,
-  projection = c("semantic", "provenance", "combined")
-) {
-  validate_retrieval_store(store)
-  projection <- rlang::arg_match(projection)
-  if (identical(projection, "semantic")) {
-    result <- dplyr::tbl(store$connection, "_graft_edges")
-  } else if (identical(projection, "provenance")) {
-    result <- dplyr::tbl(store$connection, "_graft_provenance_edges")
-  } else {
-    result <- dplyr::tbl(
-      store$connection,
-      dbplyr::sql(graph_combined_edges_sql(store$connection))
-    )
-  }
-  attr(result, "graft_projection") <- projection
-  attr(result, "store_schema_digest") <- store_schema_digest(store)
-  result
 }
 
 graph_combined_edges_sql <- function(connection) {

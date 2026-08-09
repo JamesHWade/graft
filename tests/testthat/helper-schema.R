@@ -17,6 +17,8 @@ tempest_manifest_path <- function() {
 refresh_schema_structural_digest <- function(schema) {
   schema$manifest$fingerprints$structural_digest <-
     manifest_structural_digest(schema$manifest)
+  schema$manifest$fingerprints$build_digest <-
+    manifest_build_digest(schema$manifest)
   schema
 }
 
@@ -28,32 +30,29 @@ plain_linkml_schema_path <- function(name = "personinfo.linkml.yaml") {
   )
 }
 
-example_schema_path <- function(name) {
-  filename <- paste0(name, ".linkml.yaml")
-  development_path <- test_path(
-    "..",
-    "..",
-    "inst",
-    "extdata",
-    filename
+data_dict_personinfo_export_path <- function() {
+  test_path(
+    "fixtures",
+    "data-dict",
+    "personinfo",
+    "data-dict.export.json"
   )
-  if (file.exists(development_path)) {
-    return(normalizePath(
-      development_path,
-      winslash = "/",
-      mustWork = TRUE
-    ))
-  }
+}
 
-  installed_path <- system.file(
-    "extdata",
-    filename,
-    package = "graft"
+data_dict_tempest_export_path <- function() {
+  test_path(
+    "fixtures",
+    "data-dict",
+    "tempest",
+    "data-dict.export.json"
   )
-  if (!nzchar(installed_path)) {
-    stop("The installed example schema is unavailable.", call. = FALSE)
+}
+
+data_dict_test_source <- function(dictionary, content_digest = NULL) {
+  if (is.null(content_digest)) {
+    content_digest <- graft_sha256(canonical_json(dictionary))
   }
-  normalizePath(installed_path, winslash = "/", mustWork = TRUE)
+  data_dict_manifest_source(dictionary, content_digest)
 }
 
 invalid_schema_path <- function(name) {
@@ -81,6 +80,29 @@ graft_core_schema_path <- function() {
   )
   if (!nzchar(installed_path)) {
     stop("The installed graft core schema is unavailable.", call. = FALSE)
+  }
+  normalizePath(installed_path, winslash = "/", mustWork = TRUE)
+}
+
+graft_manifest_definition_path <- function() {
+  development_path <- test_path(
+    "..",
+    "..",
+    "inst",
+    "schema",
+    "graft-manifest.schema.json"
+  )
+  if (file.exists(development_path)) {
+    return(normalizePath(development_path, winslash = "/", mustWork = TRUE))
+  }
+
+  installed_path <- system.file(
+    "schema",
+    "graft-manifest.schema.json",
+    package = "graft"
+  )
+  if (!nzchar(installed_path)) {
+    stop("The installed manifest schema is unavailable.", call. = FALSE)
   }
   normalizePath(installed_path, winslash = "/", mustWork = TRUE)
 }

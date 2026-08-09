@@ -50,8 +50,6 @@ slots:
     range: string
   temperature:
     range: float
-    unit:
-      ucum_code: Cel
 
 classes:
   Material:

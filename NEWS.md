@@ -1,52 +1,14 @@
 # graft 0.0.0.9000
 
-* A governed Materials Market Radar example combines business, competitor, and downstream-market signals with dsprrr analysis, typed Tempest briefings and approval, configurable models and tools, a focused daily-brief and decision-room UI, and accepted-only Graft knowledge that visibly changes a later scan.
-* A local Graft Coworker example combines a shinychat tool-using assistant, dsprrr planning, typed Tempest work products, an approval inbox, local file delivery, and approved-only Graft memory. Its Tempest-native model configuration and extensible ellmer tool registry include an optional read-only `btw` tool belt.
-* A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.
-* Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.
-* `kg_apply_migration()` atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.
-* `kg_apply_okf_import()` revalidates and commits an approved, tamper-evident OKF import plan through Graft's ordinary atomic ingestion path, then synchronizes the managed working tree.
-* `kg_batch()` creates stable producer batches, and `kg_ingest()` atomically
-  reconciles, validates, and upserts multiple record classes with identifier,
-  origin, observation, and replay lineage.
-* `kg_batches()` and `kg_changes()` provide bounded, newest-first provenance and revision views with historical schema-aware sensitivity filtering.
-* `kg_check_store()` reports bounded revision-ledger and current-state integrity findings, with an optional deep payload and projection check.
-* `kg_claims()`, `kg_evidence()`, and `kg_competing_claims()` retrieve bounded
-  narrative and semantic assertions, stored citations, and non-adjudicated
-  comparison sets while preserving qualifiers and ordinary attributes.
-* `kg_compile_schema()` compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.
-* `kg_connect_duckdb()`, `kg_init()`, and `kg_disconnect()` provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization, structural schema protection, and a managed sibling OKF directory by default for file-backed stores.
-* `kg_context()` generates a token-bounded, sensitive-field-safe description
-  of the active manifest and DuckDB access constraints.
-* `kg_edges()`, `kg_nodes()`, `kg_neighbors()`, `kg_traverse()`, and `kg_subgraph()` provide lazy manifest-driven graph projections plus deterministic, explicitly collected one-hop and two-hop retrieval with hard node and edge caps.
-* `kg_export_okf()` writes a deterministic, source-linked Open Knowledge Format v0.2 projection of current or historical accepted revisions while preserving Graft schema, batch, revision, and record identity.
-* `kg_find()`, `kg_lookup()`, and `kg_identifiers()` provide bounded
-  manifest-declared search and exact identifier resolution with registry
-  provenance.
-* `kg_get()` hydrates exactly one public record with bounded related
-  identifiers, claims, and evidence.
-* `kg_history()` retrieves bounded revisions for one record and recovers its accepted state at a committed batch or time boundary.
-* `kg_init()` verifies structural-digest integrity and compiler-required physical type contracts before creating or changing store objects.
-* `kg_ingest_tempest_records()` commits mapped Tempest domain records with
-  run- and stage-stable idempotency keys, independently of Tempest deliverable
-  persistence.
-* `kg_okf_context()` gives people and agents bounded progressive disclosure over current accepted OKF knowledge and refuses stale, modified, or incompatible bundles.
-* `kg_okf_status()` reports whether a managed OKF working tree is unconfigured, missing, current, stale, locally modified, or incompatible.
-* `kg_plan_migration()` creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.
-* `kg_plan_okf_import()` creates a read-only, schema-validated proposal plan bound to the exact store, accepted batch, schema, and edited OKF bundle.
-* `kg_records()` returns lazy typed dbplyr tables for public concrete classes.
-* `kg_schema()`, `kg_classes()`, `kg_slots()`, `kg_enums()`, and
-  `kg_schema_info()` load and inspect manifests without Python.
-* `kg_schema_diff()` reports structural schema changes with deterministic per-change and overall compatibility classifications.
-* `kg_select()` provides a collected, hard-capped structured query surface
-  with manifest validation and no arbitrary SQL.
-* `kg_store_info()` reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; `kg_capabilities()` reports static backend capabilities.
-* `kg_sync_okf()` atomically materializes current accepted state into the store's managed OKF working tree without replacing unrelated directories.
-* `kg_tools()` creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with JSON-compatible structured results and no arbitrary SQL surface.
-* `kg_unresolved()` returns bounded unresolved mention records.
-* `kg_validate_data()` preflights the same staged identity, shape, and
-  reference checks as ingestion without mutating the store.
-* `kg_write()` provides a one-class convenience wrapper over `kg_ingest()`.
-* `tempest_artifact_store_graft()` explicitly reports the upstream Tempest
-  serialization contract required before durable typed-artifact persistence
-  can be supported.
+* Graft v0.1 replaces the pre-production `kg_*` API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 15-function revision-first package boundary.
+* Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.
+* Store format 3 makes immutable record revisions authoritative and treats current records, multivalued relations, graph edges, and search state as verified rebuildable projections.
+* `graft_commit()` and `graft_ingest()` atomically accept immutable reviewed plans through set-based DuckDB operations and return ordinary summaries with insert, update, match, observation, replay, and timing details.
+* `graft_find()`, `graft_get()`, `graft_history()`, and `graft_query()` provide bounded deterministic retrieval directly from the authoritative revision ledger, including exact historical types, evidence, graph traversal, and integrity diagnosis.
+* `graft_open()` and `graft_close()` manage the only DuckDB backend through an invariant-checked S7 `GraftStore`, including ownership-aware connection cleanup and read-only reopen behavior.
+* `graft_plan()` and `graft_review()` produce the same tamper-evident S7 `GraftCommitPlan` for ordinary records and edited OKF knowledge without persistent writes.
+* `graft_provenance()` creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.
+* `graft_schema()` loads compiled manifests or compiles LinkML and optional data-dict contracts into an invariant-checked S7 `GraftSchema`; the strict `graft-table-v1` adapter separates YAML source-spec and resolved JSON export-format versions, runs YAML preflight and CLI export from one byte snapshot, guards CLI provenance against executable replacement, publishes a digest-bound public manifest with examples, ranges, origins, and source locators redacted, rejects unsafe JSON numeric tokens, `number(id)`, and primary IDs that are also foreign keys, normalizes optional blank foreign keys, and enforces supported datetime forms, while trusted resolved JSON avoids a required CLI dependency.
+* `graft_schema()` now fails closed when LinkML custom types or unsupported schema, class, slot, enum, or permissible-value semantics would be discarded; resolved data-dict versions retain their upstream lexical contract, provider metadata is allowlisted, and `foreign_key` constraints must agree with resolved references.
+* `graft_status()` and `graft_sync()` inspect and explicitly synchronize the deterministic OKF working tree without making it an independent source of accepted knowledge.
+* `graft_tools()` creates four bounded read-only ellmer tools that delegate to the public retrieval and history operations.

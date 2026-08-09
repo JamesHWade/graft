@@ -3,86 +3,25 @@
 graft_okf_version <- "0.2"
 graft_okf_profile_version <- "1"
 
-#' Export accepted Graft knowledge as an Open Knowledge Format bundle
-#'
-#' `kg_export_okf()` writes a deterministic
-#' [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-#' (OKF) v0.2 directory from accepted Graft revisions. The bundle is a
-#' human-readable projection for agents, Git, and documentation tools. The
-#' active LinkML-derived manifest remains the executable contract for identity,
-#' validation, storage, and retrieval.
-#'
-#' Every concept includes a `graft` frontmatter extension with stable record,
-#' revision, batch, and schema identity. Object references become Markdown
-#' links, and direct or claim-evidence source references become OKF `sources`.
-#' Sensitive slots remain excluded through the historical manifest that
-#' governed each exported revision.
-#'
-#' Exports are bounded and atomic. Existing directories are never replaced
-#' unless `overwrite = TRUE` and the directory identifies itself as a
-#' Graft-produced OKF bundle. The managed directory is reserved for a complete
-#' projection of current accepted state; selected or historical exports must
-#' use another `path`.
-#'
-#' @param store An initialized `kg_store`.
-#' @param path Destination directory. The default uses the store's managed OKF
-#'   directory. It need not already exist.
-#' @param classes Optional concrete classes to export. The default exports all
-#'   public classes in the active manifest.
-#' @param as_of Optional committed batch identifier or scalar `POSIXt` time.
-#'   The default exports current accepted record heads.
-#' @param limit Maximum number of concepts. An export that exceeds the limit
-#'   fails rather than writing a partial bundle.
-#' @param overwrite Whether to replace an existing Graft-produced OKF bundle.
-#'
-#' @return A `kg_okf_bundle` summary.
-#' @examples
-#' \dontrun{
-#' bundle <- kg_export_okf(store, "knowledge/okf")
-#' bundle
-#' }
-#' @export
-kg_export_okf <- function(
+export_okf_bundle <- function(
   store,
   path = NULL,
-  classes = NULL,
-  as_of = NULL,
-  limit = 5000,
+  limit = 5000L,
   overwrite = FALSE
 ) {
   validate_retrieval_store(store)
   path <- okf_resolve_path(store, path)
-  if (
-    !is.null(store$okf_path) &&
-      identical(path, store$okf_path) &&
-      (!is.null(classes) || !is.null(as_of))
-  ) {
-    abort_validation_error(
-      paste(
-        "The managed OKF directory must remain a complete projection of",
-        "current accepted state. Supply a different `path` for selected or",
-        "historical exports."
-      ),
-      field = "path",
-      rule = "managed_okf_current_complete",
-      observed_value = path
-    )
-  }
   path <- okf_output_path(path)
-  classes <- okf_export_classes(store, classes)
+  classes <- okf_public_classes(store)
   limit <- validate_result_limit(
     limit,
     hard_limit = graft_retrieval_limits$okf_concepts
   )
   overwrite <- validate_history_flag(overwrite, "overwrite")
-  boundary <- if (is.null(as_of)) {
-    okf_current_boundary(store)
-  } else {
-    resolve_history_boundary(store, as_of)
-  }
+  boundary <- okf_current_boundary(store)
   bundle_schema <- okf_boundary_schema(store, boundary)
   snapshot <- okf_snapshot_records(store, classes, boundary, limit)
-  bundle <- okf_build_bundle(
+  okf_build_bundle(
     path,
     snapshot,
     boundary,
@@ -90,7 +29,6 @@ kg_export_okf <- function(
     overwrite,
     classes
   )
-  structure(bundle, class = "kg_okf_bundle")
 }
 
 okf_output_path <- function(path) {
@@ -115,39 +53,8 @@ okf_is_absolute_path <- function(path) {
   startsWith(path, "\\\\") || grepl("^(/|[A-Za-z]:[/\\\\])", path)
 }
 
-okf_export_classes <- function(store, classes) {
-  available <- sort(public_class_names(store), method = "radix")
-  if (is.null(classes)) {
-    return(available)
-  }
-  if (
-    !is.character(classes) ||
-      length(classes) == 0L ||
-      anyNA(classes) ||
-      !all(nzchar(classes))
-  ) {
-    abort_validation_error(
-      "`classes` must contain one or more non-empty class names.",
-      field = "classes",
-      rule = "public_concrete_classes",
-      observed_value = classes
-    )
-  }
-  classes <- unique(classes)
-  unknown <- setdiff(classes, available)
-  if (length(unknown) > 0L) {
-    abort_validation_error(
-      paste0(
-        "Unknown public concrete class(es): ",
-        paste(unknown, collapse = ", "),
-        "."
-      ),
-      field = "classes",
-      rule = "public_concrete_classes",
-      observed_value = unknown
-    )
-  }
-  sort(classes, method = "radix")
+okf_public_classes <- function(store) {
+  sort(public_class_names(store), method = "radix")
 }
 
 okf_snapshot_records <- function(store, classes, boundary, limit) {

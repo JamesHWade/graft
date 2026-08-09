@@ -24,38 +24,40 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Traceable knowledge for R workflows"
+  title: "graft: Reviewable knowledge changes for R workflows"
   description: >
-    Keep records consistent across runs, preserve claims with exact evidence,
-    and provide bounded, schema-aware retrieval to analysts and AI tools.
+    Define records with LinkML or data-dict, inspect a read-only change plan,
+    accept it atomically, and retrieve current knowledge with its immutable
+    history.
   sidebar:
     structure: [links, license, authors, dev]
 
 navbar:
   structure:
-    left:
-      [intro, change_control, open_knowledge, market_intelligence, coworker, examples,
-      reference, news]
+    left: [intro, concepts, design, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
       text: Get started
       href: articles/getting-started.html
-    change_control:
-      text: Change control
-      href: articles/knowledge-change-control.html
-    open_knowledge:
-      text: Open knowledge
-      href: articles/open-knowledge-format.html
-    market_intelligence:
-      text: Market radar
-      href: articles/market-intelligence.html
-    coworker:
-      text: Coworker
-      href: articles/coworker.html
-    examples:
-      text: Examples
-      href: articles/examples.html
+    concepts:
+      text: Concepts
+      menu:
+        - text: Architecture
+          href: articles/architecture.html
+        - text: LinkML contract
+          href: articles/linkml-schema.html
+        - text: data-dict contract
+          href: articles/data-dict-schema.html
+        - text: Change control
+          href: articles/knowledge-change-control.html
+        - text: Retrieval and history
+          href: articles/retrieval.html
+        - text: Open knowledge
+          href: articles/open-knowledge-format.html
+    design:
+      text: v0.1 design
+      href: articles/v01-design.html
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/JamesHWade/graft/
@@ -71,117 +73,56 @@ footer:
 articles:
   - title: Start here
     desc: >
-      Follow one workflow from domain contract to traceable retrieval, or start
-      from an ordinary LinkML schema and see how graft applies it in R.
+      Complete one provider-free workflow, then understand the package's
+      deliberately small design.
     contents:
       - getting-started
-      - knowledge-change-control
+      - architecture
+      - v01-design
+  - title: Core concepts
+    desc: >
+      Go deeper into the domain contract, acceptance boundary, retrieval
+      operations, and readable open-knowledge projection.
+    contents:
       - linkml-schema
+      - data-dict-schema
+      - knowledge-change-control
+      - retrieval
       - open-knowledge-format
-  - title: Agent applications
-    desc: >
-      Build a local agent host with typed workflows, approval-gated actions,
-      accepted memory, configurable models, and extensible tools.
-    contents:
-      - market-intelligence
-      - coworker
-  - title: Examples
-    desc: >
-      Small, runnable domain models adapted from established LinkML projects.
-    contents:
-      - examples
 
 reference:
-  - title: Schema
+  - title: Define and open
     desc: >
-      Compile and inspect LinkML schemas and their generated manifests.
-  - contents:
-      - kg_compile_schema
-      - kg_schema
-      - kg_schema_diff
-      - kg_classes
-      - kg_slots
-      - kg_enums
-      - kg_schema_info
-  - title: Store lifecycle
+      Load the domain contract and manage the store that accepts knowledge
+      under it.
+    contents:
+      - graft_schema
+      - graft_open
+      - graft_close
+  - title: Propose and accept
     desc: >
-      Open, initialize, inspect, and close a DuckDB store.
-  - contents:
-      - kg_connect_duckdb
-      - kg_init
-      - kg_disconnect
-      - kg_store_info
-      - kg_capabilities
-  - title: Ingestion and validation
+      Describe a candidate's origin, plan the change without writing, and
+      accept it through one atomic commit path.
+    contents:
+      - graft_provenance
+      - graft_plan
+      - graft_commit
+      - graft_ingest
+  - title: Retrieve and inspect
     desc: >
-      Validate and write records in batches with provenance and idempotency.
-  - contents:
-      - kg_batch
-      - kg_ingest
-      - kg_write
-      - kg_validate_data
-  - title: History and change control
+      Read current and historical accepted knowledge through bounded,
+      contract-aware operations and projections.
+    contents:
+      - graft_get
+      - graft_find
+      - graft_query
+      - graft_history
+  - title: Synchronize and integrate
     desc: >
-      Inspect accepted revisions and apply explicitly reviewed additive schema
-      migrations.
-  - contents:
-      - kg_batches
-      - kg_changes
-      - kg_history
-      - kg_check_store
-      - kg_plan_migration
-      - kg_apply_migration
-  - title: Records and identity
-    desc: >
-      Read records, search declared text fields, and resolve external
-      identifiers.
-  - contents:
-      - kg_records
-      - kg_find
-      - kg_get
-      - kg_lookup
-      - kg_identifiers
-      - kg_unresolved
-  - title: Claims and evidence
-    desc: >
-      Inspect claims and the stored sources and locations that support or
-      challenge them.
-  - contents:
-      - kg_claims
-      - kg_evidence
-      - kg_competing_claims
-  - title: Graph projections
-    desc: >
-      Inspect graph nodes and edges or traverse a limited neighborhood.
-  - contents:
-      - kg_nodes
-      - kg_edges
-      - kg_neighbors
-      - kg_traverse
-      - kg_subgraph
-  - title: Structured access
-    desc: >
-      Inspect the retrieval contract, run field-and-filter queries, and create
-      ellmer tools.
-  - contents:
-      - kg_context
-      - kg_select
-      - kg_tools
-  - title: Open knowledge
-    desc: >
-      Synchronize, read, review, and exchange the managed human- and
-      agent-readable OKF working tree without replacing the governing schema
-      or ledger.
-  - contents:
-      - kg_sync_okf
-      - kg_okf_status
-      - kg_okf_context
-      - kg_plan_okf_import
-      - kg_apply_okf_import
-      - kg_export_okf
-  - title: Experimental integrations
-    desc: >
-      Package-specific adapters. Most graft users do not need these functions.
-  - contents:
-      - kg_ingest_tempest_records
-      - tempest_artifact_store_graft
+      Synchronize the readable working tree, review file edits as proposals,
+      and expose accepted retrieval to agents.
+    contents:
+      - graft_sync
+      - graft_status
+      - graft_review
+      - graft_tools

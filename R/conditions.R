@@ -25,33 +25,19 @@ abort_schema_integrity <- function(
   graft_abort(classes, message, ..., call = call)
 }
 
-abort_schema_mismatch <- function(diff, call = rlang::caller_env()) {
+abort_schema_mismatch <- function(compatibility, call = rlang::caller_env()) {
   graft_abort(
     "graft_schema_mismatch",
     paste0(
       "The schemas are not structurally compatible (classification: ",
-      diff$classification,
+      compatibility$classification,
       "): ",
-      diff$old_structural_digest,
+      compatibility$old_structural_digest,
       " versus ",
-      diff$new_structural_digest,
+      compatibility$new_structural_digest,
       "."
     ),
-    schema_diff = diff,
-    call = call
-  )
-}
-
-abort_migration_error <- function(
-  subclass,
-  message,
-  ...,
-  call = rlang::caller_env()
-) {
-  graft_abort(
-    subclass,
-    message,
-    ...,
+    schema_compatibility = compatibility,
     call = call
   )
 }

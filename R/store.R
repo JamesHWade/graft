@@ -1,23 +1,4 @@
-#' Connect to a DuckDB knowledge store
-#'
-#' A store combines a compiled graft schema with one DuckDB connection. When
-#' graft creates the connection, graft owns and closes it. A caller-supplied
-#' connection is never closed by graft.
-#'
-#' @param schema A `kg_schema` object or manifest path.
-#' @param path DuckDB file path, or `":memory:"`. When supplied together with
-#'   `connection`, it must identify that connection's database.
-#' @param read_only Whether the store must prohibit writes.
-#' @param connection An optional existing DuckDB DBI connection.
-#' @param okf Whether to manage an Open Knowledge Format working tree for the
-#'   store. File-backed stores use `"managed"` by default. Use `"disabled"` to
-#'   opt out.
-#' @param okf_path Optional managed OKF directory. By default, a file-backed
-#'   `knowledge.duckdb` store uses the sibling `knowledge.okf` directory.
-#'
-#' @return A `kg_store` object. Call [kg_init()] before using a new store.
-#' @export
-kg_connect_duckdb <- function(
+open_store_backend <- function(
   schema,
   path = ":memory:",
   read_only = FALSE,
@@ -25,7 +6,9 @@ kg_connect_duckdb <- function(
   okf = c("managed", "disabled"),
   okf_path = NULL
 ) {
-  schema <- as_kg_schema(schema)
+  if (!is_compiled_schema(schema)) {
+    abort_schema_error("Internal store setup requires a compiled schema.")
+  }
   validate_read_only(read_only)
   okf <- rlang::arg_match(okf)
 
@@ -60,11 +43,11 @@ kg_connect_duckdb <- function(
   }
 
   okf_path <- resolve_managed_okf_path(path, okf, okf_path)
-  capabilities <- new_duckdb_capabilities(
+  capabilities <- duckdb_capabilities(
     read_only = read_only,
     owns_connection = owns_connection
   )
-  store <- new_kg_store(
+  store <- new_store_backend(
     schema = schema,
     connection = connection,
     owns_connection = owns_connection,
@@ -78,7 +61,7 @@ kg_connect_duckdb <- function(
     reg.finalizer(
       store,
       function(store) {
-        disconnect_owned_store(store, finalizer = TRUE)
+        disconnect_owned_backend(store, finalizer = TRUE)
       },
       onexit = TRUE
     )
@@ -174,7 +157,7 @@ validate_duckdb_connection <- function(connection) {
 }
 
 validate_store_writable <- function(store, operation = "write") {
-  validate_kg_store(store)
+  validate_store_backend(store)
   if (isTRUE(store$read_only)) {
     abort_backend_error(
       paste0(
@@ -189,34 +172,20 @@ validate_store_writable <- function(store, operation = "write") {
   invisible(store)
 }
 
-#' Initialize or verify a graft store
-#'
-#' Initialization creates client tables from the compiled manifest plus the
-#' package-owned metadata tables and three generated graph views. It is
-#' atomic and idempotent. Before any store mutation, Graft verifies the
-#' manifest's declared structural digest and compiler-required physical type
-#' contracts. Existing stores must also be structurally compatible with the
-#' active schema.
-#'
-#' @param store A `kg_store` object.
-#'
-#' @return `store`, invisibly.
-#' @export
-kg_init <- function(store) {
-  validate_kg_store(store)
+initialize_store_backend <- function(store) {
+  validate_store_backend(store)
   validate_manifest_integrity(store$schema)
-  validate_manifest_physical_names(store$schema)
 
   if (duckdb_table_exists(store$connection, "_graft_store")) {
     if (isTRUE(store$read_only)) {
       verify_initialized_store(store)
-      verify_graph_views(store$connection)
+      verify_projection_views(store$connection, store$schema)
     } else {
       with_duckdb_error(
         "initialize_existing_store",
         DBI::dbWithTransaction(store$connection, {
           verify_initialized_store(store)
-          create_graph_views(store$connection, store$schema)
+          rebuild_projection_views(store$connection, store$schema)
         })
       )
     }
@@ -251,40 +220,30 @@ kg_init <- function(store) {
     "initialize",
     DBI::dbWithTransaction(store$connection, {
       create_metadata_tables(store$connection)
-      create_manifest_tables(store$connection, store$schema)
-      create_graph_views(store$connection, store$schema)
       insert_store_metadata(store)
       register_initial_schema(store)
+      rebuild_projection_views(store$connection, store$schema)
     })
   )
   mark_store_verified(store)
   invisible(store)
 }
 
-#' Disconnect a graft store
-#'
-#' Disconnecting is safe to call more than once. Graft closes only connections
-#' it created; caller-supplied connections remain open.
-#'
-#' @param store A `kg_store` object.
-#'
-#' @return `store`, invisibly.
-#' @export
-kg_disconnect <- function(store) {
-  validate_kg_store(store, require_open = FALSE)
+close_store_backend <- function(store) {
+  validate_store_backend(store, require_open = FALSE)
   if (isTRUE(store$closed)) {
     return(invisible(store))
   }
   if (isTRUE(store$owns_connection)) {
-    disconnect_owned_store(store)
+    disconnect_owned_backend(store)
   } else {
     store$closed <- TRUE
   }
   invisible(store)
 }
 
-disconnect_owned_store <- function(store, finalizer = FALSE) {
-  if (!is_kg_store(store) || isTRUE(store$closed)) {
+disconnect_owned_backend <- function(store, finalizer = FALSE) {
+  if (!is_store_backend(store) || isTRUE(store$closed)) {
     return(invisible(store))
   }
   valid <- isTRUE(tryCatch(
@@ -302,84 +261,7 @@ disconnect_owned_store <- function(store, finalizer = FALSE) {
   invisible(store)
 }
 
-#' Inspect a graft store
-#'
-#' @param store A `kg_store` object.
-#'
-#' @return A named list describing the connection, initialization state,
-#'   observed and required store formats, active schema fingerprints, and
-#'   revision-history coverage, and managed OKF configuration.
-#'   `store_format_version` is `NA` when no store metadata can be observed,
-#'   including before initialization and after close.
-#' @export
-kg_store_info <- function(store) {
-  validate_kg_store(store, require_open = FALSE)
-  closed <- isTRUE(store$closed)
-  metadata <- NULL
-  initialized <- NA
-  table_count <- NA_integer_
-  if (!closed) {
-    initialized <- duckdb_table_exists(store$connection, "_graft_store")
-    table_count <- length(duckdb_table_names(store$connection))
-    if (initialized) {
-      metadata <- read_store_metadata(store$connection)
-      verify_store_format(metadata)
-    }
-  }
-
-  fingerprints <- store$schema$manifest$fingerprints
-  list(
-    backend = "duckdb",
-    path = store$path,
-    read_only = store$read_only,
-    owns_connection = store$owns_connection,
-    okf_mode = store$okf_mode,
-    okf_path = store$okf_path,
-    closed = closed,
-    initialized = initialized,
-    table_count = table_count,
-    structural_digest = scalar_character(
-      fingerprints$structural_digest
-    ),
-    source_digest = scalar_character(fingerprints$source_digest),
-    build_digest = scalar_character(fingerprints$build_digest),
-    store_format_version = if (is.null(metadata)) {
-      NA_character_
-    } else {
-      scalar_character(metadata$store_format_version)
-    },
-    required_store_format_version = graft_store_format_version,
-    active_build_digest = if (is.null(metadata)) {
-      NA_character_
-    } else {
-      scalar_character(metadata$active_build_digest)
-    },
-    history_complete = if (is.null(metadata)) {
-      NA
-    } else {
-      isTRUE(metadata$history_complete)
-    },
-    history_started_at = if (is.null(metadata)) {
-      as.POSIXct(NA_real_, origin = "1970-01-01", tz = "UTC")
-    } else {
-      metadata$history_started_at
-    },
-    stored = metadata
-  )
-}
-
-#' Report DuckDB store capabilities
-#'
-#' @param store A `kg_store` object.
-#'
-#' @return A named list of static backend and connection capabilities.
-#' @export
-kg_capabilities <- function(store) {
-  validate_kg_store(store, require_open = FALSE)
-  store$capabilities
-}
-
-new_duckdb_capabilities <- function(read_only, owns_connection) {
+duckdb_capabilities <- function(read_only, owns_connection) {
   list(
     backend = "duckdb",
     transactions = TRUE,

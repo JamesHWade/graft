@@ -164,7 +164,7 @@ samp {
 }
 
 .graft-hero h2 {
-  max-width: 16ch;
+  max-width: 18ch;
   margin-bottom: 1.1rem;
   color: var(--graft-forest-deep);
   font-size: clamp(2.2rem, 6vw, 4.4rem);
@@ -252,6 +252,10 @@ samp {
   margin: 1.5rem 0 3.5rem;
 }
 
+.graft-card-grid-four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .graft-card {
   padding: 1.35rem;
   border: 1px solid var(--graft-border);
@@ -290,7 +294,7 @@ samp {
 
 .graft-flow {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.7rem;
   margin: 1.5rem 0 3.5rem;
 }
@@ -314,6 +318,17 @@ samp {
   border-right: 2px solid var(--graft-forest);
   content: "";
   transform: rotate(45deg);
+}
+
+.graft-flow-step:nth-child(3)::after {
+  display: none;
+}
+
+.graft-flow-step-accept {
+  border-color: rgba(201, 130, 36, 0.48);
+  background:
+    linear-gradient(135deg, rgba(201, 130, 36, 0.1), transparent 75%),
+    var(--graft-surface-soft);
 }
 
 .graft-flow-number {
@@ -360,6 +375,110 @@ samp {
   color: var(--graft-slate);
 }
 
+.graft-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(22rem, 1.12fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: center;
+  margin: 1.5rem 0 4rem;
+}
+
+.graft-system-figure {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--graft-border);
+  border-radius: 1rem;
+  background: var(--graft-surface);
+  box-shadow: 0 12px 32px rgba(18, 54, 45, 0.06);
+}
+
+.graft-system-figure figcaption {
+  margin-top: 0.65rem;
+  color: var(--graft-slate);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.graft-path-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 4rem;
+}
+
+.graft-path {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.25rem;
+  border: 1px solid var(--graft-border);
+  border-radius: 0.85rem;
+  background: var(--graft-surface);
+  color: var(--graft-ink);
+  text-decoration: none !important;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.graft-path:hover,
+.graft-path:focus-visible {
+  border-color: rgba(23, 107, 82, 0.5);
+  box-shadow: 0 10px 28px rgba(18, 54, 45, 0.1);
+  color: var(--graft-ink);
+  transform: translateY(-2px);
+}
+
+.graft-path-label {
+  color: var(--graft-forest);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+[data-bs-theme="dark"] .graft-path-label {
+  color: #79d6b5;
+}
+
+.graft-path strong {
+  font-size: 1.05rem;
+}
+
+.graft-path span:last-child {
+  color: var(--graft-slate);
+}
+
+.graft-api-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1.5rem 0 4rem;
+}
+
+.graft-api-grid > div {
+  padding: 1.1rem;
+  border: 1px solid var(--graft-border);
+  border-radius: 0.75rem;
+  background: var(--graft-surface-soft);
+}
+
+.graft-api-grid span {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: var(--graft-slate);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.graft-api-grid code {
+  display: inline-block;
+  margin: 0 0.28rem 0.35rem 0;
+}
+
 .graft-cta {
   margin: 3rem 0 1rem;
   padding: 1.6rem;
@@ -389,7 +508,7 @@ pre {
   box-shadow: 0 6px 18px rgba(18, 54, 45, 0.04);
 }
 
-.figure:has(.graft-architecture-visual) {
+.graft-article-figure {
   width: 100%;
   margin: 1.5rem 0 2.25rem;
 }
@@ -400,13 +519,23 @@ pre {
   height: auto;
 }
 
-.figure:has(.graft-architecture-visual) .caption {
+.graft-article-figure figcaption {
   max-width: 62ch;
   margin: 0.65rem auto 0;
   color: var(--graft-slate);
   font-size: 0.92rem;
   line-height: 1.45;
   text-align: center;
+}
+
+.graft-diagram-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.graft-swipe-hint {
+  display: none;
 }
 
 code {
@@ -425,13 +554,12 @@ footer {
 }
 
 @media (max-width: 991.98px) {
-  .graft-card-grid,
-  .graft-flow {
+  .graft-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .graft-flow-step:nth-child(2)::after {
-    display: none;
+  .graft-split {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -447,7 +575,9 @@ footer {
 
   .graft-card-grid,
   .graft-flow,
-  .graft-audience-grid {
+  .graft-audience-grid,
+  .graft-path-grid,
+  .graft-api-grid {
     grid-template-columns: 1fr;
   }
 
@@ -455,33 +585,17 @@ footer {
     display: none;
   }
 
-  .figure:has(.graft-architecture-visual) {
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
-  }
-
-  .figure:has(.graft-architecture-visual)::before {
-    position: sticky;
-    left: 0;
+  .graft-swipe-hint {
     display: block;
-    width: max-content;
     margin-bottom: 0.55rem;
     color: var(--graft-slate);
-    content: "Swipe to explore the diagram →";
     font-size: 0.78rem;
     font-weight: 600;
   }
 
-  .graft-architecture-visual {
+  .graft-diagram-scroll .graft-architecture-visual {
     width: 44rem !important;
     max-width: none;
-  }
-
-  .figure:has(.graft-architecture-visual) .caption {
-    position: sticky;
-    left: 0;
-    width: 100%;
   }
 }
 

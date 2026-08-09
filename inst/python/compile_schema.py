@@ -14,15 +14,15 @@ import json
 import platform
 import re
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from linkml_runtime.utils.schemaview import SchemaView
 
 
-MANIFEST_VERSION = "1.0.0"
-RELATIONAL_MAPPING_VERSION = "1"
+MANIFEST_VERSION = "2.0.0"
+PROJECTION_MAPPING_VERSION = "1"
 COMPILER_NAME = "graft-linkml-compiler"
-COMPILER_VERSION = "0.2.0"
+COMPILER_VERSION = "0.3.0"
 CORE_STATEMENT_FIELDS = {
     "id",
     "created_at",
@@ -60,6 +60,122 @@ ROLE_VALUES = {
     "metadata",
 }
 ID_POLICY_VALUES = {"require", "mint", "resolve_exact", "deterministic"}
+UNSUPPORTED_SLOT_SEMANTICS = {
+    "abstract",
+    "all_members",
+    "all_of",
+    "any_of",
+    "apply_to",
+    "array",
+    "asymmetric",
+    "bindings",
+    "children_are_mutually_disjoint",
+    "designates_type",
+    "disjoint_with",
+    "domain",
+    "enum_range",
+    "equals_expression",
+    "equals_number",
+    "equals_string",
+    "equals_string_in",
+    "exact_cardinality",
+    "exactly_one_of",
+    "has_member",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "ifabsent",
+    "implicit_prefix",
+    "inherited",
+    "inverse",
+    "irreflexive",
+    "is_a",
+    "is_class_field",
+    "key",
+    "list_elements_unique",
+    "locally_reflexive",
+    "maximum_cardinality",
+    "minimum_cardinality",
+    "mixin",
+    "mixins",
+    "none_of",
+    "path_rule",
+    "range_expression",
+    "readonly",
+    "recommended",
+    "reflexive",
+    "relational_role",
+    "shared",
+    "string_serialization",
+    "structured_pattern",
+    "subproperty_of",
+    "symmetric",
+    "transitive",
+    "transitive_form_of",
+    "type_mappings",
+    "reflexive_transitive_form_of",
+    "union_of",
+    "unit",
+    "value_presence",
+    "values_from",
+}
+UNSUPPORTED_CLASS_SEMANTICS = {
+    "all_of",
+    "any_of",
+    "apply_to",
+    "children_are_mutually_disjoint",
+    "classification_rules",
+    "defining_slots",
+    "disjoint_with",
+    "exactly_one_of",
+    "extra_slots",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "none_of",
+    "represents_relationship",
+    "rules",
+    "slot_conditions",
+    "slot_names_unique",
+    "string_serialization",
+    "subclass_of",
+    "tree_root",
+    "union_of",
+    "unique_keys",
+    "values_from",
+}
+UNSUPPORTED_ENUM_SEMANTICS = {
+    "abstract",
+    "apply_to",
+    "code_set",
+    "code_set_tag",
+    "code_set_version",
+    "concepts",
+    "enum_uri",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "include",
+    "inherits",
+    "is_a",
+    "matches",
+    "minus",
+    "mixin",
+    "mixins",
+    "pv_formula",
+    "reachable_from",
+    "string_serialization",
+    "values_from",
+}
+UNSUPPORTED_SCHEMA_SEMANTICS = {
+    "bindings",
+    "id_prefixes",
+    "id_prefixes_are_closed",
+    "slot_names_unique",
+}
+UNSUPPORTED_PERMISSIBLE_VALUE_SEMANTICS = {
+    "is_a",
+    "mixins",
+    "unit",
+}
+LINKML_TYPES_SCHEMA_ID = "https://w3id.org/linkml/types"
 PRIMITIVE_SQL_TYPES = {
     "boolean": "BOOLEAN",
     "date": "DATE",
@@ -70,10 +186,63 @@ PRIMITIVE_SQL_TYPES = {
     "integer": "BIGINT",
     "time": "TIME",
 }
+SUPPORTED_PRIMITIVE_RANGES = set(PRIMITIVE_SQL_TYPES) | {
+    "string",
+    "uri",
+    "uriorcurie",
+}
 
 
 class GraftCompilerError(ValueError):
     """Raised when a LinkML schema violates the graft semantic contract."""
+
+
+def _linkml_field_is_set(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (str, bytes, list, tuple, set, dict)):
+        return len(value) > 0
+    return True
+
+
+def _reject_unsupported_linkml_fields(
+    element: Any, fields: set[str], label: str
+) -> None:
+    unsupported = sorted(
+        field
+        for field in fields
+        if _linkml_field_is_set(getattr(element, field, None))
+    )
+    if unsupported:
+        raise GraftCompilerError(
+            f"{label} uses LinkML semantic field(s) unsupported by "
+            f"graft-table-v1: {', '.join(unsupported)}."
+        )
+
+
+def _validate_schema_semantics(schema_view: SchemaView) -> None:
+    schema_view.all_schema(imports=True)
+    for schema_key, schema in schema_view.schema_map.items():
+        label = f"Schema {schema.name}"
+        _reject_unsupported_linkml_fields(
+            schema,
+            UNSUPPORTED_SCHEMA_SEMANTICS,
+            label,
+        )
+        _validate_annotation_names(label, _annotation_map(schema), set())
+        custom_types = sorted(
+            str(name)
+            for name in (schema.types or {})
+            if not (
+                str(schema_key) == "linkml:types"
+                and str(schema.id) == LINKML_TYPES_SCHEMA_ID
+            )
+        )
+        if custom_types:
+            raise GraftCompilerError(
+                f"{label} defines custom LinkML type(s) unsupported by "
+                f"graft-table-v1: {', '.join(custom_types)}."
+            )
 
 
 def _canonical_json(value: Any) -> str:
@@ -152,7 +321,7 @@ def _inherited_class_annotations(
 ) -> dict[str, Any]:
     result: dict[str, Any] = {}
     ancestors = schema_view.class_ancestors(
-        class_name, imports=True, mixins=True, reflexive=True
+        class_name, imports=True, mixins=False, reflexive=True
     )
     for ancestor_name in reversed(ancestors):
         result.update(_annotation_map(schema_view.get_class(ancestor_name)))
@@ -224,10 +393,23 @@ def _is_concrete(class_definition: Any) -> bool:
     return not bool(class_definition.abstract) and not bool(class_definition.mixin)
 
 
-def _relational_type(range_name: str, enum_names: set[str]) -> str:
+def _duckdb_type(range_name: str, enum_names: set[str]) -> str:
     if range_name in enum_names:
         return "VARCHAR"
     return PRIMITIVE_SQL_TYPES.get(range_name, "VARCHAR")
+
+
+def _validate_slot_range(
+    label: str,
+    range_name: str,
+    class_names: set[str],
+    enum_names: set[str],
+) -> None:
+    if range_name not in class_names | enum_names | SUPPORTED_PRIMITIVE_RANGES:
+        raise GraftCompilerError(
+            f"{label} uses LinkML range {range_name!r}, which is unsupported "
+            "by graft-table-v1."
+        )
 
 
 def _slot_contract(
@@ -237,19 +419,35 @@ def _slot_contract(
     class_names: set[str],
     enum_names: set[str],
 ) -> dict[str, Any]:
+    if slot.inlined is True:
+        raise GraftCompilerError(
+            f"Slot {class_name}.{slot.name} uses inlined: true, which is "
+            "unsupported by graft-table-v1."
+        )
+    _reject_unsupported_linkml_fields(
+        slot,
+        UNSUPPORTED_SLOT_SEMANTICS,
+        f"Slot {class_name}.{slot.name}",
+    )
     annotations = _annotation_map(slot)
     _validate_annotation_names(
         f"Slot {class_name}.{slot.name}", annotations, SUPPORTED_SLOT_ANNOTATIONS
     )
     range_name = str(slot.range or "string")
+    _validate_slot_range(
+        f"Slot {class_name}.{slot.name}",
+        range_name,
+        class_names,
+        enum_names,
+    )
     object_range = range_name in class_names
     multivalued = bool(slot.multivalued)
     ordered = bool(slot.list_elements_ordered or slot.inlined_as_list)
     contract: dict[str, Any] = {
         "name": str(slot.name),
-        "column": None if multivalued else _snake_case(str(slot.name)),
+        "view_column": None if multivalued else _snake_case(str(slot.name)),
         "range": range_name,
-        "relational_type": _relational_type(range_name, enum_names),
+        "duckdb_type": _duckdb_type(range_name, enum_names),
         "required": bool(slot.required),
         "multivalued": multivalued,
         "ordered": ordered,
@@ -260,9 +458,6 @@ def _slot_contract(
         "pattern": str(slot.pattern) if slot.pattern else None,
         "minimum_value": _plain(slot.minimum_value),
         "maximum_value": _plain(slot.maximum_value),
-        "foreign_key": (
-            {"class": range_name, "slot": "id"} if object_range else None
-        ),
         "external_identifier": annotations.get("graft.external_identifier"),
         "search_weight": (
             float(annotations["graft.search_weight"])
@@ -277,13 +472,13 @@ def _slot_contract(
 def _runtime_slot_contract(
     name: str,
     range_name: str,
-    relational_type: str,
+    duckdb_type: str,
 ) -> dict[str, Any]:
     return {
         "name": name,
-        "column": name,
+        "view_column": name,
         "range": range_name,
-        "relational_type": relational_type,
+        "duckdb_type": duckdb_type,
         "required": name == "id",
         "multivalued": False,
         "ordered": False,
@@ -294,7 +489,6 @@ def _runtime_slot_contract(
         "pattern": None,
         "minimum_value": None,
         "maximum_value": None,
-        "foreign_key": None,
         "external_identifier": None,
         "search_weight": None,
         "sensitive": False,
@@ -319,7 +513,7 @@ def _prepare_plain_linkml_slots(
         if (
             declared_id["multivalued"]
             or declared_id["object_reference"]
-            or declared_id["relational_type"] != "VARCHAR"
+            or declared_id["duckdb_type"] != "VARCHAR"
         ):
             raise GraftCompilerError(
                 f"Plain LinkML class {class_name} must use a scalar string-like "
@@ -327,7 +521,7 @@ def _prepare_plain_linkml_slots(
             )
         declared_id["required"] = True
         declared_id["identifier"] = True
-        declared_id["column"] = "id"
+        declared_id["view_column"] = "id"
         for slot in identifier_slots:
             if slot["name"] == "id":
                 continue
@@ -378,7 +572,7 @@ def _inferred_label_slot(slots: list[dict[str, Any]]) -> str | None:
         for slot in slots
         if not slot["multivalued"]
         and not slot["object_reference"]
-        and slot["relational_type"] == "VARCHAR"
+        and slot["duckdb_type"] == "VARCHAR"
         and not slot["sensitive"]
     }
     return next((candidate for candidate in candidates if candidate in available), None)
@@ -392,7 +586,7 @@ def _inferred_search_slots(slots: list[dict[str, Any]]) -> list[str]:
         if slot["name"] not in excluded
         and not slot["multivalued"]
         and not slot["object_reference"]
-        and slot["relational_type"] == "VARCHAR"
+        and slot["duckdb_type"] == "VARCHAR"
         and not slot["sensitive"]
     )
 
@@ -400,10 +594,28 @@ def _inferred_search_slots(slots: list[dict[str, Any]]) -> list[str]:
 def _enum_contract(schema_view: SchemaView) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for name, enum_definition in sorted(schema_view.all_enums().items()):
+        _reject_unsupported_linkml_fields(
+            enum_definition,
+            UNSUPPORTED_ENUM_SEMANTICS,
+            f"Enum {name}",
+        )
+        _validate_annotation_names(
+            f"Enum {name}", _annotation_map(enum_definition), set()
+        )
         values = []
         for value_name, permissible_value in sorted(
             (enum_definition.permissible_values or {}).items()
         ):
+            _reject_unsupported_linkml_fields(
+                permissible_value,
+                UNSUPPORTED_PERMISSIBLE_VALUE_SEMANTICS,
+                f"Permissible value {name}.{value_name}",
+            )
+            _validate_annotation_names(
+                f"Permissible value {name}.{value_name}",
+                _annotation_map(permissible_value),
+                set(),
+            )
             values.append(
                 {
                     "value": str(value_name),
@@ -431,105 +643,52 @@ def _enum_contract(schema_view: SchemaView) -> dict[str, Any]:
     return result
 
 
-def _table_columns(slots: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "name": slot["column"],
-            "slot": slot["name"],
-            "type": slot["relational_type"],
-            "nullable": not slot["required"],
-            "primary_key": slot["identifier"],
-            "foreign_key": slot["foreign_key"],
-        }
-        for slot in slots
-        if not slot["multivalued"]
-    ]
-
-
-def _generated_relation(
+def _generated_multivalue_view(
     owner_class: str,
-    owner_table: str,
+    owner_view: str,
     slot: dict[str, Any],
     schema_view: SchemaView,
 ) -> dict[str, Any]:
-    table = f"{owner_table}__{_snake_case(slot['name'])}"
-    if slot["object_reference"]:
-        columns = [
-            {
-                "name": "id",
-                "type": "VARCHAR",
-                "nullable": False,
-                "primary_key": True,
-            },
-            {
-                "name": "subject",
-                "type": "VARCHAR",
-                "nullable": False,
-                "foreign_key": {"class": owner_class, "slot": "id"},
-            },
-            {
-                "name": "object",
-                "type": "VARCHAR",
-                "nullable": False,
-                "foreign_key": slot["foreign_key"],
-            },
-            {
-                "name": "position",
-                "type": "BIGINT",
-                "nullable": True,
-            },
-            {
-                "name": "created_at",
-                "type": "TIMESTAMP",
-                "nullable": True,
-            },
-        ]
-        kind = "object"
-    else:
-        columns = [
-            {
-                "name": "owner_id",
-                "type": "VARCHAR",
-                "nullable": False,
-                "foreign_key": {"class": owner_class, "slot": "id"},
-            },
-            {
-                "name": "position",
-                "type": "BIGINT",
-                "nullable": True,
-            },
-            {
-                "name": "value",
-                "type": slot["relational_type"],
-                "nullable": False,
-            },
-        ]
-        kind = "value"
+    view = f"{owner_view}__{_snake_case(slot['name'])}"
+    kind = "object" if slot["object_reference"] else "value"
     return {
         "name": f"{owner_class}.{slot['name']}",
-        "table": table,
+        "view": view,
         "owner_class": owner_class,
-        "owner_table": owner_table,
+        "owner_view": owner_view,
         "slot": slot["name"],
         "kind": kind,
         "ordered": slot["ordered"],
         "predicate": str(schema_view.get_uri(slot["name"], expand=True)),
-        "columns": columns,
     }
 
 
 def _class_contracts(
     schema_view: SchemaView,
-) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     all_classes = schema_view.all_classes(imports=True)
+    mixin_classes = sorted(
+        str(name)
+        for name, class_definition in all_classes.items()
+        if bool(class_definition.mixin) or bool(class_definition.mixins)
+    )
+    if mixin_classes:
+        raise GraftCompilerError(
+            "LinkML class mixins are not supported by graft-table-v1; "
+            f"found: {', '.join(mixin_classes)}."
+        )
     class_names = {str(name) for name in all_classes}
     enum_names = {str(name) for name in schema_view.all_enums(imports=True)}
     classes: dict[str, Any] = {}
-    tables: dict[str, Any] = {}
     relations: list[dict[str, Any]] = []
 
     for name, class_definition in sorted(all_classes.items()):
         name = str(name)
+        _reject_unsupported_linkml_fields(
+            class_definition,
+            UNSUPPORTED_CLASS_SEMANTICS,
+            f"Class {name}",
+        )
         direct_annotations = _annotation_map(class_definition)
         _validate_annotation_names(
             f"Class {name}", direct_annotations, SUPPORTED_CLASS_ANNOTATIONS
@@ -540,7 +699,7 @@ def _class_contracts(
         ancestors = [
             str(value)
             for value in schema_view.class_ancestors(
-                name, imports=True, mixins=True, reflexive=True
+                name, imports=True, mixins=False, reflexive=True
             )
         ]
         annotations = _inherited_class_annotations(schema_view, name)
@@ -584,6 +743,16 @@ def _class_contracts(
         if plain_linkml:
             induced_slots, inferred_id_policy, id_format = (
                 _prepare_plain_linkml_slots(name, induced_slots)
+            )
+        view_columns = [
+            str(slot["view_column"]).lower()
+            for slot in induced_slots
+            if slot["view_column"] is not None
+        ]
+        if len(view_columns) != len(set(view_columns)):
+            raise GraftCompilerError(
+                f"Class {name} has scalar slots that map to the same projection "
+                "column."
             )
         id_policy = annotations.get("graft.id_policy") or inferred_id_policy
         if id_policy not in ID_POLICY_VALUES:
@@ -644,16 +813,16 @@ def _class_contracts(
                 f"Class {name} uses graft.fixed_predicate but is not an edge."
             )
 
-        table_name = _snake_case(name)
-        if table_name.startswith("_graft_"):
+        view_name = _snake_case(name)
+        if view_name.startswith("_graft_"):
             raise GraftCompilerError(
-                f"Class {name} maps to reserved physical name {table_name!r}."
+                f"Class {name} maps to reserved projection name {view_name!r}."
             )
         class_relations = []
         for slot in induced_slots:
             if slot["multivalued"]:
-                relation = _generated_relation(
-                    name, table_name, slot, schema_view=schema_view
+                relation = _generated_multivalue_view(
+                    name, view_name, slot, schema_view=schema_view
                 )
                 relations.append(relation)
                 class_relations.append(relation["name"])
@@ -665,7 +834,7 @@ def _class_contracts(
             "type_uri": str(schema_view.get_uri(name, expand=True)),
             "role": str(role),
             "statement_shape": statement_shape,
-            "table": table_name,
+            "view": view_name,
             "id_policy": str(id_policy),
             "id_format": id_format,
             "label_slot": str(label_slot) if label_slot else None,
@@ -681,15 +850,16 @@ def _class_contracts(
             "relations": sorted(class_relations),
         }
         classes[name] = class_contract
-        tables[name] = {
-            "name": table_name,
-            "class": name,
-            "role": role,
-            "columns": _table_columns(induced_slots),
-        }
 
     relations.sort(key=lambda item: item["name"])
-    return classes, tables, relations
+    projection_names = [
+        str(contract["view"]).lower() for contract in classes.values()
+    ] + [str(relation["view"]).lower() for relation in relations]
+    if len(projection_names) != len(set(projection_names)):
+        raise GraftCompilerError(
+            "Class and relation projection names must be unique."
+        )
+    return classes, relations
 
 
 def _global_slot_contract(
@@ -698,15 +868,31 @@ def _global_slot_contract(
     result: dict[str, Any] = {}
     for name, slot in sorted(schema_view.all_slots(imports=True).items()):
         name = str(name)
+        if slot.inlined is True:
+            raise GraftCompilerError(
+                f"Slot {name} uses inlined: true, which is unsupported by "
+                "graft-table-v1."
+            )
+        _reject_unsupported_linkml_fields(
+            slot,
+            UNSUPPORTED_SLOT_SEMANTICS,
+            f"Slot {name}",
+        )
         annotations = _annotation_map(slot)
         _validate_annotation_names(
             f"Slot {name}", annotations, SUPPORTED_SLOT_ANNOTATIONS
         )
         range_name = str(slot.range or "string")
+        _validate_slot_range(
+            f"Slot {name}",
+            range_name,
+            class_names,
+            enum_names,
+        )
         result[name] = {
             "name": name,
             "range": range_name,
-            "relational_type": _relational_type(range_name, enum_names),
+            "duckdb_type": _duckdb_type(range_name, enum_names),
             "required": bool(slot.required),
             "multivalued": bool(slot.multivalued),
             "identifier": bool(slot.identifier),
@@ -829,11 +1015,12 @@ def _graph_projections(
     }
 
 
-def _normalization_contract(slots: dict[str, Any]) -> dict[str, str]:
+def _normalization_contract(classes: dict[str, Any]) -> dict[str, str]:
     namespaces = sorted(
         {
             str(slot["external_identifier"])
-            for slot in slots.values()
+            for class_contract in classes.values()
+            for slot in class_contract["slots"].values()
             if slot["external_identifier"]
         }
     )
@@ -866,20 +1053,20 @@ def compile_schema(schema_path: str, output_path: str | None = None) -> str:
     # All compiler logic below reads LinkML through the SchemaView and its
     # resolved import closure.
     schema_view.all_schema(imports=True)
-    classes, tables, relations = _class_contracts(schema_view)
+    _validate_schema_semantics(schema_view)
+    classes, relations = _class_contracts(schema_view)
     enums = _enum_contract(schema_view)
     class_names = {str(name) for name in schema_view.all_classes(imports=True)}
     enum_names = {str(name) for name in schema_view.all_enums(imports=True)}
     slots = _global_slot_contract(schema_view, class_names, enum_names)
     validations = _validation_invariants(classes)
     graph_projections = _graph_projections(classes, relations)
-    normalization = _normalization_contract(slots)
+    normalization = _normalization_contract(classes)
     source_files, source_digest = _source_contract(schema_view, root_path)
 
     structural_contract = {
-        "relational_mapping_version": RELATIONAL_MAPPING_VERSION,
+        "projection_mapping_version": PROJECTION_MAPPING_VERSION,
         "classes": classes,
-        "tables": tables,
         "relations": relations,
         "enums": enums,
         "graph_projections": graph_projections,
@@ -892,7 +1079,7 @@ def compile_schema(schema_path: str, output_path: str | None = None) -> str:
     }
     manifest: dict[str, Any] = {
         "manifest_version": MANIFEST_VERSION,
-        "relational_mapping_version": RELATIONAL_MAPPING_VERSION,
+        "projection_mapping_version": PROJECTION_MAPPING_VERSION,
         "schema": {
             "id": str(schema_view.schema.id),
             "name": str(schema_view.schema.name),
@@ -906,7 +1093,6 @@ def compile_schema(schema_path: str, output_path: str | None = None) -> str:
         "classes": classes,
         "slots": slots,
         "enums": enums,
-        "tables": tables,
         "relations": relations,
         "graph_projections": graph_projections,
         "validation_invariants": validations,

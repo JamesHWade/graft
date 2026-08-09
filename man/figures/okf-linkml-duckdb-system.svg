@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
-  <title id="title">How OKF, LinkML, and DuckDB fit together in Graft</title>
-  <desc id="desc">Graft sits at the center. A LinkML schema compiles into its runtime contract, Open Knowledge Format provides the readable working surface for people and agents, and DuckDB holds accepted revisions and provenance.</desc>
+  <title id="title">How contract providers, OKF, Graft, and DuckDB exchange knowledge</title>
+  <desc id="desc">A LinkML or data-dict contract compiles into Graft. Open Knowledge Format exchanges readable proposals and accepted projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB.</desc>
   <style>
     :root {
       --bg: #f7faf8;
@@ -121,9 +121,9 @@
   <circle cx="122" cy="157" r="24" fill="var(--amber)" opacity="0.16"/>
   <path d="M111 143h18l10 10v22h-28z M129 143v11h10" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linejoin="round"/>
   <text class="eyebrow" x="158" y="151">DOMAIN CONTRACT</text>
-  <text class="title" x="105" y="207">LinkML</text>
+  <text class="title" x="105" y="207">LinkML or data-dict</text>
   <text class="subtitle" x="105" y="239">Defines meaning before storage</text>
-  <text class="small" x="105" y="273">classes · slots · identity · ranges</text>
+  <text class="small" x="105" y="273">classes/tables · fields · identity</text>
   <text class="small" x="105" y="298">relationships · sensitivity</text>
 
   <rect class="node-soft" x="770" y="105" width="360" height="210" rx="24"/>
@@ -145,7 +145,7 @@
   <rect class="pill" x="551" y="510" width="90" height="34" rx="17"/>
   <text class="pill-text" x="596" y="533" text-anchor="middle">identify</text>
   <rect class="pill" x="651" y="510" width="108" height="34" rx="17"/>
-  <text class="pill-text" x="705" y="533" text-anchor="middle">approve</text>
+  <text class="pill-text" x="705" y="533" text-anchor="middle">plan</text>
 
   <rect class="node" x="70" y="615" width="1060" height="94" rx="24"/>
   <ellipse cx="132" cy="650" rx="26" ry="10" fill="none" stroke="var(--forest)" stroke-width="3"/>
@@ -170,7 +170,7 @@
   <text class="small" x="940" y="418" text-anchor="middle">work in readable files</text>
   <path class="connector" d="M1080 420 C1100 390 1100 350 1080 316" marker-end="url(#arrow)"/>
 
-  <text class="label" x="213" y="414" text-anchor="middle">Applications</text>
+  <text class="label" x="213" y="414" text-anchor="middle">R workflows</text>
   <text class="small" x="213" y="441" text-anchor="middle">call bounded Graft APIs</text>
   <path class="connector" d="M300 455 L382 455" marker-end="url(#arrow)"/>
 </svg>

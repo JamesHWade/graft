@@ -1,154 +1,4 @@
-#' List committed ingestion batches
-#'
-#' `kg_batches()` returns committed batches in deterministic newest-first commit
-#' order. Batch metadata is parsed into a list-column; the stored JSON is never
-#' exposed directly.
-#'
-#' @param store An initialized `kg_store`.
-#' @param producer Optional exact producer name.
-#' @param source_run_id Optional exact producer-side run identifier.
-#' @param from,to Optional inclusive `POSIXt` boundaries on commit time.
-#' @param limit Maximum number of batches to return.
-#'
-#' @return A bounded data frame of committed batch provenance.
-#' @export
-kg_batches <- function(
-  store,
-  producer = NULL,
-  source_run_id = NULL,
-  from = NULL,
-  to = NULL,
-  limit = 100
-) {
-  validate_retrieval_store(store)
-  producer <- validate_optional_scalar_text(producer, "producer")
-  source_run_id <- validate_optional_scalar_text(
-    source_run_id,
-    "source_run_id"
-  )
-  boundaries <- validate_history_time_range(from, to)
-  limit <- validate_result_limit(
-    limit,
-    hard_limit = graft_retrieval_limits$batches
-  )
-  filters <- history_sql_filters(
-    store,
-    values = list(
-      producer = producer,
-      source_run_id = source_run_id,
-      from = boundaries$from,
-      to = boundaries$to
-    ),
-    columns = c(
-      producer = "producer",
-      source_run_id = "source_run_id",
-      from = "committed_at",
-      to = "committed_at"
-    ),
-    operators = c(from = ">=", to = "<=")
-  )
-  sql <- paste0(
-    "SELECT batch_id, schema_build_digest, commit_order, producer, ",
-    "producer_version, source_run_id, idempotency_key, metadata_json, ",
-    "started_at, committed_at, status FROM ",
-    quote_identifier(store$connection, "_graft_batches"),
-    " WHERE status = 'committed'",
-    filters$sql,
-    " ORDER BY commit_order DESC, batch_id ASC LIMIT ",
-    limit + 1L
-  )
-  rows <- with_duckdb_error(
-    "list_batches",
-    DBI::dbGetQuery(store$connection, sql, params = filters$params)
-  )
-  truncated <- nrow(rows) > limit
-  if (truncated) {
-    rows <- rows[seq_len(limit), , drop = FALSE]
-  }
-  payloads <- lapply(rows$metadata_json, parse_public_batch_metadata)
-  rows$metadata_json <- NULL
-  rows$metadata <- I(lapply(payloads, function(payload) {
-    if (is.null(payload$metadata)) list() else payload$metadata
-  }))
-  rows$result <- I(lapply(payloads, function(payload) {
-    if (is.null(payload$graft_result)) list() else payload$graft_result
-  }))
-  finalize_history_rows(rows, store, limit, truncated)
-}
-
-#' List accepted record changes
-#'
-#' `kg_changes()` returns immutable record revisions in deterministic
-#' newest-first commit order. Historical records and changed-field names are
-#' filtered using the exact manifest that governed each revision, so sensitive
-#' slots are not exposed.
-#'
-#' @param store An initialized `kg_store`.
-#' @param batch_id Optional exact committed batch identifier.
-#' @param record_id Optional exact internal record identifier.
-#' @param class Optional exact historical concrete class name.
-#' @param from,to Optional inclusive `POSIXt` boundaries on batch commit time.
-#' @param limit Maximum number of revisions to return.
-#'
-#' @return A bounded data frame with `changed_fields` and `record` list-columns.
-#' @export
-kg_changes <- function(
-  store,
-  batch_id = NULL,
-  record_id = NULL,
-  class = NULL,
-  from = NULL,
-  to = NULL,
-  limit = 100
-) {
-  validate_retrieval_store(store)
-  batch_id <- validate_optional_scalar_text(batch_id, "batch_id")
-  record_id <- validate_optional_scalar_text(record_id, "record_id")
-  class <- validate_optional_scalar_text(class, "class")
-  boundaries <- validate_history_time_range(from, to)
-  limit <- validate_result_limit(
-    limit,
-    hard_limit = graft_retrieval_limits$changes
-  )
-  filters <- history_sql_filters(
-    store,
-    values = list(
-      batch_id = batch_id,
-      record_id = record_id,
-      class = class,
-      from = boundaries$from,
-      to = boundaries$to
-    ),
-    columns = c(
-      batch_id = "r.batch_id",
-      record_id = "r.record_id",
-      class = "r.class",
-      from = "b.committed_at",
-      to = "b.committed_at"
-    ),
-    operators = c(from = ">=", to = "<=")
-  )
-  rows <- query_history_revisions(store, filters, limit)
-  hydrate_history_rows(rows, store, limit)
-}
-
-#' Retrieve the accepted history of one record
-#'
-#' Revisions are returned in deterministic newest-first commit order. `as_of`
-#' selects the state committed by a boundary: either an exact committed batch
-#' identifier or a `POSIXt` time. Time boundaries are first resolved to a
-#' committed batch order, so revision timestamps are never used as transaction
-#' boundaries. With `limit = 1`, the returned `record` is the accepted record at
-#' that boundary.
-#'
-#' @param store An initialized `kg_store`.
-#' @param id One internal record identifier.
-#' @param as_of Optional committed batch identifier or scalar `POSIXt` time.
-#' @param limit Maximum number of revisions to return.
-#'
-#' @return A bounded data frame with `changed_fields` and `record` list-columns.
-#' @export
-kg_history <- function(store, id, as_of = NULL, limit = 100) {
+graft_history_engine <- function(store, id, as_of = NULL, limit = 100) {
   validate_retrieval_store(store)
   id <- validate_scalar_text(id, "id", condition = abort_reference_error)
   limit <- validate_result_limit(
@@ -222,67 +72,6 @@ kg_history <- function(store, id, as_of = NULL, limit = 100) {
   result
 }
 
-#' Check revision-ledger and current-state integrity
-#'
-#' Shallow checks validate relationships among batches, revisions, heads,
-#' observations, schema versions, and typed current tables. With `deep = TRUE`,
-#' Graft also parses and re-digests every revision payload and compares every
-#' current typed record with its revision head. All records may be scanned, but
-#' reported issues are always bounded.
-#'
-#' @param store An initialized `kg_store`.
-#' @param deep Whether to perform payload and current-state digest checks.
-#' @param limit Maximum number of issues to report.
-#'
-#' @return A `kg_store_check` containing `valid`, scan details, and a bounded
-#'   `issues` data frame.
-#' @export
-kg_check_store <- function(store, deep = FALSE, limit = 100) {
-  validate_retrieval_store(store, refresh = TRUE)
-  deep <- validate_history_flag(deep, "deep")
-  limit <- validate_result_limit(
-    limit,
-    hard_limit = graft_retrieval_limits$integrity_issues
-  )
-  issues <- shallow_integrity_issues(store, limit)
-  if (deep) {
-    issues <- c(issues, deep_integrity_issues(store, limit))
-  }
-  issues <- bind_integrity_issues(issues)
-  if (nrow(issues) > 0L) {
-    issues <- issues[
-      order(
-        issues$issue,
-        issues$class,
-        issues$record_id,
-        issues$revision_id,
-        issues$batch_id,
-        na.last = TRUE,
-        method = "radix"
-      ),
-      ,
-      drop = FALSE
-    ]
-  }
-  truncated <- nrow(issues) > limit
-  if (truncated) {
-    issues <- issues[seq_len(limit), , drop = FALSE]
-  }
-  issues <- bounded_data_frame(issues, store, limit, truncated)
-  structure(
-    list(
-      valid = nrow(issues) == 0L,
-      deep = deep,
-      checked_at = as.POSIXct(Sys.time(), tz = "UTC"),
-      reported_issues = nrow(issues),
-      truncated = truncated,
-      issues = issues,
-      store_schema_digest = store_schema_digest(store)
-    ),
-    class = "kg_store_check"
-  )
-}
-
 validate_history_flag <- function(value, argument) {
   if (!is.logical(value) || length(value) != 1L || is.na(value)) {
     abort_validation_error(
@@ -313,20 +102,6 @@ validate_history_time <- function(value, argument) {
     )
   }
   as.POSIXct(value, tz = "UTC")
-}
-
-validate_history_time_range <- function(from, to) {
-  from <- validate_history_time(from, "from")
-  to <- validate_history_time(to, "to")
-  if (!is.null(from) && !is.null(to) && from > to) {
-    abort_validation_error(
-      "`from` must not be later than `to`.",
-      field = "from",
-      rule = "time_range_order",
-      observed_value = from
-    )
-  }
-  list(from = from, to = to)
 }
 
 history_sql_filters <- function(
@@ -364,32 +139,6 @@ history_sql_filters <- function(
   list(sql = paste0(clauses, collapse = ""), params = params)
 }
 
-parse_public_batch_metadata <- function(metadata_json) {
-  if (is.na(metadata_json) || !nzchar(metadata_json)) {
-    return(list())
-  }
-  payload <- tryCatch(
-    jsonlite::fromJSON(metadata_json, simplifyVector = FALSE),
-    error = function(error) {
-      abort_backend_error(
-        paste0(
-          "Could not parse stored batch metadata: ",
-          conditionMessage(error)
-        ),
-        operation = "list_batches",
-        parent = error
-      )
-    }
-  )
-  if (!is.list(payload)) {
-    abort_backend_error(
-      "Stored batch metadata must contain a JSON object.",
-      operation = "list_batches"
-    )
-  }
-  payload
-}
-
 query_history_revisions <- function(store, filters, limit) {
   sql <- paste0(
     "SELECT r.revision_id, r.record_id, r.class, r.batch_id, ",
@@ -417,15 +166,14 @@ hydrate_history_rows <- function(rows, store, limit) {
   if (truncated) {
     rows <- rows[seq_len(limit), , drop = FALSE]
   }
-  cache <- new.env(parent = emptyenv())
+  schemas <- historical_schemas(
+    store,
+    unique(rows$schema_build_digest)
+  )
   records <- vector("list", nrow(rows))
   changed_fields <- vector("list", nrow(rows))
   for (index in seq_len(nrow(rows))) {
-    schema <- historical_schema(
-      store,
-      rows$schema_build_digest[[index]],
-      cache
-    )
+    schema <- schemas[[rows$schema_build_digest[[index]]]]
     contract <- schema$manifest$classes[[rows$class[[index]]]]
     if (is.null(contract)) {
       abort_backend_error(
@@ -436,9 +184,12 @@ hydrate_history_rows <- function(rows, store, limit) {
         build_digest = rows$schema_build_digest[[index]]
       )
     }
-    records[[index]] <- public_revision_record(
+    records[[index]] <- validated_public_revision_record(
       rows$payload_json[[index]],
-      contract
+      rows$content_digest[[index]],
+      contract,
+      record_id = rows$record_id[[index]],
+      revision_id = rows$revision_id[[index]]
     )
     changed_fields[[index]] <- public_changed_fields(
       rows$changed_fields_json[[index]],
@@ -453,11 +204,38 @@ hydrate_history_rows <- function(rows, store, limit) {
   finalize_history_rows(rows, store, limit, truncated)
 }
 
-historical_schema <- function(store, build_digest, cache) {
-  if (exists(build_digest, envir = cache, inherits = FALSE)) {
-    return(get(build_digest, envir = cache, inherits = FALSE))
+historical_schemas <- function(store, build_digests) {
+  build_digests <- unique(as.character(build_digests))
+  if (length(build_digests) == 0L) {
+    return(list())
   }
-  version <- read_schema_version(store$connection, build_digest)
+  versions <- with_duckdb_error(
+    "record_history_schemas",
+    DBI::dbGetQuery(
+      store$connection,
+      paste0(
+        "SELECT structural_digest, source_digest, build_digest, ",
+        "manifest_json FROM ",
+        quote_identifier(store$connection, "_graft_schema_versions"),
+        " WHERE build_digest IN (",
+        paste(rep("?", length(build_digests)), collapse = ", "),
+        ") ORDER BY build_digest"
+      ),
+      params = as.list(build_digests)
+    )
+  )
+  schemas <- list()
+  for (build_digest in build_digests) {
+    version <- versions[versions$build_digest == build_digest, , drop = FALSE]
+    schemas[[build_digest]] <- historical_schema_version(
+      version,
+      build_digest
+    )
+  }
+  schemas
+}
+
+historical_schema_version <- function(version, build_digest) {
   if (nrow(version) != 1L) {
     abort_backend_error(
       "A revision does not have exactly one registered historical manifest.",
@@ -466,7 +244,7 @@ historical_schema <- function(store, build_digest, cache) {
       schema_version_count = nrow(version)
     )
   }
-  schema <- schema_from_manifest_json(version$manifest_json[[1L]])
+  schema <- compiled_schema_from_json(version$manifest_json[[1L]])
   validate_manifest_integrity(schema)
   fingerprints <- schema$manifest$fingerprints
   if (
@@ -489,6 +267,15 @@ historical_schema <- function(store, build_digest, cache) {
       build_digest = build_digest
     )
   }
+  schema
+}
+
+historical_schema <- function(store, build_digest, cache) {
+  if (exists(build_digest, envir = cache, inherits = FALSE)) {
+    return(get(build_digest, envir = cache, inherits = FALSE))
+  }
+  version <- read_schema_version(store$connection, build_digest)
+  schema <- historical_schema_version(version, build_digest)
   assign(build_digest, schema, envir = cache)
   schema
 }
@@ -515,8 +302,50 @@ public_revision_record <- function(payload_json, contract) {
   record
 }
 
+validated_public_revision_record <- function(
+  payload_json,
+  content_digest,
+  contract,
+  record_id = NULL,
+  revision_id = NULL
+) {
+  payload <- tryCatch(
+    parse_revision_payload(payload_json),
+    error = identity
+  )
+  if (inherits(payload, "error")) {
+    abort_backend_error(
+      "A selected revision payload is not valid canonical JSON.",
+      operation = "graft_retrieval",
+      record_id = record_id,
+      revision_id = revision_id,
+      parent = payload
+    )
+  }
+  canonical <- tryCatch(
+    canonical_manifest_payload(payload, contract),
+    error = identity
+  )
+  if (
+    inherits(canonical, "error") ||
+      !identical(logical_record_content_digest(canonical), content_digest)
+  ) {
+    abort_backend_error(
+      "A selected revision payload does not match its content digest.",
+      operation = "graft_retrieval",
+      record_id = record_id,
+      revision_id = revision_id,
+      parent = if (inherits(canonical, "error")) canonical else NULL
+    )
+  }
+  public_revision_record(payload_json, contract)
+}
+
 coerce_historical_value <- function(value, slot) {
-  type <- canonical_slot_type(slot, operation = "record_history")
+  type <- toupper(scalar_character(
+    slot$duckdb_type,
+    scalar_character(slot$relational_type, "VARCHAR")
+  ))
   object_reference <- scalar_logical(slot$object_reference)
   if (is.null(value)) {
     return(NULL)
@@ -536,9 +365,28 @@ coerce_historical_value <- function(value, slot) {
       return(as.logical(item))
     }
     if (identical(type, "BIGINT")) {
+      if (is.character(item)) {
+        number <- suppressWarnings(as.numeric(item))
+        exact <- is.finite(number) &&
+          abs(number) <= 2^53 &&
+          identical(
+            format(number, scientific = FALSE, trim = TRUE),
+            item
+          )
+        if (!exact) {
+          return(item)
+        }
+        return(number)
+      }
       return(as.numeric(item))
     }
-    if (type %in% c("DOUBLE", "DECIMAL")) {
+    if (identical(type, "DECIMAL")) {
+      if (is.character(item)) {
+        return(item)
+      }
+      return(as.numeric(item))
+    }
+    if (identical(type, "DOUBLE")) {
       return(as.numeric(item))
     }
     if (identical(type, "DATE")) {
@@ -566,7 +414,10 @@ coerce_historical_value <- function(value, slot) {
       if (identical(type, "BOOLEAN")) {
         return(logical())
       }
-      if (type %in% c("BIGINT", "DOUBLE", "DECIMAL")) {
+      if (type %in% c("BIGINT", "DECIMAL")) {
+        return(character())
+      }
+      if (identical(type, "DOUBLE")) {
         return(numeric())
       }
       if (identical(type, "DATE")) {
@@ -886,86 +737,10 @@ shallow_integrity_issues <- function(store, limit) {
       "WHERE o.revision_id IS NULL"
     )
   )
-  head_classes <- DBI::dbGetQuery(
-    connection,
-    paste0("SELECT DISTINCT class FROM ", head, " ORDER BY class")
-  )$class
-  unknown_classes <- setdiff(
-    as.character(head_classes),
-    names(store$schema$manifest$classes)
-  )
-  if (length(unknown_classes) > 0L) {
-    unknown <- DBI::dbGetQuery(
-      connection,
-      paste0(
-        "SELECT 'head_class_missing' AS issue, record_id, class, ",
-        "revision_id, NULL AS batch_id, ",
-        "'Head class is absent from the active manifest.' AS detail FROM ",
-        head,
-        " WHERE class IN (",
-        paste(rep("?", length(unknown_classes)), collapse = ", "),
-        ") LIMIT ",
-        limit + 1L
-      ),
-      params = as.list(unknown_classes)
-    )
-    checks <- c(checks, list(unknown))
-  }
-  available_tables <- duckdb_table_names(connection)
-  for (record_class in names(store$schema$manifest$classes)) {
-    contract <- store$schema$manifest$classes[[record_class]]
-    table_name <- scalar_character(contract$table)
-    if (!table_name %in% available_tables) {
-      checks <- c(
-        checks,
-        list(integrity_issue_row(
-          "current_table_missing",
-          class = record_class,
-          detail = "The active manifest's current-state table does not exist."
-        ))
-      )
-      next
-    }
-    table <- quote_identifier(connection, table_name)
-    id_column <- quote_identifier(connection, slot_column(contract, "id"))
-    class_string <- as.character(DBI::dbQuoteString(connection, record_class))
-    checks <- c(
-      checks,
-      list(
-        paste0(
-          "SELECT 'current_without_head' AS issue, t.",
-          id_column,
-          " AS record_id, ",
-          class_string,
-          " AS class, NULL AS revision_id, NULL AS batch_id, ",
-          "'Current record has no revision head.' AS detail FROM ",
-          table,
-          " t LEFT JOIN ",
-          head,
-          " h ON t.",
-          id_column,
-          " = h.record_id AND h.class = ",
-          class_string,
-          " WHERE h.record_id IS NULL"
-        ),
-        paste0(
-          "SELECT 'head_without_current' AS issue, h.record_id, h.class, ",
-          "h.revision_id, NULL AS batch_id, ",
-          "'Revision head has no current record.' AS detail FROM ",
-          head,
-          " h LEFT JOIN ",
-          table,
-          " t ON h.record_id = t.",
-          id_column,
-          " WHERE h.class = ",
-          class_string,
-          " AND t.",
-          id_column,
-          " IS NULL"
-        )
-      )
-    )
-  }
+  execute_integrity_checks(connection, checks, limit)
+}
+
+execute_integrity_checks <- function(connection, checks, limit) {
   lapply(checks, function(check) {
     if (is.data.frame(check)) {
       return(check)
@@ -1072,93 +847,6 @@ deep_integrity_issues <- function(store, limit) {
   }
   DBI::dbClearResult(revisions)
   revisions <- NULL
-  heads_result <- DBI::dbSendQuery(
-    store$connection,
-    paste0(
-      "SELECT h.record_id, h.class, h.revision_id, r.batch_id, ",
-      "r.schema_build_digest, r.content_digest FROM ",
-      quote_identifier(store$connection, "_graft_record_heads"),
-      " h INNER JOIN ",
-      quote_identifier(store$connection, "_graft_record_revisions"),
-      " r ON h.revision_id = r.revision_id ORDER BY h.record_id"
-    )
-  )
-  on.exit(
-    {
-      if (!is.null(heads_result)) {
-        DBI::dbClearResult(heads_result)
-      }
-    },
-    add = TRUE
-  )
-  repeat {
-    heads <- DBI::dbFetch(heads_result, n = 500L)
-    if (nrow(heads) == 0L) {
-      break
-    }
-    for (index in seq_len(nrow(heads))) {
-      schema <- tryCatch(
-        historical_schema(
-          store,
-          heads$schema_build_digest[[index]],
-          cache
-        ),
-        error = identity
-      )
-      contract <- if (inherits(schema, "error")) {
-        NULL
-      } else {
-        schema$manifest$classes[[heads$class[[index]]]]
-      }
-      if (is.null(contract)) {
-        add_issue(integrity_issue_row(
-          "head_schema_class_missing",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Head class is absent from its revision schema."
-        ))
-        next
-      }
-      payload <- tryCatch(
-        current_record_payload(
-          store,
-          list(class = heads$class[[index]], contract = contract),
-          heads$record_id[[index]]
-        ),
-        error = identity
-      )
-      if (inherits(payload, "error")) {
-        add_issue(integrity_issue_row(
-          "current_payload_unreadable",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Current typed record could not be reconstructed."
-        ))
-        next
-      }
-      if (
-        !identical(
-          logical_record_content_digest(payload),
-          heads$content_digest[[index]]
-        )
-      ) {
-        add_issue(integrity_issue_row(
-          "current_payload_drift",
-          heads$record_id[[index]],
-          heads$class[[index]],
-          heads$revision_id[[index]],
-          heads$batch_id[[index]],
-          "Current typed record differs from its revision head."
-        ))
-      }
-    }
-  }
-  DBI::dbClearResult(heads_result)
-  heads_result <- NULL
   issues
 }
 

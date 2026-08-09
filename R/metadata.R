@@ -1,4 +1,17 @@
-graft_store_format_version <- "2.0.0"
+graft_store_format_version <- "3.0.0"
+
+graft_authoritative_table_names <- c(
+  "_graft_store",
+  "_graft_schema_versions",
+  "_graft_batches",
+  "_graft_origins",
+  "_graft_identifiers",
+  "_graft_record_revisions",
+  "_graft_record_heads",
+  "_graft_record_observations"
+)
+
+graft_projection_metadata_table_names <- "_graft_projection_state"
 
 metadata_table_definitions <- function() {
   list(
@@ -40,63 +53,6 @@ metadata_table_definitions <- function() {
         c("source_digest")
       )
     ),
-    `_graft_schema_activations` = list(
-      columns = list(
-        ddl_column(
-          "activation_id",
-          "VARCHAR",
-          nullable = FALSE,
-          primary_key = TRUE
-        ),
-        ddl_column("build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("previous_build_digest", "VARCHAR"),
-        ddl_column("reason", "VARCHAR", nullable = FALSE),
-        ddl_column("activation_order", "BIGINT", nullable = FALSE),
-        ddl_column("activated_at", "TIMESTAMP", nullable = FALSE)
-      ),
-      constraints = list(
-        c("activation_order")
-      ),
-      indexes = list(
-        c("build_digest")
-      )
-    ),
-    `_graft_migrations` = list(
-      columns = list(
-        ddl_column(
-          "migration_id",
-          "VARCHAR",
-          nullable = FALSE,
-          primary_key = TRUE
-        ),
-        ddl_column("plan_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("from_build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column("to_build_digest", "VARCHAR", nullable = FALSE),
-        ddl_column(
-          "from_structural_digest",
-          "VARCHAR",
-          nullable = FALSE
-        ),
-        ddl_column(
-          "to_structural_digest",
-          "VARCHAR",
-          nullable = FALSE
-        ),
-        ddl_column("classification", "VARCHAR", nullable = FALSE),
-        ddl_column("changes_json", "VARCHAR", nullable = FALSE),
-        ddl_column("operations_json", "VARCHAR", nullable = FALSE),
-        ddl_column("application_order", "BIGINT", nullable = FALSE),
-        ddl_column("applied_at", "TIMESTAMP", nullable = FALSE)
-      ),
-      constraints = list(
-        c("plan_digest"),
-        c("application_order")
-      ),
-      indexes = list(
-        c("from_build_digest"),
-        c("to_build_digest")
-      )
-    ),
     `_graft_batches` = list(
       columns = list(
         ddl_column("batch_id", "VARCHAR", nullable = FALSE, primary_key = TRUE),
@@ -121,7 +77,7 @@ metadata_table_definitions <- function() {
         c("status")
       )
     ),
-    `_graft_record_origins` = list(
+    `_graft_origins` = list(
       columns = list(
         ddl_column("record_id", "VARCHAR", nullable = FALSE),
         ddl_column("class", "VARCHAR", nullable = FALSE),
@@ -144,6 +100,9 @@ metadata_table_definitions <- function() {
         ddl_column("batch_id", "VARCHAR", nullable = FALSE),
         ddl_column("disposition", "VARCHAR", nullable = FALSE),
         ddl_column("revision_id", "VARCHAR", nullable = FALSE),
+        ddl_column("origin_key", "VARCHAR", nullable = FALSE),
+        ddl_column("matched_by", "VARCHAR", nullable = FALSE),
+        ddl_column("identity_evidence_json", "VARCHAR", nullable = FALSE),
         ddl_column("observed_at", "TIMESTAMP", nullable = FALSE)
       ),
       constraints = list(
@@ -269,13 +228,6 @@ insert_store_metadata <- function(store) {
 register_initial_schema <- function(store) {
   now <- as.POSIXct(Sys.time(), tz = "UTC")
   register_schema_version(store$connection, store$schema, now)
-  insert_schema_activation(
-    store$connection,
-    store$schema,
-    previous_build_digest = NA_character_,
-    reason = "initial",
-    now = now
-  )
   invisible(store)
 }
 
@@ -323,31 +275,6 @@ register_schema_version <- function(connection, schema, now = Sys.time()) {
   invisible(schema)
 }
 
-insert_schema_activation <- function(
-  connection,
-  schema,
-  previous_build_digest,
-  reason,
-  now = Sys.time()
-) {
-  activation_order <- next_metadata_order(
-    connection,
-    "_graft_schema_activations",
-    "activation_order"
-  )
-  row <- data.frame(
-    activation_id = new_graft_id(now),
-    build_digest = scalar_character(schema$manifest$fingerprints$build_digest),
-    previous_build_digest = previous_build_digest,
-    reason = reason,
-    activation_order = activation_order,
-    activated_at = as.POSIXct(now, tz = "UTC"),
-    stringsAsFactors = FALSE
-  )
-  DBI::dbAppendTable(connection, "_graft_schema_activations", row)
-  invisible(schema)
-}
-
 activate_schema <- function(
   connection,
   schema,
@@ -355,9 +282,9 @@ activate_schema <- function(
   now = Sys.time()
 ) {
   metadata <- read_store_metadata(connection)
-  previous_build_digest <- scalar_character(metadata$active_build_digest)
+  active_build_digest <- scalar_character(metadata$active_build_digest)
   build_digest <- scalar_character(schema$manifest$fingerprints$build_digest)
-  if (identical(previous_build_digest, build_digest)) {
+  if (identical(active_build_digest, build_digest)) {
     return(invisible(schema))
   }
   now <- as.POSIXct(now, tz = "UTC")
@@ -381,13 +308,6 @@ activate_schema <- function(
       canonical_manifest_json(manifest),
       now
     )
-  )
-  insert_schema_activation(
-    connection,
-    schema,
-    previous_build_digest,
-    reason,
-    now
   )
   invisible(schema)
 }
@@ -429,12 +349,12 @@ verify_initialized_store <- function(
   metadata <- read_store_metadata(store$connection)
   verify_store_format(metadata)
   verify_metadata_structure(store$connection)
-  old_schema <- schema_from_manifest_json(metadata$manifest_json)
+  old_schema <- compiled_schema_from_json(metadata$manifest_json)
   validate_manifest_integrity(old_schema)
   validate_manifest_integrity(store$schema)
-  diff <- kg_schema_diff(old_schema, store$schema)
-  if (!isTRUE(diff$compatible)) {
-    abort_schema_mismatch(diff)
+  compatibility <- schema_compatibility(old_schema, store$schema)
+  if (!isTRUE(compatibility$compatible)) {
+    abort_schema_mismatch(compatibility)
   }
 
   active_build_digest <- scalar_character(metadata$active_build_digest)
@@ -575,10 +495,11 @@ read_schema_version <- function(connection, build_digest) {
   )
 }
 
-schema_from_manifest_json <- function(manifest_json) {
+compiled_schema_from_json <- function(manifest_json) {
+  manifest_text <- scalar_character(manifest_json)
   manifest <- tryCatch(
     jsonlite::fromJSON(
-      scalar_character(manifest_json),
+      manifest_text,
       simplifyVector = FALSE
     ),
     error = function(error) {
@@ -592,8 +513,28 @@ schema_from_manifest_json <- function(manifest_json) {
       )
     }
   )
+  duplicate <- duplicate_json_object_key(manifest)
+  if (!is.null(duplicate)) {
+    abort_backend_error(
+      paste0(
+        "The stored manifest contains duplicate JSON object key `",
+        duplicate$key,
+        "`."
+      ),
+      operation = "read_store_metadata",
+      field = duplicate$path,
+      rule = "duplicate_json_key"
+    )
+  }
+  if (!identical(canonical_manifest_json(manifest), manifest_text)) {
+    abort_backend_error(
+      "The stored manifest JSON is not in its canonical representation.",
+      operation = "read_store_metadata",
+      rule = "stored_manifest_canonical_json"
+    )
+  }
   validate_manifest_header(manifest, "<stored manifest>")
-  new_kg_schema(manifest)
+  new_compiled_schema(manifest)
 }
 
 canonical_manifest_json <- function(manifest) {
@@ -601,16 +542,31 @@ canonical_manifest_json <- function(manifest) {
 }
 
 canonical_json <- function(x) {
+  x <- normalize_json_signed_zero(x)
   as.character(jsonlite::toJSON(
     x,
     auto_unbox = TRUE,
     null = "null",
     na = "null",
-    digits = NA,
+    digits = 17,
     POSIXt = "ISO8601",
     UTC = TRUE,
     pretty = FALSE
   ))
+}
+
+normalize_json_signed_zero <- function(value) {
+  if (is.numeric(value)) {
+    value[!is.na(value) & value == 0] <- 0
+    return(value)
+  }
+  if (!is.list(value) || is.null(value)) {
+    return(value)
+  }
+  for (index in seq_along(value)) {
+    value[index] <- list(normalize_json_signed_zero(value[[index]]))
+  }
+  value
 }
 
 new_store_id <- function() {

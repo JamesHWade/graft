@@ -5,247 +5,118 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-graft keeps records produced by R workflows consistent, connected, and
-traceable across runs. It reconciles identities, validates related data as they
-are written, preserves claims with exact source evidence, and provides bounded
-retrieval for analysts, applications, and AI tools.
+graft turns candidate records from R workflows into governed, traceable
+knowledge changes. A LinkML or data-dict source compiles into the canonical
+Graft domain contract; neither provider becomes the accepted ledger. Every
+accepted change carries provenance, passes through a read-only plan, and
+becomes an immutable revision through one atomic commit path. Bounded
+retrieval, history, and a readable Open Knowledge Format (OKF) working tree are
+derived from that accepted ledger.
 
-Graft is OKF-first and Graft-backed. People and agents work with a plain
-Markdown [Open Knowledge
-Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-(OKF) directory. A compiled LinkML contract and DuckDB revision ledger remain
-underneath to enforce identity, validation, history, and approval.
+[![Graft architecture: a LinkML or data-dict contract compiles into Graft; OKF exchanges readable proposals and projections with Graft; Graft commits to and retrieves accepted revisions from DuckDB.](man/figures/okf-linkml-duckdb-system.svg)](man/figures/okf-linkml-duckdb-system.svg)
 
-[![Architecture diagram with Graft at the center. LinkML supplies the domain contract, OKF provides the readable working surface, and DuckDB holds accepted revisions and provenance.](man/figures/okf-linkml-duckdb-system.svg)](man/figures/okf-linkml-duckdb-system.svg)
-
-Start with the [getting started
-guide](https://jameshwade.github.io/graft/articles/getting-started.html) to
-build a small store and query its records, claims, and evidence.
-The [LinkML schema
-article](https://jameshwade.github.io/graft/articles/linkml-schema.html) starts
-from an ordinary schema with no graft-specific imports or annotations.
-The [examples
-page](https://jameshwade.github.io/graft/articles/examples.html) applies the
-same workflow to chemistry and environmental biology.
-
-The current storage backend is embedded DuckDB, which keeps a graft store local
-and available through DBI and dbplyr. Python and `linkml-runtime` are required
-only to compile a schema; loading a committed manifest and using a store run in
-R:
+## A complete change
 
 ```r
 library(graft)
 
-manifest <- system.file(
+schema <- graft_schema(system.file(
   "extdata",
   "personinfo.graft.json",
   package = "graft"
-)
-schema <- kg_schema(manifest)
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
-kg_init(store)
+))
+store <- graft_open(schema, "knowledge.duckdb")
 
-kg_ingest(
-  store,
-  kg_batch(
-    producer = "directory-import",
-    source_run_id = "run-42",
-    idempotency_key = "daily-planet-v1"
+provenance <- graft_provenance(
+  producer = "directory-import",
+  run_id = "run-42",
+  idempotency_key = "daily-planet-v1"
+)
+
+records <- list(
+  Organization = data.frame(
+    id = "org:daily-planet",
+    name = "Daily Planet"
   ),
-  list(
-    Organization = data.frame(
-      id = "org:daily-planet",
-      name = "Daily Planet"
-    ),
-    Person = data.frame(
-      id = "person:clark-kent",
-      full_name = "Clark Kent",
-      employed_by = I(list("org:daily-planet"))
-    )
+  Person = data.frame(
+    id = "person:clark-kent",
+    full_name = "Clark Kent",
+    employed_by = I(list("org:daily-planet"))
   )
 )
 
-kg_get(store, "person:clark-kent")
+plan <- graft_plan(store, records, provenance)
+plan@changes
+plan@issues
 
-# Creates the managed sibling directory knowledge.okf
-kg_sync_okf(store)
-kg_okf_status(store)
+if (plan@valid) {
+  graft_commit(store, plan)
+}
+
+graft_get(store, "person:clark-kent")
+graft_find(store, "Clark", class = "Person")
+graft_history(store, "person:clark-kent")
+
+graft_sync(store)
+graft_status(store)
+graft_close(store)
 ```
 
-The batch is atomic, its relationship is validated, and reusing the same
-producer and idempotency key does not create another observation. Functions
-that collect records or graph results require a limit and report whether the
-result was truncated. `kg_tools()` exposes seven read-only ellmer tools,
-including progressive access to the current accepted OKF working tree:
+Planning is read-only. Committing rechecks the plan against the store and
+active contract before accepting all changes atomically. Use `graft_ingest()`
+when the same process may plan and commit without a separate review step.
 
-```r
-chat <- ellmer::chat_anthropic()
-chat$set_tools(kg_tools(store))
-```
+The revision ledger is the authority for accepted record content. Current
+records, search results, graph projections, and the OKF working tree are
+rebuildable views. Editing OKF therefore creates a proposal: `graft_review()`
+turns the edits into an ordinary plan, and `graft_commit()` is still the only
+acceptance boundary.
 
-## Work in open knowledge
+## Public API
 
-A file-backed `knowledge.duckdb` store manages the sibling `knowledge.okf`
-directory by default. Synchronization is explicit so a filesystem failure
-cannot be mistaken for a failed database transaction:
+The v0.1 surface is deliberately small:
 
-```r
-bundle <- kg_sync_okf(store)
-bundle
+- Contract: `graft_schema()`
+- Store lifecycle: `graft_open()`, `graft_close()`
+- Provenance and changes: `graft_provenance()`, `graft_plan()`,
+  `graft_commit()`, `graft_ingest()`
+- Retrieval and history: `graft_get()`, `graft_find()`, `graft_query()`,
+  `graft_history()`
+- Open knowledge: `graft_sync()`, `graft_status()`, `graft_review()`
+- Read-only agent access: `graft_tools()`
 
-kg_okf_context(store)
-kg_okf_context(
-  store,
-  query = "Daily Planet",
-  types = "Organization"
-)
-```
+Start with the [10-minute getting started
+guide](https://jameshwade.github.io/graft/articles/getting-started.html). Then
+read [architecture](https://jameshwade.github.io/graft/articles/architecture.html)
+for the authority and projection model, choose a [LinkML
+contract](https://jameshwade.github.io/graft/articles/linkml-schema.html) or
+[data-dict contract](https://jameshwade.github.io/graft/articles/data-dict-schema.html),
+and read [change
+control](https://jameshwade.github.io/graft/articles/knowledge-change-control.html)
+for plans and commit preconditions, [retrieval and
+history](https://jameshwade.github.io/graft/articles/retrieval.html) for the read
+surface, and [open
+knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
+for synchronization and file review. [The v0.1
+design](https://jameshwade.github.io/graft/articles/v01-design.html) explains the
+intentional pre-production cutover.
 
-Each concept remains readable Markdown, object references become links, and
-source records become OKF source citations. The `graft` frontmatter extension
-retains exact record, revision, batch, and schema identity. If a person or
-agent edits the structured `graft.record` mapping, the edit is still only a
-proposal:
+The data-dict path uses a strict table profile. It accepts trusted
+`export-spec` JSON or runs only `export-spec` for YAML, and it validates scalar
+foreign keys without turning them into graph traversal edges. YAML source-spec
+and resolved JSON export-format versions are tracked separately, and the CLI
+executable is re-hashed around export and version discovery. For YAML, graft
+captures the source bytes once so preflight, CLI export, and the source/build
+fingerprints share one immutable snapshot.
 
-```r
-plan <- kg_plan_okf_import(store)
-plan
-
-result <- kg_apply_okf_import(
-  store,
-  plan,
-  kg_batch(
-    producer = "human:reviewer",
-    idempotency_key = "approved-okf-edit-1"
-  )
-)
-```
-
-Planning is read-only. Application revalidates the plan, bundle, store,
-schema, and accepted batch before committing through the ordinary Graft write
-path. Historical or selected snapshots remain available through
-`kg_export_okf()`. Read [Work with open knowledge by
-default](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
-for managed synchronization, agent retrieval, proposal review, historical
-export, and the Tempest handoff.
-
-## Continuous intelligence example
-
-The installable `continuous-intelligence` example combines Graft with
-Tempest's generic workflow kernel without adding application-specific package
-functions. A frozen three-day corpus drives a passive briefing, an
-approval-gated knowledge handoff, a promoted decision workflow, and a
-no-material-change day:
-
-```r
-example <- system.file(
-  "examples",
-  "continuous-intelligence",
-  package = "graft",
-  mustWork = TRUE
-)
-file.show(file.path(example, "README.md"))
-```
-
-Open the interactive Briefing Room to advance the three mornings, inspect
-accepted evidence, and act at each approval boundary:
-
-```r
-shiny::runApp(file.path(example, "app"))
-```
-
-Or take the operator's seat in the console:
-
-```r
-source(file.path(example, "walkthrough.R"))
-walkthrough <- run_continuous_intelligence_walkthrough()
-```
-
-The walkthrough pauses at the knowledge, promotion, and decision boundaries
-instead of approving the complete story automatically.
-
-The example keeps scheduling, workflow routing, approval, and writes in the
-host application. A contrasting package-maintainer profile exercises the same
-host contract with different domain configuration.
-
-## Materials Market Radar example
-
-The installable `market-intelligence` example turns competitor, business, and
-downstream-market signals into a governed morning decision loop. Its portfolio
-map spans six Dow business clusters, an enterprise and specialist competitor
-watchlist, and downstream lenses such as data centers, electrification,
-packaging, construction, and consumer care:
-
-```r
-example <- system.file(
-  "examples",
-  "market-intelligence",
-  package = "graft",
-  mustWork = TRUE
-)
-shiny::runApp(file.path(example, "app"))
-```
-
-The provider-free two-scan walkthrough makes organizational learning visible.
-The first scan proposes a cross-business thesis and waits for approval. Only
-the accepted assessment, sources, and accountable action enter Graft; the next
-competitor scan receives that reviewed history as explicit context. Rejected
-interpretations never enter the knowledge ledger.
-
-Read [Build a governed materials market
-radar](https://jameshwade.github.io/graft/articles/market-intelligence.html) for
-the market model, workflow boundary, production source strategy, model
-configuration, and tool-extension recipes.
-
-## Graft Coworker example
-
-The installable `coworker` example is a local, outcome-oriented work surface
-inspired by OpenWorker. A shinychat assistant can call a tool that uses a
-dsprrr planner and Tempest's typed workflow runtime to prepare a finished
-Markdown deliverable. Tempest stops at the file-publication boundary. The
-approved file, approval decision, source links, and outcome memory enter Graft
-only after the operator approves the exact artifact:
-
-Read [Build a governed local Coworker](https://jameshwade.github.io/graft/articles/coworker.html)
-for the architecture, approval contract, model configuration, and
-tool-extension recipes.
-
-```r
-example <- system.file(
-  "examples",
-  "coworker",
-  package = "graft",
-  mustWork = TRUE
-)
-
-options(tempest.chat = "openai/gpt-5-mini")
-shiny::runApp(file.path(example, "app"))
-```
-
-Coworker builds its clients from `tempest_config()`, so a personal
-`tempest.chat` default, an explicit role-specific model configuration, or a
-custom Tempest `chat_fn` can select the provider without changing the
-workflow. Its per-session ellmer tool registry accepts custom tools and can
-load a conservative R-aware [btw](https://github.com/posit-dev/btw) tool belt:
-
-```r
-options(graft.coworker.btw = "read_only")
-shiny::runApp(file.path(example, "app"))
-```
-
-Use `options(graft.coworker.tools = list(...))` for additional ellmer tools or
-a provider function that constructs session-aware tools. Mutating tools remain
-an explicit host decision; the read-only btw profile excludes file and Git
-writes so it cannot bypass the Tempest approval card.
-
-The app also includes a provider-free reference request so the complete
-prepare, review, approve, publish, and remember loop can be exercised without
-an API key. By default its DuckDB store and deliverables persist under
-`tools::R_user_dir("graft", "data")`; set `GRAFT_COWORKER_HOME` to choose
-another local directory.
-
-This is a vertical slice rather than a desktop-agent replacement. It currently
-ships one bounded source bundle and one approval-gated local-file action. The
-host boundaries are ready for additional source adapters, connector actions,
-schedules, and durable conversation storage without turning those
-application concerns into workflow-specific Graft APIs.
+The compiled manifest is public contract metadata. It removes column examples
+and ranges, dataset and table origins, and table source locators, while the raw
+values still bind source and build digests. Those digests permit equality tests
+and offline guessing of low-entropy values; redaction is not a secrecy
+boundary. Other retained fields are public and can expose observed or
+sensitive values embedded manually. `number(id)` and `list(number(id))` are
+rejected in favor of quoted string codes, unsafe JSON numeric tokens fail
+closed before lossy conversion, and supported datetime zones have exact input
+rules. See the [data-dict
+guide](https://jameshwade.github.io/graft/articles/data-dict-schema.html) for the
+complete boundary.

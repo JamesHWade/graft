@@ -4,25 +4,7 @@ graph_result_limits <- list(
   hops = 2L
 )
 
-#' Retrieve a bounded graph neighborhood
-#'
-#' `kg_neighbors()` performs deterministic breadth-first expansion for one or
-#' two hops. It only follows generated graph projections and always collects a
-#' bounded result.
-#'
-#' @param store An initialized `kg_store`.
-#' @param id One projected graph node identifier.
-#' @param predicate Optional exact predicate restriction applied at every hop.
-#' @param direction One of `"both"`, `"out"`, or `"in"`.
-#' @param hops One or two hops.
-#' @param projection One of `"semantic"`, `"provenance"`, or `"combined"`.
-#' @param max_nodes Maximum collected nodes, up to 500.
-#' @param max_edges Maximum collected edges, up to 2,000.
-#'
-#' @return A collected `kg_subgraph` with nodes, edges, request metadata,
-#'   limits, truncation state, and the store structural digest.
-#' @export
-kg_neighbors <- function(
+graft_neighbors_engine <- function(
   store,
   id,
   predicate = NULL,
@@ -58,7 +40,7 @@ kg_neighbors <- function(
     projection = projection,
     limits = limits
   )
-  new_kg_subgraph(
+  new_graft_graph_result(
     nodes = result$nodes,
     edges = result$edges,
     roots = id,
@@ -74,24 +56,7 @@ kg_neighbors <- function(
   )
 }
 
-#' Traverse a bounded predicate path
-#'
-#' `kg_traverse()` follows a manifest-safe sequence of one or two predicates.
-#' It uses generated joins for each hop and never runs recursive or unbounded
-#' SQL.
-#'
-#' @param store An initialized `kg_store`.
-#' @param from One projected graph node identifier.
-#' @param via One or two exact predicates in traversal order.
-#' @param direction One of `"out"`, `"in"`, or `"both"`.
-#' @param max_hops Maximum predicates from `via` to follow, up to two.
-#' @param max_nodes Maximum collected nodes, up to 500.
-#' @param max_edges Maximum collected edges, up to 2,000.
-#' @param projection One of `"combined"`, `"semantic"`, or `"provenance"`.
-#'
-#' @return A collected `kg_subgraph` with path and limit metadata.
-#' @export
-kg_traverse <- function(
+graft_traverse_engine <- function(
   store,
   from,
   via,
@@ -134,7 +99,7 @@ kg_traverse <- function(
     projection = projection,
     limits = limits
   )
-  new_kg_subgraph(
+  new_graft_graph_result(
     nodes = result$nodes,
     edges = result$edges,
     roots = from,
@@ -150,69 +115,42 @@ kg_traverse <- function(
   )
 }
 
-#' Collect a bounded induced subgraph
-#'
-#' `kg_subgraph()` explicitly collects projected nodes and every projected edge
-#' whose endpoints are both in the retained identifier set.
-#'
-#' @param store An initialized `kg_store`.
-#' @param ids Projected graph node identifiers.
-#' @param projection One of `"combined"`, `"semantic"`, or `"provenance"`.
-#' @param max_nodes Maximum collected nodes, up to 500.
-#' @param max_edges Maximum collected edges, up to 2,000.
-#'
-#' @return A collected `kg_subgraph` with limit and truncation metadata.
-#' @export
-kg_subgraph <- function(
-  store,
-  ids,
-  projection = "combined",
-  max_nodes = 500,
-  max_edges = 2000
+new_graft_graph_result <- function(
+  nodes,
+  edges,
+  roots,
+  path,
+  predicate,
+  direction,
+  hops,
+  projection,
+  truncated,
+  limits,
+  store_schema_digest,
+  request_kind
 ) {
-  validate_retrieval_store(store)
-  ids <- validate_graph_ids(ids)
-  projection <- rlang::arg_match(
-    projection,
-    c("combined", "semantic", "provenance")
-  )
-  limits <- validate_graph_limits(max_nodes, max_edges)
-  requested <- unique(ids)
-  retained <- sort(requested)
-  truncated <- length(retained) > limits$max_nodes
-  if (truncated) {
-    retained <- retained[seq_len(limits$max_nodes)]
-  }
-  nodes <- graph_collect_nodes(store, retained)
-  graph_assert_collected_nodes(
-    nodes,
-    retained,
-    field = "ids",
-    rule = "graph_node_exists"
-  )
-  edges <- graph_collect_induced_edges(
-    store,
-    retained,
-    projection,
-    limits$max_edges
-  )
-  truncated <- truncated || isTRUE(attr(edges, "truncated"))
-  attr(edges, "truncated") <- NULL
-  graph_assert_edge_endpoints(store, edges)
-
-  new_kg_subgraph(
+  list(
     nodes = nodes,
     edges = edges,
-    roots = requested,
-    path = character(),
-    predicate = NULL,
-    direction = NA_character_,
-    hops = 0L,
+    roots = roots,
+    requested_roots = roots,
+    path = path,
+    predicate = predicate,
+    direction = direction,
+    hops = as.integer(hops),
     projection = projection,
-    truncated = truncated,
+    request = list(
+      kind = request_kind,
+      roots = roots,
+      path = path,
+      predicate = predicate,
+      direction = direction,
+      hops = as.integer(hops),
+      projection = projection
+    ),
+    truncated = isTRUE(truncated),
     limits = limits,
-    store_schema_digest = store_schema_digest(store),
-    request_kind = "subgraph"
+    store_schema_digest = store_schema_digest
   )
 }
 
@@ -230,22 +168,6 @@ validate_graph_path <- function(via) {
     )
   }
   via
-}
-
-validate_graph_ids <- function(ids) {
-  valid <- is.character(ids) &&
-    length(ids) > 0L &&
-    !anyNA(ids) &&
-    all(nzchar(ids))
-  if (!valid) {
-    abort_validation_error(
-      "`ids` must contain one or more non-empty graph node identifiers.",
-      field = "ids",
-      rule = "graph_node_identifiers",
-      observed_value = ids
-    )
-  }
-  ids
 }
 
 validate_graph_limits <- function(max_nodes, max_edges) {
@@ -393,48 +315,6 @@ graph_collect_frontier_edges <- function(
   rows <- with_duckdb_error(
     "graph_neighbors",
     DBI::dbGetQuery(connection, sql, params = params)
-  )
-  truncated <- nrow(rows) > limit
-  if (truncated) {
-    rows <- rows[seq_len(limit), , drop = FALSE]
-  }
-  rownames(rows) <- NULL
-  attr(rows, "truncated") <- truncated
-  rows
-}
-
-graph_collect_induced_edges <- function(
-  store,
-  ids,
-  projection,
-  limit
-) {
-  if (length(ids) == 0L) {
-    rows <- graph_empty_edge_data()
-    attr(rows, "truncated") <- FALSE
-    return(rows)
-  }
-  placeholders <- paste(rep("?", length(ids)), collapse = ", ")
-  sql <- paste0(
-    "SELECT edge_id, subject, predicate, object, edge_class, source_table, ",
-    "created_at FROM (",
-    graph_normalized_edges_sql(store$connection, projection),
-    ") AS graft_graph_edges WHERE subject IN (",
-    placeholders,
-    ") AND object IN (",
-    placeholders,
-    ")",
-    graph_edge_order_sql(),
-    " LIMIT ",
-    limit + 1L
-  )
-  rows <- with_duckdb_error(
-    "graph_subgraph",
-    DBI::dbGetQuery(
-      store$connection,
-      sql,
-      params = c(as.list(ids), as.list(ids))
-    )
   )
   truncated <- nrow(rows) > limit
   if (truncated) {

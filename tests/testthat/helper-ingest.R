@@ -1,15 +1,18 @@
-local_ingest_store <- function(
+local_graft_ingest_store <- function(
   path = ":memory:",
   schema = NULL,
   env = parent.frame()
 ) {
   if (is.null(schema)) {
-    schema <- kg_schema(tempest_manifest_path())
+    schema <- graft_schema(tempest_manifest_path())
   }
-  store <- kg_connect_duckdb(schema, path)
-  withr::defer(kg_disconnect(store), envir = env)
-  kg_init(store)
+  store <- graft_open(schema, path, okf = "disabled")
+  withr::defer(graft_close(store), envir = env)
   store
+}
+
+graft_test_connection <- function(store) {
+  as_graft_store_internal(store)$connection
 }
 
 test_graft_id <- function(seed) {
@@ -18,6 +21,30 @@ test_graft_id <- function(seed) {
 
 catch_graft_ingest_condition <- function(code) {
   tryCatch(code, graft_error = identity)
+}
+
+resign_test_commit_plan <- function(
+  plan,
+  staged = graft:::commit_plan_execution(plan)$staged,
+  changes = plan@changes,
+  preconditions = plan@preconditions
+) {
+  execution <- graft:::commit_plan_execution(plan)
+  execution$staged <- staged
+  data <- graft:::commit_plan_data(plan)
+  data$changes <- changes
+  data$preconditions <- preconditions
+  data$execution_digest <- graft_sha256(canonical_json(execution))
+  data$plan_digest <- graft_sha256(
+    canonical_json(graft:::commit_plan_digest_data(data))
+  )
+  data$plan_id <- deterministic_graft_id(
+    "GraftCommitPlan",
+    list(plan_digest = data$plan_digest)
+  )
+  attr(plan, ".execution") <- execution
+  attr(plan, ".data") <- data
+  plan
 }
 
 modified_ingest_schema <- function(schema) {
@@ -167,69 +194,18 @@ retrieval_fixture_records <- function() {
 
 local_retrieval_store <- function(env = parent.frame()) {
   fixture <- retrieval_fixture_records()
-  store <- local_ingest_store(env = env)
-  kg_ingest(
+  store <- local_graft_ingest_store(env = env)
+  graft_ingest(
     store,
-    kg_batch("retrieval-fixture", idempotency_key = "retrieval-fixture"),
-    fixture$records
-  )
-  list(store = store, ids = fixture$ids)
-}
-
-graph_schema_with_direct_edge <- function() {
-  schema <- modified_ingest_schema(kg_schema(tempest_manifest_path()))
-  semantic <- schema$manifest$classes$SemanticClaim
-  slots <- semantic$slots[c(
-    "created_at",
-    "id",
-    "predicate",
-    "subject",
-    "updated_at"
-  )]
-  object <- semantic$slots$object_entity
-  object$name <- "object"
-  object$column <- "object"
-  object$required <- TRUE
-  slots$object <- object
-  slots <- slots[sort(names(slots))]
-  contract <- list(
-    name = "RelatedEdge",
-    is_a = "GraftEdge",
-    ancestors = c("RelatedEdge", "GraftEdge", "GraftRecord"),
-    type_uri = "https://w3id.org/tempest/RelatedEdge",
-    role = "edge",
-    statement_shape = NULL,
-    table = "related_edge",
-    id_policy = "mint",
-    label_slot = NULL,
-    search_slots = list(),
-    origin_key_slots = list(),
-    qualifier_slots = list(),
-    fixed_predicate = NULL,
-    slots = slots,
-    relations = list()
-  )
-  columns <- lapply(slots, function(slot) {
-    list(
-      name = scalar_character(slot$column),
-      type = scalar_character(slot$relational_type),
-      nullable = !scalar_logical(slot$required),
-      primary_key = scalar_logical(slot$identifier),
-      slot = scalar_character(slot$name),
-      foreign_key = slot$foreign_key
+    fixture$records,
+    graft_provenance(
+      "retrieval-fixture",
+      idempotency_key = "retrieval-fixture"
     )
-  })
-  schema$manifest$classes$RelatedEdge <- contract
-  schema$manifest$tables$RelatedEdge <- list(
-    name = "related_edge",
-    class = "RelatedEdge",
-    role = "edge",
-    columns = columns
   )
-  direct <- schema$manifest$graph_projections$semantic_edges$direct_edge_classes
-  schema$manifest$graph_projections$semantic_edges$direct_edge_classes <- sort(c(
-    empty_character(direct),
-    "RelatedEdge"
-  ))
-  refresh_schema_structural_digest(schema)
+  list(
+    store = store,
+    connection = as_graft_store_internal(store)$connection,
+    ids = fixture$ids
+  )
 }
