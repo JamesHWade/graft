@@ -1,151 +1,55 @@
 # Package index
 
-## Schema
+## Define and open
 
-Compile and inspect LinkML schemas and their generated manifests.
+Load the domain contract and manage the store that accepts knowledge
+under it.
 
-- [`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md)
-  : Compile a LinkML schema into a graft manifest
-- [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md)
-  : Load a compiled graft schema manifest
-- [`kg_schema_diff()`](https://jameshwade.github.io/graft/reference/kg_schema_diff.md)
-  : Compare two compiled graft schemas
-- [`kg_classes()`](https://jameshwade.github.io/graft/reference/kg_classes.md)
-  : List concrete classes in a graft schema
-- [`kg_slots()`](https://jameshwade.github.io/graft/reference/kg_slots.md)
-  : List slots in a graft schema
-- [`kg_enums()`](https://jameshwade.github.io/graft/reference/kg_enums.md)
-  : List enum values in a graft schema
-- [`kg_schema_info()`](https://jameshwade.github.io/graft/reference/kg_schema_info.md)
-  : Summarize a graft schema
+- [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+  : Load or compile a Graft schema
+- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+  : Open and initialize a Graft store
+- [`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
+  : Close a Graft store
 
-## Store lifecycle
+## Propose and accept
 
-Open, initialize, inspect, and close a DuckDB store.
+Describe a candidate’s origin, plan the change without writing, and
+accept it through one atomic commit path.
 
-- [`kg_connect_duckdb()`](https://jameshwade.github.io/graft/reference/kg_connect_duckdb.md)
-  : Connect to a DuckDB knowledge store
-- [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
-  : Initialize or verify a graft store
-- [`kg_disconnect()`](https://jameshwade.github.io/graft/reference/kg_disconnect.md)
-  : Disconnect a graft store
-- [`kg_store_info()`](https://jameshwade.github.io/graft/reference/kg_store_info.md)
-  : Inspect a graft store
-- [`kg_capabilities()`](https://jameshwade.github.io/graft/reference/kg_capabilities.md)
-  : Report DuckDB store capabilities
+- [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
+  : Describe the provenance of a candidate knowledge change
+- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+  : Plan a candidate knowledge change without writing it
+- [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+  : Commit a reviewed knowledge-change plan
+- [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
+  : Plan and immediately commit candidate records
 
-## Ingestion and validation
+## Retrieve and inspect
 
-Validate and write records in batches with provenance and idempotency.
+Read current and historical accepted knowledge through bounded,
+contract-aware operations and projections.
 
-- [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
-  : Describe one atomic ingestion batch
-- [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
-  : Atomically ingest one or more record classes
-- [`kg_write()`](https://jameshwade.github.io/graft/reference/kg_write.md)
-  : Ingest one concrete record class
-- [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
-  : Validate records without writing them
+- [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
+  : Retrieve one current accepted record
+- [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
+  : Search current accepted records
+- [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+  : Run a bounded advanced retrieval operation
+- [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+  : Retrieve accepted record history
 
-## History and change control
+## Synchronize and integrate
 
-Inspect accepted revisions and apply explicitly reviewed additive schema
-migrations.
+Synchronize the readable working tree, review file edits as proposals,
+and expose accepted retrieval to agents.
 
-- [`kg_batches()`](https://jameshwade.github.io/graft/reference/kg_batches.md)
-  : List committed ingestion batches
-- [`kg_changes()`](https://jameshwade.github.io/graft/reference/kg_changes.md)
-  : List accepted record changes
-- [`kg_history()`](https://jameshwade.github.io/graft/reference/kg_history.md)
-  : Retrieve the accepted history of one record
-- [`kg_check_store()`](https://jameshwade.github.io/graft/reference/kg_check_store.md)
-  : Check revision-ledger and current-state integrity
-- [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
-  : Plan an additive schema migration
-- [`kg_apply_migration()`](https://jameshwade.github.io/graft/reference/kg_apply_migration.md)
-  : Apply a planned additive schema migration
-
-## Records and identity
-
-Read records, search declared text fields, and resolve external
-identifiers.
-
-- [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-  : Read records from one concrete class
-- [`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md)
-  : Search manifest-declared record text
-- [`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md) :
-  Hydrate exactly one record
-- [`kg_lookup()`](https://jameshwade.github.io/graft/reference/kg_lookup.md)
-  : Look up an exact external identifier
-- [`kg_identifiers()`](https://jameshwade.github.io/graft/reference/kg_identifiers.md)
-  : List external identifiers for one record
-- [`kg_unresolved()`](https://jameshwade.github.io/graft/reference/kg_unresolved.md)
-  : List unresolved mentions
-
-## Claims and evidence
-
-Inspect claims and the stored sources and locations that support or
-challenge them.
-
-- [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md)
-  : Retrieve narrative and semantic claims about an entity
-- [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md)
-  : Retrieve evidence for one statement
-- [`kg_competing_claims()`](https://jameshwade.github.io/graft/reference/kg_competing_claims.md)
-  : Group candidate competing claims
-
-## Graph projections
-
-Inspect graph nodes and edges or traverse a limited neighborhood.
-
-- [`kg_nodes()`](https://jameshwade.github.io/graft/reference/kg_nodes.md)
-  : Access the graph node projection
-- [`kg_edges()`](https://jameshwade.github.io/graft/reference/kg_edges.md)
-  : Access a graph edge projection
-- [`kg_neighbors()`](https://jameshwade.github.io/graft/reference/kg_neighbors.md)
-  : Retrieve a bounded graph neighborhood
-- [`kg_traverse()`](https://jameshwade.github.io/graft/reference/kg_traverse.md)
-  : Traverse a bounded predicate path
-- [`kg_subgraph()`](https://jameshwade.github.io/graft/reference/kg_subgraph.md)
-  : Collect a bounded induced subgraph
-
-## Structured access
-
-Inspect the retrieval contract, run field-and-filter queries, and create
-ellmer tools.
-
-- [`kg_context()`](https://jameshwade.github.io/graft/reference/kg_context.md)
-  : Describe the active knowledge contract
-- [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
-  : Perform a bounded structured selection
-- [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-  : Create bounded ellmer tools for a graft store
-
-## Open knowledge
-
-Synchronize, read, review, and exchange the managed human- and
-agent-readable OKF working tree without replacing the governing schema
-or ledger.
-
-- [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
-  : Synchronize the managed Open Knowledge Format working tree
-- [`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
-  : Inspect the managed Open Knowledge Format working tree
-- [`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
-  : Read accepted knowledge from the managed OKF working tree
-- [`kg_plan_okf_import()`](https://jameshwade.github.io/graft/reference/kg_plan_okf_import.md)
-  : Plan changes from an edited Open Knowledge Format working tree
-- [`kg_apply_okf_import()`](https://jameshwade.github.io/graft/reference/kg_apply_okf_import.md)
-  : Apply an approved Open Knowledge Format import plan
-- [`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
-  : Export accepted Graft knowledge as an Open Knowledge Format bundle
-
-## Experimental integrations
-
-Package-specific adapters. Most graft users do not need these functions.
-
-- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-  : Ingest records mapped from one Tempest run
-- [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
-  : Create a Graft-backed Tempest artifact-store adapter
+- [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
+  : Synchronize the managed open-knowledge working tree
+- [`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
+  : Inspect the managed open-knowledge working tree
+- [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+  : Review edited open knowledge as a commit plan
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  : Create bounded read-only tools for a Graft store

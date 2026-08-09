@@ -1,0 +1,162 @@
+# Understand graft's architecture
+
+graft is organized around one question: **what was accepted?** The
+answer is the immutable revision ledger. Everything else either
+constrains a proposed change before acceptance or derives a useful view
+after acceptance.
+
+Swipe to explore the diagram →
+
+![A LinkML or data-dict contract compiles into Graft. OKF exchanges
+readable proposals and projections with Graft. Graft commits to and
+retrieves accepted revisions from
+DuckDB.](../reference/figures/okf-linkml-duckdb-system.svg)
+
+Contract, accepted authority, and readable projection stay distinct.
+
+This is the package’s simplifying idea. It avoids parallel mutation
+APIs, storage-shaped user functions, and ambiguity between a readable
+file and an accepted record.
+
+## The four architectural roles
+
+### The contract defines meaning
+
+A source contract comes from LinkML or data-dict. LinkML supplies rich
+class, ontology, and graph semantics. The strict `graft-table-v1`
+data-dict profile supplies flat tables, public IDs, supported field
+types, enums, scalar foreign-key validation, and restricted-field
+policy. graft compiles either source into one canonical `.graft.json`
+runtime contract with stable digests.
+
+The contract governs planning, revision acceptance, retrieval, and
+projection generation. A provider never becomes the revision ledger or a
+second write path. The data-dict adapter also does not turn scalar
+foreign keys into graph traversal edges; use LinkML when graph meaning
+is part of the contract.
+
+Provider-specific lowering can preserve metadata without enforcing it.
+In particular, data-dict assertions, non-primary unique constraints,
+relationship cardinality and joins, and units do not become Graft
+acceptance rules. Representative examples and ranges, dataset and table
+origins, and table source locators are removed from the public manifest,
+although their raw values still affect source and build digests. Those
+digests permit equality tests and offline guessing of low-entropy
+values; redaction is not a secrecy boundary. Other retained schema
+fields are public contract metadata and can expose observed or sensitive
+values embedded manually.
+
+The strict profile rejects scalar and list `number(id)` columns in favor
+of quoted strings and fails closed on unsafe JSON numeric tokens before
+lossy conversion. Omitted datetime zones require RFC 3339 `Z` or
+`±HH:MM` per character value; `time_zone: UTC` requires zoneless input
+interpreted as UTC. Both accept no more than six fractional digits and
+accept `POSIXt` instants, while `Date` values and `naive` or named-zone
+declarations are rejected. `export-data`-derived rows and profiles are
+also rejected, blocking those observations rather than promising general
+metadata scrubbing. For YAML, one captured byte snapshot feeds
+preflight, CLI export, and the source/build fingerprints. The compiled
+mapping report records known defaults and losses, but is not exhaustive.
+
+### A plan makes the proposal inspectable
+
+[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+accepts candidate data frames and explicit provenance. It normalizes
+values, resolves identity, validates the complete connected set,
+compares candidates with accepted heads, and returns inserts, updates,
+matches, and collected issues.
+
+Planning is read-only. The plan binds its result to the store identity,
+schema digest, expected record heads, idempotency state, and a
+deterministic digest. That binding makes review meaningful instead of
+advisory.
+
+### The ledger records acceptance
+
+[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+is the only internal acceptance path. Immediately before mutation it
+rechecks the plan, store, contract, write capability, idempotency state,
+and expected heads. The full batch commits in one transaction.
+
+Each accepted revision retains its record content, predecessor, changed
+fields, schema digest, accepted batch, and producer provenance.
+Historical state is therefore recovered from accepted facts rather than
+reconstructed from logs or current tables.
+
+### Projections serve readers
+
+Current record heads, identifiers, search data, contract-declared
+semantic relationships, and the Open Knowledge Format (OKF) working tree
+are derived from accepted revisions and the active contract. A
+projection may be rebuilt or repaired; it never becomes a second
+authority for record content.
+
+## Why S7 is selective
+
+S7 helps where the package must protect durable invariants:
+
+- `GraftSchema` owns a validated compiled contract and its digests.
+- `GraftProvenance` owns producer and idempotency semantics.
+- `GraftCommitPlan` owns the candidate change set and commit
+  preconditions.
+- `GraftStore` owns store identity and private connection state.
+
+These objects form the trusted boundary between user intent and
+mutation. Properties make important state explicit, constructors
+establish invariants, and dispatch stays narrow.
+
+S7 would add ceremony without benefit at the ordinary data boundary.
+Domain records remain data frames, collections remain named lists, and
+retrieval results remain data frames or lists. The compiled manifest
+remains the domain type system; graft does not mirror every source class
+or table with an R class hierarchy.
+
+## Storage is an implementation boundary
+
+The current store uses embedded DuckDB, but the public API speaks in
+lifecycle operations:
+
+- define and open;
+- propose and accept;
+- retrieve and inspect; and
+- synchronize and integrate.
+
+No public function exposes internal table names or accepts raw SQL. The
+store owns its connection, transactions, format version, migrations, and
+projection maintenance behind a small internal backend boundary. This
+keeps a future backend change from becoming a public API redesign.
+
+## Failure behavior is part of the design
+
+The architecture is useful because its failures are explicit:
+
+- invalid candidates return reviewable issues and cannot commit;
+- an altered plan fails digest verification;
+- a changed contract or record head makes a plan stale;
+- a transaction failure accepts none of the batch;
+- an OKF edit remains a proposal until reviewed and committed;
+- projection drift can be detected and repaired from revisions; and
+- retrieval limits and truncation are reported rather than hidden.
+
+There is no force flag that turns a failed precondition into acceptance.
+Callers create a fresh plan against the new state.
+
+## The complete lifecycle
+
+Swipe to explore the diagram →
+
+![Accepted revisions synchronize to readable files; edits return through
+review and commit.](../reference/figures/okf-acceptance-loop.svg)
+
+Readable files remain proposals until they pass the ordinary commit
+boundary.
+
+For code, start with [Getting
+started](https://jameshwade.github.io/graft/articles/getting-started.md).
+Then read [Change
+control](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
+for commit preconditions, [Retrieval and
+history](https://jameshwade.github.io/graft/articles/retrieval.md) for
+the read surface, and [Open
+knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.md)
+for the filesystem proposal loop.

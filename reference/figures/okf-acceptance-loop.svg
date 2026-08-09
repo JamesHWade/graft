@@ -151,7 +151,7 @@
   <text class="step" x="865" y="405">Snapshot + compare</text>
   <text class="copy" x="865" y="435">store · schema · batch · digest</text>
   <rect class="pill" x="865" y="451" width="226" height="30" rx="15"/>
-  <text class="pill-text mono" x="978" y="472" text-anchor="middle">kg_plan_okf_import()</text>
+  <text class="pill-text mono" x="978" y="472" text-anchor="middle">graft_review()</text>
   <path class="line" d="M980 248 L980 330" marker-end="url(#arrow)"/>
 
   <rect class="box" x="450" y="330" width="300" height="164" rx="22"/>

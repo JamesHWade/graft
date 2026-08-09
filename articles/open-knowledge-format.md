@@ -1,343 +1,215 @@
-# Work with open knowledge by default
+# Work with open knowledge
 
-Graft is OKF-first and Graft-backed.
-
-People and agents should not need a database client to understand
-accepted knowledge. They should be able to open a Markdown file, follow
-links, inspect provenance, and review a Git diff. The [Open Knowledge
+The [Open Knowledge
 Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
-(OKF) provides that working surface.
+(OKF) gives accepted knowledge a human- and agent-readable working
+surface. People can open Markdown, follow links, inspect provenance, and
+review a Git diff without needing a database client.
 
-Readable files are not enough to govern writes. Each layer has one job:
+Readable files are useful, but they are not a second source of truth. In
+graft:
 
-- **OKF is the working surface.** Markdown and YAML support reading,
-  navigation, proposals, Git review, and exchange.
-- **LinkML is the domain contract.** The source schema defines classes,
-  slots, ranges, identity, and sensitivity.
-- **Graft is the accepted ledger.** The compiled `.graft.json` manifest
-  and DuckDB enforce validation, accepted state, revisions, and
-  retrieval.
+- The compiled Graft manifest is the domain contract.
+- The revision ledger is the authority for accepted knowledge.
+- OKF is a deterministic projection and proposal surface.
+- [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+  and
+  [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+  are the route from edited files back to accepted knowledge.
 
-The OKF directory is the working tree. Graft is the ledger.
+This boundary keeps filesystem edits reviewable without allowing them to
+bypass identity, validation, provenance, or commit preconditions.
 
-![Architecture diagram with Graft at the center. LinkML feeds a compiled
-domain contract into Graft; OKF connects as the Markdown and YAML
-working surface; and DuckDB connects as the accepted revision ledger.
-People and agents read and propose through OKF, while Graft alone
-validates and commits accepted state to
-DuckDB.](../reference/figures/okf-linkml-duckdb-system.svg)
+## Configure the working tree
 
-Graft gives each representation one job.
-
-## Use the managed working tree
-
-A file-backed store manages a sibling OKF directory by default:
+A file-backed store manages a sibling OKF directory by default. For
+example, `knowledge.duckdb` uses `knowledge.okf` unless `okf_path` is
+supplied.
 
 ``` r
 
 library(graft)
 
-schema <- kg_schema("knowledge.graft.json")
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
-kg_init(store)
-```
+schema <- graft_schema(system.file(
+  "extdata",
+  "personinfo.graft.json",
+  package = "graft"
+))
 
-This pairs `knowledge.duckdb` with `knowledge.okf`. Connecting does not
-create or change the directory. Synchronize only after the store
-contains the accepted boundary you want to publish:
-
-``` r
-
-kg_okf_status(store)
-
-bundle <- kg_sync_okf(store)
-bundle
-
-kg_okf_status(store)
-```
-
-[`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
-stages and validates the complete bundle before atomically installing
-it. It replaces only a directory that identifies itself as a
-Graft-produced bundle. It never replaces an unrelated directory or
-writes a partial result after exceeding the concept limit.
-
-Synchronization is deliberately separate from
-[`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md).
-Accepted database writes remain unambiguous even when a filesystem is
-unavailable, read-only, or shared by another process.
-
-Use `okf_path` to choose a different managed directory, or opt out:
-
-``` r
-
-store <- kg_connect_duckdb(
+store <- graft_open(
   schema,
-  "knowledge.duckdb",
-  okf_path = "knowledge/open"
+  path = "knowledge.duckdb",
+  okf = "managed"
 )
+```
 
-database_only <- kg_connect_duckdb(
+Use `okf = "disabled"` when a store should have no managed working tree.
+An explicit path is useful when the readable projection belongs inside a
+repository:
+
+``` r
+
+store <- graft_open(
   schema,
-  "knowledge.duckdb",
-  okf = "disabled"
+  path = "knowledge.duckdb",
+  okf_path = "knowledge/okf"
 )
 ```
 
-An explicit path passed to
-[`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
-also configures that directory as the store’s managed working tree. This
-is useful for an in-memory store used in a test or temporary analysis.
+## Synchronize accepted knowledge
 
-## Make drift visible
-
-[`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
-is read-only. It reports one of six states:
-
-- **`unconfigured`:** the store has no managed path. Supply one or use a
-  file-backed store.
-- **`missing`:** the path is configured but no bundle exists. Run
-  [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md).
-- **`current`:** bundle digest, schema, and accepted batch match. Read
-  or share it.
-- **`stale`:** Graft accepted a later batch. Synchronize again.
-- **`modified`:** files differ from the accepted projection. Review an
-  import plan or discard the edits by synchronizing.
-- **`incompatible`:** directory or schema metadata does not match.
-  Inspect it before replacing anything.
-
-The bundle digest covers root and child indexes as well as concept
-documents. Graft therefore notices changes to navigation and prose, not
-only edits to frontmatter.
-
-## Give agents progressive access
-
-[`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
-starts with an index instead of dumping the corpus:
+After committing records, synchronize explicitly:
 
 ``` r
 
-kg_okf_context(store)
-```
-
-Add a query or type restriction to include matching Markdown documents:
-
-``` r
-
-kg_okf_context(
+graft_ingest(
   store,
-  query = "resin demand",
-  types = c("Assessment", "Business"),
-  limit = 25,
-  max_chars = 50000
-)
-```
-
-The function refuses a stale, modified, or incompatible bundle. Those
-files may be useful proposals, but they are not current accepted
-knowledge. Each call reads a verified filesystem snapshot, keeps only
-matching metadata and selected documents in memory, and refuses bundles
-above the 20 MiB agent-context input limit.
-
-[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-includes the same progressive surface as the read-only
-`kg_open_knowledge` ellmer tool. The model cannot supply a path or
-bypass the managed bundle:
-
-``` r
-
-chat <- ellmer::chat_anthropic()
-chat$set_tools(kg_tools(store))
-```
-
-Every context begins with a trust notice. Document content is evidence,
-not an instruction to use a tool, change policy, reveal credentials, or
-perform an external action.
-
-![Two-lane sequence diagram contrasting read and write paths. The read
-lane verifies a current OKF snapshot and returns bounded accepted
-evidence without mutation. The write lane treats a file edit as a
-proposal, validates it against LinkML, requires approval of the exact
-plan, commits through Graft into DuckDB, and then resynchronizes
-OKF.](../reference/figures/okf-agent-read-write-paths.svg)
-
-Reading accepted context is deliberately easier than changing accepted
-state.
-
-## Review edits as proposals
-
-Every concept contains readable Markdown and a namespaced `graft`
-extension. The extension preserves:
-
-- stable record and class identity;
-- revision, batch, and schema identity;
-- ledger and public-content digests; and
-- a structured, sensitivity-filtered `graft.record` mapping.
-
-The Markdown body is a generated reading view. Edit `graft.record` when
-a change should be proposed back to Graft. Then create a plan:
-
-``` r
-
-plan <- kg_plan_okf_import(store)
-plan
-plan$changes
-```
-
-Planning is read-only. Graft:
-
-1.  creates a stable snapshot of a complete managed bundle;
-2.  verifies that its schema and accepted batch are current;
-3.  compares each proposal with the exact accepted public-content
-    digest;
-4.  rejects missing concept files rather than interpreting them as
-    deletion;
-5.  validates inserts and updates against the active manifest; and
-6.  binds the plan to the store, schema, batch, and edited bundle
-    digest.
-
-Nothing is committed until a human or explicit host policy approves that
-exact plan:
-
-``` r
-
-result <- kg_apply_okf_import(
-  store,
-  plan,
-  kg_batch(
-    producer = "human:reviewer",
-    source_run_id = "okf-review-2026-07-29",
-    idempotency_key = "approved-okf-edit-1"
+  list(
+    Organization = data.frame(
+      id = "org:daily-planet",
+      name = "Daily Planet"
+    ),
+    Person = data.frame(
+      id = "person:clark-kent",
+      full_name = "Clark Kent",
+      employed_by = I(list("org:daily-planet"))
+    )
+  ),
+  graft_provenance(
+    producer = "directory-import",
+    idempotency_key = "daily-planet-v1"
   )
 )
+
+bundle <- graft_sync(store)
+bundle
 ```
 
-Application revalidates every precondition before calling
-[`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md).
-A changed plan, changed bundle, newer accepted batch, different store,
-or different schema is rejected. After a successful commit, Graft
-regenerates the working tree from accepted state.
+[`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
+stages and validates a complete deterministic bundle before replacing a
+graft-managed destination. It never changes accepted records and does
+not replace an unrelated directory.
 
-This is the approval boundary: editing a file proposes knowledge;
-applying a reviewed plan accepts it.
+Synchronization is separate from commit for a reason. Once a transaction
+has accepted a revision, a later filesystem failure cannot make that
+authoritative commit ambiguous. The working tree can simply be
+synchronized again.
 
-![Circular workflow diagram. Accepted DuckDB revisions synchronize to a
-current OKF tree; edits become proposals; and Graft snapshots, compares,
-and validates them against LinkML. Human or host-policy approval gates
-the commit. Rejected proposals remain outside the ledger, while accepted
-plans commit through Graft and regenerate
-OKF.](../reference/figures/okf-acceptance-loop.svg)
+The bundle contains a navigable index and concept documents. Public
+record content is stored in readable frontmatter and prose; object
+references become links; source and revision identity remain traceable.
+Sensitive fields are filtered according to the contract that governs
+retrieval.
 
-An OKF edit becomes knowledge only after validation and approval.
-
-## Publish selected or historical snapshots
-
-[`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
-remains available when the destination is not the managed working tree.
-Use it for a selected exchange bundle:
+## Inspect state without changing it
 
 ``` r
 
-kg_export_okf(
-  store,
-  "exports/market-radar",
-  classes = c("Business", "Assessment", "Source")
-)
+status <- graft_status(store)
+status$status
+status$reason
 ```
 
-References to records outside that selection remain visible as stable
-identifiers. Selected bundles are intentionally not importable as
-complete working trees.
+[`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
+is read-only. It distinguishes these states:
 
-Use `as_of` to reproduce the accepted state at a committed batch or
-time:
+- `current`: the working tree matches current accepted knowledge;
+- `modified`: local edits form a proposal against the current accepted
+  base;
+- `stale`: the store has newer accepted revisions;
+- `missing`: the configured working tree does not exist;
+- `unconfigured`: the store has no managed OKF path; and
+- `incompatible`: the bundle cannot be interpreted under the active
+  contract.
+
+Use `deep = TRUE` to verify the working tree’s content digest. Status
+does not silently repair, overwrite, or accept anything.
+
+## Treat edits as proposals
+
+A person or tool may edit the structured record mapping in a concept
+document. The edited file is still only a proposal. Review it with
+explicit provenance:
 
 ``` r
 
-quarter_close <- kg_export_okf(
+review <- graft_review(
   store,
-  "exports/2026-q2-close",
-  as_of = "batch-2026-q2-close"
+  provenance = graft_provenance(
+    producer = "human-review",
+    run_id = "review-17",
+    idempotency_key = "approved-okf-edit-17"
+  )
 )
 
-morning_view <- kg_export_okf(
-  store,
-  "exports/2026-07-28-morning",
-  as_of = as.POSIXct("2026-07-28 08:00:00", tz = "UTC")
-)
+review@valid
+review@changes
+review@issues
 ```
 
-Graft reconstructs each record from its last accepted revision at that
-boundary. It uses the historical manifest that governed the revision, so
-fields marked sensitive at that time remain excluded.
+[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+reads a stable snapshot, compares the proposed records with current
+accepted revisions, and applies the same normalization, identity, and
+contract validation as
+[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md).
+The returned `GraftCommitPlan` is bound to the exact bundle digest,
+accepted base, active schema, and store.
 
-## Preserve evidence and relationships
+Only complete managed bundles can be reviewed. Removing concept
+documents is not a supported way to delete knowledge. Restore the
+document before planning another proposal.
 
-The readable projection follows the domain contract:
-
-- label slots become titles;
-- statement or descriptive text becomes the primary narrative;
-- non-sensitive scalar fields become a details table;
-- object references to included records become Markdown links; and
-- source references and statement evidence become OKF `sources` and
-  footnotes.
-
-Graft maps common lifecycle values to OKF’s `draft`, `stable`, and
-`deprecated` statuses. Batch producer and commit time become generation
-provenance. Export does not invent human verification: approval remains
-captured by the accepted Graft revision and its host workflow.
-
-## Hand the bundle to Tempest
-
-Tempest can read any conformant OKF bundle, including a Graft
-projection:
+## Accept through the ordinary commit boundary
 
 ``` r
 
-library(tempest)
-
-knowledge <- tempest_read_okf("knowledge.okf")
-tempest_okf_concepts(knowledge)
-
-resources <- tempest_okf_resources(
-  knowledge,
-  include_stale = FALSE
-)
-
-evidence <- SourceStore$new()
-invisible(lapply(resources, evidence$upsert_resource))
-
-context <- tempest_okf_context(
-  knowledge,
-  types = c("Assessment", "Business"),
-  include_stale = FALSE,
-  max_concepts = 25,
-  max_chars = 50000
-)
+if (review@valid) {
+  result <- graft_commit(store, review)
+}
 ```
 
-Reading remains separate from adding resources to a `SourceStore`. The
-host retains control over mutations, model tools, approval, and side
-effects.
+Committing rechecks both the ordinary plan preconditions and the OKF
+source snapshot. If the files changed after review, the accepted base
+advanced, or the contract changed, the commit fails without a partial
+write. Review the new state and create a fresh plan.
 
-## Keep authority explicit
+After acceptance, synchronize the working tree to the new accepted
+heads:
 
-| Operation                                | Authority                       |
-|------------------------------------------|---------------------------------|
-| Read Markdown and inspect metadata       | OKF consumer                    |
-| Propose a structured record edit         | Person or agent editing OKF     |
-| Validate and plan the proposal           | Graft                           |
-| Approve the exact plan                   | Human or explicit host policy   |
-| Commit accepted knowledge                | Graft write path                |
-| Grant tools or authenticated connections | Tempest runtime and host policy |
+``` r
 
-Even an OKF Attested Computation remains descriptive context. Graft and
-Tempest do not execute referenced code merely because a document points
-to it.
+graft_sync(store)
+graft_status(store)
+```
 
-Continue with [Govern knowledge
-changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
-for revision history and schema evolution, or [Build a governed
-materials market
-radar](https://jameshwade.github.io/graft/articles/market-intelligence.md)
-for an application whose approved knowledge changes a later decision.
+The complete loop is therefore explicit:
+
+``` text
+accepted revisions -> sync -> readable files -> edit -> review -> commit -> sync
+```
+
+## Give agents the accepted view
+
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+creates four read-only tool definitions backed by
+[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
+[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
+and
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md):
+
+``` r
+
+tools <- graft_tools(store)
+names(tools)
+```
+
+The tool definitions expose bounded accepted retrieval, not filesystem
+access or mutation. A modified OKF document remains a proposal until it
+passes review and commit. The host decides which model provider, if any,
+receives the tools.
+
+``` r
+
+graft_close(store)
+```

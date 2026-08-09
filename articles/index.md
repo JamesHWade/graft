@@ -2,58 +2,60 @@
 
 ### Start here
 
-Follow one workflow from domain contract to traceable retrieval, or
-start from an ordinary LinkML schema and see how graft applies it in R.
+Complete one provider-free workflow, then understand the package’s
+deliberately small design.
 
-- [Getting started with
+- [Get started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-  Keep records consistent across workflow runs, add a source-backed
-  claim, and retrieve its evidence from R.
+  Accept one reviewable knowledge change, then retrieve its current
+  record and immutable history in about ten minutes.
+
+- [Understand graft's
+  architecture](https://jameshwade.github.io/graft/articles/architecture.md):
+
+  See how the domain contract, accepted revision ledger, derived
+  projections, and selective S7 objects fit around one acceptance
+  boundary.
+
+- [The v0.1
+  design](https://jameshwade.github.io/graft/articles/v01-design.md):
+
+  Understand the deliberate pre-production cutover to a revision-first
+  API, one commit path, selective S7 objects, and a smaller package
+  scope.
+
+### Core concepts
+
+Go deeper into the domain contract, acceptance boundary, retrieval
+operations, and readable open-knowledge projection.
+
+- [Use a LinkML contract with
+  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+
+  Compile or load a LinkML domain contract, inspect its S7
+  representation, and use it to validate records and bounded retrieval.
+
+- [Use a data-dict contract with
+  graft](https://jameshwade.github.io/graft/articles/data-dict-schema.md):
+
+  Compile a table-first data dictionary into Graft’s governed contract
+  while keeping the optional Rust CLI outside the package runtime.
 
 - [Govern knowledge
   changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md):
 
-  Inspect what changed, recover accepted state at a commit boundary, and
-  apply a reviewed additive schema migration.
+  Review candidate changes, commit them atomically, and recover the
+  accepted history of a record from one authoritative revision ledger.
 
-- [Use a LinkML schema with
-  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+- [Retrieve accepted
+  knowledge](https://jameshwade.github.io/graft/articles/retrieval.md):
 
-  Compile an ordinary LinkML schema, write schema-shaped records to
-  DuckDB, and query them from R.
+  Choose the smallest bounded read operation for current records,
+  search, advanced projections, immutable history, or agent tools.
 
-- [Work with open knowledge by
-  default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
+- [Work with open
+  knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
 
-  Use a managed, human- and agent-readable OKF working tree without
-  giving up Graft’s schema validation, accepted history, or approval
-  boundary.
-
-### Agent applications
-
-Build a local agent host with typed workflows, approval-gated actions,
-accepted memory, configurable models, and extensible tools.
-
-- [Build a governed materials market
-  radar](https://jameshwade.github.io/graft/articles/market-intelligence.md):
-
-  Reconcile competitor, business, customer, and downstream-market
-  signals into reviewed intelligence that becomes durable context for
-  the next scan.
-
-- [Build a governed local
-  Coworker](https://jameshwade.github.io/graft/articles/coworker.md):
-
-  Combine Graft, Tempest, dsprrr, shinychat, and extensible ellmer tools
-  in a local agent that publishes and remembers work only after
-  approval.
-
-### Examples
-
-Small, runnable domain models adapted from established LinkML projects.
-
-- [Examples](https://jameshwade.github.io/graft/articles/examples.md):
-
-  See how ordinary LinkML schemas can describe chemical entities,
-  biological samples, and the relationships between them.
+  Synchronize a readable OKF working tree, inspect its state, and review
+  edits through Graft’s ordinary plan and commit contract.

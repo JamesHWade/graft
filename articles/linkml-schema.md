@@ -1,43 +1,61 @@
-# Use a LinkML schema with graft
+# Use a LinkML contract with graft
 
-This article starts with an ordinary LinkML schema. It does not import
-graft’s core schema or use graft annotations.
+LinkML is graft’s richer ontology- and graph-oriented contract provider.
+It defines the classes and fields that a workflow may submit, which
+values are required, how records are identified, and which fields refer
+to other records. graft compiles it into the same canonical runtime
+contract used by every provider. That compiled contract governs
+planning, accepted revisions, retrieval, history, and readable
+projections; LinkML itself is never the revision ledger.
 
-The example is based on LinkML’s [PersonInfo
-tutorial](https://linkml.io/linkml/intro/tutorial01.html), which
-introduces classes and attributes with a small `Person` model. This
-version adds an `Organization` class and the tutorial’s suggested
-employment relationship.
+Choose LinkML when you need inheritance, class and slot ontology URIs,
+permissible-value meanings, polymorphic references, graph traversal
+relationships, or Graft-specific record and statement semantics. For a
+strict table-first alternative with richer dictionary metadata, see [Use
+a data-dict contract with
+graft](https://jameshwade.github.io/graft/articles/data-dict-schema.md).
 
-## Write the schema
+An ordinary LinkML schema is enough. It does not need to import a graft
+base schema or define a parallel set of R classes.
 
-``` r
+The v0.1 compiler intentionally supports a strict LinkML profile. Direct
+`is_a` inheritance and class-local `slot_usage` overrides are supported,
+but class mixins are rejected at compilation because a flattened mixin
+ancestry cannot be independently validated as a single parent chain in
+the canonical manifest. Replace a mixin with explicit inheritance or
+concrete slots before compiling it for graft.
 
-library(graft)
+The compiler also rejects LinkML validation, defaulting, composition,
+and serialization fields that the canonical manifest does not preserve.
+This includes class rules and unique keys; slot equality, cardinality,
+expression, default, unit, member, identifier-prefix, and
+structured-pattern fields; schema bindings and slot-name constraints;
+and enum identity or enum and permissible-value inheritance. Custom
+LinkML types are also rejected because their inherited constraints do
+not have a lossless `graft-table-v1` representation. Supported primitive
+ranges are `boolean`, `date`, `datetime`, `decimal`, `double`, `float`,
+`integer`, `string`, `time`, `uri`, and `uriorcurie`; other LinkML
+built-ins are rejected until Graft can execute their lexical semantics.
+URI and URI-or-CURIE values must be complete RFC 3986 ASCII URIs, or
+prefixed CURIEs for `uriorcurie`, with valid percent escapes. Relative
+references are rejected. Supported requiredness, scalar or list shape,
+enum membership, pattern, and numeric bounds remain executable Graft
+validation rules. The strict boundary prevents a source constraint from
+looking active after it has been dropped.
 
-schema_file <- system.file(
-  "extdata",
-  "personinfo.linkml.yaml",
-  package = "graft"
-)
-```
+## Write the domain contract
 
-The complete schema is:
+This small schema is based on the LinkML PersonInfo tutorial:
 
 ``` yaml
 id: https://w3id.org/graft/examples/personinfo
 name: personinfo
-title: Person information
-description: A small people and organizations schema based on LinkML PersonInfo.
 version: 0.1.0
 prefixes:
   linkml: https://w3id.org/linkml/
-  personinfo: https://w3id.org/graft/examples/personinfo/
   sdo: https://schema.org/
 imports:
   - linkml:types
-default_prefix: personinfo
-default_range: string
 
 classes:
   Person:
@@ -46,13 +64,10 @@ classes:
       id:
         identifier: true
         required: true
-        slot_uri: sdo:identifier
       full_name:
         required: true
-        slot_uri: sdo:name
       aliases:
         multivalued: true
-        slot_uri: sdo:alternateName
       age:
         range: integer
         minimum_value: 0
@@ -60,7 +75,6 @@ classes:
         range: Organization
         multivalued: true
         inlined: false
-        slot_uri: sdo:worksFor
 
   Organization:
     class_uri: sdo:Organization
@@ -68,105 +82,98 @@ classes:
       id:
         identifier: true
         required: true
-        slot_uri: sdo:identifier
       name:
         required: true
-        slot_uri: sdo:name
 ```
 
-These are standard LinkML features:
+This contract says that both classes require explicit identifiers, that
+names are required, that age cannot be negative, and that `employed_by`
+values must refer to organizations.
 
-- `classes` define `Person` and `Organization` records;
-- `attributes` define their fields;
-- `identifier: true` marks each class identifier;
-- `required`, `range`, and `minimum_value` add constraints;
-- `multivalued: true` represents repeated values; and
-- `slot_uri` and `class_uri` connect local names to Schema.org terms.
+## Compile or load once
 
-There is no graft-specific authoring requirement in this file.
-
-## Compile the schema
-
-Compile the LinkML file into a graft manifest:
+[`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+accepts LinkML YAML, data-dict YAML or trusted resolved `export-spec`
+JSON, and a compiled `.graft.json` contract. This article follows the
+LinkML path.
 
 ``` r
 
-kg_compile_schema(
-  schema_file,
-  "personinfo.graft.json"
+library(graft)
+
+schema <- graft_schema(
+  "personinfo.linkml.yaml",
+  output = "personinfo.graft.json"
 )
 ```
 
-Compilation is the only step that uses Python and `linkml-runtime`.
-Commit the generated `.graft.json` file with the source schema.
-Applications can then load the manifest without Python.
+Compiling YAML resolves the LinkML import closure and creates a
+canonical manifest with stable source, structure, and build digests.
+Compilation requires Python and `linkml-runtime`. Commit the YAML and
+compiled manifest together when reproducible use without Python matters.
 
-The package includes a compiled copy so the rest of this article is
-executable:
+Loading the compiled contract is an R-only operation:
 
 ``` r
 
-manifest_file <- system.file(
+schema <- graft_schema("personinfo.graft.json")
+```
+
+The package includes the compiled example used in this article:
+
+``` r
+
+schema <- graft_schema(system.file(
   "extdata",
   "personinfo.graft.json",
   package = "graft"
-)
-schema <- kg_schema(manifest_file)
-
-kg_classes(schema)
-#>          class role statement_shape        table id_policy
-#> 1 Organization node            <NA> organization   require
-#> 2       Person node            <NA>       person   require
-kg_slots(schema, "Person")
-#>    class        slot        range relational_type required multivalued
-#> 1 Person         age      integer          BIGINT    FALSE       FALSE
-#> 2 Person     aliases       string         VARCHAR    FALSE        TRUE
-#> 3 Person  created_at     datetime       TIMESTAMP    FALSE       FALSE
-#> 4 Person employed_by Organization         VARCHAR    FALSE        TRUE
-#> 5 Person   full_name       string         VARCHAR     TRUE       FALSE
-#> 6 Person          id       string         VARCHAR     TRUE       FALSE
-#> 7 Person  updated_at     datetime       TIMESTAMP    FALSE       FALSE
-#>   identifier object_reference enum     column
-#> 1      FALSE            FALSE <NA>        age
-#> 2      FALSE            FALSE <NA>       <NA>
-#> 3      FALSE            FALSE <NA> created_at
-#> 4      FALSE             TRUE <NA>       <NA>
-#> 5      FALSE            FALSE <NA>  full_name
-#> 6       TRUE            FALSE <NA>         id
-#> 7      FALSE            FALSE <NA> updated_at
+))
 ```
 
-For a plain LinkML class, graft supplies conservative storage defaults:
+## Inspect semantic properties
 
-- a concrete class becomes a node table;
-- a scalar string-like `id` remains the record identifier;
-- scalar attributes become columns;
-- multivalued attributes become related tables;
-- class-valued attributes become references;
-- common text fields provide a display label and basic search fields;
-  and
-- `created_at` and `updated_at` are added to the runtime manifest.
-
-These defaults affect the compiled manifest, not the source LinkML file.
-
-## Create the DuckDB store
+[`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+returns an immutable S7 `GraftSchema`. Its properties expose stable
+semantic information without requiring separate inspection functions.
 
 ``` r
 
-store <- suppressMessages(kg_connect_duckdb(schema, ":memory:"))
-kg_init(store)
+schema@name
+schema@version
+schema@structural_digest
+names(schema@classes)
+
+person <- schema@classes$Person
+person@label_slot
+person@search_slots
+names(person@slots)
+
+person@slots$id@identifier
+person@slots$full_name@required
+person@slots$aliases@multivalued
+person@slots$employed_by@object_reference
+person@slots$employed_by@range
 ```
 
-Use a file path instead of `":memory:"` when the store should persist
-across R sessions.
+`ClassContract` and `SlotContract` are invariant-rich internal views of
+the compiled LinkML contract. They make schema inspection predictable
+while domain records remain ordinary data frames.
 
-## Write LinkML-shaped records
+The complete canonical Graft manifest is available as `schema@manifest`
+for tooling that needs lower-level contract details. It is not
+necessarily a copy of the source-provider document: for example,
+data-dict manifests intentionally redact representative values, dataset
+and table origins, and table source locators. Other retained provider
+metadata remains public and can contain values embedded manually. Prefer
+the typed properties when they cover the question.
 
-The input data use the class and attribute names from the LinkML schema.
-An object reference contains the identifier of the referenced record. A
-multivalued attribute uses a list-column.
+## Validate a connected candidate set
+
+Open a store with the schema, then submit records by concrete class:
 
 ``` r
+
+store <- graft_open(schema, ":memory:", okf = "disabled")
 
 records <- list(
   Organization = data.frame(
@@ -177,104 +184,88 @@ records <- list(
     id = "person:clark-kent",
     full_name = "Clark Kent",
     aliases = I(list(c("Superman", "Kal-El"))),
-    age = 35L,
     employed_by = I(list("org:daily-planet"))
   )
 )
 
-kg_ingest(
+plan <- graft_plan(
   store,
-  kg_batch(
+  records,
+  graft_provenance(
     producer = "linkml-example",
     idempotency_key = "personinfo-v1"
-  ),
-  records
+  )
 )
-#> <kg_ingest_result> committed graft:01KZ2GJ2PJR1Z70V06BN89156B
-#>   inserted: 2
-#>   updated:  0
-#>   matched:  0
-#>   observed: 2
+
+plan@valid
+plan@changes
+plan@issues
 ```
 
-The two classes are committed in one transaction. The reference from
-`Person.employed_by` is checked against both records already in the
-store and records staged in the same batch.
+Planning validates the complete candidate set before anything is
+accepted. The organization and person can therefore arrive together: the
+relationship is checked against both accepted records and candidates in
+the same plan.
 
-## Query the records
-
-[`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-returns a lazy dbplyr table:
+List-columns represent multivalued LinkML fields. Scalar fields use
+ordinary atomic columns. The data-frame boundary stays familiar even
+though the schema, provenance, plan, and store use S7 to protect their
+invariants.
 
 ``` r
 
-people <- kg_records(store, "Person")
-
-people |>
-  dplyr::select(id, full_name, age) |>
-  dplyr::collect()
-#> # A tibble: 1 × 3
-#>   id                full_name    age
-#>   <chr>             <chr>      <dbl>
-#> 1 person:clark-kent Clark Kent    35
+if (plan@valid) {
+  graft_commit(store, plan)
+}
 ```
 
-The inferred text fields are available to
-[`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md):
+## Let the contract govern retrieval
+
+The compiled contract identifies public search fields, labels,
+relationships, and sensitive fields. Retrieval applies those rules to
+the active accepted revisions.
 
 ``` r
 
-kg_find(store, "Clark", class = "Person", limit = 5)
-#>                  id  class      label score
-#> 1 person:clark-kent Person Clark Kent     6
+graft_find(store, "Clark", class = "Person", limit = 5)
+
+person <- graft_get(store, "person:clark-kent")
+person$record
+
+graft_query(
+  store,
+  operation = "neighbors",
+  request = list(
+    id = "person:clark-kent",
+    projection = "semantic",
+    max_nodes = 25,
+    max_edges = 50
+  )
+)
 ```
 
-[`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md)
-hydrates the record and its multivalued fields:
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+exposes fixed, bounded operations rather than storage-specific queries.
+A relationship projection is rebuildable from accepted revisions and the
+contract; it is not a second place to write knowledge.
+
+This graph behavior is a reason to choose LinkML. Under the strict
+data-dict profile, scalar foreign keys are checked as references but do
+not become graph traversal edges.
+
+## Change the contract deliberately
+
+Schema digests are part of every plan and accepted revision. Editing the
+LinkML source therefore creates a new contract version rather than
+silently changing the meaning of existing knowledge.
+
+Under v0.1, graft can register a compatible semantic contract and
+rebuild its derived views. A change that requires transforming accepted
+payloads calls for rebuilding the development store from source records.
+Historical revisions always retain the exact contract digest that
+governed their acceptance.
 
 ``` r
 
-person <- kg_get(store, "person:clark-kent")
-
-person$record[c("id", "full_name", "age")]
-#> $id
-#> [1] "person:clark-kent"
-#> 
-#> $full_name
-#> [1] "Clark Kent"
-#> 
-#> $age
-#> [1] 35
-person$record$aliases
-#> [1] "Kal-El"   "Superman"
-person$record$employed_by
-#> [1] "org:daily-planet"
+graft_close(store)
 ```
-
-## Add graft semantics only when needed
-
-Ordinary LinkML describes record structure, identifiers, ranges,
-cardinality, and semantic mappings. That is enough for baseline storage
-and querying.
-
-Some knowledge-store decisions are not part of a general LinkML schema.
-For example, a project may want to distinguish narrative claims from
-normalized semantic statements, connect claims to exact evidence
-locations, normalize external identifiers, or choose weighted search
-fields.
-
-For those cases, import `graft-core.linkml` and extend one of graft’s
-optional roles:
-
-- `GraftNarrativeStatement`
-- `GraftSemanticStatement`
-- `GraftSource`
-- `GraftEvidence`
-- `GraftMention`
-- `GraftEdge`
-- `GraftMetadata`
-
-The package’s
-[`materials.linkml.yaml`](https://github.com/JamesHWade/graft/blob/main/inst/extdata/materials.linkml.yaml)
-shows that enriched form. Start with ordinary LinkML and add these roles
-only when the application needs their behavior.

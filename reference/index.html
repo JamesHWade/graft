@@ -16,11 +16,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/knowledge-change-control.html">Change control</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/market-intelligence.html">Market radar</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/coworker.html">Coworker</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
+    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
+  </ul></li>
+<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -44,9 +49,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="schema">Schema<a class="anchor" aria-label="anchor" href="#schema"></a></h2>
+      <h2 id="define-and-open">Define and open<a class="anchor" aria-label="anchor" href="#define-and-open"></a></h2>
 
-      <div class="section-desc"><p>Compile and inspect LinkML schemas and their generated manifests.</p></div>
+      <div class="section-desc"><p>Load the domain contract and manage the store that accepts knowledge under it.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -55,56 +60,28 @@
 
       <dl><dt>
 
-          <code><a href="kg_compile_schema.html">kg_compile_schema()</a></code>
+          <code><a href="graft_schema.html">graft_schema()</a></code>
 
         </dt>
-        <dd>Compile a LinkML schema into a graft manifest</dd>
+        <dd>Load or compile a Graft schema</dd>
 
         <dt>
 
-          <code><a href="kg_schema.html">kg_schema()</a></code>
+          <code><a href="graft_open.html">graft_open()</a></code>
 
         </dt>
-        <dd>Load a compiled graft schema manifest</dd>
+        <dd>Open and initialize a Graft store</dd>
 
         <dt>
 
-          <code><a href="kg_schema_diff.html">kg_schema_diff()</a></code>
+          <code><a href="graft_close.html">graft_close()</a></code>
 
         </dt>
-        <dd>Compare two compiled graft schemas</dd>
-
-        <dt>
-
-          <code><a href="kg_classes.html">kg_classes()</a></code>
-
-        </dt>
-        <dd>List concrete classes in a graft schema</dd>
-
-        <dt>
-
-          <code><a href="kg_slots.html">kg_slots()</a></code>
-
-        </dt>
-        <dd>List slots in a graft schema</dd>
-
-        <dt>
-
-          <code><a href="kg_enums.html">kg_enums()</a></code>
-
-        </dt>
-        <dd>List enum values in a graft schema</dd>
-
-        <dt>
-
-          <code><a href="kg_schema_info.html">kg_schema_info()</a></code>
-
-        </dt>
-        <dd>Summarize a graft schema</dd>
+        <dd>Close a Graft store</dd>
       </dl></div><div class="section level2">
-      <h2 id="store-lifecycle">Store lifecycle<a class="anchor" aria-label="anchor" href="#store-lifecycle"></a></h2>
+      <h2 id="propose-and-accept">Propose and accept<a class="anchor" aria-label="anchor" href="#propose-and-accept"></a></h2>
 
-      <div class="section-desc"><p>Open, initialize, inspect, and close a DuckDB store.</p></div>
+      <div class="section-desc"><p>Describe a candidate’s origin, plan the change without writing, and accept it through one atomic commit path.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -113,42 +90,35 @@
 
       <dl><dt>
 
-          <code><a href="kg_connect_duckdb.html">kg_connect_duckdb()</a></code>
+          <code><a href="graft_provenance.html">graft_provenance()</a></code>
 
         </dt>
-        <dd>Connect to a DuckDB knowledge store</dd>
+        <dd>Describe the provenance of a candidate knowledge change</dd>
 
         <dt>
 
-          <code><a href="kg_init.html">kg_init()</a></code>
+          <code><a href="graft_plan.html">graft_plan()</a></code>
 
         </dt>
-        <dd>Initialize or verify a graft store</dd>
+        <dd>Plan a candidate knowledge change without writing it</dd>
 
         <dt>
 
-          <code><a href="kg_disconnect.html">kg_disconnect()</a></code>
+          <code><a href="graft_commit.html">graft_commit()</a></code>
 
         </dt>
-        <dd>Disconnect a graft store</dd>
+        <dd>Commit a reviewed knowledge-change plan</dd>
 
         <dt>
 
-          <code><a href="kg_store_info.html">kg_store_info()</a></code>
+          <code><a href="graft_ingest.html">graft_ingest()</a></code>
 
         </dt>
-        <dd>Inspect a graft store</dd>
-
-        <dt>
-
-          <code><a href="kg_capabilities.html">kg_capabilities()</a></code>
-
-        </dt>
-        <dd>Report DuckDB store capabilities</dd>
+        <dd>Plan and immediately commit candidate records</dd>
       </dl></div><div class="section level2">
-      <h2 id="ingestion-and-validation">Ingestion and validation<a class="anchor" aria-label="anchor" href="#ingestion-and-validation"></a></h2>
+      <h2 id="retrieve-and-inspect">Retrieve and inspect<a class="anchor" aria-label="anchor" href="#retrieve-and-inspect"></a></h2>
 
-      <div class="section-desc"><p>Validate and write records in batches with provenance and idempotency.</p></div>
+      <div class="section-desc"><p>Read current and historical accepted knowledge through bounded, contract-aware operations and projections.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -157,86 +127,35 @@
 
       <dl><dt>
 
-          <code><a href="kg_batch.html">kg_batch()</a></code>
+          <code><a href="graft_get.html">graft_get()</a></code>
 
         </dt>
-        <dd>Describe one atomic ingestion batch</dd>
+        <dd>Retrieve one current accepted record</dd>
 
         <dt>
 
-          <code><a href="kg_ingest.html">kg_ingest()</a></code>
+          <code><a href="graft_find.html">graft_find()</a></code>
 
         </dt>
-        <dd>Atomically ingest one or more record classes</dd>
+        <dd>Search current accepted records</dd>
 
         <dt>
 
-          <code><a href="kg_write.html">kg_write()</a></code>
+          <code><a href="graft_query.html">graft_query()</a></code>
 
         </dt>
-        <dd>Ingest one concrete record class</dd>
+        <dd>Run a bounded advanced retrieval operation</dd>
 
         <dt>
 
-          <code><a href="kg_validate_data.html">kg_validate_data()</a></code>
+          <code><a href="graft_history.html">graft_history()</a></code>
 
         </dt>
-        <dd>Validate records without writing them</dd>
+        <dd>Retrieve accepted record history</dd>
       </dl></div><div class="section level2">
-      <h2 id="history-and-change-control">History and change control<a class="anchor" aria-label="anchor" href="#history-and-change-control"></a></h2>
+      <h2 id="synchronize-and-integrate">Synchronize and integrate<a class="anchor" aria-label="anchor" href="#synchronize-and-integrate"></a></h2>
 
-      <div class="section-desc"><p>Inspect accepted revisions and apply explicitly reviewed additive schema migrations.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_batches.html">kg_batches()</a></code>
-
-        </dt>
-        <dd>List committed ingestion batches</dd>
-
-        <dt>
-
-          <code><a href="kg_changes.html">kg_changes()</a></code>
-
-        </dt>
-        <dd>List accepted record changes</dd>
-
-        <dt>
-
-          <code><a href="kg_history.html">kg_history()</a></code>
-
-        </dt>
-        <dd>Retrieve the accepted history of one record</dd>
-
-        <dt>
-
-          <code><a href="kg_check_store.html">kg_check_store()</a></code>
-
-        </dt>
-        <dd>Check revision-ledger and current-state integrity</dd>
-
-        <dt>
-
-          <code><a href="kg_plan_migration.html">kg_plan_migration()</a></code>
-
-        </dt>
-        <dd>Plan an additive schema migration</dd>
-
-        <dt>
-
-          <code><a href="kg_apply_migration.html">kg_apply_migration()</a></code>
-
-        </dt>
-        <dd>Apply a planned additive schema migration</dd>
-      </dl></div><div class="section level2">
-      <h2 id="records-and-identity">Records and identity<a class="anchor" aria-label="anchor" href="#records-and-identity"></a></h2>
-
-      <div class="section-desc"><p>Read records, search declared text fields, and resolve external identifiers.</p></div>
+      <div class="section-desc"><p>Synchronize the readable working tree, review file edits as proposals, and expose accepted retrieval to agents.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -245,223 +164,31 @@
 
       <dl><dt>
 
-          <code><a href="kg_records.html">kg_records()</a></code>
+          <code><a href="graft_sync.html">graft_sync()</a></code>
 
         </dt>
-        <dd>Read records from one concrete class</dd>
+        <dd>Synchronize the managed open-knowledge working tree</dd>
 
         <dt>
 
-          <code><a href="kg_find.html">kg_find()</a></code>
+          <code><a href="graft_status.html">graft_status()</a></code>
 
         </dt>
-        <dd>Search manifest-declared record text</dd>
+        <dd>Inspect the managed open-knowledge working tree</dd>
 
         <dt>
 
-          <code><a href="kg_get.html">kg_get()</a></code>
+          <code><a href="graft_review.html">graft_review()</a></code>
 
         </dt>
-        <dd>Hydrate exactly one record</dd>
+        <dd>Review edited open knowledge as a commit plan</dd>
 
         <dt>
 
-          <code><a href="kg_lookup.html">kg_lookup()</a></code>
+          <code><a href="graft_tools.html">graft_tools()</a></code>
 
         </dt>
-        <dd>Look up an exact external identifier</dd>
-
-        <dt>
-
-          <code><a href="kg_identifiers.html">kg_identifiers()</a></code>
-
-        </dt>
-        <dd>List external identifiers for one record</dd>
-
-        <dt>
-
-          <code><a href="kg_unresolved.html">kg_unresolved()</a></code>
-
-        </dt>
-        <dd>List unresolved mentions</dd>
-      </dl></div><div class="section level2">
-      <h2 id="claims-and-evidence">Claims and evidence<a class="anchor" aria-label="anchor" href="#claims-and-evidence"></a></h2>
-
-      <div class="section-desc"><p>Inspect claims and the stored sources and locations that support or challenge them.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_claims.html">kg_claims()</a></code>
-
-        </dt>
-        <dd>Retrieve narrative and semantic claims about an entity</dd>
-
-        <dt>
-
-          <code><a href="kg_evidence.html">kg_evidence()</a></code>
-
-        </dt>
-        <dd>Retrieve evidence for one statement</dd>
-
-        <dt>
-
-          <code><a href="kg_competing_claims.html">kg_competing_claims()</a></code>
-
-        </dt>
-        <dd>Group candidate competing claims</dd>
-      </dl></div><div class="section level2">
-      <h2 id="graph-projections">Graph projections<a class="anchor" aria-label="anchor" href="#graph-projections"></a></h2>
-
-      <div class="section-desc"><p>Inspect graph nodes and edges or traverse a limited neighborhood.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_nodes.html">kg_nodes()</a></code>
-
-        </dt>
-        <dd>Access the graph node projection</dd>
-
-        <dt>
-
-          <code><a href="kg_edges.html">kg_edges()</a></code>
-
-        </dt>
-        <dd>Access a graph edge projection</dd>
-
-        <dt>
-
-          <code><a href="kg_neighbors.html">kg_neighbors()</a></code>
-
-        </dt>
-        <dd>Retrieve a bounded graph neighborhood</dd>
-
-        <dt>
-
-          <code><a href="kg_traverse.html">kg_traverse()</a></code>
-
-        </dt>
-        <dd>Traverse a bounded predicate path</dd>
-
-        <dt>
-
-          <code><a href="kg_subgraph.html">kg_subgraph()</a></code>
-
-        </dt>
-        <dd>Collect a bounded induced subgraph</dd>
-      </dl></div><div class="section level2">
-      <h2 id="structured-access">Structured access<a class="anchor" aria-label="anchor" href="#structured-access"></a></h2>
-
-      <div class="section-desc"><p>Inspect the retrieval contract, run field-and-filter queries, and create ellmer tools.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_context.html">kg_context()</a></code>
-
-        </dt>
-        <dd>Describe the active knowledge contract</dd>
-
-        <dt>
-
-          <code><a href="kg_select.html">kg_select()</a></code>
-
-        </dt>
-        <dd>Perform a bounded structured selection</dd>
-
-        <dt>
-
-          <code><a href="kg_tools.html">kg_tools()</a></code>
-
-        </dt>
-        <dd>Create bounded ellmer tools for a graft store</dd>
-      </dl></div><div class="section level2">
-      <h2 id="open-knowledge">Open knowledge<a class="anchor" aria-label="anchor" href="#open-knowledge"></a></h2>
-
-      <div class="section-desc"><p>Synchronize, read, review, and exchange the managed human- and agent-readable OKF working tree without replacing the governing schema or ledger.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_sync_okf.html">kg_sync_okf()</a></code>
-
-        </dt>
-        <dd>Synchronize the managed Open Knowledge Format working tree</dd>
-
-        <dt>
-
-          <code><a href="kg_okf_status.html">kg_okf_status()</a></code>
-
-        </dt>
-        <dd>Inspect the managed Open Knowledge Format working tree</dd>
-
-        <dt>
-
-          <code><a href="kg_okf_context.html">kg_okf_context()</a></code>
-
-        </dt>
-        <dd>Read accepted knowledge from the managed OKF working tree</dd>
-
-        <dt>
-
-          <code><a href="kg_plan_okf_import.html">kg_plan_okf_import()</a></code>
-
-        </dt>
-        <dd>Plan changes from an edited Open Knowledge Format working tree</dd>
-
-        <dt>
-
-          <code><a href="kg_apply_okf_import.html">kg_apply_okf_import()</a></code>
-
-        </dt>
-        <dd>Apply an approved Open Knowledge Format import plan</dd>
-
-        <dt>
-
-          <code><a href="kg_export_okf.html">kg_export_okf()</a></code>
-
-        </dt>
-        <dd>Export accepted Graft knowledge as an Open Knowledge Format bundle</dd>
-      </dl></div><div class="section level2">
-      <h2 id="experimental-integrations">Experimental integrations<a class="anchor" aria-label="anchor" href="#experimental-integrations"></a></h2>
-
-      <div class="section-desc"><p>Package-specific adapters. Most graft users do not need these functions.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="kg_ingest_tempest_records.html">kg_ingest_tempest_records()</a></code>
-
-        </dt>
-        <dd>Ingest records mapped from one Tempest run</dd>
-
-        <dt>
-
-          <code><a href="tempest_artifact_store_graft.html">tempest_artifact_store_graft()</a></code>
-
-        </dt>
-        <dd>Create a Graft-backed Tempest artifact-store adapter</dd>
+        <dd>Create bounded read-only tools for a Graft store</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

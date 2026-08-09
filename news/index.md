@@ -2,146 +2,68 @@
 
 ## graft 0.0.0.9000
 
-- A governed Materials Market Radar example combines business,
-  competitor, and downstream-market signals with dsprrr analysis, typed
-  Tempest briefings and approval, configurable models and tools, a
-  focused daily-brief and decision-room UI, and accepted-only Graft
-  knowledge that visibly changes a later scan.
-- A local Graft Coworker example combines a shinychat tool-using
-  assistant, dsprrr planning, typed Tempest work products, an approval
-  inbox, local file delivery, and approved-only Graft memory. Its
-  Tempest-native model configuration and extensible ellmer tool registry
-  include an optional read-only `btw` tool belt.
-- A provider-free continuous-intelligence example, staged operator
-  walkthrough, and interactive Shiny Briefing Room demonstrate scheduled
-  Tempest briefings, host-bound promotion and approval, evidence-checked
-  decisions, and governed Graft ingestion.
-- Store format 2 adds complete system-time revision history and rejects
-  stores created by earlier development versions instead of silently
-  upgrading or operating in a legacy mode.
-- [`kg_apply_migration()`](https://jameshwade.github.io/graft/reference/kg_apply_migration.md)
-  atomically applies an unmodified reviewed migration plan after
-  revalidating its digest and store preconditions; the first migration
-  version accepts only compatible and supported additive changes.
-- [`kg_apply_okf_import()`](https://jameshwade.github.io/graft/reference/kg_apply_okf_import.md)
-  revalidates and commits an approved, tamper-evident OKF import plan
-  through Graft’s ordinary atomic ingestion path, then synchronizes the
-  managed working tree.
-- [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
-  creates stable producer batches, and
-  [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
-  atomically reconciles, validates, and upserts multiple record classes
-  with identifier, origin, observation, and replay lineage.
-- [`kg_batches()`](https://jameshwade.github.io/graft/reference/kg_batches.md)
+- Graft v0.1 replaces the pre-production `kg_*` API, bundled
+  applications, Tempest adapter, physical migration subsystem, and dual
+  authoritative record tables with a 15-function revision-first package
+  boundary.
+- Canonical record and identity JSON now preserves finite numeric inputs
+  with round-trip-safe double serialization, normalizes signed zero, and
+  rejects character numeric underflow so distinct values cannot collapse
+  into one revision or identity digest.
+- Store format 3 makes immutable record revisions authoritative and
+  treats current records, multivalued relations, graph edges, and search
+  state as verified rebuildable projections.
+- [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
   and
-  [`kg_changes()`](https://jameshwade.github.io/graft/reference/kg_changes.md)
-  provide bounded, newest-first provenance and revision views with
-  historical schema-aware sensitivity filtering.
-- [`kg_check_store()`](https://jameshwade.github.io/graft/reference/kg_check_store.md)
-  reports bounded revision-ledger and current-state integrity findings,
-  with an optional deep payload and projection check.
-- [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md),
-  [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md),
+  [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
+  atomically accept immutable reviewed plans through set-based DuckDB
+  operations and return ordinary summaries with insert, update, match,
+  observation, replay, and timing details.
+- [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
+  [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
+  [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md),
   and
-  [`kg_competing_claims()`](https://jameshwade.github.io/graft/reference/kg_competing_claims.md)
-  retrieve bounded narrative and semantic assertions, stored citations,
-  and non-adjudicated comparison sets while preserving qualifiers and
-  ordinary attributes.
-- [`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md)
-  compiles ordinary LinkML schemas into deterministic, portable graft
-  manifests without requiring graft-specific imports or annotations;
-  graft core roles remain available for richer claim, evidence, and
-  graph behavior.
-- [`kg_connect_duckdb()`](https://jameshwade.github.io/graft/reference/kg_connect_duckdb.md),
-  [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md),
+  [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+  provide bounded deterministic retrieval directly from the
+  authoritative revision ledger, including exact historical types,
+  evidence, graph traversal, and integrity diagnosis.
+- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
   and
-  [`kg_disconnect()`](https://jameshwade.github.io/graft/reference/kg_disconnect.md)
-  provide an ownership-aware DuckDB store lifecycle with manifest-driven
-  initialization, structural schema protection, and a managed sibling
-  OKF directory by default for file-backed stores.
-- [`kg_context()`](https://jameshwade.github.io/graft/reference/kg_context.md)
-  generates a token-bounded, sensitive-field-safe description of the
-  active manifest and DuckDB access constraints.
-- [`kg_edges()`](https://jameshwade.github.io/graft/reference/kg_edges.md),
-  [`kg_nodes()`](https://jameshwade.github.io/graft/reference/kg_nodes.md),
-  [`kg_neighbors()`](https://jameshwade.github.io/graft/reference/kg_neighbors.md),
-  [`kg_traverse()`](https://jameshwade.github.io/graft/reference/kg_traverse.md),
+  [`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
+  manage the only DuckDB backend through an invariant-checked S7
+  `GraftStore`, including ownership-aware connection cleanup and
+  read-only reopen behavior.
+- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
   and
-  [`kg_subgraph()`](https://jameshwade.github.io/graft/reference/kg_subgraph.md)
-  provide lazy manifest-driven graph projections plus deterministic,
-  explicitly collected one-hop and two-hop retrieval with hard node and
-  edge caps.
-- [`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
-  writes a deterministic, source-linked Open Knowledge Format v0.2
-  projection of current or historical accepted revisions while
-  preserving Graft schema, batch, revision, and record identity.
-- [`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md),
-  [`kg_lookup()`](https://jameshwade.github.io/graft/reference/kg_lookup.md),
+  [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+  produce the same tamper-evident S7 `GraftCommitPlan` for ordinary
+  records and edited OKF knowledge without persistent writes.
+- [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
+  creates immutable S7 provenance carrying producer, run, replay, and
+  JSON metadata identity.
+- [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+  loads compiled manifests or compiles LinkML and optional data-dict
+  contracts into an invariant-checked S7 `GraftSchema`; the strict
+  `graft-table-v1` adapter separates YAML source-spec and resolved JSON
+  export-format versions, runs YAML preflight and CLI export from one
+  byte snapshot, guards CLI provenance against executable replacement,
+  publishes a digest-bound public manifest with examples, ranges,
+  origins, and source locators redacted, rejects unsafe JSON numeric
+  tokens, `number(id)`, and primary IDs that are also foreign keys,
+  normalizes optional blank foreign keys, and enforces supported
+  datetime forms, while trusted resolved JSON avoids a required CLI
+  dependency.
+- [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+  now fails closed when LinkML custom types or unsupported schema,
+  class, slot, enum, or permissible-value semantics would be discarded;
+  resolved data-dict versions retain their upstream lexical contract,
+  provider metadata is allowlisted, and `foreign_key` constraints must
+  agree with resolved references.
+- [`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
   and
-  [`kg_identifiers()`](https://jameshwade.github.io/graft/reference/kg_identifiers.md)
-  provide bounded manifest-declared search and exact identifier
-  resolution with registry provenance.
-- [`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md)
-  hydrates exactly one public record with bounded related identifiers,
-  claims, and evidence.
-- [`kg_history()`](https://jameshwade.github.io/graft/reference/kg_history.md)
-  retrieves bounded revisions for one record and recovers its accepted
-  state at a committed batch or time boundary.
-- [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
-  verifies structural-digest integrity and compiler-required physical
-  type contracts before creating or changing store objects.
-- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-  commits mapped Tempest domain records with run- and stage-stable
-  idempotency keys, independently of Tempest deliverable persistence.
-- [`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
-  gives people and agents bounded progressive disclosure over current
-  accepted OKF knowledge and refuses stale, modified, or incompatible
-  bundles.
-- [`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
-  reports whether a managed OKF working tree is unconfigured, missing,
-  current, stale, locally modified, or incompatible.
-- [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
-  creates a deterministic, serializable migration plan bound to the
-  store identity, format, active schema, and exact target manifest.
-- [`kg_plan_okf_import()`](https://jameshwade.github.io/graft/reference/kg_plan_okf_import.md)
-  creates a read-only, schema-validated proposal plan bound to the exact
-  store, accepted batch, schema, and edited OKF bundle.
-- [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-  returns lazy typed dbplyr tables for public concrete classes.
-- [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md),
-  [`kg_classes()`](https://jameshwade.github.io/graft/reference/kg_classes.md),
-  [`kg_slots()`](https://jameshwade.github.io/graft/reference/kg_slots.md),
-  [`kg_enums()`](https://jameshwade.github.io/graft/reference/kg_enums.md),
-  and
-  [`kg_schema_info()`](https://jameshwade.github.io/graft/reference/kg_schema_info.md)
-  load and inspect manifests without Python.
-- [`kg_schema_diff()`](https://jameshwade.github.io/graft/reference/kg_schema_diff.md)
-  reports structural schema changes with deterministic per-change and
-  overall compatibility classifications.
-- [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
-  provides a collected, hard-capped structured query surface with
-  manifest validation and no arbitrary SQL.
-- [`kg_store_info()`](https://jameshwade.github.io/graft/reference/kg_store_info.md)
-  reports the store format, exact active schema build, and
-  revision-history coverage in addition to connection and schema
-  details;
-  [`kg_capabilities()`](https://jameshwade.github.io/graft/reference/kg_capabilities.md)
-  reports static backend capabilities.
-- [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
-  atomically materializes current accepted state into the store’s
-  managed OKF working tree without replacing unrelated directories.
-- [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-  creates seven read-only ellmer tools over bounded Graft retrieval
-  APIs, including progressive access to current accepted OKF knowledge,
-  with JSON-compatible structured results and no arbitrary SQL surface.
-- [`kg_unresolved()`](https://jameshwade.github.io/graft/reference/kg_unresolved.md)
-  returns bounded unresolved mention records.
-- [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
-  preflights the same staged identity, shape, and reference checks as
-  ingestion without mutating the store.
-- [`kg_write()`](https://jameshwade.github.io/graft/reference/kg_write.md)
-  provides a one-class convenience wrapper over
-  [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md).
-- [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
-  explicitly reports the upstream Tempest serialization contract
-  required before durable typed-artifact persistence can be supported.
+  [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
+  inspect and explicitly synchronize the deterministic OKF working tree
+  without making it an independent source of accepted knowledge.
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  creates four bounded read-only ellmer tools that delegate to the
+  public retrieval and history operations.

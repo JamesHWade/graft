@@ -1,584 +1,180 @@
-# Getting started with graft
+# Get started with graft
 
-An R workflow can end with well-formed data frames and still leave
-important questions unresolved. Is this the same material seen in an
-earlier run? Which source supports a claim? Is a relationship stated by
-the source or inferred by the application? What can another analyst or
-an AI tool safely retrieve?
+This guide follows the shortest complete graft workflow:
 
-graft records those decisions in one versioned contract and applies the
-contract whenever data are written or read. It covers:
-
-- which fields identify the same record across runs;
-- which fields are required and how they are validated;
-- whether a statement is narrative or semantic;
-- how claims, sources, and evidence are related; and
-- which relationships are available as graph projections.
-
-With the contract in place, repeated workflow runs can recognize the
-same record, claims remain separate from adjudicated truth, and
-retrieval can return the exact source location stored with an assertion.
-
-graft expresses the contract in [LinkML](https://linkml.io/) and
-compiles it into a portable JSON manifest. At runtime, the manifest
-governs identity, validation, storage, and retrieval.
-
-This guide uses the materials schema included with the package. It
-creates an in-memory store, writes a material and a source, adds a claim
-and its evidence, and then queries the result.
-
-## How the pieces fit together
-
-From a package user’s perspective, the main workflow is:
-
-> domain contract -\> accepted Graft ledger -\> managed OKF working tree
-> -\> bounded retrieval
-
-Each part has one job:
-
-1.  **Describe the domain.** Use ordinary LinkML classes and slots for
-    the records your workflow produces. Add graft’s optional roles when
-    you need explicit claims, sources, evidence, or graph behavior.
-2.  **Compile the runtime contract.** The generated `.graft.json`
-    manifest resolves fields, identity rules, validation, relationships,
-    and schema fingerprints. Commit it with your project.
-3.  **Ingest workflow results.** graft validates related data frames
-    atomically, reconciles declared identifiers, and records the
-    producer and replay boundary.
-4.  **Synchronize open knowledge.** Materialize accepted state as
-    readable, diffable OKF Markdown for people, agents, Git, and other
-    tools.
-5.  **Retrieve records with context.** Browse OKF progressively, read
-    one class lazily with dbplyr, or use bounded functions to inspect
-    exact records, claims, evidence, and graph neighborhoods.
-
-The current backend is embedded DuckDB. That keeps stores local,
-portable, and available to familiar DBI and dbplyr workflows without
-making the backend the domain model.
-
-Python and `linkml-runtime` are used only for step 2. Loading an
-existing manifest and performing normal storage or retrieval both run
-entirely in R.
-
-## Installation
-
-graft is currently available from GitHub:
-
-``` r
-
-pak::pak("JamesHWade/graft")
+``` text
+contract -> provenance -> read-only plan -> review -> atomic commit -> retrieval
 ```
 
-## Start from a compiled contract
+It uses a compiled contract included with the package, a temporary local
+store, and no model provider. At the end you will have accepted
+connected records, inspected the exact proposed change, and recovered
+its history.
+
+## 1. Load the contract and open a store
 
 ``` r
 
 library(graft)
-```
 
-The package includes a small materials contract for this guide. Loading
-the compiled manifest does not initialize Python:
-
-``` r
-
-manifest <- system.file(
+schema <- graft_schema(system.file(
   "extdata",
-  "materials.graft.json",
+  "personinfo.graft.json",
   package = "graft"
+))
+
+store <- graft_open(
+  schema,
+  path = tempfile(fileext = ".duckdb"),
+  okf = "disabled"
 )
-schema <- kg_schema(manifest)
-schema
-#> <kg_schema> materials 0.1.0
-#>   classes:    5
-#>   relations:  1
-#>   structural: sha256:2f89cfc254e22a342a36ae87e438164fa714de11c712d57e5d7be25bfa00e145
 ```
 
-Inspect the contract before creating a store:
+The bundled contract was compiled from LinkML and defines the classes,
+required fields, stable identifiers, and relationships. Loading a
+compiled `.graft.json` contract and operating a store are R-only. Source
+contracts may come from LinkML or the strict data-dict table profile.
+
+## 2. Describe the candidate change
+
+Candidate records are a named list of data frames. The names are
+concrete classes in the contract. List-columns represent multivalued
+fields.
 
 ``` r
 
-kg_classes(schema)
-#>         class      role statement_shape       table     id_policy
-#> 1       Claim statement       narrative       claim          mint
-#> 2    Evidence  evidence            <NA>    evidence          mint
-#> 3    Material      node            <NA>    material resolve_exact
-#> 4 Measurement statement        semantic measurement          mint
-#> 5      Source    source            <NA>      source resolve_exact
-kg_slots(schema, "Claim")
-#>    class            slot             range relational_type required multivalued
-#> 1  Claim           about         GraftNode         VARCHAR     TRUE        TRUE
-#> 2  Claim     asserted_at          datetime       TIMESTAMP    FALSE       FALSE
-#> 3  Claim      claim_type         ClaimType         VARCHAR    FALSE       FALSE
-#> 4  Claim      confidence             float          DOUBLE    FALSE       FALSE
-#> 5  Claim      created_at          datetime       TIMESTAMP    FALSE       FALSE
-#> 6  Claim              id        uriorcurie         VARCHAR     TRUE       FALSE
-#> 7  Claim        polarity StatementPolarity         VARCHAR    FALSE       FALSE
-#> 8  Claim primary_subject         GraftNode         VARCHAR    FALSE       FALSE
-#> 9  Claim  statement_text            string         VARCHAR     TRUE       FALSE
-#> 10 Claim          status   StatementStatus         VARCHAR    FALSE       FALSE
-#> 11 Claim   superseded_by    GraftStatement         VARCHAR    FALSE       FALSE
-#> 12 Claim      updated_at          datetime       TIMESTAMP    FALSE       FALSE
-#> 13 Claim      valid_from          datetime       TIMESTAMP    FALSE       FALSE
-#> 14 Claim        valid_to          datetime       TIMESTAMP    FALSE       FALSE
-#>    identifier object_reference              enum          column
-#> 1       FALSE             TRUE              <NA>            <NA>
-#> 2       FALSE            FALSE              <NA>     asserted_at
-#> 3       FALSE            FALSE         ClaimType      claim_type
-#> 4       FALSE            FALSE              <NA>      confidence
-#> 5       FALSE            FALSE              <NA>      created_at
-#> 6        TRUE            FALSE              <NA>              id
-#> 7       FALSE            FALSE StatementPolarity        polarity
-#> 8       FALSE             TRUE              <NA> primary_subject
-#> 9       FALSE            FALSE              <NA>  statement_text
-#> 10      FALSE            FALSE   StatementStatus          status
-#> 11      FALSE             TRUE              <NA>   superseded_by
-#> 12      FALSE            FALSE              <NA>      updated_at
-#> 13      FALSE            FALSE              <NA>      valid_from
-#> 14      FALSE            FALSE              <NA>        valid_to
-```
-
-The `role` and `statement_shape` columns are important. They let graft
-treat domain-specific classes consistently without pretending that every
-record is the same kind of thing:
-
-- nodes are the subjects and objects a workflow reasons about;
-- narrative statements preserve source-faithful language;
-- semantic statements express an intentional subject-predicate-object
-  assertion;
-- sources describe where information came from;
-- evidence connects a statement to a stored source and locator.
-
-## Create a store
-
-The executable example below deliberately uses an in-memory DuckDB
-database, so it does not create a managed OKF directory. In a durable
-workflow, pass a file path instead; file-backed stores manage a sibling
-OKF path by default, so `knowledge.duckdb` is paired with
-`knowledge.okf`.
-
-``` r
-
-store <- kg_connect_duckdb(schema, ":memory:")
-#> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpTtcV2r/duckdb
-#> This is removed when the R session ends.
-#> • Extensions are re-downloaded each session.
-#> • Secrets are lost.
-#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
-#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
-#> ℹ See ?duckdb_storage for details and alternatives.
-kg_init(store)
-store
-#> <kg_store> DuckDB initialized (read-write)
-#>   path:       :memory:
-#>   OKF:        <unconfigured>
-#>   structural: sha256:2f89cfc254e22a342a36ae87e438164fa714de11c712d57e5d7be25bfa00e145
-```
-
-[`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
-creates the tables and graph views declared by the manifest, plus
-graft’s private metadata tables. Calling it again is safe. If an
-existing store was initialized with a structurally different manifest,
-graft reports a schema mismatch rather than silently changing the
-meaning of its data.
-
-## Ingest records with provenance
-
-Ingestion happens in atomic batches. A batch identifies the producer and
-provides an optional idempotency key, so rerunning the same stage does
-not duplicate its observations.
-
-First ingest one material and one source:
-
-``` r
-
-foundations <- list(
-  Material = data.frame(
-    preferred_name = "Linear low-density polyethylene (LLDPE)",
-    description = "A polyethylene with controlled short-chain branching.",
-    cas_number = "9002-88-4"
+records <- list(
+  Organization = data.frame(
+    id = "org:daily-planet",
+    name = "Daily Planet"
   ),
-  Source = data.frame(
-    uri = "https://example.org/lldpe-study",
-    title = "Controlled DSC study of LLDPE crystallinity",
-    doi = "10.1000/lldpe.dsc"
+  Person = data.frame(
+    id = "person:clark-kent",
+    full_name = "Clark Kent",
+    employed_by = I(list("org:daily-planet"))
   )
 )
 
-kg_ingest(
-  store,
-  kg_batch(
-    producer = "getting-started",
-    source_run_id = "materials-demo",
-    idempotency_key = "foundations-v1"
-  ),
-  foundations
-)
-#> <kg_ingest_result> committed graft:01KZ2GHNGFR1Z70V06BN89156B
-#>   inserted: 2
-#>   updated:  0
-#>   matched:  0
-#>   observed: 2
-```
-
-graft minted internal IDs and registered the schema-declared external
-identifiers. Exact lookup resolves normalized external values back to
-the stable records:
-
-``` r
-
-material_id <- kg_lookup(
-  store,
-  namespace = "cas",
-  value = "CAS: 9002-88-4"
-)$record_id[[1]]
-
-source_id <- kg_lookup(
-  store,
-  namespace = "doi",
-  value = "https://doi.org/10.1000/LLDPE.DSC"
-)$record_id[[1]]
-```
-
-Now add a claim about the material. A multivalued LinkML slot, such as
-`about`, is represented as a list-column:
-
-``` r
-
-kg_write(
-  store,
-  kg_batch(
-    producer = "getting-started",
-    source_run_id = "materials-demo",
-    idempotency_key = "claim-v1"
-  ),
-  class = "Claim",
-  records = data.frame(
-    statement_text = paste(
-      "A controlled DSC experiment measured 37% crystallinity",
-      "for the LLDPE sample."
-    ),
-    primary_subject = material_id,
-    claim_type = "finding",
-    polarity = "positive",
-    confidence = 0.95,
-    status = "active",
-    about = I(list(material_id))
-  )
-)
-#> <kg_ingest_result> committed graft:01KZ2GHPNRQ2GY08F99AMH9TQ1
-#>   inserted: 1
-#>   updated:  0
-#>   matched:  0
-#>   observed: 1
-
-claim_id <- kg_find(
-  store,
-  "crystallinity",
-  class = "Claim",
-  limit = 1
-)$id[[1]]
-```
-
-Finally, connect the claim to the exact source passage:
-
-``` r
-
-kg_write(
-  store,
-  kg_batch(
-    producer = "getting-started",
-    source_run_id = "materials-demo",
-    idempotency_key = "evidence-v1"
-  ),
-  class = "Evidence",
-  records = data.frame(
-    statement_id = claim_id,
-    source_id = source_id,
-    support_type = "supports",
-    locator_type = "other",
-    locator_value = "table 1",
-    page_start = 5L,
-    page_end = 5L,
-    excerpt = "Crystallinity (%) for the LLDPE sample: 37."
-  )
-)
-#> <kg_ingest_result> committed graft:01KZ2GHQQ692H6D99E1M5Y9W65
-#>   inserted: 1
-#>   updated:  0
-#>   matched:  0
-#>   observed: 1
-```
-
-These writes are separate because the example lets graft mint each ID
-before a later record refers to it. Producers that already have stable
-graft IDs can submit all related classes in one atomic
-[`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
-call.
-
-## Retrieve an answer and its evidence
-
-Search is useful for discovery:
-
-``` r
-
-kg_find(store, "LLDPE", limit = 5)
-#>                                 id    class
-#> 1 graft:01KZ2GHNY978J8TW5CCRM2CHPK   Source
-#> 2 graft:01KZ2GHNXYC500CHZ4PA036PQ1 Material
-#> 3 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5    Claim
-#>                                                                          label
-#> 1                                  Controlled DSC study of LLDPE crystallinity
-#> 2                                      Linear low-density polyethylene (LLDPE)
-#> 3 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
-#>   score
-#> 1     6
-#> 2     5
-#> 3     3
-```
-
-Hydration starts from one stable ID and returns bounded related records:
-
-``` r
-
-material <- kg_get(store, material_id)
-material
-#> <kg_record> Material graft:01KZ2GHNXYC500CHZ4PA036PQ1
-#>   identifiers: 1
-#>   claims: 1
-#>   evidence: 1
-
-material$record[c("preferred_name", "cas_number")]
-#> $preferred_name
-#> [1] "Linear low-density polyethylene (LLDPE)"
-#> 
-#> $cas_number
-#> [1] "9002-88-4"
-```
-
-Claims remain assertions rather than being collapsed into a single
-truth. Their status, polarity, qualifiers, and evidence stay available
-for inspection:
-
-``` r
-
-claims <- kg_claims(store, material_id)
-claims[c("statement_text", "confidence", "status")]
-#>                                                                 statement_text
-#> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
-#>   confidence status
-#> 1       0.95 active
-
-evidence <- kg_evidence(store, claim_id)
-evidence[c(
-  "support_type",
-  "source_title",
-  "locator_value",
-  "excerpt"
-)]
-#>   support_type                                source_title locator_value
-#> 1     supports Controlled DSC study of LLDPE crystallinity       table 1
-#>                                       excerpt
-#> 1 Crystallinity (%) for the LLDPE sample: 37.
-```
-
-This distinction is deliberate. A narrative claim records what a source
-says. A semantic statement records an intentional normalized assertion.
-Evidence can support or contradict either statement shape, and graft can
-return competing claims without adjudicating them on the user’s behalf.
-
-## Choose the right retrieval surface
-
-graft offers different interfaces for different jobs:
-
-| Need | Interface | Collection behavior |
-|----|----|----|
-| Work with one class using dplyr | [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md) | Lazy |
-| Discover records by declared text fields | [`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md) | Bounded |
-| Resolve an external identifier exactly | [`kg_lookup()`](https://jameshwade.github.io/graft/reference/kg_lookup.md) | Bounded |
-| Hydrate one record and related knowledge | [`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md) | Bounded |
-| Inspect claims and stored citations | [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md), [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md) | Bounded |
-| Run a validated structured query | [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md) | Bounded |
-| Explore a graph neighborhood | [`kg_neighbors()`](https://jameshwade.github.io/graft/reference/kg_neighbors.md) | Bounded |
-
-For example,
-[`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-returns a lazy dbplyr table:
-
-``` r
-
-kg_records(store, "Claim") |>
-  dplyr::select(id, statement_text, confidence) |>
-  dplyr::collect()
-#> # A tibble: 1 × 3
-#>   id                               statement_text                     confidence
-#>   <chr>                            <chr>                                   <dbl>
-#> 1 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5 A controlled DSC experiment measu…       0.95
-```
-
-[`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
-is the safer collected interface when a caller should choose fields and
-filters but must not provide SQL:
-
-``` r
-
-kg_select(
-  store,
-  class = "Claim",
-  fields = c("id", "statement_text", "confidence"),
-  filters = list(list(
-    field = "confidence",
-    operator = "gte",
-    value = 0.9
-  )),
-  limit = 10
-)
-#>                                 id
-#> 1 graft:01KZ2GHQ3NXYMNMFJVDDVKRXM5
-#>                                                                 statement_text
-#> 1 A controlled DSC experiment measured 37% crystallinity for the LLDPE sample.
-#>   confidence
-#> 1       0.95
-```
-
-## Work with open knowledge
-
-For a durable store, synchronize accepted state into its managed OKF
-working tree:
-
-``` r
-
-schema <- kg_schema("my-domain.graft.json")
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
-kg_init(store)
-
-kg_sync_okf(store)
-kg_okf_status(store)
-```
-
-Synchronization is explicit. Graft never turns a filesystem failure into
-an ambiguous database result, and a status check reports whether the
-bundle is missing, current, stale, locally modified, or incompatible.
-
-Start with a bounded index, then ask for matching documents:
-
-``` r
-
-kg_okf_context(store)
-kg_okf_context(
-  store,
-  query = "polyethylene",
-  types = c("Material", "Claim")
+origin <- graft_provenance(
+  producer = "directory-import",
+  run_id = "run-42",
+  idempotency_key = "daily-planet-v1",
+  metadata = list(source = "staff-directory.csv")
 )
 ```
 
-Edits to a concept’s structured `graft.record` mapping are proposals.
-Planning is read-only; applying a reviewed plan uses the ordinary atomic
-ingestion path:
+Provenance names the producer event. The idempotency key makes an
+intentional retry return the original accepted result instead of
+creating another observation.
+
+## 3. Plan and review without writing
 
 ``` r
 
-plan <- kg_plan_okf_import(store)
-plan
+plan <- graft_plan(store, records, origin)
 
-kg_apply_okf_import(
+plan@valid
+plan@changes
+plan@issues
+```
+
+Planning normalizes values, resolves identity, validates the
+relationship, and compares the candidates with current accepted heads.
+It writes no accepted records or provenance.
+
+Review `plan@changes` even when `plan@valid` is `TRUE`. Valid means the
+plan can be committed; the changes show whether it should be. Issues
+retain source class and row coordinates so invalid inputs can be
+corrected together.
+
+## 4. Accept the complete plan atomically
+
+``` r
+
+if (plan@valid) {
+  result <- graft_commit(store, plan)
+}
+
+result
+```
+
+Immediately before writing, graft verifies that the plan is intact and
+still matches the store, active contract, and expected record heads. The
+records, provenance, and identity decisions then commit together. A
+stale, altered, or invalid plan fails without a partial acceptance.
+
+When the producer is already authorized to accept its own results,
+`graft_ingest(store, records, origin)` is shorthand for planning and
+immediately committing a valid plan. It is not a second write path.
+
+## 5. Retrieve the accepted view and its history
+
+``` r
+
+person <- graft_get(store, "person:clark-kent")
+person$record
+
+graft_find(store, "Clark", class = "Person", limit = 10)
+
+history <- graft_history(store, "person:clark-kent", limit = 20)
+history[, c("batch_id", "changed_fields", "record")]
+```
+
+[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
+reads one current accepted record.
+[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
+searches public fields declared by the contract.
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+reads immutable revisions in deterministic newest-first order. Current
+state and history are two views of the same accepted ledger.
+
+Advanced retrieval stays behind fixed operations. For example, inspect
+the connected organization without exposing arbitrary SQL:
+
+``` r
+
+graft_query(
   store,
-  plan,
-  kg_batch(
-    producer = "human:reviewer",
-    idempotency_key = "approved-okf-edit-1"
+  operation = "neighbors",
+  request = list(
+    id = "person:clark-kent",
+    projection = "semantic",
+    hops = 1,
+    max_nodes = 25,
+    max_edges = 50
   )
 )
 ```
 
-See [Work with open knowledge by
-default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md)
-for the complete synchronization, review, historical-export, and Tempest
-handoff contract.
-
-## Use graft with ellmer
-
-If the `ellmer` package is installed,
-[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-creates seven read-only tools that capture one initialized store:
+## 6. Close the store
 
 ``` r
 
-chat <- ellmer::chat_anthropic()
-chat$set_tools(kg_tools(store))
+graft_close(store)
 ```
 
-The tools call the same query functions shown above. `kg_open_knowledge`
-gives the model progressive access to the current accepted OKF bundle.
-The tools do not accept SQL, file paths, URLs, or network options. Each
-result reports its limit, whether it was truncated, and the store’s
-schema digest.
+Closing is idempotent. graft closes connections it created; a connection
+supplied by the caller remains owned by the caller.
 
-[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-does not validate model output. It gives a model read-only access to
-records and evidence that are already present in the store.
+## Where to go next
 
-## Bring your own domain
-
-The [LinkML schema
-article](https://jameshwade.github.io/graft/articles/linkml-schema.md)
-starts with an ordinary PersonInfo-style schema. It compiles without
-graft annotations or an import of graft’s core schema.
-
-The installed materials example shows the optional enriched form:
-
-``` r
-
-system.file(
-  "extdata",
-  "materials.linkml.yaml",
-  package = "graft"
-)
-#> [1] "/home/runner/work/_temp/Library/graft/extdata/materials.linkml.yaml"
-```
-
-Extend graft’s core roles only when the domain needs package-specific
-behavior for claims, evidence, sources, mentions, or graph edges:
-
-- `GraftNode`
-- `GraftEdge`
-- `GraftNarrativeStatement`
-- `GraftSemanticStatement`
-- `GraftSource`
-- `GraftEvidence`
-- `GraftMention`
-- `GraftMetadata`
-
-Annotations can then declare identity policies, external identifier
-namespaces, search fields, label fields, origin keys, and semantic
-qualifiers. Compile the schema once:
-
-``` r
-
-kg_compile_schema(
-  "my-domain.linkml.yaml",
-  "my-domain.graft.json"
-)
-```
-
-Commit both the source schema and compiled manifest. Application and
-production environments can then load the manifest without Python:
-
-``` r
-
-schema <- kg_schema("my-domain.graft.json")
-store <- kg_connect_duckdb(schema, "knowledge.duckdb")
-kg_init(store)
-```
-
-## When to use graft
-
-Use graft when a project needs to preserve record identity, claims,
-sources, and evidence across runs while keeping the data available
-through R, DBI, and dbplyr.
-
-graft does not design the LinkML schema, collect source material,
-provide vector similarity search, or replace a general-purpose graph
-database. It manages the boundary between readable open knowledge and
-validated, accepted, historical records.
+- [Architecture](https://jameshwade.github.io/graft/articles/architecture.md)
+  explains the authoritative ledger, derived projections, and selective
+  use of S7.
+- [LinkML
+  contract](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+  covers compilation and schema inspection.
+- [data-dict
+  contract](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
+  covers the optional table-first adapter, resolved JSON, and its
+  explicit semantic limits.
+- [Change
+  control](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
+  covers stale plans, updates, history, and integrity checks.
+- [Retrieval and
+  history](https://jameshwade.github.io/graft/articles/retrieval.md)
+  maps each read function to its job.
+- [Open
+  knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.md)
+  adds a readable working tree whose edits return through the same plan
+  and commit boundary.

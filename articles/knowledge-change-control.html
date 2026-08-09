@@ -13,9 +13,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Govern knowledge changes">
-<meta name="description" content="Inspect what changed, recover accepted state at a commit boundary, and apply a reviewed additive schema migration.
+<meta name="description" content="Review candidate changes, commit them atomically, and recover the accepted history of a record from one authoritative revision ledger.
 ">
-<meta property="og:description" content="Inspect what changed, recover accepted state at a commit boundary, and apply a reviewed additive schema migration.
+<meta property="og:description" content="Review candidate changes, commit them atomically, and recover the accepted history of a record from one authoritative revision ledger.
 ">
 </head>
 <body>
@@ -36,11 +36,18 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
-<li class="active nav-item"><a class="nav-link" href="../articles/knowledge-change-control.html">Change control</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/market-intelligence.html">Market radar</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/coworker.html">Coworker</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
+<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
+    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
+  </ul>
+</li>
+<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -79,354 +86,210 @@
 
     
     
-<p>A current-state table can answer “what do we believe now?” It cannot,
-on its own, answer the questions that make the result dependable:</p>
-<ul>
-<li>What changed, and which workflow run changed it?</li>
-<li>What had the store accepted before that change?</li>
-<li>Which exact schema governed each revision?</li>
-<li>Can the contract evolve without silently changing stored
-knowledge?</li>
-</ul>
-<p>graft keeps the typed tables used for ordinary queries and an
-append-only revision ledger used for these questions. Ingestion batches
-connect each accepted change to its producer, schema, and commit order.
-Schema evolution is a separate plan-review-apply operation.</p>
-<p>This guide runs the complete loop with two small contract versions
-included in the package. Both use store format 2 and are already
-compiled, so the walkthrough does not require Python.</p>
+<p>Knowledge change control is easier to reason about when there is one
+answer to “what was accepted?” In graft, immutable record revisions are
+that answer. Current records, search data, graph relationships, and the
+OKF working tree are derived views that can be rebuilt from the accepted
+ledger.</p>
+<p>Every mutation follows the same sequence:</p>
+<pre class="text"><code>candidate records -&gt; read-only plan -&gt; review -&gt; atomic commit -&gt; revision history</code></pre>
+<p>This separation makes the approval boundary visible and prevents
+validation, OKF import, or convenience functions from becoming alternate
+write paths.</p>
 <div class="section level2">
-<h2 id="create-a-store-with-contract-v1">Create a store with contract v1<a class="anchor" aria-label="anchor" href="#create-a-store-with-contract-v1"></a>
+<h2 id="the-objects-at-the-boundary">The objects at the boundary<a class="anchor" aria-label="anchor" href="#the-objects-at-the-boundary"></a>
 </h2>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<p>graft uses S7 selectively where an object carries durable
+invariants:</p>
+<ul>
+<li>
+<code>GraftSchema</code> owns a validated compiled domain contract
+and its digests.</li>
+<li>
+<code>GraftProvenance</code> identifies the producer event and
+replay boundary.</li>
+<li>
+<code>GraftCommitPlan</code> carries the candidate change set and
+commit preconditions.</li>
+<li>
+<code>GraftStore</code> owns store identity and private connection
+state.</li>
+</ul>
+<p>Domain records remain ordinary data frames. Retrieval results remain
+ordinary data frames or lists. graft does not create an S7 class for
+every contract class.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">manifest_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"extdata"</span>,</span>
-<span>  <span class="st">"change-control-v1.graft.json"</span>,</span>
+<span>  <span class="st">"personinfo.graft.json"</span>,</span>
 <span>  package <span class="op">=</span> <span class="st">"graft"</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">":memory:"</span>, okf <span class="op">=</span> <span class="st">"disabled"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="build-a-reviewable-plan">Build a reviewable plan<a class="anchor" aria-label="anchor" href="#build-a-reviewable-plan"></a>
+</h2>
+<p>Provenance and records are separate inputs so the candidate’s origin
+cannot be confused with its domain content.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">provenance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
+<span>  producer <span class="op">=</span> <span class="st">"directory-import"</span>,</span>
+<span>  run_id <span class="op">=</span> <span class="st">"run-42"</span>,</span>
+<span>  idempotency_key <span class="op">=</span> <span class="st">"directory-2026-08-03"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">schema_v1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_schema.html">kg_schema</a></span><span class="op">(</span><span class="va">manifest_v1</span><span class="op">)</span></span>
-<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb</a></span><span class="op">(</span><span class="va">schema_v1</span>, <span class="st">":memory:"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; duckdb keeps downloaded extensions and secrets in a temporary directory:</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> /tmp/RtmpwM2mW7/duckdb</span></span>
-<span><span class="co">#&gt; This is removed when the R session ends.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">•</span> Secrets are lost.</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">ℹ</span> See ?duckdb_storage for details and alternatives.</span></span>
-<span><span class="fu"><a href="../reference/kg_init.html">kg_init</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
-<p>The first batch records an initiative at the point it enters concept
-review. The producer-side run identifier and idempotency key make that
-provenance and replay boundary explicit.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_write.html">kg_write</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="fu"><a href="../reference/kg_batch.html">kg_batch</a></span><span class="op">(</span></span>
-<span>    producer <span class="op">=</span> <span class="st">"portfolio-review"</span>,</span>
-<span>    source_run_id <span class="op">=</span> <span class="st">"daily-brief-001"</span>,</span>
-<span>    idempotency_key <span class="op">=</span> <span class="st">"firefly-v1"</span></span>
+<span></span>
+<span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  Organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"org:daily-planet"</span>,</span>
+<span>    name <span class="op">=</span> <span class="st">"Daily Planet"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  class <span class="op">=</span> <span class="st">"Initiative"</span>,</span>
-<span>  records <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    preferred_name <span class="op">=</span> <span class="st">"Project Firefly"</span>,</span>
-<span>    status <span class="op">=</span> <span class="st">"concept review"</span>,</span>
-<span>    portfolio_id <span class="op">=</span> <span class="st">"PF-001"</span></span>
+<span>  Person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>    full_name <span class="op">=</span> <span class="st">"Clark Kent"</span>,</span>
+<span>    employed_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"org:daily-planet"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">initiative_id</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_lookup.html">kg_lookup</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  namespace <span class="op">=</span> <span class="st">"portfolio"</span>,</span>
-<span>  value <span class="op">=</span> <span class="st">"PF-001"</span></span>
-<span><span class="op">)</span><span class="op">$</span><span class="va">record_id</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p>A later batch accepts a new status for the same schema-declared
-identity:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">approved</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_write.html">kg_write</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  <span class="fu"><a href="../reference/kg_batch.html">kg_batch</a></span><span class="op">(</span></span>
-<span>    producer <span class="op">=</span> <span class="st">"portfolio-review"</span>,</span>
-<span>    source_run_id <span class="op">=</span> <span class="st">"daily-brief-002"</span>,</span>
-<span>    idempotency_key <span class="op">=</span> <span class="st">"firefly-v2"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  class <span class="op">=</span> <span class="st">"Initiative"</span>,</span>
-<span>  records <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    preferred_name <span class="op">=</span> <span class="st">"Project Firefly"</span>,</span>
-<span>    status <span class="op">=</span> <span class="st">"prototype approved"</span>,</span>
-<span>    portfolio_id <span class="op">=</span> <span class="st">"PF-001"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The typed table remains the convenient current-state projection:</p>
+<span><span class="va">plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_plan.html">graft_plan</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">records</span>, <span class="va">provenance</span><span class="op">)</span></span></code></pre></div>
+<p>Planning is deterministic for the same contract, store snapshot,
+records, and provenance. It performs the work needed for an informed
+review:</p>
+<ul>
+<li>normalize values and validate the compiled contract shapes;</li>
+<li>resolve stable record identity;</li>
+<li>validate references across the complete candidate set;</li>
+<li>compare candidates with current accepted heads;</li>
+<li>classify each candidate as an insert, update, or match;</li>
+<li>collect validation issues with source-row coordinates; and</li>
+<li>bind the plan to the store, schema, expected heads, and a plan
+digest.</li>
+</ul>
+<p>No accepted record or batch metadata is written during this step.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_records.html">kg_records</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Initiative"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">preferred_name</span>, <span class="va">status</span>, <span class="va">portfolio_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 3</span></span></span>
-<span><span class="co">#&gt;   preferred_name  status             portfolio_id</span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Project Firefly prototype approved PF-001</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span></span>
+<span><span class="va">plan</span><span class="op">@</span><span class="va">changes</span></span>
+<span><span class="va">plan</span><span class="op">@</span><span class="va">issues</span></span></code></pre></div>
+<p>A reviewer should examine the proposed dispositions and changed
+fields, not only <code>plan@valid</code>. Valid means that the plan can
+be committed; it does not mean that the proposed knowledge is
+desirable.</p>
 </div>
 <div class="section level2">
-<h2 id="inspect-batches-and-changes">Inspect batches and changes<a class="anchor" aria-label="anchor" href="#inspect-batches-and-changes"></a>
+<h2 id="commit-with-optimistic-preconditions">Commit with optimistic preconditions<a class="anchor" aria-label="anchor" href="#commit-with-optimistic-preconditions"></a>
 </h2>
-<p><code><a href="../reference/kg_batches.html">kg_batches()</a></code> returns committed workflow batches in
-newest-first commit order. Its filters and result limits make it
-suitable for routine status views rather than an unbounded audit-table
-dump.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_batches.html">kg_batches</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"commit_order"</span>, <span class="st">"producer"</span>, <span class="st">"source_run_id"</span>, <span class="st">"status"</span><span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt;   commit_order         producer   source_run_id    status</span></span>
-<span><span class="co">#&gt; 1            2 portfolio-review daily-brief-002 committed</span></span>
-<span><span class="co">#&gt; 2            1 portfolio-review daily-brief-001 committed</span></span></code></pre></div>
-<p><code><a href="../reference/kg_changes.html">kg_changes()</a></code> returns accepted inserts and updates. Each
-row identifies the batch and schema build that governed the revision.
-Parsed records and changed field names are exposed as list-columns; raw
-ledger payloads and content digests are not.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_changes.html">kg_changes</a></span><span class="op">(</span><span class="va">store</span>, record_id <span class="op">=</span> <span class="va">initiative_id</span><span class="op">)</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"commit_order"</span>,</span>
-<span>    <span class="st">"revision_number"</span>,</span>
-<span>    <span class="st">"operation"</span>,</span>
-<span>    <span class="st">"changed_fields"</span>,</span>
-<span>    <span class="st">"batch_id"</span>,</span>
-<span>    <span class="st">"schema_build_digest"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt;   commit_order revision_number operation changed_fields</span></span>
-<span><span class="co">#&gt; 1            2               2    update         status</span></span>
-<span><span class="co">#&gt; 2            1               1    insert   id, labe....</span></span>
-<span><span class="co">#&gt;                           batch_id</span></span>
-<span><span class="co">#&gt; 1 graft:01KZ2GHX2NQP8ZR98JRJEWGEYP</span></span>
-<span><span class="co">#&gt; 2 graft:01KZ2GHWP9R1Z70V06BN89156B</span></span>
-<span><span class="co">#&gt;                                                       schema_build_digest</span></span>
-<span><span class="co">#&gt; 1 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span>
-<span><span class="co">#&gt; 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span></code></pre></div>
-<p><code><a href="../reference/kg_history.html">kg_history()</a></code> narrows the same ledger to one stable
-record:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_history.html">kg_history</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">initiative_id</span><span class="op">)</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"revision_number"</span>, <span class="st">"operation"</span>, <span class="st">"changed_fields"</span>, <span class="st">"recorded_at"</span><span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt;   revision_number operation changed_fields         recorded_at</span></span>
-<span><span class="co">#&gt; 1               2    update         status 2026-08-03 00:32:06</span></span>
-<span><span class="co">#&gt; 2               1    insert   id, labe.... 2026-08-03 00:32:05</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">plan</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>Immediately before mutation, graft rechecks the plan digest, store
+identity, store format, active schema digest, idempotency state, write
+capability, and expected record heads. If another accepted change made
+the plan stale, the commit fails and the caller must plan again against
+the new state.</p>
+<p>The accepted changes, provenance, identity decisions, and
+observations commit together. A failure before transaction completion
+leaves no partially accepted change.</p>
+<p>Reusing a committed producer and idempotency key returns the original
+result without adding new accepted metadata. This makes retry behavior
+explicit at the workflow boundary.</p>
 </div>
 <div class="section level2">
-<h2 id="recover-state-at-a-commit-boundary">Recover state at a commit boundary<a class="anchor" aria-label="anchor" href="#recover-state-at-a-commit-boundary"></a>
+<h2 id="use-the-convenience-path-deliberately">Use the convenience path deliberately<a class="anchor" aria-label="anchor" href="#use-the-convenience-path-deliberately"></a>
 </h2>
-<p>Pass a committed batch ID to recover what Graft had accepted when
-that batch completed. A scalar <code>POSIXt</code> value is also
-supported; Graft first resolves it to the latest committed batch order,
-so equal or imprecise timestamps do not reorder transactions.</p>
+<p><code><a href="../reference/graft_ingest.html">graft_ingest()</a></code> plans and immediately commits when the
+plan is valid:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">records</span>, <span class="va">provenance</span><span class="op">)</span></span></code></pre></div>
+<p>It is appropriate when the producing process is itself authorized to
+accept the records and no person or host policy needs to inspect the
+change set. Use <code><a href="../reference/graft_plan.html">graft_plan()</a></code> and
+<code><a href="../reference/graft_commit.html">graft_commit()</a></code> separately whenever review matters.</p>
+</div>
+<div class="section level2">
+<h2 id="recover-current-and-historical-state">Recover current and historical state<a class="anchor" aria-label="anchor" href="#recover-current-and-historical-state"></a>
+</h2>
+<p>Current retrieval reads the head of the accepted revision chain:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:clark-kent"</span><span class="op">)</span></span></code></pre></div>
+<p>Suppose a later source run changes the record:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">at_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_history.html">kg_history</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">update</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  Person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>    full_name <span class="op">=</span> <span class="st">"Clark Kent"</span>,</span>
+<span>    age <span class="op">=</span> <span class="fl">35L</span>,</span>
+<span>    employed_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"org:daily-planet"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">update_plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_plan.html">graft_plan</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
-<span>  <span class="va">initiative_id</span>,</span>
-<span>  as_of <span class="op">=</span> <span class="va">baseline</span><span class="op">$</span><span class="va">batch_id</span>,</span>
+<span>  <span class="va">update</span>,</span>
+<span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
+<span>    producer <span class="op">=</span> <span class="st">"directory-import"</span>,</span>
+<span>    run_id <span class="op">=</span> <span class="st">"run-43"</span>,</span>
+<span>    idempotency_key <span class="op">=</span> <span class="st">"directory-2026-08-04"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">update_plan</span><span class="op">@</span><span class="va">changes</span></span>
+<span><span class="fu"><a href="../reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">update_plan</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/graft_history.html">graft_history()</a></code> returns immutable revisions in
+deterministic newest-first order. Each row carries the accepted record
+and the provenance needed to explain the change.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>  limit <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">history</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"batch_id"</span>, <span class="st">"changed_fields"</span>, <span class="st">"record"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p>An accepted batch ID or <code>POSIXt</code> value can select the
+state at a commit boundary:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">earlier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>  as_of <span class="op">=</span> <span class="va">history</span><span class="op">$</span><span class="va">batch_id</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>,</span>
 <span>  limit <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">at_baseline</span><span class="op">$</span><span class="va">record</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"preferred_name"</span>, <span class="st">"status"</span>, <span class="st">"portfolio_id"</span><span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt; $preferred_name</span></span>
-<span><span class="co">#&gt; [1] "Project Firefly"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $status</span></span>
-<span><span class="co">#&gt; [1] "concept review"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $portfolio_id</span></span>
-<span><span class="co">#&gt; [1] "PF-001"</span></span></code></pre></div>
-<p>This is <strong>system time</strong>: when Graft committed a version.
-It is different from <strong>domain-valid time</strong>: when a claim is
-true in the world. Statement schemas can model domain validity with
-<code>valid_from</code> and <code>valid_to</code>; those remain
-user-supplied facts. Revision history should not be used as a substitute
-for them.</p>
+<span><span class="va">earlier</span><span class="op">$</span><span class="va">record</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<p>Commit order, not a record’s own timestamp, defines historical
+boundaries.</p>
 </div>
 <div class="section level2">
-<h2 id="plan-and-review-an-additive-migration">Plan and review an additive migration<a class="anchor" aria-label="anchor" href="#plan-and-review-an-additive-migration"></a>
+<h2 id="verify-derived-state">Verify derived state<a class="anchor" aria-label="anchor" href="#verify-derived-state"></a>
 </h2>
-<p>Version 2 of the example contract adds an optional
-<code>decision_note</code> field. Loading it does not change the
-store.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">manifest_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
-<span>  <span class="st">"extdata"</span>,</span>
-<span>  <span class="st">"change-control-v2.graft.json"</span>,</span>
-<span>  package <span class="op">=</span> <span class="st">"graft"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">schema_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_schema.html">kg_schema</a></span><span class="op">(</span><span class="va">manifest_v2</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/kg_schema_diff.html">kg_schema_diff</a></span><span class="op">(</span><span class="va">schema_v1</span>, <span class="va">schema_v2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;kg_schema_diff&gt; additive</span></span>
-<span><span class="co">#&gt;   structural: changed</span></span>
-<span><span class="co">#&gt;   old: sha256:1007cd8b6f043ed8072f0ea172ee0278866b874c6d9c10e3abaabbcd02c8e17a</span></span>
-<span><span class="co">#&gt;   new: sha256:152894ca9006570a7f545daa715fa91122edd789c5967212c8c3b55ed0ac6710</span></span>
-<span><span class="co">#&gt;   classes: +0 -0 ~1</span></span>
-<span><span class="co">#&gt;   slots:   1 change(s)</span></span>
-<span><span class="co">#&gt;   enums: +0 -0 ~0</span></span>
-<span><span class="co">#&gt;   tables: +0 -0 ~1</span></span>
-<span><span class="co">#&gt;   relations: +0 -0 ~0</span></span></code></pre></div>
-<p>The <code>additive</code> classification means this difference is
-supported by the current migration path.</p>
-<p>Planning is also read-only. The result is deterministic and bound to
-this store’s identity, format version, and active schema build. Review
-the classification, every classified change, and the declarative
-operations before approval.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_plan_migration.html">kg_plan_migration</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">schema_v2</span><span class="op">)</span></span>
-<span><span class="va">plan</span></span>
-<span><span class="co">#&gt; &lt;kg_migration_plan&gt; additive graft-migration-6c6afd8784d36659312e5e5369c2875c416e36b821e5d291d9b4535948be4356</span></span>
-<span><span class="co">#&gt;   from:       sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span>
-<span><span class="co">#&gt;   to:         sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124</span></span>
-<span><span class="co">#&gt;   changes:    2</span></span>
-<span><span class="co">#&gt;   rules:      nullable_column_added, optional_slot_added</span></span>
-<span><span class="co">#&gt;   operations: 1</span></span>
-<span><span class="co">#&gt;   digest:     sha256:6c6afd8784d36659312e5e5369c2875c416e36b821e5d291d9b4535948be4356</span></span>
-<span></span>
-<span><span class="va">plan</span><span class="op">$</span><span class="va">changes</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"path"</span>, <span class="st">"object_type"</span>, <span class="st">"classification"</span>, <span class="st">"rule"</span><span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt;                                       path  object_type classification</span></span>
-<span><span class="co">#&gt; 1  /classes/Initiative/slots/decision_note         slot       additive</span></span>
-<span><span class="co">#&gt; 2 /tables/Initiative/columns/decision_note table_column       additive</span></span>
-<span><span class="co">#&gt;                    rule</span></span>
-<span><span class="co">#&gt; 1   optional_slot_added</span></span>
-<span><span class="co">#&gt; 2 nullable_column_added</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">plan</span><span class="op">$</span><span class="va">operations</span>, <span class="kw">function</span><span class="op">(</span><span class="va">operation</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    kind <span class="op">=</span> <span class="va">operation</span><span class="op">$</span><span class="va">kind</span>,</span>
-<span>    table <span class="op">=</span> <span class="va">operation</span><span class="op">$</span><span class="va">table</span>,</span>
-<span>    column <span class="op">=</span> <span class="va">operation</span><span class="op">$</span><span class="va">column</span><span class="op">$</span><span class="va">name</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [[1]]</span></span>
-<span><span class="co">#&gt; [[1]]$kind</span></span>
-<span><span class="co">#&gt; [1] "add_column"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[1]]$table</span></span>
-<span><span class="co">#&gt; [1] "initiative"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [[1]]$column</span></span>
-<span><span class="co">#&gt; [1] "decision_note"</span></span></code></pre></div>
-<p>The current migration engine accepts only compatible and supported
-additive changes. Required fields, removals, type changes, normalization
-changes, custom transformations, and other risky changes are reported
-but refused. There is no force flag.</p>
-<p>Once the plan has been reviewed, apply that exact object:</p>
+<p>Advanced integrity inspection is available as a bounded query:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_apply_migration.html">kg_apply_migration</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">plan</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/kg_store_info.html">kg_store_info</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"store_format_version"</span>,</span>
-<span>    <span class="st">"required_store_format_version"</span>,</span>
-<span>    <span class="st">"active_build_digest"</span>,</span>
-<span>    <span class="st">"history_complete"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt; $store_format_version</span></span>
-<span><span class="co">#&gt; [1] "2.0.0"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $required_store_format_version</span></span>
-<span><span class="co">#&gt; [1] "2.0.0"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $active_build_digest</span></span>
-<span><span class="co">#&gt; [1] "sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $history_complete</span></span>
-<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>Application revalidates the plan and its store preconditions,
-performs the DDL, registers and activates the exact target manifest,
-rebuilds generated graph views, and records the migration in one
-transaction.</p>
-</div>
-<div class="section level2">
-<h2 id="continue-writing-under-the-new-contract">Continue writing under the new contract<a class="anchor" aria-label="anchor" href="#continue-writing-under-the-new-contract"></a>
-</h2>
-<p>The same stable initiative can now use the added field. Unchanged
-fields do not create false differences merely because the governing
-schema changed.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">with_decision</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_write.html">kg_write</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_query.html">graft_query</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
-<span>  <span class="fu"><a href="../reference/kg_batch.html">kg_batch</a></span><span class="op">(</span></span>
-<span>    producer <span class="op">=</span> <span class="st">"portfolio-review"</span>,</span>
-<span>    source_run_id <span class="op">=</span> <span class="st">"daily-brief-003"</span>,</span>
-<span>    idempotency_key <span class="op">=</span> <span class="st">"firefly-v3"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  class <span class="op">=</span> <span class="st">"Initiative"</span>,</span>
-<span>  records <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    preferred_name <span class="op">=</span> <span class="st">"Project Firefly"</span>,</span>
-<span>    status <span class="op">=</span> <span class="st">"prototype approved"</span>,</span>
-<span>    portfolio_id <span class="op">=</span> <span class="st">"PF-001"</span>,</span>
-<span>    decision_note <span class="op">=</span> <span class="st">"Advance with a reversible prototype."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/kg_records.html">kg_records</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Initiative"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">preferred_name</span>, <span class="va">status</span>, <span class="va">decision_note</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 3</span></span></span>
-<span><span class="co">#&gt;   preferred_name  status             decision_note                       </span></span>
-<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                               </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Project Firefly prototype approved Advance with a reversible prototype.</span></span></code></pre></div>
-<p>History spans both schema builds and applies each historical
-manifest’s sensitivity rules when hydrating records:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/kg_changes.html">kg_changes</a></span><span class="op">(</span><span class="va">store</span>, record_id <span class="op">=</span> <span class="va">initiative_id</span><span class="op">)</span><span class="op">[</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"revision_number"</span>,</span>
-<span>    <span class="st">"changed_fields"</span>,</span>
-<span>    <span class="st">"schema_build_digest"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">]</span></span>
-<span><span class="co">#&gt;   revision_number changed_fields</span></span>
-<span><span class="co">#&gt; 1               3   decision....</span></span>
-<span><span class="co">#&gt; 2               2         status</span></span>
-<span><span class="co">#&gt; 3               1   id, labe....</span></span>
-<span><span class="co">#&gt;                                                       schema_build_digest</span></span>
-<span><span class="co">#&gt; 1 sha256:3c830cc687617df734f95cfba51a51ff5b66b9b2369ace6ddfeb7ecb72563124</span></span>
-<span><span class="co">#&gt; 2 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span>
-<span><span class="co">#&gt; 3 sha256:609ef168a26e8a9f1c1c2b52f97090d3beed23be57e5348b2b226038eda9673a</span></span></code></pre></div>
+<span>  operation <span class="op">=</span> <span class="st">"integrity"</span>,</span>
+<span>  request <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>projections <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  limit <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The check verifies the authoritative revision chain and, when
+requested, the freshness of derived projections. A projection can be
+repaired from accepted revisions; it never becomes a second source of
+record content.</p>
 </div>
 <div class="section level2">
-<h2 id="check-integrity">Check integrity<a class="anchor" aria-label="anchor" href="#check-integrity"></a>
+<h2 id="evolve-the-contract-explicitly">Evolve the contract explicitly<a class="anchor" aria-label="anchor" href="#evolve-the-contract-explicitly"></a>
 </h2>
-<p><code><a href="../reference/kg_check_store.html">kg_check_store()</a></code> validates relationships among batches,
-revisions, heads, schema versions, and current typed tables. Deep
-checking also re-digests every revision payload and compares current
-records with their revision heads.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">check</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/kg_check_store.html">kg_check_store</a></span><span class="op">(</span><span class="va">store</span>, deep <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">check</span></span>
-<span><span class="co">#&gt; &lt;kg_store_check&gt; valid (deep)</span></span>
-<span><span class="co">#&gt;   issues:    0</span></span>
-<span><span class="co">#&gt;   truncated: FALSE</span></span>
-<span><span class="va">check</span><span class="op">$</span><span class="va">issues</span></span>
-<span><span class="co">#&gt; [1] issue       record_id   class       revision_id batch_id    detail     </span></span>
-<span><span class="co">#&gt; &lt;0 rows&gt; (or 0-length row.names)</span></span></code></pre></div>
-<p>Direct writes to client tables are unsupported because they bypass
-the ledger. A deep check reports that kind of current-state drift.</p>
-</div>
-<div class="section level2">
-<h2 id="store-format-2-is-a-clean-cutover">Store format 2 is a clean cutover<a class="anchor" aria-label="anchor" href="#store-format-2-is-a-clean-cutover"></a>
-</h2>
-<p>Knowledge history begins with store format 2. Stores created by
-earlier development versions are rejected with a classed format error;
-Graft does not silently upgrade them or run in a legacy mode. During
-this pre-release phase, recreate an older development store from its
-source records under the current contract.</p>
-<p>This boundary keeps every format 2 store honest about the same
-guarantee: its accepted current state has complete revision history from
-initialization onward.</p>
+<p>A domain contract can evolve, but contract evolution is not an
+in-place rewrite of accepted payloads. A new contract version must be
+registered, current revisions must be interpretable under it, and
+derived projections must be rebuilt. Historical revisions retain the
+exact schema digest under which they were accepted.</p>
+<p>During v0.1 development, a breaking contract change means rebuilding
+a store from source records under the new contract. graft does not hide
+that change behind a force flag or an automatic transformation.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

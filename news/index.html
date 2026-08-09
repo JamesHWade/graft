@@ -16,11 +16,16 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/knowledge-change-control.html">Change control</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/market-intelligence.html">Market radar</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/coworker.html">Coworker</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/examples.html">Examples</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
+    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
+  </ul></li>
+<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -46,72 +51,27 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="graft-0009000">graft 0.0.0.9000<a class="anchor" aria-label="anchor" href="#graft-0009000"></a></h2>
-<ul><li>A governed Materials Market Radar example combines business, competitor, and downstream-market signals with dsprrr analysis, typed Tempest briefings and approval, configurable models and tools, a focused daily-brief and decision-room UI, and accepted-only Graft knowledge that visibly changes a later scan.</li>
-<li>A local Graft Coworker example combines a shinychat tool-using assistant, dsprrr planning, typed Tempest work products, an approval inbox, local file delivery, and approved-only Graft memory. Its Tempest-native model configuration and extensible ellmer tool registry include an optional read-only <code>btw</code> tool belt.</li>
-<li>A provider-free continuous-intelligence example, staged operator walkthrough, and interactive Shiny Briefing Room demonstrate scheduled Tempest briefings, host-bound promotion and approval, evidence-checked decisions, and governed Graft ingestion.</li>
-<li>Store format 2 adds complete system-time revision history and rejects stores created by earlier development versions instead of silently upgrading or operating in a legacy mode.</li>
+<ul><li>Graft v0.1 replaces the pre-production <code>kg_*</code> API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 15-function revision-first package boundary.</li>
+<li>Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.</li>
+<li>Store format 3 makes immutable record revisions authoritative and treats current records, multivalued relations, graph edges, and search state as verified rebuildable projections.</li>
 <li>
-<code><a href="../reference/kg_apply_migration.html">kg_apply_migration()</a></code> atomically applies an unmodified reviewed migration plan after revalidating its digest and store preconditions; the first migration version accepts only compatible and supported additive changes.</li>
+<code><a href="../reference/graft_commit.html">graft_commit()</a></code> and <code><a href="../reference/graft_ingest.html">graft_ingest()</a></code> atomically accept immutable reviewed plans through set-based DuckDB operations and return ordinary summaries with insert, update, match, observation, replay, and timing details.</li>
 <li>
-<code><a href="../reference/kg_apply_okf_import.html">kg_apply_okf_import()</a></code> revalidates and commits an approved, tamper-evident OKF import plan through Graft’s ordinary atomic ingestion path, then synchronizes the managed working tree.</li>
+<code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_history.html">graft_history()</a></code>, and <code><a href="../reference/graft_query.html">graft_query()</a></code> provide bounded deterministic retrieval directly from the authoritative revision ledger, including exact historical types, evidence, graph traversal, and integrity diagnosis.</li>
 <li>
-<code><a href="../reference/kg_batch.html">kg_batch()</a></code> creates stable producer batches, and <code><a href="../reference/kg_ingest.html">kg_ingest()</a></code> atomically reconciles, validates, and upserts multiple record classes with identifier, origin, observation, and replay lineage.</li>
+<code><a href="../reference/graft_open.html">graft_open()</a></code> and <code><a href="../reference/graft_close.html">graft_close()</a></code> manage the only DuckDB backend through an invariant-checked S7 <code>GraftStore</code>, including ownership-aware connection cleanup and read-only reopen behavior.</li>
 <li>
-<code><a href="../reference/kg_batches.html">kg_batches()</a></code> and <code><a href="../reference/kg_changes.html">kg_changes()</a></code> provide bounded, newest-first provenance and revision views with historical schema-aware sensitivity filtering.</li>
+<code><a href="../reference/graft_plan.html">graft_plan()</a></code> and <code><a href="../reference/graft_review.html">graft_review()</a></code> produce the same tamper-evident S7 <code>GraftCommitPlan</code> for ordinary records and edited OKF knowledge without persistent writes.</li>
 <li>
-<code><a href="../reference/kg_check_store.html">kg_check_store()</a></code> reports bounded revision-ledger and current-state integrity findings, with an optional deep payload and projection check.</li>
+<code><a href="../reference/graft_provenance.html">graft_provenance()</a></code> creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.</li>
 <li>
-<code><a href="../reference/kg_claims.html">kg_claims()</a></code>, <code><a href="../reference/kg_evidence.html">kg_evidence()</a></code>, and <code><a href="../reference/kg_competing_claims.html">kg_competing_claims()</a></code> retrieve bounded narrative and semantic assertions, stored citations, and non-adjudicated comparison sets while preserving qualifiers and ordinary attributes.</li>
+<code><a href="../reference/graft_schema.html">graft_schema()</a></code> loads compiled manifests or compiles LinkML and optional data-dict contracts into an invariant-checked S7 <code>GraftSchema</code>; the strict <code>graft-table-v1</code> adapter separates YAML source-spec and resolved JSON export-format versions, runs YAML preflight and CLI export from one byte snapshot, guards CLI provenance against executable replacement, publishes a digest-bound public manifest with examples, ranges, origins, and source locators redacted, rejects unsafe JSON numeric tokens, <code>number(id)</code>, and primary IDs that are also foreign keys, normalizes optional blank foreign keys, and enforces supported datetime forms, while trusted resolved JSON avoids a required CLI dependency.</li>
 <li>
-<code><a href="../reference/kg_compile_schema.html">kg_compile_schema()</a></code> compiles ordinary LinkML schemas into deterministic, portable graft manifests without requiring graft-specific imports or annotations; graft core roles remain available for richer claim, evidence, and graph behavior.</li>
+<code><a href="../reference/graft_schema.html">graft_schema()</a></code> now fails closed when LinkML custom types or unsupported schema, class, slot, enum, or permissible-value semantics would be discarded; resolved data-dict versions retain their upstream lexical contract, provider metadata is allowlisted, and <code>foreign_key</code> constraints must agree with resolved references.</li>
 <li>
-<code><a href="../reference/kg_connect_duckdb.html">kg_connect_duckdb()</a></code>, <code><a href="../reference/kg_init.html">kg_init()</a></code>, and <code><a href="../reference/kg_disconnect.html">kg_disconnect()</a></code> provide an ownership-aware DuckDB store lifecycle with manifest-driven initialization, structural schema protection, and a managed sibling OKF directory by default for file-backed stores.</li>
+<code><a href="../reference/graft_status.html">graft_status()</a></code> and <code><a href="../reference/graft_sync.html">graft_sync()</a></code> inspect and explicitly synchronize the deterministic OKF working tree without making it an independent source of accepted knowledge.</li>
 <li>
-<code><a href="../reference/kg_context.html">kg_context()</a></code> generates a token-bounded, sensitive-field-safe description of the active manifest and DuckDB access constraints.</li>
-<li>
-<code><a href="../reference/kg_edges.html">kg_edges()</a></code>, <code><a href="../reference/kg_nodes.html">kg_nodes()</a></code>, <code><a href="../reference/kg_neighbors.html">kg_neighbors()</a></code>, <code><a href="../reference/kg_traverse.html">kg_traverse()</a></code>, and <code><a href="../reference/kg_subgraph.html">kg_subgraph()</a></code> provide lazy manifest-driven graph projections plus deterministic, explicitly collected one-hop and two-hop retrieval with hard node and edge caps.</li>
-<li>
-<code><a href="../reference/kg_export_okf.html">kg_export_okf()</a></code> writes a deterministic, source-linked Open Knowledge Format v0.2 projection of current or historical accepted revisions while preserving Graft schema, batch, revision, and record identity.</li>
-<li>
-<code><a href="../reference/kg_find.html">kg_find()</a></code>, <code><a href="../reference/kg_lookup.html">kg_lookup()</a></code>, and <code><a href="../reference/kg_identifiers.html">kg_identifiers()</a></code> provide bounded manifest-declared search and exact identifier resolution with registry provenance.</li>
-<li>
-<code><a href="../reference/kg_get.html">kg_get()</a></code> hydrates exactly one public record with bounded related identifiers, claims, and evidence.</li>
-<li>
-<code><a href="../reference/kg_history.html">kg_history()</a></code> retrieves bounded revisions for one record and recovers its accepted state at a committed batch or time boundary.</li>
-<li>
-<code><a href="../reference/kg_init.html">kg_init()</a></code> verifies structural-digest integrity and compiler-required physical type contracts before creating or changing store objects.</li>
-<li>
-<code><a href="../reference/kg_ingest_tempest_records.html">kg_ingest_tempest_records()</a></code> commits mapped Tempest domain records with run- and stage-stable idempotency keys, independently of Tempest deliverable persistence.</li>
-<li>
-<code><a href="../reference/kg_okf_context.html">kg_okf_context()</a></code> gives people and agents bounded progressive disclosure over current accepted OKF knowledge and refuses stale, modified, or incompatible bundles.</li>
-<li>
-<code><a href="../reference/kg_okf_status.html">kg_okf_status()</a></code> reports whether a managed OKF working tree is unconfigured, missing, current, stale, locally modified, or incompatible.</li>
-<li>
-<code><a href="../reference/kg_plan_migration.html">kg_plan_migration()</a></code> creates a deterministic, serializable migration plan bound to the store identity, format, active schema, and exact target manifest.</li>
-<li>
-<code><a href="../reference/kg_plan_okf_import.html">kg_plan_okf_import()</a></code> creates a read-only, schema-validated proposal plan bound to the exact store, accepted batch, schema, and edited OKF bundle.</li>
-<li>
-<code><a href="../reference/kg_records.html">kg_records()</a></code> returns lazy typed dbplyr tables for public concrete classes.</li>
-<li>
-<code><a href="../reference/kg_schema.html">kg_schema()</a></code>, <code><a href="../reference/kg_classes.html">kg_classes()</a></code>, <code><a href="../reference/kg_slots.html">kg_slots()</a></code>, <code><a href="../reference/kg_enums.html">kg_enums()</a></code>, and <code><a href="../reference/kg_schema_info.html">kg_schema_info()</a></code> load and inspect manifests without Python.</li>
-<li>
-<code><a href="../reference/kg_schema_diff.html">kg_schema_diff()</a></code> reports structural schema changes with deterministic per-change and overall compatibility classifications.</li>
-<li>
-<code><a href="../reference/kg_select.html">kg_select()</a></code> provides a collected, hard-capped structured query surface with manifest validation and no arbitrary SQL.</li>
-<li>
-<code><a href="../reference/kg_store_info.html">kg_store_info()</a></code> reports the store format, exact active schema build, and revision-history coverage in addition to connection and schema details; <code><a href="../reference/kg_capabilities.html">kg_capabilities()</a></code> reports static backend capabilities.</li>
-<li>
-<code><a href="../reference/kg_sync_okf.html">kg_sync_okf()</a></code> atomically materializes current accepted state into the store’s managed OKF working tree without replacing unrelated directories.</li>
-<li>
-<code><a href="../reference/kg_tools.html">kg_tools()</a></code> creates seven read-only ellmer tools over bounded Graft retrieval APIs, including progressive access to current accepted OKF knowledge, with JSON-compatible structured results and no arbitrary SQL surface.</li>
-<li>
-<code><a href="../reference/kg_unresolved.html">kg_unresolved()</a></code> returns bounded unresolved mention records.</li>
-<li>
-<code><a href="../reference/kg_validate_data.html">kg_validate_data()</a></code> preflights the same staged identity, shape, and reference checks as ingestion without mutating the store.</li>
-<li>
-<code><a href="../reference/kg_write.html">kg_write()</a></code> provides a one-class convenience wrapper over <code><a href="../reference/kg_ingest.html">kg_ingest()</a></code>.</li>
-<li>
-<code><a href="../reference/tempest_artifact_store_graft.html">tempest_artifact_store_graft()</a></code> explicitly reports the upstream Tempest serialization contract required before durable typed-artifact persistence can be supported.</li>
+<code><a href="../reference/graft_tools.html">graft_tools()</a></code> creates four bounded read-only ellmer tools that delegate to the public retrieval and history operations.</li>
 </ul></div>
   </main></div>
 

@@ -1,348 +1,329 @@
 # graft
 
-A knowledge layer for R workflows
+Revision-first knowledge for R workflows
 
-## Keep workflow results consistent, connected, and traceable.
+## Review what changes. Preserve why. Retrieve what was accepted.
 
-Define what your domain records mean once. graft applies that contract
-whenever R workflows write or retrieve data—reconciling identities
-across runs, validating relationships, preserving claims with exact
-evidence, and exposing predictable queries to analysts and AI tools.
+graft turns candidate records into governed knowledge. A LinkML or
+data-dict source compiles into the contract that defines what is valid,
+a read-only plan shows exactly what would change, and one atomic commit
+path preserves every accepted revision with its provenance.
 
-[Get
-started](https://jameshwade.github.io/graft/articles/getting-started.md)
-[View source](https://github.com/JamesHWade/graft)
+[Run the 10-minute
+workflow](https://jameshwade.github.io/graft/articles/getting-started.md)
+[See the
+architecture](https://jameshwade.github.io/graft/articles/architecture.md)
 
-Stable identity Schema-checked ingestion Claims and evidence Bounded
-retrieval
+Read-only planning Atomic acceptance Immutable history Bounded retrieval
 
-## When tidy tables are not enough
+## One path from proposal to knowledge
 
-An R workflow can produce tidy tables and still leave hard questions
-scattered across scripts. Is this the same material as last run? Which
-source supports this claim? Is a relationship stated or inferred? What
-may an automated tool retrieve? graft makes those decisions explicit,
-versioned, and enforceable.
+The package has one visible acceptance boundary. Everything before
+commit is a proposal; everything after commit is derived from the
+accepted revision ledger.
 
-01
+01 **Contract** Define identity, fields, and relationships with LinkML
+or data-dict.
 
-### Recognize the same thing
+02 **Provenance** Name the producer event and its replay boundary.
 
-Use declared identifiers and workflow-specific keys to match new results
-to existing records.
+03 **Plan** Normalize and validate without writing accepted state.
 
-02
+04 **Review** Inspect inserts, updates, matches, and all collected
+issues.
 
-### Keep claims traceable
+05 **Commit** Recheck preconditions and accept the complete plan
+atomically.
 
-Preserve what a source said, where it said it, and whether the stored
-evidence supports or challenges the claim.
+06 **Retrieve** Read current records, history, and bounded projections.
 
-03
+## One authoritative ledger
 
-### Control retrieval
+A compiled domain contract supplies meaning. DuckDB stores accepted
+revisions and provenance. Current records, search, contract-declared
+graph relationships, and the readable OKF working tree are rebuildable
+projections—never alternate write paths.
 
-Give R code schema-aware query helpers and AI tools structured access
-without arbitrary SQL or invented relationships.
+This makes the important question easy to answer: *what, exactly, was
+accepted?* The revision ledger is the answer. A local OKF edit becomes
+an ordinary proposal through
+[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+and still passes through
+[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md).
 
-## What graft does
+[Read the architecture and guarantees
+→](https://jameshwade.github.io/graft/articles/architecture.md)
 
-01 **Define the contract** Describe records, identifiers, validation,
-and relationships.
+![A LinkML or data-dict contract compiles into Graft. OKF exchanges
+readable proposals and projections with Graft. Graft commits to and
+retrieves accepted revisions from
+DuckDB.](reference/figures/okf-linkml-duckdb-system.svg)
 
-02 **Write workflow results** Ingest related data frames as one producer
-batch.
+Contract, authority, and readable projection stay distinct.
 
-03 **Reconcile and validate** Reuse identities, check references, and
-record lineage.
+## Guarantees you can design around
 
-04 **Retrieve with context** Inspect records together with claims,
-evidence, and relationships.
+P
 
-graft uses an ordinary LinkML schema as the source contract and compiles
-it into a portable `.graft.json` manifest. At runtime, that manifest
-drives validation, identity, storage, and retrieval. The current backend
-is embedded DuckDB, so stores are local and remain available through
-familiar DBI and dbplyr workflows.
+### Planning is read-only
 
-## From a data frame to a durable record
+Validation and identity resolution produce an inspectable plan without
+accepting records or provenance.
+
+C
+
+### Commit is defensive
+
+Changed contracts, stale heads, altered plans, and incomplete
+transactions fail before a partial acceptance.
+
+H
+
+### History is authoritative
+
+Immutable revisions retain the accepted record, schema digest, batch,
+and producer provenance.
+
+R
+
+### Retrieval is bounded
+
+Fixed operations enforce limits and contract policy without exposing raw
+SQL or mutation to agents.
+
+## A complete change in R
 
 ``` r
 
 library(graft)
 
-manifest <- system.file(
-  "extdata",
-  "materials.graft.json",
-  package = "graft"
-)
-schema <- kg_schema(manifest)
-store <- kg_connect_duckdb(schema, ":memory:")
-kg_init(store)
+schema <- graft_schema(system.file(
+  "extdata", "personinfo.graft.json", package = "graft"
+))
+store <- graft_open(schema, ":memory:", okf = "disabled")
 
-kg_ingest(
-  store,
-  kg_batch(
-    producer = "materials-pipeline",
-    source_run_id = "run-42",
-    idempotency_key = "lldpe-v1"
-  ),
-  list(Material = data.frame(
-    preferred_name = "Linear low-density polyethylene",
-    cas_number = "9002-88-4"
-  ))
+records <- list(Person = data.frame(
+  id = "person:lois-lane",
+  full_name = "Lois Lane"
+))
+origin <- graft_provenance(
+  producer = "directory-import",
+  idempotency_key = "directory-2026-08-04"
 )
 
-material_id <- kg_lookup(store, "cas", "CAS: 9002-88-4")$record_id[[1]]
-kg_get(store, material_id)
+plan <- graft_plan(store, records, origin)
+plan@changes
+plan@issues
+
+if (plan@valid) graft_commit(store, plan)
+
+graft_get(store, "person:lois-lane")
+graft_history(store, "person:lois-lane")
+graft_close(store)
 ```
 
-Reuse the same producer and idempotency key, and graft recognizes the
-write as a replay rather than a new observation. The getting-started
-guide continues from this foundation by adding a source-backed claim and
-retrieving the exact evidence stored with it.
+The complete guide explains each decision, adds a connected record, and
+shows search, advanced retrieval, history, and the readable OKF surface.
+Loading the compiled example contract and operating the store are
+R-only. Source contracts can be compiled from LinkML or from data-dict
+YAML or trusted resolved `export-spec` JSON. A source provider defines
+meaning; it never becomes the accepted ledger or another write path.
 
-Python and `linkml-runtime` are needed only to compile a schema. After
-compilation, graft loads committed manifests and operates stores
-entirely in R.
+Use
+[LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+for inheritance and rich graph semantics. Use
+[data-dict](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
+for a strict, table-first contract with descriptions, glossary metadata,
+enums, and scalar foreign-key validation. Its CLI-assisted YAML path
+runs `export-spec`, not upstream metadata or data validation, and scalar
+foreign keys are not graph traversal edges. YAML source-spec and
+resolved JSON export-format versions are tracked separately, and Graft
+re-hashes the selected CLI around export and version discovery. YAML
+bytes are captured once so preflight, CLI export, and the source/build
+fingerprints share one immutable snapshot.
 
-## Query interfaces
+The data-dict manifest is public contract metadata. Column examples and
+ranges, dataset and table origins, and table source locators are
+removed, although their raw values still bind source and build digests.
+Those digests permit equality tests and offline guessing of low-entropy
+values; redaction is not a secrecy boundary. Other retained fields can
+expose observed or sensitive values embedded manually. The strict
+profile rejects `number(id)` in scalar or list form, fails closed on
+unsafe JSON numeric tokens before lossy conversion, and enforces its
+supported datetime forms. The [data-dict
+guide](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
+documents the exact boundary.
 
-### Analysts and applications
+## Choose your path
 
-[`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-returns a lazy dbplyr table.
-[`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md),
-[`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md),
-and the graph helpers return collected results with explicit limits and
-schema context.
+[Use the package **Run the first accepted change** Start with a
+complete, provider-free
+workflow.](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Design a system **Understand authority and projections** See storage
+boundaries, S7 choices, and
+guarantees.](https://jameshwade.github.io/graft/articles/architecture.md)
+[Govern changes **Review before acceptance** Work with plans, optimistic
+preconditions, and
+history.](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
+[Build an integration **Use bounded retrieval** Choose current, search,
+query, history, or agent
+tools.](https://jameshwade.github.io/graft/articles/retrieval.md)
 
-### AI tools
+## Small on purpose
 
-[`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-creates six read-only tools for one store. The tools accept structured
-arguments rather than SQL and report truncation state and the active
-schema digest.
+The v0.1 API is 15 functions arranged around the lifecycle, not the
+storage engine. Rich objects protect durable invariants; records and
+results stay as ordinary data frames and lists.
 
-## Next steps
+Define &
+open[`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+[`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+[`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
 
-The getting-started guide builds a small materials store, then adds
-records, a claim, a source, and evidence.
+Propose &
+accept[`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
+[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+[`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
 
-[Read getting
+Retrieve &
+inspect[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
+[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+
+Synchronize &
+integrate[`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
+[`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
+[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+
+Start with the boundary that matters
+
+## Plan the change before you accept it.
+
+Build one local store, inspect one plan, and recover the exact accepted
+history.
+
+[Get
 started](https://jameshwade.github.io/graft/articles/getting-started.md)
-[See examples](https://jameshwade.github.io/graft/articles/examples.md)
-[Browse
+[Browse the 15
 functions](https://jameshwade.github.io/graft/reference/index.md)
 
 # Package index
 
-## Schema
+## Define and open
 
-Compile and inspect LinkML schemas and their generated manifests.
+Load the domain contract and manage the store that accepts knowledge
+under it.
 
-- [`kg_compile_schema()`](https://jameshwade.github.io/graft/reference/kg_compile_schema.md)
-  : Compile a LinkML schema into a graft manifest
-- [`kg_schema()`](https://jameshwade.github.io/graft/reference/kg_schema.md)
-  : Load a compiled graft schema manifest
-- [`kg_schema_diff()`](https://jameshwade.github.io/graft/reference/kg_schema_diff.md)
-  : Compare two compiled graft schemas
-- [`kg_classes()`](https://jameshwade.github.io/graft/reference/kg_classes.md)
-  : List concrete classes in a graft schema
-- [`kg_slots()`](https://jameshwade.github.io/graft/reference/kg_slots.md)
-  : List slots in a graft schema
-- [`kg_enums()`](https://jameshwade.github.io/graft/reference/kg_enums.md)
-  : List enum values in a graft schema
-- [`kg_schema_info()`](https://jameshwade.github.io/graft/reference/kg_schema_info.md)
-  : Summarize a graft schema
+- [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
+  : Load or compile a Graft schema
+- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+  : Open and initialize a Graft store
+- [`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
+  : Close a Graft store
 
-## Store lifecycle
+## Propose and accept
 
-Open, initialize, inspect, and close a DuckDB store.
+Describe a candidate’s origin, plan the change without writing, and
+accept it through one atomic commit path.
 
-- [`kg_connect_duckdb()`](https://jameshwade.github.io/graft/reference/kg_connect_duckdb.md)
-  : Connect to a DuckDB knowledge store
-- [`kg_init()`](https://jameshwade.github.io/graft/reference/kg_init.md)
-  : Initialize or verify a graft store
-- [`kg_disconnect()`](https://jameshwade.github.io/graft/reference/kg_disconnect.md)
-  : Disconnect a graft store
-- [`kg_store_info()`](https://jameshwade.github.io/graft/reference/kg_store_info.md)
-  : Inspect a graft store
-- [`kg_capabilities()`](https://jameshwade.github.io/graft/reference/kg_capabilities.md)
-  : Report DuckDB store capabilities
+- [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
+  : Describe the provenance of a candidate knowledge change
+- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+  : Plan a candidate knowledge change without writing it
+- [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+  : Commit a reviewed knowledge-change plan
+- [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
+  : Plan and immediately commit candidate records
 
-## Ingestion and validation
+## Retrieve and inspect
 
-Validate and write records in batches with provenance and idempotency.
+Read current and historical accepted knowledge through bounded,
+contract-aware operations and projections.
 
-- [`kg_batch()`](https://jameshwade.github.io/graft/reference/kg_batch.md)
-  : Describe one atomic ingestion batch
-- [`kg_ingest()`](https://jameshwade.github.io/graft/reference/kg_ingest.md)
-  : Atomically ingest one or more record classes
-- [`kg_write()`](https://jameshwade.github.io/graft/reference/kg_write.md)
-  : Ingest one concrete record class
-- [`kg_validate_data()`](https://jameshwade.github.io/graft/reference/kg_validate_data.md)
-  : Validate records without writing them
+- [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
+  : Retrieve one current accepted record
+- [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
+  : Search current accepted records
+- [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+  : Run a bounded advanced retrieval operation
+- [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+  : Retrieve accepted record history
 
-## History and change control
+## Synchronize and integrate
 
-Inspect accepted revisions and apply explicitly reviewed additive schema
-migrations.
+Synchronize the readable working tree, review file edits as proposals,
+and expose accepted retrieval to agents.
 
-- [`kg_batches()`](https://jameshwade.github.io/graft/reference/kg_batches.md)
-  : List committed ingestion batches
-- [`kg_changes()`](https://jameshwade.github.io/graft/reference/kg_changes.md)
-  : List accepted record changes
-- [`kg_history()`](https://jameshwade.github.io/graft/reference/kg_history.md)
-  : Retrieve the accepted history of one record
-- [`kg_check_store()`](https://jameshwade.github.io/graft/reference/kg_check_store.md)
-  : Check revision-ledger and current-state integrity
-- [`kg_plan_migration()`](https://jameshwade.github.io/graft/reference/kg_plan_migration.md)
-  : Plan an additive schema migration
-- [`kg_apply_migration()`](https://jameshwade.github.io/graft/reference/kg_apply_migration.md)
-  : Apply a planned additive schema migration
-
-## Records and identity
-
-Read records, search declared text fields, and resolve external
-identifiers.
-
-- [`kg_records()`](https://jameshwade.github.io/graft/reference/kg_records.md)
-  : Read records from one concrete class
-- [`kg_find()`](https://jameshwade.github.io/graft/reference/kg_find.md)
-  : Search manifest-declared record text
-- [`kg_get()`](https://jameshwade.github.io/graft/reference/kg_get.md) :
-  Hydrate exactly one record
-- [`kg_lookup()`](https://jameshwade.github.io/graft/reference/kg_lookup.md)
-  : Look up an exact external identifier
-- [`kg_identifiers()`](https://jameshwade.github.io/graft/reference/kg_identifiers.md)
-  : List external identifiers for one record
-- [`kg_unresolved()`](https://jameshwade.github.io/graft/reference/kg_unresolved.md)
-  : List unresolved mentions
-
-## Claims and evidence
-
-Inspect claims and the stored sources and locations that support or
-challenge them.
-
-- [`kg_claims()`](https://jameshwade.github.io/graft/reference/kg_claims.md)
-  : Retrieve narrative and semantic claims about an entity
-- [`kg_evidence()`](https://jameshwade.github.io/graft/reference/kg_evidence.md)
-  : Retrieve evidence for one statement
-- [`kg_competing_claims()`](https://jameshwade.github.io/graft/reference/kg_competing_claims.md)
-  : Group candidate competing claims
-
-## Graph projections
-
-Inspect graph nodes and edges or traverse a limited neighborhood.
-
-- [`kg_nodes()`](https://jameshwade.github.io/graft/reference/kg_nodes.md)
-  : Access the graph node projection
-- [`kg_edges()`](https://jameshwade.github.io/graft/reference/kg_edges.md)
-  : Access a graph edge projection
-- [`kg_neighbors()`](https://jameshwade.github.io/graft/reference/kg_neighbors.md)
-  : Retrieve a bounded graph neighborhood
-- [`kg_traverse()`](https://jameshwade.github.io/graft/reference/kg_traverse.md)
-  : Traverse a bounded predicate path
-- [`kg_subgraph()`](https://jameshwade.github.io/graft/reference/kg_subgraph.md)
-  : Collect a bounded induced subgraph
-
-## Structured access
-
-Inspect the retrieval contract, run field-and-filter queries, and create
-ellmer tools.
-
-- [`kg_context()`](https://jameshwade.github.io/graft/reference/kg_context.md)
-  : Describe the active knowledge contract
-- [`kg_select()`](https://jameshwade.github.io/graft/reference/kg_select.md)
-  : Perform a bounded structured selection
-- [`kg_tools()`](https://jameshwade.github.io/graft/reference/kg_tools.md)
-  : Create bounded ellmer tools for a graft store
-
-## Open knowledge
-
-Synchronize, read, review, and exchange the managed human- and
-agent-readable OKF working tree without replacing the governing schema
-or ledger.
-
-- [`kg_sync_okf()`](https://jameshwade.github.io/graft/reference/kg_sync_okf.md)
-  : Synchronize the managed Open Knowledge Format working tree
-- [`kg_okf_status()`](https://jameshwade.github.io/graft/reference/kg_okf_status.md)
-  : Inspect the managed Open Knowledge Format working tree
-- [`kg_okf_context()`](https://jameshwade.github.io/graft/reference/kg_okf_context.md)
-  : Read accepted knowledge from the managed OKF working tree
-- [`kg_plan_okf_import()`](https://jameshwade.github.io/graft/reference/kg_plan_okf_import.md)
-  : Plan changes from an edited Open Knowledge Format working tree
-- [`kg_apply_okf_import()`](https://jameshwade.github.io/graft/reference/kg_apply_okf_import.md)
-  : Apply an approved Open Knowledge Format import plan
-- [`kg_export_okf()`](https://jameshwade.github.io/graft/reference/kg_export_okf.md)
-  : Export accepted Graft knowledge as an Open Knowledge Format bundle
-
-## Experimental integrations
-
-Package-specific adapters. Most graft users do not need these functions.
-
-- [`kg_ingest_tempest_records()`](https://jameshwade.github.io/graft/reference/kg_ingest_tempest_records.md)
-  : Ingest records mapped from one Tempest run
-- [`tempest_artifact_store_graft()`](https://jameshwade.github.io/graft/reference/tempest_artifact_store_graft.md)
-  : Create a Graft-backed Tempest artifact-store adapter
+- [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
+  : Synchronize the managed open-knowledge working tree
+- [`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
+  : Inspect the managed open-knowledge working tree
+- [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+  : Review edited open knowledge as a commit plan
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  : Create bounded read-only tools for a Graft store
 
 # Articles
 
 ### Start here
 
-Follow one workflow from domain contract to traceable retrieval, or
-start from an ordinary LinkML schema and see how graft applies it in R.
+Complete one provider-free workflow, then understand the package’s
+deliberately small design.
 
-- [Getting started with
+- [Get started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-  Keep records consistent across workflow runs, add a source-backed
-  claim, and retrieve its evidence from R.
+  Accept one reviewable knowledge change, then retrieve its current
+  record and immutable history in about ten minutes.
+
+- [Understand graft's
+  architecture](https://jameshwade.github.io/graft/articles/architecture.md):
+
+  See how the domain contract, accepted revision ledger, derived
+  projections, and selective S7 objects fit around one acceptance
+  boundary.
+
+- [The v0.1
+  design](https://jameshwade.github.io/graft/articles/v01-design.md):
+
+  Understand the deliberate pre-production cutover to a revision-first
+  API, one commit path, selective S7 objects, and a smaller package
+  scope.
+
+### Core concepts
+
+Go deeper into the domain contract, acceptance boundary, retrieval
+operations, and readable open-knowledge projection.
+
+- [Use a LinkML contract with
+  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+
+  Compile or load a LinkML domain contract, inspect its S7
+  representation, and use it to validate records and bounded retrieval.
+
+- [Use a data-dict contract with
+  graft](https://jameshwade.github.io/graft/articles/data-dict-schema.md):
+
+  Compile a table-first data dictionary into Graft’s governed contract
+  while keeping the optional Rust CLI outside the package runtime.
 
 - [Govern knowledge
   changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md):
 
-  Inspect what changed, recover accepted state at a commit boundary, and
-  apply a reviewed additive schema migration.
+  Review candidate changes, commit them atomically, and recover the
+  accepted history of a record from one authoritative revision ledger.
 
-- [Use a LinkML schema with
-  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+- [Retrieve accepted
+  knowledge](https://jameshwade.github.io/graft/articles/retrieval.md):
 
-  Compile an ordinary LinkML schema, write schema-shaped records to
-  DuckDB, and query them from R.
+  Choose the smallest bounded read operation for current records,
+  search, advanced projections, immutable history, or agent tools.
 
-- [Work with open knowledge by
-  default](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
+- [Work with open
+  knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
 
-  Use a managed, human- and agent-readable OKF working tree without
-  giving up Graft’s schema validation, accepted history, or approval
-  boundary.
-
-### Agent applications
-
-Build a local agent host with typed workflows, approval-gated actions,
-accepted memory, configurable models, and extensible tools.
-
-- [Build a governed materials market
-  radar](https://jameshwade.github.io/graft/articles/market-intelligence.md):
-
-  Reconcile competitor, business, customer, and downstream-market
-  signals into reviewed intelligence that becomes durable context for
-  the next scan.
-
-- [Build a governed local
-  Coworker](https://jameshwade.github.io/graft/articles/coworker.md):
-
-  Combine Graft, Tempest, dsprrr, shinychat, and extensible ellmer tools
-  in a local agent that publishes and remembers work only after
-  approval.
-
-### Examples
-
-Small, runnable domain models adapted from established LinkML projects.
-
-- [Examples](https://jameshwade.github.io/graft/articles/examples.md):
-
-  See how ordinary LinkML schemas can describe chemical entities,
-  biological samples, and the relationships between them.
+  Synchronize a readable OKF working tree, inspect its state, and review
+  edits through Graft’s ordinary plan and commit contract.

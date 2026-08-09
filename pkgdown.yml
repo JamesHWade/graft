@@ -2,14 +2,15 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  coworker: coworker.html
-  examples: examples.html
+  architecture: architecture.html
+  data-dict-schema: data-dict-schema.html
   getting-started: getting-started.html
   knowledge-change-control: knowledge-change-control.html
   linkml-schema: linkml-schema.html
-  market-intelligence: market-intelligence.html
   open-knowledge-format: open-knowledge-format.html
-last_built: 2026-08-03T00:31Z
+  retrieval: retrieval.html
+  v01-design: v01-design.html
+last_built: 2026-08-09T00:58Z
 urls:
   reference: https://jameshwade.github.io/graft/reference
   article: https://jameshwade.github.io/graft/articles
