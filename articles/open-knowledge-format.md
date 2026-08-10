@@ -33,27 +33,31 @@ library(graft)
 schema <- graft_schema(system.file(
   "extdata",
   "personinfo.graft.json",
-  package = "graft"
+  package = "graft",
+  mustWork = TRUE
 ))
+
+store_path <- tempfile(fileext = ".duckdb")
+okf_path <- tempfile(pattern = "graft-knowledge-")
 
 store <- graft_open(
   schema,
-  path = "knowledge.duckdb",
-  okf = "managed"
+  path = store_path,
+  okf = "managed",
+  okf_path = okf_path
 )
 ```
 
 Use `okf = "disabled"` when a store should have no managed working tree.
-An explicit path is useful when the readable projection belongs inside a
-repository:
+An explicit `okf_path` is useful when the readable projection belongs
+inside a repository. If it is omitted, graft derives a sibling `.okf`
+directory from the DuckDB filename. These are alternative
+configurations; open the store only once with the one you want.
 
 ``` r
 
-store <- graft_open(
-  schema,
-  path = "knowledge.duckdb",
-  okf_path = "knowledge/okf"
-)
+default_store_path <- "knowledge.duckdb"
+default_okf_path <- "knowledge.okf"
 ```
 
 ## Synchronize accepted knowledge
@@ -70,8 +74,8 @@ graft_ingest(
       name = "Daily Planet"
     ),
     Person = data.frame(
-      id = "person:clark-kent",
-      full_name = "Clark Kent",
+      id = "person:lois-lane",
+      full_name = "Lois Lane",
       employed_by = I(list("org:daily-planet"))
     )
   ),
@@ -130,6 +134,26 @@ does not silently repair, overwrite, or accept anything.
 A person or tool may edit the structured record mapping in a concept
 document. The edited file is still only a proposal. Review it with
 explicit provenance:
+
+``` r
+
+concept_path <- file.path(
+  bundle$path,
+  "concepts",
+  utils::URLencode("Organization", reserved = TRUE),
+  paste0(utils::URLencode("org:daily-planet", reserved = TRUE), ".md")
+)
+
+contents <- readLines(concept_path, warn = FALSE, encoding = "UTF-8")
+edited <- sub(
+  "name: Daily Planet",
+  "name: Daily Planet News",
+  contents,
+  fixed = TRUE
+)
+stopifnot(!identical(contents, edited))
+writeLines(edited, concept_path, useBytes = TRUE)
+```
 
 ``` r
 
@@ -212,4 +236,6 @@ receives the tools.
 ``` r
 
 graft_close(store)
+unlink(store_path)
+unlink(okf_path, recursive = TRUE)
 ```

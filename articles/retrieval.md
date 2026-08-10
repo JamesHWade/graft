@@ -1,25 +1,25 @@
 # Retrieve accepted knowledge
 
-graft’s read surface is deliberately smaller than its storage model.
-Four functions cover current records, search, fixed advanced operations,
-and immutable history.
-[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-exposes the same accepted reads to an agent host without adding mutation
-or raw SQL.
+Graft provides four read functions. Current reads use the active
+contract;
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+uses the exact contract recorded for each revision. None exposes raw SQL
+or a mutation path.
 
 | Need | Function | Result |
 |----|----|----|
-| One current record | [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md) | A hydrated record and its accepted context |
+| One current record | [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md) | The record and its accepted context |
 | Search public fields | [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md) | Ranked, bounded matches |
-| A fixed advanced shape | [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md) | A validated operation-specific result |
+| A fixed advanced operation | [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md) | A validated operation-specific result |
 | Accepted revisions | [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md) | Newest-first immutable history |
-| Read-only agent access | [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) | Tool definitions backed by the four reads |
+| Read-only agent access | [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) | Tool definitions backed by the same reads |
 
-All reads are governed by the active contract and accepted revision
-ledger. Internal projections make them efficient, but projections are
-not independent sources of knowledge.
+## Create some accepted knowledge
 
-## Create a small accepted graph
+This example uses the resolved data-dict contract included with Graft.
+It describes people, organizations, and employment records that refer to
+both. The foreign keys are checked during planning, but they are not
+semantic graph edges.
 
 ``` r
 
@@ -27,28 +27,33 @@ library(graft)
 
 schema <- graft_schema(system.file(
   "extdata",
-  "personinfo.graft.json",
-  package = "graft"
+  "team-directory.data-dict.json",
+  package = "graft",
+  mustWork = TRUE
 ))
 store <- graft_open(schema, ":memory:", okf = "disabled")
 
 graft_ingest(
   store,
   list(
-    Organization = data.frame(
+    organization = data.frame(
       id = "org:daily-planet",
       name = "Daily Planet"
     ),
-    Person = data.frame(
-      id = "person:clark-kent",
-      full_name = "Clark Kent",
-      aliases = I(list(c("Superman", "Kal-El"))),
-      employed_by = I(list("org:daily-planet"))
+    person = data.frame(
+      id = "person:lois-lane",
+      full_name = "Lois Lane",
+      job_title = "Reporter"
+    ),
+    employment = data.frame(
+      id = "employment:lois-lane:daily-planet",
+      person_id = "person:lois-lane",
+      organization_id = "org:daily-planet"
     )
   ),
   graft_provenance(
-    producer = "directory-import",
-    idempotency_key = "daily-planet-v1"
+    producer = "team-directory-import",
+    idempotency_key = "team-directory-v1"
   )
 )
 ```
@@ -61,59 +66,76 @@ when the stable identifier is already known:
 
 ``` r
 
-person <- graft_get(store, "person:clark-kent")
+person <- graft_get(store, "person:lois-lane")
 person$record
 ```
 
-The result includes accepted context rather than returning an
-unqualified storage row. Missing identifiers return a typed package
-error; callers do not need to know which projection table serves the
-request.
+The result includes its class and accepted context. A missing identifier
+raises a typed package error; callers do not need to know how the record
+is stored internally.
 
 ## Find records by public text
 
 Use
 [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
-for human-facing lookup across public search fields declared by the
-active compiled contract:
+when you know a name or phrase rather than an identifier:
 
 ``` r
 
-graft_find(store, "Clark", class = "Person", limit = 10)
-graft_find(store, "Daily", class = "Organization", limit = 10)
+graft_find(store, "Lois", class = "person", limit = 10)
+graft_find(store, "Daily", class = "organization", limit = 10)
 ```
 
-Class and limit are explicit. Sensitive fields are excluded by contract
-rather than filtered by the caller after retrieval.
+The compiled contract determines which fields are searchable and which
+are sensitive. An optional class restriction narrows the search; every
+call remains bounded by its result limit.
 
-## Query a fixed advanced operation
+## Recover accepted history
 
-[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
-is the extension point for reads that need a richer shape. The operation
-chooses a validated request schema; the request supplies only values for
-that operation.
+Accept a later version of the same person:
 
 ``` r
 
-graft_query(
+graft_ingest(
   store,
-  operation = "neighbors",
-  request = list(
-    id = "person:clark-kent",
-    projection = "semantic",
-    hops = 1,
-    max_nodes = 25,
-    max_edges = 50
+  list(
+    person = data.frame(
+      id = "person:lois-lane",
+      full_name = "Lois Lane",
+      job_title = "Investigative reporter"
+    )
+  ),
+  graft_provenance(
+    producer = "team-directory-import",
+    idempotency_key = "team-directory-v2"
   )
 )
 ```
 
-Operations cover exact identifiers, identifiers, claims, evidence,
-bounded neighbors, unresolved mentions, and integrity. Unknown request
-members, unbounded traversal, and arbitrary SQL are rejected.
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+returns the accepted revisions in newest-first order:
 
-Use the integrity operation when diagnosing the accepted ledger or
-derived views:
+``` r
+
+history <- graft_history(
+  store,
+  id = "person:lois-lane",
+  limit = 100
+)
+
+history[, c("batch_id", "changed_fields", "record")]
+```
+
+An accepted batch ID or `POSIXt` value selects state at an exact commit
+boundary. Commit order, rather than a timestamp inside the domain
+record, defines that boundary.
+
+## Use fixed advanced operations
+
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
+accepts named operations with validated request shapes. For example, the
+integrity operation checks the revision chain and, when requested, its
+derived projections:
 
 ``` r
 
@@ -125,30 +147,18 @@ graft_query(
 )
 ```
 
-Projection drift is repairable from accepted revisions. A successful
-current query is not treated as proof that the historical chain is
-intact; integrity inspection checks the authoritative chain directly.
+The `neighbors` operation returns semantic edges only when the active
+contract declares graph-producing semantic statements or edges. Graft
+does not turn the team directory’s data-dict foreign keys, or an
+ordinary LinkML object-reference slot, into traversal edges. See [Add
+graph semantics with
+LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+for that contract shape.
 
-## Recover immutable history
-
-Use
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
-when the question includes “when,” “why,” or “what changed”:
-
-``` r
-
-history <- graft_history(
-  store,
-  id = "person:clark-kent",
-  limit = 100
-)
-
-history[, c("batch_id", "changed_fields", "record")]
-```
-
-An accepted batch ID or `POSIXt` value selects state at an exact commit
-boundary. Commit order, not a domain record’s timestamp, defines
-historical boundaries.
+Other fixed operations cover exact identifiers, claims, evidence,
+unresolved mentions, and bounded neighbors where the contract supports
+them. Unknown request members, unbounded traversal, and arbitrary SQL
+are rejected.
 
 ## Give agents the same bounded reads
 
@@ -158,7 +168,7 @@ tools <- graft_tools(store)
 names(tools)
 ```
 
-The returned definitions are backed by
+The definitions call
 [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
 [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
 [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
@@ -169,15 +179,15 @@ access, or network access. The host decides which provider receives them
 and remains responsible for tool authorization.
 
 Every operation reports its applicable limits and truncation state so a
-host can distinguish “complete result” from “bounded prefix.”
+host can distinguish a complete result from a bounded prefix.
 
 ``` r
 
 graft_close(store)
 ```
 
-Read
-[Architecture](https://jameshwade.github.io/graft/articles/architecture.md)
-for the ledger/projection boundary and [Change
+Read [Change
 control](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
-for how a record becomes part of the accepted view.
+for the path from proposal to accepted revision and
+[Architecture](https://jameshwade.github.io/graft/articles/architecture.md)
+for how the ledger and derived views fit together.

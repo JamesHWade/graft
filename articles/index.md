@@ -2,45 +2,23 @@
 
 ### Start here
 
-Complete one provider-free workflow, then understand the package’s
-deliberately small design.
+Build a new store from related tables with a data-dict contract.
 
 - [Get started with
   graft](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-  Accept one reviewable knowledge change, then retrieve its current
-  record and immutable history in about ten minutes.
-
-- [Understand graft's
-  architecture](https://jameshwade.github.io/graft/articles/architecture.md):
-
-  See how the domain contract, accepted revision ledger, derived
-  projections, and selective S7 objects fit around one acceptance
-  boundary.
-
-- [The v0.1
-  design](https://jameshwade.github.io/graft/articles/v01-design.md):
-
-  Understand the deliberate pre-production cutover to a revision-first
-  API, one commit path, selective S7 objects, and a smaller package
-  scope.
-
-### Core concepts
-
-Go deeper into the domain contract, acceptance boundary, retrieval
-operations, and readable open-knowledge projection.
-
-- [Use a LinkML contract with
-  graft](https://jameshwade.github.io/graft/articles/linkml-schema.md):
-
-  Compile or load a LinkML domain contract, inspect its S7
-  representation, and use it to validate records and bounded retrieval.
+  Turn three ordinary tables into reviewed, connected, versioned
+  knowledge in an empty local store.
 
 - [Use a data-dict contract with
   graft](https://jameshwade.github.io/graft/articles/data-dict-schema.md):
 
-  Compile a table-first data dictionary into Graft’s governed contract
-  while keeping the optional Rust CLI outside the package runtime.
+  Start from related tables, resolve their data dictionary, and
+  understand exactly which rules graft enforces.
+
+### Use graft
+
+Review and accept changes, then retrieve current and historical records.
 
 - [Govern knowledge
   changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md):
@@ -51,11 +29,47 @@ operations, and readable open-knowledge projection.
 - [Retrieve accepted
   knowledge](https://jameshwade.github.io/graft/articles/retrieval.md):
 
-  Choose the smallest bounded read operation for current records,
-  search, advanced projections, immutable history, or agent tools.
+  Get current records, search public fields, inspect accepted history,
+  and expose the same bounded reads to agent hosts.
+
+### Add richer representations
+
+Add semantic graph relationships with LinkML or synchronize a readable
+working tree.
+
+- [Add graph semantics with
+  LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md):
+
+  Use LinkML when a table contract needs ontology identifiers,
+  inheritance, or semantic statements that produce a bounded graph
+  projection.
 
 - [Work with open
   knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.md):
 
   Synchronize a readable OKF working tree, inspect its state, and review
   edits through Graft’s ordinary plan and commit contract.
+
+### Design and internals
+
+Understand storage and projection boundaries, contract compilation, and
+the choices behind the v0.1 package design.
+
+- [How graft stores and retrieves
+  knowledge](https://jameshwade.github.io/graft/articles/architecture.md):
+
+  See how source contracts, reviewable plans, accepted revisions, and
+  derived read views fit together.
+
+- [Contract compiler
+  details](https://jameshwade.github.io/graft/articles/contract-compilers.md):
+
+  Reproduce data-dict and LinkML builds and understand their validation,
+  provenance, redaction, and digest boundaries.
+
+- [The v0.1
+  design](https://jameshwade.github.io/graft/articles/v01-design.md):
+
+  Understand the deliberate pre-production cutover to a revision-first
+  API, one commit path, selective S7 objects, and a smaller package
+  scope.

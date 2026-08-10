@@ -13,9 +13,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Retrieve accepted knowledge">
-<meta name="description" content="Choose the smallest bounded read operation for current records, search, advanced projections, immutable history, or agent tools.
+<meta name="description" content="Get current records, search public fields, inspect accepted history, and expose the same bounded reads to agent hosts.
 ">
-<meta property="og:description" content="Choose the smallest bounded read operation for current records, search, advanced projections, immutable history, or agent tools.
+<meta property="og:description" content="Get current records, search public fields, inspect accepted history, and expose the same bounded reads to agent hosts.
 ">
 </head>
 <body>
@@ -37,17 +37,23 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
 <li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
-    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
-    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
-    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-learn" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Learn</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-learn">
+<li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
 </li>
-<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-design">
+<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/contract-compilers.html">Contract compilers</a></li>
+    <li><a class="dropdown-item" href="../articles/v01-design.html">v0.1 design notes</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -86,10 +92,9 @@
 
     
     
-<p>graft’s read surface is deliberately smaller than its storage model.
-Four functions cover current records, search, fixed advanced operations,
-and immutable history. <code><a href="../reference/graft_tools.html">graft_tools()</a></code> exposes the same
-accepted reads to an agent host without adding mutation or raw SQL.</p>
+<p>Graft provides four read functions. Current reads use the active
+contract; <code><a href="../reference/graft_history.html">graft_history()</a></code> uses the exact contract recorded
+for each revision. None exposes raw SQL or a mutation path.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -105,7 +110,7 @@ accepted reads to an agent host without adding mutation or raw SQL.</p>
 <tr class="odd">
 <td>One current record</td>
 <td><code><a href="../reference/graft_get.html">graft_get()</a></code></td>
-<td>A hydrated record and its accepted context</td>
+<td>The record and its accepted context</td>
 </tr>
 <tr class="even">
 <td>Search public fields</td>
@@ -113,7 +118,7 @@ accepted reads to an agent host without adding mutation or raw SQL.</p>
 <td>Ranked, bounded matches</td>
 </tr>
 <tr class="odd">
-<td>A fixed advanced shape</td>
+<td>A fixed advanced operation</td>
 <td><code><a href="../reference/graft_query.html">graft_query()</a></code></td>
 <td>A validated operation-specific result</td>
 </tr>
@@ -125,43 +130,49 @@ accepted reads to an agent host without adding mutation or raw SQL.</p>
 <tr class="odd">
 <td>Read-only agent access</td>
 <td><code><a href="../reference/graft_tools.html">graft_tools()</a></code></td>
-<td>Tool definitions backed by the four reads</td>
+<td>Tool definitions backed by the same reads</td>
 </tr>
 </tbody>
 </table>
-<p>All reads are governed by the active contract and accepted revision
-ledger. Internal projections make them efficient, but projections are
-not independent sources of knowledge.</p>
 <div class="section level2">
-<h2 id="create-a-small-accepted-graph">Create a small accepted graph<a class="anchor" aria-label="anchor" href="#create-a-small-accepted-graph"></a>
+<h2 id="create-some-accepted-knowledge">Create some accepted knowledge<a class="anchor" aria-label="anchor" href="#create-some-accepted-knowledge"></a>
 </h2>
+<p>This example uses the resolved data-dict contract included with
+Graft. It describes people, organizations, and employment records that
+refer to both. The foreign keys are checked during planning, but they
+are not semantic graph edges.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"extdata"</span>,</span>
-<span>  <span class="st">"personinfo.graft.json"</span>,</span>
-<span>  package <span class="op">=</span> <span class="st">"graft"</span></span>
+<span>  <span class="st">"team-directory.data-dict.json"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"graft"</span>,</span>
+<span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">":memory:"</span>, okf <span class="op">=</span> <span class="st">"disabled"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    Organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>      id <span class="op">=</span> <span class="st">"org:daily-planet"</span>,</span>
 <span>      name <span class="op">=</span> <span class="st">"Daily Planet"</span></span>
 <span>    <span class="op">)</span>,</span>
-<span>    Person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>      id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
-<span>      full_name <span class="op">=</span> <span class="st">"Clark Kent"</span>,</span>
-<span>      aliases <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Superman"</span>, <span class="st">"Kal-El"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>      employed_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"org:daily-planet"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>      id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>      full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
+<span>      job_title <span class="op">=</span> <span class="st">"Reporter"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    employment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>      id <span class="op">=</span> <span class="st">"employment:lois-lane:daily-planet"</span>,</span>
+<span>      person_id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>      organization_id <span class="op">=</span> <span class="st">"org:daily-planet"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
-<span>    producer <span class="op">=</span> <span class="st">"directory-import"</span>,</span>
-<span>    idempotency_key <span class="op">=</span> <span class="st">"daily-planet-v1"</span></span>
+<span>    producer <span class="op">=</span> <span class="st">"team-directory-import"</span>,</span>
+<span>    idempotency_key <span class="op">=</span> <span class="st">"team-directory-v1"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -171,75 +182,80 @@ not independent sources of knowledge.</p>
 <p>Use <code><a href="../reference/graft_get.html">graft_get()</a></code> when the stable identifier is already
 known:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">person</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:clark-kent"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">person</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span></span>
 <span><span class="va">person</span><span class="op">$</span><span class="va">record</span></span></code></pre></div>
-<p>The result includes accepted context rather than returning an
-unqualified storage row. Missing identifiers return a typed package
-error; callers do not need to know which projection table serves the
-request.</p>
+<p>The result includes its class and accepted context. A missing
+identifier raises a typed package error; callers do not need to know how
+the record is stored internally.</p>
 </div>
 <div class="section level2">
 <h2 id="find-records-by-public-text">Find records by public text<a class="anchor" aria-label="anchor" href="#find-records-by-public-text"></a>
 </h2>
-<p>Use <code><a href="../reference/graft_find.html">graft_find()</a></code> for human-facing lookup across public
-search fields declared by the active compiled contract:</p>
+<p>Use <code><a href="../reference/graft_find.html">graft_find()</a></code> when you know a name or phrase rather
+than an identifier:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Clark"</span>, class <span class="op">=</span> <span class="st">"Person"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Daily"</span>, class <span class="op">=</span> <span class="st">"Organization"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
-<p>Class and limit are explicit. Sensitive fields are excluded by
-contract rather than filtered by the caller after retrieval.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Lois"</span>, class <span class="op">=</span> <span class="st">"person"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Daily"</span>, class <span class="op">=</span> <span class="st">"organization"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+<p>The compiled contract determines which fields are searchable and
+which are sensitive. An optional class restriction narrows the search;
+every call remains bounded by its result limit.</p>
 </div>
 <div class="section level2">
-<h2 id="query-a-fixed-advanced-operation">Query a fixed advanced operation<a class="anchor" aria-label="anchor" href="#query-a-fixed-advanced-operation"></a>
+<h2 id="recover-accepted-history">Recover accepted history<a class="anchor" aria-label="anchor" href="#recover-accepted-history"></a>
 </h2>
-<p><code><a href="../reference/graft_query.html">graft_query()</a></code> is the extension point for reads that need
-a richer shape. The operation chooses a validated request schema; the
-request supplies only values for that operation.</p>
+<p>Accept a later version of the same person:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_query.html">graft_query</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
-<span>  operation <span class="op">=</span> <span class="st">"neighbors"</span>,</span>
-<span>  request <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
-<span>    projection <span class="op">=</span> <span class="st">"semantic"</span>,</span>
-<span>    hops <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>    max_nodes <span class="op">=</span> <span class="fl">25</span>,</span>
-<span>    max_edges <span class="op">=</span> <span class="fl">50</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>      id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>      full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
+<span>      job_title <span class="op">=</span> <span class="st">"Investigative reporter"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
+<span>    producer <span class="op">=</span> <span class="st">"team-directory-import"</span>,</span>
+<span>    idempotency_key <span class="op">=</span> <span class="st">"team-directory-v2"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Operations cover exact identifiers, identifiers, claims, evidence,
-bounded neighbors, unresolved mentions, and integrity. Unknown request
-members, unbounded traversal, and arbitrary SQL are rejected.</p>
-<p>Use the integrity operation when diagnosing the accepted ledger or
-derived views:</p>
+<p><code><a href="../reference/graft_history.html">graft_history()</a></code> returns the accepted revisions in
+newest-first order:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>  limit <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">history</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"batch_id"</span>, <span class="st">"changed_fields"</span>, <span class="st">"record"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p>An accepted batch ID or <code>POSIXt</code> value selects state at an
+exact commit boundary. Commit order, rather than a timestamp inside the
+domain record, defines that boundary.</p>
+</div>
+<div class="section level2">
+<h2 id="use-fixed-advanced-operations">Use fixed advanced operations<a class="anchor" aria-label="anchor" href="#use-fixed-advanced-operations"></a>
+</h2>
+<p><code><a href="../reference/graft_query.html">graft_query()</a></code> accepts named operations with validated
+request shapes. For example, the integrity operation checks the revision
+chain and, when requested, its derived projections:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_query.html">graft_query</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  operation <span class="op">=</span> <span class="st">"integrity"</span>,</span>
 <span>  request <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>projections <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>  limit <span class="op">=</span> <span class="fl">100</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Projection drift is repairable from accepted revisions. A successful
-current query is not treated as proof that the historical chain is
-intact; integrity inspection checks the authoritative chain
-directly.</p>
-</div>
-<div class="section level2">
-<h2 id="recover-immutable-history">Recover immutable history<a class="anchor" aria-label="anchor" href="#recover-immutable-history"></a>
-</h2>
-<p>Use <code><a href="../reference/graft_history.html">graft_history()</a></code> when the question includes “when,”
-“why,” or “what changed”:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
-<span>  limit <span class="op">=</span> <span class="fl">100</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">history</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"batch_id"</span>, <span class="st">"changed_fields"</span>, <span class="st">"record"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>An accepted batch ID or <code>POSIXt</code> value selects state at an
-exact commit boundary. Commit order, not a domain record’s timestamp,
-defines historical boundaries.</p>
+<p>The <code>neighbors</code> operation returns semantic edges only when
+the active contract declares graph-producing semantic statements or
+edges. Graft does not turn the team directory’s data-dict foreign keys,
+or an ordinary LinkML object-reference slot, into traversal edges. See
+<a href="linkml-schema.html">Add graph semantics with LinkML</a> for
+that contract shape.</p>
+<p>Other fixed operations cover exact identifiers, claims, evidence,
+unresolved mentions, and bounded neighbors where the contract supports
+them. Unknown request members, unbounded traversal, and arbitrary SQL
+are rejected.</p>
 </div>
 <div class="section level2">
 <h2 id="give-agents-the-same-bounded-reads">Give agents the same bounded reads<a class="anchor" aria-label="anchor" href="#give-agents-the-same-bounded-reads"></a>
@@ -247,19 +263,19 @@ defines historical boundaries.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span></code></pre></div>
-<p>The returned definitions are backed by <code><a href="../reference/graft_find.html">graft_find()</a></code>,
+<p>The definitions call <code><a href="../reference/graft_find.html">graft_find()</a></code>,
 <code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>, and
 <code><a href="../reference/graft_history.html">graft_history()</a></code>. They expose no write operation, raw
 database connection, filesystem access, or network access. The host
 decides which provider receives them and remains responsible for tool
 authorization.</p>
 <p>Every operation reports its applicable limits and truncation state so
-a host can distinguish “complete result” from “bounded prefix.”</p>
+a host can distinguish a complete result from a bounded prefix.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
-<p>Read <a href="architecture.html">Architecture</a> for the
-ledger/projection boundary and <a href="knowledge-change-control.html">Change control</a> for how a record
-becomes part of the accepted view.</p>
+<p>Read <a href="knowledge-change-control.html">Change control</a> for
+the path from proposal to accepted revision and <a href="architecture.html">Architecture</a> for how the ledger and derived
+views fit together.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

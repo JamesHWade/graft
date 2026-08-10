@@ -2,8 +2,7 @@
 
 ## Define and open
 
-Load the domain contract and manage the store that accepts knowledge
-under it.
+Compile or load a contract, then create, open, and close a store.
 
 - [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
   : Load or compile a Graft schema
@@ -14,8 +13,7 @@ under it.
 
 ## Propose and accept
 
-Describe a candidate’s origin, plan the change without writing, and
-accept it through one atomic commit path.
+Record where candidates came from, inspect a plan, and commit it.
 
 - [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
   : Describe the provenance of a candidate knowledge change
@@ -28,8 +26,7 @@ accept it through one atomic commit path.
 
 ## Retrieve and inspect
 
-Read current and historical accepted knowledge through bounded,
-contract-aware operations and projections.
+Read current records, search results, fixed projections, and history.
 
 - [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
   : Retrieve one current accepted record
@@ -42,8 +39,8 @@ contract-aware operations and projections.
 
 ## Synchronize and integrate
 
-Synchronize the readable working tree, review file edits as proposals,
-and expose accepted retrieval to agents.
+Synchronize readable files, review file edits, and provide read-only
+tools to an agent host.
 
 - [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
   : Synchronize the managed open-knowledge working tree

@@ -37,17 +37,23 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
 <li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts">
-<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
-    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
-    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
-    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-learn" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Learn</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-learn">
+<li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
 </li>
-<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-design">
+<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/contract-compilers.html">Contract compilers</a></li>
+    <li><a class="dropdown-item" href="../articles/v01-design.html">v0.1 design notes</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -123,8 +129,9 @@ every contract class.</p>
 <span></span>
 <span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"extdata"</span>,</span>
-<span>  <span class="st">"personinfo.graft.json"</span>,</span>
-<span>  package <span class="op">=</span> <span class="st">"graft"</span></span>
+<span>  <span class="st">"team-directory.data-dict.json"</span>,</span>
+<span>  package <span class="op">=</span> <span class="st">"graft"</span>,</span>
+<span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">":memory:"</span>, okf <span class="op">=</span> <span class="st">"disabled"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -141,14 +148,19 @@ cannot be confused with its domain content.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  Organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>    id <span class="op">=</span> <span class="st">"org:daily-planet"</span>,</span>
 <span>    name <span class="op">=</span> <span class="st">"Daily Planet"</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  Person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
-<span>    full_name <span class="op">=</span> <span class="st">"Clark Kent"</span>,</span>
-<span>    employed_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"org:daily-planet"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>    full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
+<span>    job_title <span class="op">=</span> <span class="st">"Reporter"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  employment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"employment:lois-lane:daily-planet"</span>,</span>
+<span>    person_id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>    organization_id <span class="op">=</span> <span class="st">"org:daily-planet"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -191,9 +203,10 @@ the new state.</p>
 <p>The accepted changes, provenance, identity decisions, and
 observations commit together. A failure before transaction completion
 leaves no partially accepted change.</p>
-<p>Reusing a committed producer and idempotency key returns the original
-result without adding new accepted metadata. This makes retry behavior
-explicit at the workflow boundary.</p>
+<p>Recommitting the exact reviewed plan with its committed producer and
+idempotency key returns the original result without adding accepted
+metadata. Reusing that key for a different plan fails. This makes retry
+behavior explicit at the workflow boundary.</p>
 </div>
 <div class="section level2">
 <h2 id="use-the-convenience-path-deliberately">Use the convenience path deliberately<a class="anchor" aria-label="anchor" href="#use-the-convenience-path-deliberately"></a>
@@ -201,7 +214,20 @@ explicit at the workflow boundary.</p>
 <p><code><a href="../reference/graft_ingest.html">graft_ingest()</a></code> plans and immediately commits when the
 plan is valid:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">records</span>, <span class="va">provenance</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">convenience_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>      id <span class="op">=</span> <span class="st">"org:metropolis-university"</span>,</span>
+<span>      name <span class="op">=</span> <span class="st">"Metropolis University"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
+<span>    producer <span class="op">=</span> <span class="st">"directory-import"</span>,</span>
+<span>    idempotency_key <span class="op">=</span> <span class="st">"directory-2026-08-03-university"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">convenience_result</span><span class="op">$</span><span class="va">inserted</span></span></code></pre></div>
 <p>It is appropriate when the producing process is itself authorized to
 accept the records and no person or host policy needs to inspect the
 change set. Use <code><a href="../reference/graft_plan.html">graft_plan()</a></code> and
@@ -212,15 +238,14 @@ change set. Use <code><a href="../reference/graft_plan.html">graft_plan()</a></c
 </h2>
 <p>Current retrieval reads the head of the accepted revision chain:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:clark-kent"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span></span></code></pre></div>
 <p>Suppose a later source run changes the record:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">update</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  Person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
-<span>    full_name <span class="op">=</span> <span class="st">"Clark Kent"</span>,</span>
-<span>    age <span class="op">=</span> <span class="fl">35L</span>,</span>
-<span>    employed_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"org:daily-planet"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>    full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
+<span>    job_title <span class="op">=</span> <span class="st">"Investigative editor"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -242,7 +267,7 @@ and the provenance needed to explain the change.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
 <span>  limit <span class="op">=</span> <span class="fl">100</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -252,7 +277,7 @@ state at a commit boundary:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">earlier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"person:clark-kent"</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
 <span>  as_of <span class="op">=</span> <span class="va">history</span><span class="op">$</span><span class="va">batch_id</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>,</span>
 <span>  limit <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span>

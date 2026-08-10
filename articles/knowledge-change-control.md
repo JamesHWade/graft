@@ -37,8 +37,9 @@ library(graft)
 
 schema <- graft_schema(system.file(
   "extdata",
-  "personinfo.graft.json",
-  package = "graft"
+  "team-directory.data-dict.json",
+  package = "graft",
+  mustWork = TRUE
 ))
 store <- graft_open(schema, ":memory:", okf = "disabled")
 ```
@@ -57,14 +58,19 @@ provenance <- graft_provenance(
 )
 
 records <- list(
-  Organization = data.frame(
+  organization = data.frame(
     id = "org:daily-planet",
     name = "Daily Planet"
   ),
-  Person = data.frame(
-    id = "person:clark-kent",
-    full_name = "Clark Kent",
-    employed_by = I(list("org:daily-planet"))
+  person = data.frame(
+    id = "person:lois-lane",
+    full_name = "Lois Lane",
+    job_title = "Reporter"
+  ),
+  employment = data.frame(
+    id = "employment:lois-lane:daily-planet",
+    person_id = "person:lois-lane",
+    organization_id = "org:daily-planet"
   )
 )
 
@@ -115,9 +121,10 @@ The accepted changes, provenance, identity decisions, and observations
 commit together. A failure before transaction completion leaves no
 partially accepted change.
 
-Reusing a committed producer and idempotency key returns the original
-result without adding new accepted metadata. This makes retry behavior
-explicit at the workflow boundary.
+Recommitting the exact reviewed plan with its committed producer and
+idempotency key returns the original result without adding accepted
+metadata. Reusing that key for a different plan fails. This makes retry
+behavior explicit at the workflow boundary.
 
 ## Use the convenience path deliberately
 
@@ -126,7 +133,20 @@ plans and immediately commits when the plan is valid:
 
 ``` r
 
-result <- graft_ingest(store, records, provenance)
+convenience_result <- graft_ingest(
+  store,
+  list(
+    organization = data.frame(
+      id = "org:metropolis-university",
+      name = "Metropolis University"
+    )
+  ),
+  graft_provenance(
+    producer = "directory-import",
+    idempotency_key = "directory-2026-08-03-university"
+  )
+)
+convenience_result$inserted
 ```
 
 It is appropriate when the producing process is itself authorized to
@@ -143,7 +163,7 @@ Current retrieval reads the head of the accepted revision chain:
 
 ``` r
 
-graft_get(store, "person:clark-kent")
+graft_get(store, "person:lois-lane")
 ```
 
 Suppose a later source run changes the record:
@@ -151,11 +171,10 @@ Suppose a later source run changes the record:
 ``` r
 
 update <- list(
-  Person = data.frame(
-    id = "person:clark-kent",
-    full_name = "Clark Kent",
-    age = 35L,
-    employed_by = I(list("org:daily-planet"))
+  person = data.frame(
+    id = "person:lois-lane",
+    full_name = "Lois Lane",
+    job_title = "Investigative editor"
   )
 )
 
@@ -182,7 +201,7 @@ change.
 
 history <- graft_history(
   store,
-  id = "person:clark-kent",
+  id = "person:lois-lane",
   limit = 100
 )
 
@@ -196,7 +215,7 @@ boundary:
 
 earlier <- graft_history(
   store,
-  id = "person:clark-kent",
+  id = "person:lois-lane",
   as_of = history$batch_id[[2]],
   limit = 1
 )

@@ -17,15 +17,19 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-concepts" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Concepts</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-concepts"><li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="../articles/linkml-schema.html">LinkML contract</a></li>
-    <li><a class="dropdown-item" href="../articles/data-dict-schema.html">data-dict contract</a></li>
-    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Change control</a></li>
-    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieval and history</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-learn" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Learn</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-learn"><li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
+    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
+    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul></li>
-<li class="nav-item"><a class="nav-link" href="../articles/v01-design.html">v0.1 design</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-design"><li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+    <li><a class="dropdown-item" href="../articles/contract-compilers.html">Contract compilers</a></li>
+    <li><a class="dropdown-item" href="../articles/v01-design.html">v0.1 design notes</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -51,7 +55,7 @@
     <div class="section level2">
       <h2 id="define-and-open">Define and open<a class="anchor" aria-label="anchor" href="#define-and-open"></a></h2>
 
-      <div class="section-desc"><p>Load the domain contract and manage the store that accepts knowledge under it.</p></div>
+      <div class="section-desc"><p>Compile or load a contract, then create, open, and close a store.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -81,7 +85,7 @@
       </dl></div><div class="section level2">
       <h2 id="propose-and-accept">Propose and accept<a class="anchor" aria-label="anchor" href="#propose-and-accept"></a></h2>
 
-      <div class="section-desc"><p>Describe a candidate’s origin, plan the change without writing, and accept it through one atomic commit path.</p></div>
+      <div class="section-desc"><p>Record where candidates came from, inspect a plan, and commit it.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -118,7 +122,7 @@
       </dl></div><div class="section level2">
       <h2 id="retrieve-and-inspect">Retrieve and inspect<a class="anchor" aria-label="anchor" href="#retrieve-and-inspect"></a></h2>
 
-      <div class="section-desc"><p>Read current and historical accepted knowledge through bounded, contract-aware operations and projections.</p></div>
+      <div class="section-desc"><p>Read current records, search results, fixed projections, and history.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -155,7 +159,7 @@
       </dl></div><div class="section level2">
       <h2 id="synchronize-and-integrate">Synchronize and integrate<a class="anchor" aria-label="anchor" href="#synchronize-and-integrate"></a></h2>
 
-      <div class="section-desc"><p>Synchronize the readable working tree, review file edits as proposals, and expose accepted retrieval to agents.</p></div>
+      <div class="section-desc"><p>Synchronize readable files, review file edits, and provide read-only tools to an agent host.</p></div>
 
       <dl></dl></div><div class="section level2">
 

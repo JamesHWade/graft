@@ -1,211 +1,244 @@
 # graft
 
-Revision-first knowledge for R workflows
+Knowledge from ordinary R tables
 
-## Review what changes. Preserve why. Retrieve what was accepted.
+## Turn related tables into knowledge you can update without losing history.
 
-graft turns candidate records into governed knowledge. A LinkML or
-data-dict source compiles into the contract that defines what is valid,
-a read-only plan shows exactly what would change, and one atomic commit
-path preserves every accepted revision with its provenance.
+Start with data frames and a data-dict contract. graft creates a new
+local store, checks related records before it writes, records where each
+accepted change came from, and keeps earlier versions available.
 
-[Run the 10-minute
-workflow](https://jameshwade.github.io/graft/articles/getting-started.md)
-[See the
-architecture](https://jameshwade.github.io/graft/articles/architecture.md)
+[Build your first
+store](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Start with
+data-dict](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
 
-Read-only planning Atomic acceptance Immutable history Bounded retrieval
+## Install graft
 
-## One path from proposal to knowledge
+graft is currently installed from GitHub:
 
-The package has one visible acceptance boundary. Everything before
-commit is a proposal; everything after commit is derived from the
-accepted revision ledger.
+``` r
 
-01 **Contract** Define identity, fields, and relationships with LinkML
-or data-dict.
+pak::pak("JamesHWade/graft")
+```
 
-02 **Provenance** Name the producer event and its replay boundary.
+Using a resolved data-dict contract and an existing `.graft.json`
+contract is R-only. The data-dict CLI is needed only to resolve authored
+YAML, and Python with `linkml-runtime` is needed only to compile LinkML
+source.
 
-03 **Plan** Normalize and validate without writing accepted state.
+## Start with the data you already have
 
-04 **Review** Inspect inserts, updates, matches, and all collected
-issues.
+Suppose an R workflow produces three tables:
 
-05 **Commit** Recheck preconditions and accept the complete plan
-atomically.
+| Table          | What one row represents | Important fields               |
+|----------------|-------------------------|--------------------------------|
+| `organization` | An organization         | `id`, `name`                   |
+| `person`       | A person                | `id`, `full_name`, `job_title` |
+| `employment`   | A person’s employment   | `person_id`, `organization_id` |
 
-06 **Retrieve** Read current records, history, and bounded projections.
+Those tables can answer who works where today. They do not, by
+themselves, tell you whether an employment row points to a known
+organization, who supplied a correction, what a reviewer accepted, or
+what the previous job title was.
 
-## One authoritative ledger
+graft adds stable record identity, relationship checks, source
+provenance, a review step, and revision history. These are the
+foundations of useful knowledge: facts that remain connected and
+explainable as they change.
 
-A compiled domain contract supplies meaning. DuckDB stores accepted
-revisions and provenance. Current records, search, contract-declared
-graph relationships, and the readable OKF working tree are rebuildable
-projections—never alternate write paths.
+## Describe the tables with data-dict
 
-This makes the important question easy to answer: *what, exactly, was
-accepted?* The revision ledger is the answer. A local OKF edit becomes
-an ordinary proposal through
-[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
-and still passes through
-[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md).
+[data-dict](https://data-dict.tidyverse.org/) gives the tables and their
+relationships a readable contract. The package includes this example as
+`team-directory.data-dict.yaml`; an abridged excerpt of its
+relationships is:
 
-[Read the architecture and guarantees
-→](https://jameshwade.github.io/graft/articles/architecture.md)
+``` yaml
+tables:
+  - name: person
+  - name: organization
+  - name: employment
 
-![A LinkML or data-dict contract compiles into Graft. OKF exchanges
-readable proposals and projections with Graft. Graft commits to and
-retrieves accepted revisions from
-DuckDB.](reference/figures/okf-linkml-duckdb-system.svg)
+relationships:
+  - join: employment.person_id = person.id
+  - join: employment.organization_id = organization.id
+```
 
-Contract, authority, and readable projection stay distinct.
-
-## Guarantees you can design around
-
-P
-
-### Planning is read-only
-
-Validation and identity resolution produce an inspectable plan without
-accepting records or provenance.
-
-C
-
-### Commit is defensive
-
-Changed contracts, stale heads, altered plans, and incomplete
-transactions fail before a partial acceptance.
-
-H
-
-### History is authoritative
-
-Immutable revisions retain the accepted record, schema digest, batch,
-and producer provenance.
-
-R
-
-### Retrieval is bounded
-
-Fixed operations enforce limits and contract policy without exposing raw
-SQL or mutation to agents.
-
-## A complete change in R
+The data-dict CLI resolves the authoring YAML with `export-spec`. A
+resolved JSON export can then be compiled by graft using R alone:
 
 ``` r
 
 library(graft)
 
-schema <- graft_schema(system.file(
-  "extdata", "personinfo.graft.json", package = "graft"
-))
-store <- graft_open(schema, ":memory:", okf = "disabled")
+resolved_json <- system.file(
+  "extdata",
+  "team-directory.data-dict.json",
+  package = "graft",
+  mustWork = TRUE
+)
 
-records <- list(Person = data.frame(
-  id = "person:lois-lane",
-  full_name = "Lois Lane"
-))
+schema <- graft_schema(resolved_json)
+schema@name
+names(schema@classes)
+```
+
+The `@` operator reads a public property from graft’s immutable S7
+contract and plan objects; candidate records themselves remain ordinary
+data frames.
+
+The full [data-dict
+guide](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
+shows how to author, resolve, and inspect the contract. The [compiler
+reference](https://jameshwade.github.io/graft/articles/contract-compilers.md)
+documents the exact supported profiles and build requirements.
+
+## Create a new, empty store
+
+You do not need an existing database. The path below does not exist when
+[`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+is called; graft creates and initializes it under the compiled contract.
+
+``` r
+
+store_path <- tempfile(fileext = ".duckdb")
+file.exists(store_path)
+#> [1] FALSE
+
+store <- graft_open(schema, store_path, okf = "disabled")
+```
+
+Use `":memory:"` instead of a file path for a disposable in-memory
+store.
+
+## Catch a broken relationship before writing
+
+Candidate records are a named list of data frames. This batch includes a
+valid person and organization, but its employment row points to an
+organization that does not exist.
+
+``` r
+
+records <- list(
+  organization = data.frame(
+    id = "org:daily-planet",
+    name = "Daily Planet"
+  ),
+  person = data.frame(
+    id = "person:lois-lane",
+    full_name = "Lois Lane",
+    job_title = "Reporter"
+  ),
+  employment = data.frame(
+    id = "employment:lois-lane:daily-planet",
+    person_id = "person:lois-lane",
+    organization_id = "org:missing"
+  )
+)
+
 origin <- graft_provenance(
   producer = "directory-import",
-  idempotency_key = "directory-2026-08-04"
+  idempotency_key = "directory-2026-08-09"
 )
 
 plan <- graft_plan(store, records, origin)
-plan@changes
-plan@issues
+plan@valid
+#> [1] FALSE
 
-if (plan@valid) graft_commit(store, plan)
-
-graft_get(store, "person:lois-lane")
-graft_history(store, "person:lois-lane")
-graft_close(store)
+plan@issues[, c("class", "record_id", "field", "message")]
 ```
 
-The complete guide explains each decision, adds a connected record, and
-shows search, advanced retrieval, history, and the readable OKF surface.
-Loading the compiled example contract and operating the store are
-R-only. Source contracts can be compiled from LinkML or from data-dict
-YAML or trusted resolved `export-spec` JSON. A source provider defines
-meaning; it never becomes the accepted ledger or another write path.
+The issue reports that `org:missing` is not a known target. Planning has
+not written any records or provenance, so the caller can correct the
+batch and review it again.
 
-Use
-[LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
-for inheritance and rich graph semantics. Use
-[data-dict](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
-for a strict, table-first contract with descriptions, glossary metadata,
-enums, and scalar foreign-key validation. Its CLI-assisted YAML path
-runs `export-spec`, not upstream metadata or data validation, and scalar
-foreign keys are not graph traversal edges. YAML source-spec and
-resolved JSON export-format versions are tracked separately, and Graft
-re-hashes the selected CLI around export and version discovery. YAML
-bytes are captured once so preflight, CLI export, and the source/build
-fingerprints share one immutable snapshot.
+## Correct, review, and commit the batch
 
-The data-dict manifest is public contract metadata. Column examples and
-ranges, dataset and table origins, and table source locators are
-removed, although their raw values still bind source and build digests.
-Those digests permit equality tests and offline guessing of low-entropy
-values; redaction is not a secrecy boundary. Other retained fields can
-expose observed or sensitive values embedded manually. The strict
-profile rejects `number(id)` in scalar or list form, fails closed on
-unsafe JSON numeric tokens before lossy conversion, and enforces its
-supported datetime forms. The [data-dict
-guide](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
-documents the exact boundary.
+``` r
 
-## Choose your path
+records$employment$organization_id <- "org:daily-planet"
+plan <- graft_plan(store, records, origin)
 
-[Use the package **Run the first accepted change** Start with a
-complete, provider-free
-workflow.](https://jameshwade.github.io/graft/articles/getting-started.md)
-[Design a system **Understand authority and projections** See storage
-boundaries, S7 choices, and
-guarantees.](https://jameshwade.github.io/graft/articles/architecture.md)
-[Govern changes **Review before acceptance** Work with plans, optimistic
-preconditions, and
-history.](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
-[Build an integration **Use bounded retrieval** Choose current, search,
-query, history, or agent
-tools.](https://jameshwade.github.io/graft/articles/retrieval.md)
+plan@valid
+plan@changes[, c("class", "record_id", "action", "changed_fields")]
 
-## Small on purpose
+if (plan@valid) {
+  graft_commit(store, plan)
+}
+```
 
-The v0.1 API is 15 functions arranged around the lifecycle, not the
-storage engine. Rich objects protect durable invariants; records and
-results stay as ordinary data frames and lists.
-
-Define &
-open[`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
-[`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
-[`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
-
-Propose &
-accept[`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
-[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+The plan now shows three inserts.
 [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
-[`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
+rechecks the reviewed plan and accepts all three records together. If a
+precondition fails, none of the batch is accepted.
 
-Retrieve &
-inspect[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
-[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
-[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+## Keep the old version when a fact changes
 
-Synchronize &
-integrate[`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
-[`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
-[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
-[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+A later review changes Lois’s role. The update plan identifies the field
+that would change before anything is written.
 
-Start with the boundary that matters
+``` r
 
-## Plan the change before you accept it.
+updated_person <- list(person = data.frame(
+  id = "person:lois-lane",
+  full_name = "Lois Lane",
+  job_title = "Investigative editor"
+))
 
-Build one local store, inspect one plan, and recover the exact accepted
-history.
+update_origin <- graft_provenance(
+  producer = "hr-review",
+  idempotency_key = "hr-review-2026-08-10"
+)
 
-[Get
-started](https://jameshwade.github.io/graft/articles/getting-started.md)
-[Browse the 15
-functions](https://jameshwade.github.io/graft/reference/index.md)
+update_plan <- graft_plan(store, updated_person, update_origin)
+update_plan@changes[, c("record_id", "action", "changed_fields")]
+graft_commit(store, update_plan)
+
+graft_get(store, "person:lois-lane")$record
+graft_history(store, "person:lois-lane")[
+  , c("revision_number", "committed_at", "producer", "changed_fields")
+]
+
+graft_close(store)
+unlink(store_path)
+```
+
+Current retrieval returns the new title. History retains both accepted
+versions and the producer attached to each change.
+
+## Add LinkML when the relationships need graph meaning
+
+data-dict is the simpler starting point when the domain is naturally
+tabular. Its foreign keys let graft reject missing targets, but they are
+not graph traversal edges. Move to
+[LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+when you need relationships that support graph traversal, inheritance,
+ontology identifiers, or polymorphic references.
+
+Both providers compile to the same Graft contract and use the same plan,
+commit, retrieval, and history functions. The provider changes how the
+domain is described; it does not create another way to write accepted
+knowledge. The evaluated LinkML guide accepts a semantic measurement and
+retrieves the typed `materials:testedWith` edge between two materials.
+
+## Continue learning
+
+- [Get
+  started](https://jameshwade.github.io/graft/articles/getting-started.md)
+  works through the complete data-dict example with its results.
+- [Use a data-dict
+  contract](https://jameshwade.github.io/graft/articles/data-dict-schema.md)
+  covers table-first authoring and compilation.
+- [Review knowledge
+  changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
+  explains plans, commit preconditions, and retries.
+- [Retrieve current records and
+  history](https://jameshwade.github.io/graft/articles/retrieval.md)
+  maps each read function to its job.
+- [Add graph semantics with
+  LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
+  continues from governed tables to typed traversal relationships.
+- [Understand the
+  architecture](https://jameshwade.github.io/graft/articles/architecture.md)
+  explains storage, projections, and selective use of S7.

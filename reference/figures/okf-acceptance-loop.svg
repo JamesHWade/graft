@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
   <title id="title">The Graft acceptance loop for Open Knowledge Format edits</title>
-  <desc id="desc">Accepted DuckDB revisions synchronize to a current OKF working tree. File edits are proposals that Graft snapshots, compares, and validates with LinkML. Only an approved exact plan commits through Graft and regenerates the working tree; rejected proposals remain outside the ledger.</desc>
+  <desc id="desc">Accepted DuckDB revisions synchronize to a current OKF working tree. File edits are proposals that Graft snapshots, compares, and validates with the active compiled contract. Only an approved exact plan commits through Graft and regenerates the working tree; rejected proposals remain outside the ledger.</desc>
   <style>
     :root {
       --bg: #f7faf8;
@@ -156,7 +156,7 @@
 
   <rect class="box" x="450" y="330" width="300" height="164" rx="22"/>
   <text class="eyebrow" x="485" y="365">DOMAIN VALIDATION</text>
-  <text class="step" x="485" y="405">LinkML contract</text>
+  <text class="step" x="485" y="405">Compiled contract</text>
   <text class="copy" x="485" y="435">identity · types · ranges · references</text>
   <path d="M694 361h18l10 10v24h-28z M712 361v11h10" fill="none" stroke="var(--amber)" stroke-width="3"/>
   <path class="line" d="M830 412 L750 412" marker-end="url(#arrow)"/>
