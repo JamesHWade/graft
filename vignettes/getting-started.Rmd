@@ -1,8 +1,8 @@
 ---
 title: "Get started with graft"
 description: >
-  Accept one reviewable knowledge change, then retrieve its current record and
-  immutable history in about ten minutes.
+  Turn three ordinary tables into reviewed, connected, versioned knowledge in
+  an empty local store.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Get started with graft}
@@ -14,163 +14,286 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = FALSE
+  eval = TRUE
 )
 ```
 
-This guide follows the shortest complete graft workflow:
+Most projects do not begin with a knowledge store. They begin with tables: a
+directory of people, a list of organizations, and a table that connects them.
+This guide starts there. It creates an empty in-memory store, rejects a broken
+relationship before writing anything, accepts corrected records, and preserves
+a later update as a second revision.
 
-```text
-contract -> provenance -> read-only plan -> review -> atomic commit -> retrieval
-```
+## Load a table contract
 
-It uses a compiled contract included with the package, a temporary local
-store, and no model provider. At the end you will have accepted connected
-records, inspected the exact proposed change, and recovered its history.
+The package includes a small team-directory contract written with
+[data-dict](https://data-dict.tidyverse.org/). This guide uses its resolved JSON
+form, so the runnable lesson needs only R and graft. In a real authoring
+workflow, write the YAML, validate it with the data-dict CLI, and run
+`data-dict export-spec` once. The human-authored YAML is included beside the
+resolved file.
 
-## 1. Load the contract and open a store
-
-```{r open}
+```{r contract}
 library(graft)
 
-schema <- graft_schema(system.file(
+dictionary_path <- system.file(
   "extdata",
-  "personinfo.graft.json",
-  package = "graft"
-))
+  "team-directory.data-dict.json",
+  package = "graft",
+  mustWork = TRUE
+)
 
+schema <- graft_schema(dictionary_path)
+
+schema@name
+names(schema@classes)
+```
+
+The three class names are the three table names: `organization`, `person`, and
+`employment`. The contract defines required columns, stable string IDs, and
+the two foreign keys in `employment`. IDs are strings chosen by the caller and
+must be globally unique within the store; the `person:` and `org:` prefixes are
+readable conventions used by this example. The `@` operator reads public
+properties from graft's immutable S7 contract and plan objects.
+
+## Create an empty store
+
+`graft_open()` creates and initializes the database when it does not already
+exist. Here the database lives only in memory and starts with no accepted
+records.
+
+```{r open, message = FALSE}
 store <- graft_open(
   schema,
-  path = tempfile(fileext = ".duckdb"),
+  path = ":memory:",
   okf = "disabled"
 )
 ```
 
-The bundled contract was compiled from LinkML and defines the classes, required
-fields, stable identifiers, and relationships. Loading a compiled
-`.graft.json` contract and operating a store are R-only. Source contracts may
-come from LinkML or the strict data-dict table profile.
+Use a DuckDB filename instead of `":memory:"` when the knowledge should persist
+between R sessions. `okf = "disabled"` leaves the optional readable file
+projection off so this first lesson stays focused on the store and its history.
 
-## 2. Describe the candidate change
+## Catch a missing relationship before writing
 
-Candidate records are a named list of data frames. The names are concrete
-classes in the contract. List-columns represent multivalued fields.
+Suppose an import contains Lois Lane and an employment row, but the referenced
+organization is absent.
 
-```{r candidate}
-records <- list(
-  Organization = data.frame(
-    id = "org:daily-planet",
-    name = "Daily Planet"
+```{r invalid-candidate}
+invalid_records <- list(
+  person = data.frame(
+    id = "person:lois-lane",
+    full_name = "Lois Lane",
+    job_title = "Reporter"
   ),
-  Person = data.frame(
-    id = "person:clark-kent",
-    full_name = "Clark Kent",
-    employed_by = I(list("org:daily-planet"))
+  employment = data.frame(
+    id = "employment:lois-lane:daily-planet",
+    person_id = "person:lois-lane",
+    organization_id = "org:missing"
   )
 )
 
-origin <- graft_provenance(
-  producer = "directory-import",
-  run_id = "run-42",
-  idempotency_key = "daily-planet-v1",
-  metadata = list(source = "staff-directory.csv")
-)
-```
-
-Provenance names the producer event. The idempotency key makes an intentional
-retry return the original accepted result instead of creating another
-observation.
-
-## 3. Plan and review without writing
-
-```{r plan}
-plan <- graft_plan(store, records, origin)
-
-plan@valid
-plan@changes
-plan@issues
-```
-
-Planning normalizes values, resolves identity, validates the relationship,
-and compares the candidates with current accepted heads. It writes no accepted
-records or provenance.
-
-Review `plan@changes` even when `plan@valid` is `TRUE`. Valid means the plan
-can be committed; the changes show whether it should be. Issues retain source
-class and row coordinates so invalid inputs can be corrected together.
-
-## 4. Accept the complete plan atomically
-
-```{r commit}
-if (plan@valid) {
-  result <- graft_commit(store, plan)
-}
-
-result
-```
-
-Immediately before writing, graft verifies that the plan is intact and still
-matches the store, active contract, and expected record heads. The records,
-provenance, and identity decisions then commit together. A stale, altered, or
-invalid plan fails without a partial acceptance.
-
-When the producer is already authorized to accept its own results,
-`graft_ingest(store, records, origin)` is shorthand for planning and
-immediately committing a valid plan. It is not a second write path.
-
-## 5. Retrieve the accepted view and its history
-
-```{r retrieve}
-person <- graft_get(store, "person:clark-kent")
-person$record
-
-graft_find(store, "Clark", class = "Person", limit = 10)
-
-history <- graft_history(store, "person:clark-kent", limit = 20)
-history[, c("batch_id", "changed_fields", "record")]
-```
-
-`graft_get()` reads one current accepted record. `graft_find()` searches public
-fields declared by the contract. `graft_history()` reads immutable revisions
-in deterministic newest-first order. Current state and history are two views
-of the same accepted ledger.
-
-Advanced retrieval stays behind fixed operations. For example, inspect the
-connected organization without exposing arbitrary SQL:
-
-```{r query}
-graft_query(
+invalid_plan <- graft_plan(
   store,
-  operation = "neighbors",
-  request = list(
-    id = "person:clark-kent",
-    projection = "semantic",
-    hops = 1,
-    max_nodes = 25,
-    max_edges = 50
+  invalid_records,
+  graft_provenance(
+    producer = "directory-import",
+    idempotency_key = "directory-invalid"
+  )
+)
+
+invalid_plan@valid
+invalid_plan@issues[
+  , c("class", "field", "rule", "message"),
+  drop = FALSE
+]
+```
+
+Planning is read-only. The missing organization appears as a review issue, and
+neither the person nor the employment row has been accepted. `producer` names
+the source workflow. An `idempotency_key` names one retryable source event so
+repeating the same accepted event does not create another revision.
+
+## Correct and review the candidate set
+
+Add the organization and plan all three tables together. These are ordinary
+data frames; the list names tell graft which contract table each frame uses.
+
+```{r valid-candidate}
+organizations <- data.frame(
+  id = "org:daily-planet",
+  name = "Daily Planet"
+)
+
+people <- data.frame(
+  id = "person:lois-lane",
+  full_name = "Lois Lane",
+  job_title = "Reporter"
+)
+
+employment <- data.frame(
+  id = "employment:lois-lane:daily-planet",
+  person_id = "person:lois-lane",
+  organization_id = "org:daily-planet"
+)
+
+initial_records <- list(
+  organization = organizations,
+  person = people,
+  employment = employment
+)
+
+initial_plan <- graft_plan(
+  store,
+  initial_records,
+  graft_provenance(
+    producer = "directory-import",
+    run_id = "import-2026-08-01",
+    idempotency_key = "directory-2026-08-01"
+  )
+)
+
+initial_plan@changes[
+  , c("class", "record_id", "action"),
+  drop = FALSE
+]
+initial_plan@issues
+```
+
+The organization can satisfy the employment foreign key in the same candidate
+set. `@valid` means the plan can be committed; `@changes` shows whether it
+should be.
+
+## Commit the reviewed plan
+
+```{r first-commit}
+stopifnot(initial_plan@valid)
+
+initial_result <- graft_commit(store, initial_plan)
+initial_result$inserted
+```
+
+Immediately before writing, graft checks that the plan is intact and still
+matches the store and active contract. All three records and their provenance
+commit in one transaction.
+
+## Accept a later update
+
+The next directory import changes only Lois's job title. Planning compares the
+candidate with the accepted head and reports one update.
+
+```{r update}
+update_plan <- graft_plan(
+  store,
+  list(
+    person = data.frame(
+      id = "person:lois-lane",
+      full_name = "Lois Lane",
+      job_title = "Investigative editor"
+    )
+  ),
+  graft_provenance(
+    producer = "hr-review",
+    run_id = "review-2026-08-08",
+    idempotency_key = "hr-review-2026-08-08"
+  )
+)
+
+update_plan@changes[
+  , c("class", "record_id", "action", "changed_fields"),
+  drop = FALSE
+]
+
+stopifnot(update_plan@valid)
+update_result <- graft_commit(store, update_plan)
+update_result$updated
+```
+
+## Read current knowledge and history
+
+`graft_get()` returns the current accepted record. The employment record keeps
+the stable IDs that connect the person to the organization.
+
+```{r current}
+current_person <- graft_get(
+  store,
+  "person:lois-lane",
+  include = character()
+)
+current_person$record
+
+current_employment <- graft_get(
+  store,
+  "employment:lois-lane:daily-planet",
+  include = character()
+)$record
+
+current_organization <- graft_get(
+  store,
+  current_employment$organization_id,
+  include = character()
+)$record
+current_organization
+```
+
+`graft_history()` retains both accepted versions. It returns newest first.
+
+```{r history}
+history <- graft_history(store, "person:lois-lane", limit = 10L)
+
+data.frame(
+  revision = history$revision_number,
+  committed_at = history$committed_at,
+  producer = history$producer,
+  event = history$source_run_id,
+  contract = substr(history$schema_build_digest, 1L, 19L),
+  job_title = vapply(
+    history$record,
+    \(record) record$job_title,
+    character(1)
   )
 )
 ```
 
-## 6. Close the store
+The current record is convenient for applications. The revision history is
+the audit trail: it retains what was accepted, when, under which contract, and
+from which producer event. The displayed contract value is an abbreviated
+build digest; the history result retains the complete digest.
+
+## Close the store
 
 ```{r close}
 graft_close(store)
 ```
 
-Closing is idempotent. graft closes connections it created; a connection
-supplied by the caller remains owned by the caller.
+## Add richer graph meaning with LinkML
 
-## Where to go next
+The data-dict contract was enough to validate ordinary tables and their scalar
+foreign keys. Those foreign keys remain validated references; graft does not
+turn them into graph traversal edges.
 
-- [Architecture](architecture.html) explains the authoritative ledger,
-  derived projections, and selective use of S7.
-- [LinkML contract](linkml-schema.html) covers compilation and schema
-  inspection.
-- [data-dict contract](data-dict-schema.html) covers the optional table-first
-  adapter, resolved JSON, and its explicit semantic limits.
-- [Change control](knowledge-change-control.html) covers stale plans, updates,
-  history, and integrity checks.
-- [Retrieval and history](retrieval.html) maps each read function to its job.
-- [Open knowledge](open-knowledge-format.html) adds a readable working tree
-  whose edits return through the same plan and commit boundary.
+LinkML is the next step when a relationship needs ontology identifiers,
+inheritance, polymorphic targets, or explicit semantic statement and evidence
+shapes. The bundled materials contract declares `Measurement` as a semantic
+statement, so accepted entity-valued measurements can become typed traversal
+edges. This is deliberately a second domain: the LinkML guide first explains
+how the same team-directory concepts map to LinkML, then uses materials to run
+a semantic edge that the package already ships.
+
+```{r linkml-next}
+linkml_schema <- graft_schema(system.file(
+  "extdata",
+  "materials.graft.json",
+  package = "graft",
+  mustWork = TRUE
+))
+
+linkml_schema@classes$Measurement@role
+linkml_schema@classes$Measurement@statement_shape
+```
+
+Read [the data-dict guide](data-dict-schema.html) to adapt an existing table
+contract. Next, deepen the package workflow with [change
+control](knowledge-change-control.html) and [retrieval and
+history](retrieval.html). Then read the [LinkML guide](linkml-schema.html) when
+the domain needs richer semantic structure.

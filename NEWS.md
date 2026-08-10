@@ -1,6 +1,7 @@
 # graft 0.0.0.9000
 
 * Graft v0.1 replaces the pre-production `kg_*` API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 15-function revision-first package boundary.
+* The pkgdown site now starts with ordinary tables and a shipped data-dict example, creates a blank store explicitly, demonstrates change history, and introduces LinkML when richer semantic graph modeling is needed.
 * Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.
 * Store format 3 makes immutable record revisions authoritative and treats current records, multivalued relations, graph edges, and search state as verified rebuildable projections.
 * `graft_commit()` and `graft_ingest()` atomically accept immutable reviewed plans through set-based DuckDB operations and return ordinary summaries with insert, update, match, observation, replay, and timing details.
@@ -8,7 +9,6 @@
 * `graft_open()` and `graft_close()` manage the only DuckDB backend through an invariant-checked S7 `GraftStore`, including ownership-aware connection cleanup and read-only reopen behavior.
 * `graft_plan()` and `graft_review()` produce the same tamper-evident S7 `GraftCommitPlan` for ordinary records and edited OKF knowledge without persistent writes.
 * `graft_provenance()` creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.
-* `graft_schema()` loads compiled manifests or compiles LinkML and optional data-dict contracts into an invariant-checked S7 `GraftSchema`; the strict `graft-table-v1` adapter separates YAML source-spec and resolved JSON export-format versions, runs YAML preflight and CLI export from one byte snapshot, guards CLI provenance against executable replacement, publishes a digest-bound public manifest with examples, ranges, origins, and source locators redacted, rejects unsafe JSON numeric tokens, `number(id)`, and primary IDs that are also foreign keys, normalizes optional blank foreign keys, and enforces supported datetime forms, while trusted resolved JSON avoids a required CLI dependency.
-* `graft_schema()` now fails closed when LinkML custom types or unsupported schema, class, slot, enum, or permissible-value semantics would be discarded; resolved data-dict versions retain their upstream lexical contract, provider metadata is allowlisted, and `foreign_key` constraints must agree with resolved references.
+* `graft_schema()` compiles LinkML or the supported `graft-table-v1` data-dict profile into the same invariant-checked contract. YAML authoring uses the optional data-dict CLI, committed resolved JSON remains R-only, and unsupported provider semantics fail closed.
 * `graft_status()` and `graft_sync()` inspect and explicitly synchronize the deterministic OKF working tree without making it an independent source of accepted knowledge.
 * `graft_tools()` creates four bounded read-only ellmer tools that delegate to the public retrieval and history operations.

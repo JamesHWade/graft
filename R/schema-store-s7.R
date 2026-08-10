@@ -281,19 +281,31 @@ GraftStore <- S7::new_class(
 
 #' Load or compile a Graft schema
 #'
-#' `graft_schema()` loads a compiled `.graft.json` manifest or compiles a LinkML
-#' or [data-dict](https://data-dict.tidyverse.org/) contract before returning an
-#' immutable semantic schema object. Data-dict YAML compilation requires the
-#' optional `data-dict` CLI; a resolved `export-spec` JSON document does not.
-#' When `output` is omitted, a temporary compiled manifest is retained as the
-#' schema object's source path.
+#' `graft_schema()` turns a
+#' [data-dict](https://data-dict.tidyverse.org/) or LinkML source into the
+#' contract used to validate records, or loads an existing `.graft.json`
+#' contract. A trusted resolved data-dict `export-spec` document compiles in R.
+#' Data-dict YAML requires the optional `data-dict` CLI, while LinkML YAML
+#' requires Python and `linkml-runtime`. When compiling a source contract
+#' without `output`, Graft retains a temporary compiled manifest for the
+#' returned schema object. Loading an existing `.graft.json` keeps its original
+#' path.
 #'
-#' @param path Path to a compiled `.graft.json` manifest, a LinkML YAML schema,
-#'   a `data-dict.yaml` contract, or resolved data-dict JSON.
+#' @param path Path to a data-dict YAML or resolved JSON contract, a LinkML YAML
+#'   schema, or a compiled `.graft.json` manifest.
 #' @param output Optional durable `.graft.json` output path when compiling a
 #'   source contract.
 #'
 #' @return An immutable `GraftSchema` S7 object.
+#' @examples
+#' dictionary <- system.file(
+#'   "extdata",
+#'   "team-directory.data-dict.json",
+#'   package = "graft",
+#'   mustWork = TRUE
+#' )
+#' schema <- graft_schema(dictionary)
+#' schema@name
 #' @export
 graft_schema <- function(path, output = NULL) {
   path <- normalize_graft_schema_path(path)
@@ -391,9 +403,10 @@ normalize_graft_schema_output <- function(output) {
 
 #' Open and initialize a Graft store
 #'
-#' `graft_open()` opens a DuckDB store and initializes a blank writable store or
-#' verifies an existing store in one call. Graft closes connections it creates;
-#' caller-supplied connections remain owned by the caller.
+#' `graft_open()` creates a blank writable DuckDB store when `path` does not
+#' exist, or verifies an existing store in one call. No pre-existing database
+#' is required. Graft closes connections it creates; caller-supplied
+#' connections remain owned by the caller.
 #'
 #' @param schema A `GraftSchema` object.
 #' @param path DuckDB file path, or `":memory:"`.

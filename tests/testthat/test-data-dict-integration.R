@@ -239,6 +239,134 @@ test_that("data-dict contracts govern the unchanged plan and commit path", {
   expect_equal(nrow(found), 1L)
 })
 
+test_that("the shipped data-dict example builds knowledge from an empty store", {
+  source <- system.file(
+    "extdata",
+    "team-directory.data-dict.json",
+    package = "graft"
+  )
+  yaml_source <- system.file(
+    "extdata",
+    "team-directory.data-dict.yaml",
+    package = "graft"
+  )
+  expect_identical(file.exists(source), TRUE)
+  expect_identical(file.exists(yaml_source), TRUE)
+
+  authored <- yaml::read_yaml(yaml_source, eval.expr = FALSE)
+  resolved <- jsonlite::fromJSON(source, simplifyVector = FALSE)
+  table_names <- function(document) {
+    vapply(document$tables, `[[`, character(1), "name")
+  }
+  column_names <- function(table) {
+    vapply(table$columns, `[[`, character(1), "name")
+  }
+  column_examples <- function(table) {
+    lapply(
+      table$columns,
+      \(column) unname(unlist(column$examples, use.names = FALSE))
+    )
+  }
+  relationship_joins <- function(document) {
+    vapply(document$relationships, `[[`, character(1), "join")
+  }
+  expect_identical(authored$name, resolved$name)
+  expect_identical(table_names(authored), table_names(resolved))
+  expect_identical(
+    lapply(authored$tables, column_names),
+    lapply(resolved$tables, column_names)
+  )
+  expect_identical(
+    lapply(authored$tables, column_examples),
+    lapply(resolved$tables, column_examples)
+  )
+  expect_identical(
+    relationship_joins(authored),
+    relationship_joins(resolved)
+  )
+
+  schema <- graft_schema(source)
+  expect_identical(schema@name, "team_directory")
+  expect_setequal(
+    names(schema@classes),
+    c("organization", "person", "employment")
+  )
+
+  store <- graft_open(schema, path = ":memory:", okf = "disabled")
+  withr::defer(graft_close(store))
+
+  invalid <- graft_plan(
+    store,
+    list(
+      person = data.frame(
+        id = "person:lois-lane",
+        full_name = "Lois Lane",
+        job_title = "Reporter"
+      ),
+      employment = data.frame(
+        id = "employment:lois-lane:daily-planet",
+        person_id = "person:lois-lane",
+        organization_id = "org:missing"
+      )
+    ),
+    graft_provenance(
+      producer = "directory-import",
+      idempotency_key = "directory-invalid"
+    )
+  )
+  expect_identical(invalid@valid, FALSE)
+  expect_in("reference_exists", invalid@issues$rule)
+
+  initial <- list(
+    organization = data.frame(
+      id = "org:daily-planet",
+      name = "Daily Planet"
+    ),
+    person = data.frame(
+      id = "person:lois-lane",
+      full_name = "Lois Lane",
+      job_title = "Reporter"
+    ),
+    employment = data.frame(
+      id = "employment:lois-lane:daily-planet",
+      person_id = "person:lois-lane",
+      organization_id = "org:daily-planet"
+    )
+  )
+  plan <- graft_plan(
+    store,
+    initial,
+    graft_provenance(
+      producer = "directory-import",
+      idempotency_key = "directory-2026-08-01"
+    )
+  )
+  expect_identical(plan@valid, TRUE)
+  expect_equal(nrow(plan@changes), 3L)
+  graft_commit(store, plan)
+
+  update <- graft_plan(
+    store,
+    list(
+      person = data.frame(
+        id = "person:lois-lane",
+        full_name = "Lois Lane",
+        job_title = "Investigative editor"
+      )
+    ),
+    graft_provenance(
+      producer = "directory-import",
+      idempotency_key = "directory-2026-08-08"
+    )
+  )
+  expect_identical(update@valid, TRUE)
+  graft_commit(store, update)
+
+  current <- graft_get(store, "person:lois-lane")
+  expect_identical(current$record$job_title, "Investigative editor")
+  expect_equal(nrow(graft_history(store, "person:lois-lane")), 2L)
+})
+
 test_that("the Tempest parity fixture exposes the deliberate mapping boundary", {
   schema <- graft_schema(data_dict_tempest_export_path())
   manifest <- schema@manifest
