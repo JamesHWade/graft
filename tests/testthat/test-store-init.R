@@ -214,8 +214,11 @@ test_that("GraftSchema validation memoizes a clean verdict on the canonical mani
   expect_identical(state$.validated_manifest_json, state$manifest_json)
   # A tampered manifest re-validates in full and fails, memo or not.
   fiddled <- state$manifest_json
-  state$manifest_json <- sub('"structural_digest":"sha256:[0-9a-f]{4}',
-    '"structural_digest":"sha256:0000', state$manifest_json)
+  state$manifest_json <- sub(
+    '"structural_digest":"sha256:[0-9a-f]{4}',
+    '"structural_digest":"sha256:0000',
+    state$manifest_json
+  )
   expect_error(S7::validate(schema))
   state$manifest_json <- fiddled
   expect_no_error(S7::validate(schema))
