@@ -2786,6 +2786,16 @@ data_dict_loss_is_valid <- function(loss) {
     is_nonempty_string(loss$handling)
 }
 
+# Content-addressed memo of manifests that have validated clean. Integrity
+# validation runs before every store mutation (and inside the S7 validators),
+# and its full pass -- canonical JSON, two digest recomputes, per-slot type
+# contracts -- costs seconds on a real manifest. The verdict is a pure
+# function of the manifest's content, so a manifest whose rlang::hash() has
+# already validated clean this session is proven; any edit changes the hash
+# and re-validates in full. Clean verdicts only: failures always re-raise
+# with their full context.
+validated_manifest_hashes <- new.env(parent = emptyenv())
+
 validate_manifest_integrity <- function(schema, subclass = NULL) {
   if (!is_compiled_schema(schema)) {
     abort_schema_integrity(
@@ -2794,6 +2804,10 @@ validate_manifest_integrity <- function(schema, subclass = NULL) {
     )
   }
   manifest <- schema$manifest
+  manifest_hash <- rlang::hash(manifest)
+  if (isTRUE(validated_manifest_hashes[[manifest_hash]])) {
+    return(invisible(schema))
+  }
   duplicate <- duplicate_json_object_key(manifest)
   if (!is.null(duplicate)) {
     abort_schema_integrity(
@@ -2870,6 +2884,7 @@ validate_manifest_integrity <- function(schema, subclass = NULL) {
       subclass = subclass
     )
   }
+  validated_manifest_hashes[[manifest_hash]] <- TRUE
   invisible(schema)
 }
 

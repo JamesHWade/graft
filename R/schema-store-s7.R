@@ -683,6 +683,23 @@ validate_graft_schema_s7 <- function(self) {
   if (!is_optional_string(state$path)) {
     return("@path must be one string or missing")
   }
+  # Memoized clean verdict. S7 re-runs this validator on every touch of a
+  # store (each API call converts through GraftStore, which validates its
+  # schema), and the full check below -- parse, re-canonicalize, recompile,
+  # recompute the structural digest, rebuild class contracts -- costs seconds
+  # on a real manifest. Everything it checks is a pure function of
+  # (manifest_json, path, classes), so once a given canonical manifest_json
+  # has validated clean with the current path and classes, the same bytes
+  # need not be re-proven. The stamp is a dot-name: ls() above does not see
+  # it, so the strict field-list check stays intact, and any change to
+  # manifest_json/path/classes misses the stamp and re-validates in full.
+  if (
+    identical(state$.validated_manifest_json, state$manifest_json) &&
+      identical(state$.validated_path, state$path) &&
+      identical(state$.validated_classes, state$classes)
+  ) {
+    return(NULL)
+  }
   manifest <- tryCatch(
     jsonlite::fromJSON(state$manifest_json, simplifyVector = FALSE),
     error = identity
@@ -711,6 +728,9 @@ validate_graft_schema_s7 <- function(self) {
   if (inherits(expected, "error") || !identical(state$classes, expected)) {
     return("@classes does not match the compiled manifest")
   }
+  state$.validated_manifest_json <- state$manifest_json
+  state$.validated_path <- state$path
+  state$.validated_classes <- state$classes
   NULL
 }
 
