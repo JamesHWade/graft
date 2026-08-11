@@ -204,3 +204,22 @@ test_that("projections rebuild from the revision ledger", {
   expect_identical(claim$statement_text, "A revision-first claim")
   expect_setequal(about$object, c("entity:alpha", "entity:beta"))
 })
+
+test_that("GraftSchema validation memoizes a clean verdict on the canonical manifest", {
+  schema <- graft_schema(tempest_manifest_path())
+  state <- attr(schema, ".state", exact = TRUE)
+  # First validate stamps the verdict (dot-name: invisible to the strict
+  # field-list check, which uses ls()).
+  S7::validate(schema)
+  expect_identical(state$.validated_manifest_json, state$manifest_json)
+  # A tampered manifest re-validates in full and fails, memo or not.
+  fiddled <- state$manifest_json
+  state$manifest_json <- sub(
+    '"structural_digest":"sha256:[0-9a-f]{4}',
+    '"structural_digest":"sha256:0000',
+    state$manifest_json
+  )
+  expect_error(S7::validate(schema))
+  state$manifest_json <- fiddled
+  expect_no_error(S7::validate(schema))
+})
