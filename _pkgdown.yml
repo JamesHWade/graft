@@ -121,8 +121,11 @@ reference:
       - graft_ingest
   - title: Retrieve and inspect
     desc: >
-      Read current records, search results, fixed projections, and history.
+      Pin an accepted boundary, then read records, search results, fixed
+      projections, and history.
     contents:
+      - graft_snapshot
+      - graft_at
       - graft_get
       - graft_find
       - graft_query

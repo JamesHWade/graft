@@ -12,7 +12,7 @@ graft_get(
 )
 }
 \arguments{
-\item{store}{An initialized Graft store.}
+\item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 
 \item{id}{One internal record identifier.}
 
@@ -29,4 +29,5 @@ limits, and truncation state.
 \code{graft_get()} hydrates one current record from its authoritative headed
 revision. Sensitive fields are filtered by the active contract. Related
 identifiers, claims, and evidence are optional and independently bounded.
+A \code{GraftView} resolves the record and related data at its pinned boundary.
 }

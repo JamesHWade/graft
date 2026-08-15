@@ -25,7 +25,12 @@ graft_neighbors_engine <- function(
     hard_limit = graph_result_limits$hops
   )
   limits <- validate_graph_limits(max_nodes, max_edges)
-  graph_assert_node_ids(store, id, field = "id")
+  graph <- if (is_graft_snapshot_backend(store)) {
+    snapshot_graph_data(store)
+  } else {
+    NULL
+  }
+  graph_assert_node_ids(store, id, field = "id", graph = graph)
 
   path <- if (is.null(predicate)) {
     rep(list(NULL), hops)
@@ -38,7 +43,8 @@ graft_neighbors_engine <- function(
     predicates = path,
     direction = direction,
     projection = projection,
-    limits = limits
+    limits = limits,
+    graph = graph
   )
   new_graft_graph_result(
     nodes = result$nodes,
@@ -88,7 +94,12 @@ graft_traverse_engine <- function(
     )
   }
   limits <- validate_graph_limits(max_nodes, max_edges)
-  graph_assert_node_ids(store, from, field = "from")
+  graph <- if (is_graft_snapshot_backend(store)) {
+    snapshot_graph_data(store)
+  } else {
+    NULL
+  }
+  graph_assert_node_ids(store, from, field = "from", graph = graph)
   traversed_path <- via[seq_len(max_hops)]
 
   result <- graph_expand(
@@ -97,7 +108,8 @@ graft_traverse_engine <- function(
     predicates = as.list(traversed_path),
     direction = direction,
     projection = projection,
-    limits = limits
+    limits = limits,
+    graph = graph
   )
   new_graft_graph_result(
     nodes = result$nodes,
@@ -191,7 +203,8 @@ graph_expand <- function(
   predicates,
   direction,
   projection,
-  limits
+  limits,
+  graph = NULL
 ) {
   visited <- sort(unique(roots))
   frontier <- visited
@@ -209,7 +222,8 @@ graph_expand <- function(
       predicate = predicate,
       direction = direction,
       projection = projection,
-      limit = remaining_edges
+      limit = remaining_edges,
+      graph = graph
     )
     truncated <- truncated || isTRUE(attr(candidates, "truncated"))
     attr(candidates, "truncated") <- NULL
@@ -217,7 +231,7 @@ graph_expand <- function(
       frontier <- character()
       next
     }
-    graph_assert_edge_endpoints(store, candidates)
+    graph_assert_edge_endpoints(store, candidates, graph = graph)
 
     existing_keys <- graph_edge_keys(edges)
     candidates <- candidates[
@@ -256,7 +270,7 @@ graph_expand <- function(
     frontier <- sort(unique(new_nodes))
   }
 
-  nodes <- graph_collect_nodes(store, visited)
+  nodes <- graph_collect_nodes(store, visited, graph = graph)
   graph_assert_collected_nodes(
     nodes,
     visited,
@@ -276,8 +290,39 @@ graph_collect_frontier_edges <- function(
   predicate,
   direction,
   projection,
-  limit
+  limit,
+  graph = NULL
 ) {
+  if (!is.null(graph)) {
+    rows <- if (identical(projection, "semantic")) {
+      graph$semantic
+    } else if (identical(projection, "provenance")) {
+      graph$provenance
+    } else {
+      dplyr::bind_rows(graph$semantic, graph$provenance)
+    }
+    incident <- if (identical(direction, "out")) {
+      rows$subject %in% frontier
+    } else if (identical(direction, "in")) {
+      rows$object %in% frontier
+    } else {
+      rows$subject %in% frontier | rows$object %in% frontier
+    }
+    if (!is.null(predicate)) {
+      incident <- incident &
+        !is.na(rows$predicate) &
+        rows$predicate == predicate
+    }
+    incident[is.na(incident)] <- FALSE
+    rows <- graph_order_edges(rows[incident, , drop = FALSE])
+    truncated <- nrow(rows) > limit
+    if (truncated) {
+      rows <- rows[seq_len(limit), , drop = FALSE]
+    }
+    rownames(rows) <- NULL
+    attr(rows, "truncated") <- truncated
+    return(rows)
+  }
   connection <- store$connection
   placeholders <- paste(rep("?", length(frontier)), collapse = ", ")
   if (identical(direction, "out")) {
@@ -387,9 +432,15 @@ graph_edge_keys <- function(edges) {
   )
 }
 
-graph_collect_nodes <- function(store, ids) {
+graph_collect_nodes <- function(store, ids, graph = NULL) {
   if (length(ids) == 0L) {
     return(graph_empty_node_data())
+  }
+  if (!is.null(graph)) {
+    rows <- graph$nodes[graph$nodes$id %in% ids, , drop = FALSE]
+    rows <- rows[order(rows$id, rows$class), , drop = FALSE]
+    rownames(rows) <- NULL
+    return(rows)
   }
   placeholders <- paste(rep("?", length(ids)), collapse = ", ")
   sql <- paste0(
@@ -411,8 +462,8 @@ graph_collect_nodes <- function(store, ids) {
   rows
 }
 
-graph_assert_node_ids <- function(store, ids, field) {
-  rows <- graph_collect_nodes(store, unique(ids))
+graph_assert_node_ids <- function(store, ids, field, graph = NULL) {
+  rows <- graph_collect_nodes(store, unique(ids), graph = graph)
   graph_assert_collected_nodes(
     rows,
     unique(ids),
@@ -457,7 +508,7 @@ graph_assert_collected_nodes <- function(rows, ids, field, rule) {
   invisible(rows)
 }
 
-graph_assert_edge_endpoints <- function(store, edges) {
+graph_assert_edge_endpoints <- function(store, edges, graph = NULL) {
   if (nrow(edges) == 0L) {
     return(invisible(edges))
   }
@@ -465,7 +516,7 @@ graph_assert_edge_endpoints <- function(store, edges) {
     as.character(edges$subject),
     as.character(edges$object)
   )))
-  rows <- graph_collect_nodes(store, endpoints)
+  rows <- graph_collect_nodes(store, endpoints, graph = graph)
   graph_assert_collected_nodes(
     rows,
     endpoints,

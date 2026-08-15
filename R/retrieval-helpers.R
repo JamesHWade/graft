@@ -23,6 +23,14 @@ graft_retrieval_limits <- list(
 )
 
 validate_retrieval_store <- function(store, refresh = FALSE) {
+  if (is_graft_snapshot_backend(store)) {
+    validate_initialized_store(
+      store$source_backend,
+      write = FALSE,
+      refresh = refresh
+    )
+    return(invisible(store))
+  }
   validate_initialized_store(
     store,
     write = FALSE,

@@ -2,12 +2,12 @@
 % Please edit documentation in R/agent-tools.R
 \name{graft_tools}
 \alias{graft_tools}
-\title{Create bounded read-only tools for a Graft store}
+\title{Create bounded read-only tools for a Graft store or view}
 \usage{
 graft_tools(store)
 }
 \arguments{
-\item{store}{An initialized \code{GraftStore}.}
+\item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 }
 \value{
 A named list of four \code{ellmer::ToolDef} objects.
@@ -16,6 +16,8 @@ A named list of four \code{ellmer::ToolDef} objects.
 \code{graft_tools()} returns four \code{\link[ellmer:tool]{ellmer::tool()}} definitions that delegate only
 to Graft's public bounded retrieval operations. The tools do not expose SQL,
 filesystem, network, connection, or mutation arguments.
+When given a \code{GraftView}, all four tools remain pinned to its immutable
+snapshot boundary and the live-store integrity diagnostic is unavailable.
 }
 \details{
 Every tool returns \code{result} plus explicit \code{truncated}, \code{limit}, and

@@ -7,7 +7,7 @@
 graft_history(store, id, as_of = NULL, limit = 100L)
 }
 \arguments{
-\item{store}{An initialized Graft store.}
+\item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 
 \item{id}{One internal record identifier.}
 
@@ -22,4 +22,6 @@ A bounded newest-first data frame with public record list-columns.
 \code{graft_history()} reads immutable revisions and hydrates them with the exact
 historical contract and sensitivity rules. A batch ID or timestamp selects
 a deterministic commit boundary.
+A \code{GraftView} defaults to its pinned boundary and permits only earlier
+explicit boundaries.
 }

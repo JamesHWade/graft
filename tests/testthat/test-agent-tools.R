@@ -80,7 +80,7 @@ test_that("graft_tools schemas are closed and hard bounded", {
 
 test_that("graft_tools delegates through the public retrieval API", {
   fixture <- local_retrieval_store()
-  store <- fixture$store
+  view <- graft_at(fixture$store, graft_snapshot(fixture$store))
   calls <- character()
   digest <- paste0("sha256:", strrep("a", 64L))
   tabular_result <- function(id, limit) {
@@ -92,12 +92,12 @@ test_that("graft_tools delegates through the public retrieval API", {
   }
   local_mocked_bindings(
     graft_find = function(observed_store, query, class, limit) {
-      expect_identical(observed_store, store)
+      expect_identical(observed_store, view)
       calls <<- c(calls, "graft_find")
       tabular_result(query, limit)
     },
     graft_get = function(observed_store, id, include, limits) {
-      expect_identical(observed_store, store)
+      expect_identical(observed_store, view)
       calls <<- c(calls, "graft_get")
       list(
         id = id,
@@ -111,24 +111,40 @@ test_that("graft_tools delegates through the public retrieval API", {
       )
     },
     graft_query = function(observed_store, operation, request, limit) {
-      expect_identical(observed_store, store)
+      expect_identical(observed_store, view)
       calls <<- c(calls, "graft_query")
       tabular_result(operation, limit)
     },
     graft_history = function(observed_store, id, as_of, limit) {
-      expect_identical(observed_store, store)
+      expect_identical(observed_store, view)
       calls <<- c(calls, "graft_history")
       tabular_result(id, limit)
     }
   )
-  tools <- graft_tools(store)
+  tools <- graft_tools(view)
   outputs <- list(
     tools$graft_find(query = "needle", limit = 2L),
     tools$graft_get(id = fixture$ids$entity, include = character()),
     tools$graft_query(operation = "identifiers", limit = 3L),
     tools$graft_history(id = fixture$ids$entity, limit = 4L)
   )
+  operation <- agent_tool_prop(
+    agent_tool_prop(
+      agent_tool_prop(tools$graft_query, "arguments"),
+      "properties"
+    )$operation,
+    "values"
+  )
 
+  expect_s7_class(view, graft:::GraftView)
+  expect_named(
+    tools,
+    c("graft_find", "graft_get", "graft_query", "graft_history")
+  )
+  expect_identical(
+    operation,
+    setdiff(graft_tool_query_operations(), "integrity")
+  )
   expect_identical(
     calls,
     c("graft_find", "graft_get", "graft_query", "graft_history")

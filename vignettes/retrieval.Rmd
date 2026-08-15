@@ -1,7 +1,7 @@
 ---
 title: "Retrieve accepted knowledge"
 description: >
-  Get current records, search public fields, inspect accepted history, and
+  Pin accepted state, get records, search public fields, inspect history, and
   expose the same bounded reads to agent hosts.
 output: rmarkdown::html_vignette
 vignette: >
@@ -18,7 +18,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-Graft provides four read functions. Current reads use the active contract;
+Graft provides four read functions. They read current accepted state from a
+store or state pinned by `graft_snapshot()` and `graft_at()`.
 `graft_history()` uses the exact contract recorded for each revision. None
 exposes raw SQL or a mutation path.
 
@@ -28,6 +29,7 @@ exposes raw SQL or a mutation path.
 | Search public fields | `graft_find()` | Ranked, bounded matches |
 | A fixed advanced operation | `graft_query()` | A validated operation-specific result |
 | Accepted revisions | `graft_history()` | Newest-first immutable history |
+| A pinned accepted boundary | `graft_snapshot()`, `graft_at()` | A serializable reference and live read view |
 | Read-only agent access | `graft_tools()` | Tool definitions backed by the same reads |
 
 ## Create some accepted knowledge
@@ -72,6 +74,20 @@ graft_ingest(
   )
 )
 ```
+
+## Pin the accepted boundary
+
+Capture a serializable reference before starting work that must use fixed
+accepted knowledge. The reference contains store, schema, and commit identity,
+not a filesystem path or live connection. `graft_at()` binds it to the open
+store as a read-only view:
+
+```{r snapshot}
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+```
+
+Later commits do not change reads through `view`.
 
 ## Get one current record
 
@@ -120,6 +136,14 @@ graft_ingest(
 )
 ```
 
+The live store now returns the update, while the view remains at the accepted
+boundary captured above:
+
+```{r pinned-read}
+graft_get(store, "person:lois-lane")$record$job_title
+graft_get(view, "person:lois-lane")$record$job_title
+```
+
 `graft_history()` returns the accepted revisions in newest-first order:
 
 ```{r history}
@@ -164,12 +188,13 @@ request members, unbounded traversal, and arbitrary SQL are rejected.
 ## Give agents the same bounded reads
 
 ```{r tools}
-tools <- graft_tools(store)
+tools <- graft_tools(view)
 names(tools)
 ```
 
 The definitions call `graft_find()`, `graft_get()`, `graft_query()`, and
-`graft_history()`. They expose no write operation, raw database connection,
+`graft_history()` through the captured view, so later commits cannot change
+their results. They expose no write operation, raw database connection,
 filesystem access, or network access. The host decides which provider receives
 them and remains responsible for tool authorization.
 

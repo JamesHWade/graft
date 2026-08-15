@@ -5,17 +5,28 @@ graft_history_engine <- function(store, id, as_of = NULL, limit = 100) {
     limit,
     hard_limit = graft_retrieval_limits$history
   )
-  boundary <- resolve_history_boundary(store, as_of)
+  boundary <- resolve_effective_history_boundary(store, as_of)
+  class_boundary_sql <- ""
+  class_params <- list(id)
+  if (!is.null(boundary$commit_order)) {
+    class_boundary_sql <- " AND r.commit_order <= ?"
+    class_params <- c(class_params, list(boundary$commit_order))
+  }
   record_classes <- with_duckdb_error(
     "record_history_class",
     DBI::dbGetQuery(
       store$connection,
       paste0(
-        "SELECT DISTINCT class FROM ",
+        "SELECT DISTINCT r.class FROM ",
         quote_identifier(store$connection, "_graft_record_revisions"),
-        " WHERE record_id = ? ORDER BY class"
+        " r INNER JOIN ",
+        quote_identifier(store$connection, "_graft_batches"),
+        " b ON r.batch_id = b.batch_id WHERE b.status = 'committed' ",
+        "AND r.record_id = ?",
+        class_boundary_sql,
+        " ORDER BY r.class"
       ),
-      params = list(id)
+      params = class_params
     )
   )
   if (nrow(record_classes) == 0L) {
@@ -538,6 +549,50 @@ resolve_history_boundary <- function(store, as_of) {
     batch_id = row$batch_id[[1L]],
     committed_at = row$committed_at[[1L]]
   )
+}
+
+resolve_effective_history_boundary <- function(store, as_of) {
+  if (!is_graft_snapshot_backend(store)) {
+    return(resolve_history_boundary(store, as_of))
+  }
+  snapshot <- snapshot_backend_data(store)
+  pinned <- list(
+    commit_order = snapshot$commit_order,
+    batch_id = snapshot$batch_id,
+    committed_at = snapshot$committed_at
+  )
+  if (is.null(as_of)) {
+    return(pinned)
+  }
+  if (inherits(as_of, "POSIXt") && snapshot$commit_order > 0) {
+    requested_time <- validate_history_time(as_of, "as_of")
+    pinned_time <- as.POSIXct(
+      snapshot$committed_at,
+      format = "%Y-%m-%dT%H:%M:%OSZ",
+      tz = "UTC"
+    )
+    if (requested_time > pinned_time) {
+      abort_snapshot_error(
+        c("graft_snapshot_boundary_error", "graft_history_boundary_error"),
+        "The requested history boundary is later than the GraftView snapshot.",
+        requested_as_of = as_of,
+        snapshot_commit_order = snapshot$commit_order,
+        snapshot_batch_id = snapshot$batch_id
+      )
+    }
+  }
+  boundary <- resolve_history_boundary(store, as_of)
+  if (boundary$commit_order > snapshot$commit_order) {
+    abort_snapshot_error(
+      c("graft_snapshot_boundary_error", "graft_history_boundary_error"),
+      "The requested history boundary is later than the GraftView snapshot.",
+      requested_as_of = as_of,
+      requested_commit_order = boundary$commit_order,
+      snapshot_commit_order = snapshot$commit_order,
+      snapshot_batch_id = snapshot$batch_id
+    )
+  }
+  boundary
 }
 
 shallow_integrity_issues <- function(store, limit) {

@@ -1,26 +1,21 @@
-#' Create bounded read-only tools for a Graft store
+#' Create bounded read-only tools for a Graft store or view
 #'
 #' `graft_tools()` returns four [ellmer::tool()] definitions that delegate only
 #' to Graft's public bounded retrieval operations. The tools do not expose SQL,
 #' filesystem, network, connection, or mutation arguments.
+#' When given a `GraftView`, all four tools remain pinned to its immutable
+#' snapshot boundary and the live-store integrity diagnostic is unavailable.
 #'
 #' Every tool returns `result` plus explicit `truncated`, `limit`, and
 #' `store_schema_digest` metadata.
 #'
-#' @param store An initialized `GraftStore`.
+#' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
 #' @return A named list of four `ellmer::ToolDef` objects.
 #' @export
 graft_tools <- function(store) {
   check_graft_tools_dependency()
-  if (!S7::S7_inherits(store, GraftStore)) {
-    abort_backend_error(
-      "`store` must be a GraftStore object.",
-      operation = "graft_tools",
-      argument = "store"
-    )
-  }
-  as_graft_store_internal(store, "store")
+  read_store <- as_graft_read_store_internal(store, "store")
   annotations <- graft_tool_annotations()
 
   list(
@@ -130,7 +125,7 @@ graft_tools <- function(store) {
         "The request shape is validated for the selected operation."
       ),
       arguments = list(
-        operation = ellmer::type_enum(graft_tool_query_operations()),
+        operation = ellmer::type_enum(graft_tool_query_operations(read_store)),
         request = graft_tool_request_type(),
         limit = graft_tool_integer(
           "Maximum rows for tabular operations.",
@@ -206,8 +201,8 @@ graft_tool_integer <- function(description, minimum, maximum, required) {
   type
 }
 
-graft_tool_query_operations <- function() {
-  c(
+graft_tool_query_operations <- function(store = NULL) {
+  operations <- c(
     "lookup",
     "identifiers",
     "claims",
@@ -217,6 +212,10 @@ graft_tool_query_operations <- function() {
     "unresolved",
     "integrity"
   )
+  if (!is.null(store) && is_graft_snapshot_backend(store)) {
+    operations <- setdiff(operations, "integrity")
+  }
+  operations
 }
 
 graft_tool_request_type <- function() {

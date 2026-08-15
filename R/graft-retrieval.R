@@ -3,8 +3,9 @@
 #' `graft_get()` hydrates one current record from its authoritative headed
 #' revision. Sensitive fields are filtered by the active contract. Related
 #' identifiers, claims, and evidence are optional and independently bounded.
+#' A `GraftView` resolves the record and related data at its pinned boundary.
 #'
-#' @param store An initialized Graft store.
+#' @param store An initialized `GraftStore` or immutable `GraftView`.
 #' @param id One internal record identifier.
 #' @param include Related results to include. Supported values are
 #'   `"identifiers"`, `"claims"`, and `"evidence"`.
@@ -19,7 +20,7 @@ graft_get <- function(
   include = c("identifiers", "claims", "evidence"),
   limits = list(identifiers = 100L, claims = 50L, evidence = 100L)
 ) {
-  store <- as_graft_store_internal(store, "store")
+  store <- as_graft_read_store_internal(store, "store")
   validate_graft_retrieval(store)
   id <- validate_scalar_text(id, "id", condition = abort_reference_error)
   include <- validate_graft_get_include(include)
@@ -87,8 +88,9 @@ graft_get <- function(
 #'
 #' `graft_find()` searches manifest-declared public search fields in current
 #' headed revisions. Results are collected, deterministic, and bounded.
+#' A `GraftView` searches only records accepted at its pinned boundary.
 #'
-#' @param store An initialized Graft store.
+#' @param store An initialized `GraftStore` or immutable `GraftView`.
 #' @param query One non-empty case-insensitive search string.
 #' @param class Optional concrete class restriction.
 #' @param limit Maximum rows to return, up to the package hard limit.
@@ -96,7 +98,7 @@ graft_get <- function(
 #' @return A bounded data frame with a public-record list-column.
 #' @export
 graft_find <- function(store, query, class = NULL, limit = 20L) {
-  store <- as_graft_store_internal(store, "store")
+  store <- as_graft_read_store_internal(store, "store")
   validate_graft_retrieval(store)
   query <- validate_scalar_text(query, "query")
   limit <- validate_result_limit(
@@ -119,8 +121,9 @@ graft_find <- function(store, query, class = NULL, limit = 20L) {
     }
     branches[[length(branches) + 1L]] <- paste0(
       "SELECT current.record_id, current.class, current.revision_id, ",
-      "current.payload_json, current.content_digest, current.recorded_at FROM (",
-      graft_current_source_sql(store$connection),
+      "current.schema_build_digest, current.payload_json, ",
+      "current.content_digest, current.recorded_at FROM (",
+      graft_read_source_sql(store),
       ") AS current WHERE current.class = ",
       graft_sql_string(store$connection, record_class),
       " AND LOWER(current.payload_json) LIKE ? ESCAPE '\\'"
@@ -228,8 +231,9 @@ graft_find <- function(store, query, class = NULL, limit = 20L) {
 #' accept optional `class` and `source_id`; and integrity accepts `projections`.
 #' Unknown members are rejected. Tabular results carry `limit`, `truncated`,
 #' and `store_schema_digest` attributes.
+#' A `GraftView` pins every operation and does not support `"integrity"`.
 #'
-#' @param store An initialized Graft store.
+#' @param store An initialized `GraftStore` or immutable `GraftView`.
 #' @param operation One supported operation name.
 #' @param request A named list of operation-specific values.
 #' @param limit Maximum rows for tabular operations.
@@ -251,11 +255,21 @@ graft_query <- function(
   request = list(),
   limit = 100L
 ) {
-  store <- as_graft_store_internal(store, "store")
+  store <- as_graft_read_store_internal(store, "store")
   validate_store_backend(store)
   operation <- rlang::arg_match(operation)
   request <- validate_graft_query_request(request)
   if (identical(operation, "integrity")) {
+    if (is_graft_snapshot_backend(store)) {
+      abort_snapshot_error(
+        "graft_snapshot_boundary_error",
+        paste(
+          "`integrity` is a live-store diagnostic and is unavailable",
+          "for a GraftView."
+        ),
+        operation = "integrity"
+      )
+    }
     validate_graft_integrity_store(store)
     validate_request_members(request, c("projections"))
     limit <- validate_result_limit(
@@ -301,8 +315,10 @@ validate_graft_integrity_store <- function(store) {
 #' `graft_history()` reads immutable revisions and hydrates them with the exact
 #' historical contract and sensitivity rules. A batch ID or timestamp selects
 #' a deterministic commit boundary.
+#' A `GraftView` defaults to its pinned boundary and permits only earlier
+#' explicit boundaries.
 #'
-#' @param store An initialized Graft store.
+#' @param store An initialized `GraftStore` or immutable `GraftView`.
 #' @param id One internal record identifier.
 #' @param as_of Optional committed batch ID or scalar `POSIXt` time.
 #' @param limit Maximum revisions to return.
@@ -310,7 +326,7 @@ validate_graft_integrity_store <- function(store) {
 #' @return A bounded newest-first data frame with public record list-columns.
 #' @export
 graft_history <- function(store, id, as_of = NULL, limit = 100L) {
-  store <- as_graft_store_internal(store, "store")
+  store <- as_graft_read_store_internal(store, "store")
   validate_graft_retrieval(store)
   graft_history_engine(store, id = id, as_of = as_of, limit = limit)
 }
@@ -370,6 +386,7 @@ graft_collect_candidate_rows <- function(
       record_id = character(),
       class = character(),
       revision_id = character(),
+      schema_build_digest = character(),
       payload_json = character(),
       content_digest = character(),
       recorded_at = as.POSIXct(character(), tz = "UTC")
@@ -430,6 +447,9 @@ graft_candidate_page_size <- function() {
 
 validate_graft_retrieval <- function(store) {
   validate_retrieval_store(store)
+  if (is_graft_snapshot_backend(store)) {
+    return(invisible(store))
+  }
   issues <- graft_retrieval_integrity(
     store,
     limit = 1L,
@@ -557,6 +577,41 @@ graft_current_source_sql <- function(connection) {
   )
 }
 
+graft_read_source_sql <- function(store) {
+  if (!is_graft_snapshot_backend(store)) {
+    return(graft_current_source_sql(store$connection))
+  }
+  snapshot <- snapshot_backend_data(store)
+  commit_order <- format(
+    snapshot$commit_order,
+    scientific = FALSE,
+    trim = TRUE
+  )
+  revision <- quote_identifier(
+    store$connection,
+    "_graft_record_revisions"
+  )
+  batch <- quote_identifier(store$connection, "_graft_batches")
+  paste0(
+    "SELECT record_id, class, revision_id, revision_number, ",
+    "schema_build_digest, payload_json, content_digest, recorded_at, ",
+    "commit_order FROM (SELECT r.record_id, r.class, r.revision_id, ",
+    "r.revision_number, r.schema_build_digest, r.payload_json, ",
+    "r.content_digest, r.recorded_at, r.commit_order, r.operation, ",
+    "ROW_NUMBER() OVER (PARTITION BY r.class, r.record_id ORDER BY ",
+    "r.commit_order DESC, r.revision_number DESC, r.revision_id ASC) ",
+    "AS graft_snapshot_rank FROM ",
+    revision,
+    " r INNER JOIN ",
+    batch,
+    " b ON r.batch_id = b.batch_id WHERE b.status = 'committed' ",
+    "AND r.commit_order <= ",
+    commit_order,
+    ") snapshot_current WHERE graft_snapshot_rank = 1 ",
+    "AND operation <> 'delete'"
+  )
+}
+
 graft_current_rows <- function(store, ids = NULL, classes = NULL, limit) {
   where <- character()
   params <- list()
@@ -599,7 +654,7 @@ graft_current_rows <- function(store, ids = NULL, classes = NULL, limit) {
     store$connection,
     paste0(
       "SELECT * FROM (",
-      graft_current_source_sql(store$connection),
+      graft_read_source_sql(store),
       ") current",
       restriction,
       " ORDER BY class, record_id, revision_id LIMIT ",
@@ -612,6 +667,14 @@ graft_current_rows <- function(store, ids = NULL, classes = NULL, limit) {
 graft_public_current_record <- function(store, row) {
   contract <- store$schema$manifest$classes[[row$class[[1L]]]]
   if (is.null(contract)) {
+    if (is_graft_snapshot_backend(store)) {
+      abort_snapshot_error(
+        "graft_snapshot_schema_error",
+        "A pinned revision class is absent from the snapshot contract.",
+        record_id = row$record_id[[1L]],
+        record_class = row$class[[1L]]
+      )
+    }
     abort_backend_error(
       "A current revision class is absent from the active contract.",
       operation = "graft_retrieval",
@@ -619,13 +682,37 @@ graft_public_current_record <- function(store, row) {
       record_class = row$class[[1L]]
     )
   }
+  if (!is_graft_snapshot_backend(store)) {
+    return(validated_public_revision_record(
+      row$payload_json[[1L]],
+      row$content_digest[[1L]],
+      contract,
+      record_id = row$record_id[[1L]],
+      revision_id = row$revision_id[[1L]]
+    ))
+  }
+  revision_schema <- historical_schemas(
+    store,
+    row$schema_build_digest[[1L]]
+  )[[row$schema_build_digest[[1L]]]]
+  revision_contract <- revision_schema$manifest$classes[[row$class[[1L]]]]
+  if (is.null(revision_contract)) {
+    abort_snapshot_error(
+      "graft_snapshot_schema_error",
+      "A pinned revision class is absent from its revision contract.",
+      record_id = row$record_id[[1L]],
+      record_class = row$class[[1L]],
+      build_digest = row$schema_build_digest[[1L]]
+    )
+  }
   validated_public_revision_record(
     row$payload_json[[1L]],
     row$content_digest[[1L]],
-    contract,
+    revision_contract,
     record_id = row$record_id[[1L]],
     revision_id = row$revision_id[[1L]]
   )
+  public_revision_record(row$payload_json[[1L]], contract)
 }
 
 graft_search_fields <- function(contract) {
@@ -806,21 +893,39 @@ graft_lookup_engine <- function(store, namespace, value, class = NULL) {
       namespace = namespace
     )
   }
-  placeholders <- paste(rep("?", length(eligible)), collapse = ", ")
-  rows <- retrieval_query(
-    store$connection,
-    paste0(
-      "SELECT record_id, class, namespace, value, normalized_value, ",
-      "status, assigned_by, confidence, created_at FROM ",
-      quote_identifier(store$connection, "_graft_identifiers"),
-      " WHERE namespace = ? AND normalized_value = ?",
-      " AND status IN ('primary', 'equivalent')",
-      " AND class IN (",
-      placeholders,
-      ") ORDER BY class, record_id, status, created_at"
-    ),
-    params = c(list(namespace, normalized), as.list(eligible))
-  )
+  if (is_graft_snapshot_backend(store)) {
+    rows <- snapshot_identifier_registry(store)
+    rows <- rows[
+      rows$namespace == namespace &
+        rows$normalized_value == normalized &
+        rows$status %in% c("primary", "equivalent") &
+        rows$class %in% eligible,
+      ,
+      drop = FALSE
+    ]
+    rows <- rows[
+      order(rows$class, rows$record_id, rows$status, rows$created_at),
+      ,
+      drop = FALSE
+    ]
+    rownames(rows) <- NULL
+  } else {
+    placeholders <- paste(rep("?", length(eligible)), collapse = ", ")
+    rows <- retrieval_query(
+      store$connection,
+      paste0(
+        "SELECT record_id, class, namespace, value, normalized_value, ",
+        "status, assigned_by, confidence, created_at FROM ",
+        quote_identifier(store$connection, "_graft_identifiers"),
+        " WHERE namespace = ? AND normalized_value = ?",
+        " AND status IN ('primary', 'equivalent')",
+        " AND class IN (",
+        placeholders,
+        ") ORDER BY class, record_id, status, created_at"
+      ),
+      params = c(list(namespace, normalized), as.list(eligible))
+    )
+  }
   duplicate <- split(rows$record_id, rows$class)
   inconsistent <- names(Filter(
     \(.x) length(unique(.x)) > 1L,
@@ -909,6 +1014,9 @@ graft_identifier_rows <- function(store, id, limit) {
     limit,
     hard_limit = graft_retrieval_limits$identifiers
   )
+  if (is_graft_snapshot_backend(store)) {
+    return(snapshot_public_identifier_rows(store, id, limit))
+  }
   eligibility <- character()
   eligibility_params <- list()
   for (record_class in sort(public_class_names(store), method = "radix")) {
@@ -993,8 +1101,9 @@ graft_claim_rows <- function(
   for (record_class in sort(classes, method = "radix")) {
     branches[[length(branches) + 1L]] <- paste0(
       "SELECT current.record_id, current.class, current.revision_id, ",
-      "current.payload_json, current.content_digest, current.recorded_at FROM (",
-      graft_current_source_sql(store$connection),
+      "current.schema_build_digest, current.payload_json, ",
+      "current.content_digest, current.recorded_at FROM (",
+      graft_read_source_sql(store),
       ") current WHERE current.class = ",
       graft_sql_string(store$connection, record_class),
       " AND LOWER(current.payload_json) LIKE ? ESCAPE '\\'"
@@ -1270,8 +1379,9 @@ graft_evidence_rows <- function(
     }
     branches[[length(branches) + 1L]] <- paste0(
       "SELECT current.record_id, current.class, current.revision_id, ",
-      "current.payload_json, current.content_digest, current.recorded_at FROM (",
-      graft_current_source_sql(store$connection),
+      "current.schema_build_digest, current.payload_json, ",
+      "current.content_digest, current.recorded_at FROM (",
+      graft_read_source_sql(store),
       ") current WHERE current.class = ",
       graft_sql_string(store$connection, record_class),
       if (length(where) > 0L) {
@@ -1695,7 +1805,9 @@ graft_query_neighbors <- function(store, request) {
     "max_edges"
   )
   validate_request_members(request, allowed, "id")
-  verify_projection_views(store$connection, store$schema)
+  if (!is_graft_snapshot_backend(store)) {
+    verify_projection_views(store$connection, store$schema)
+  }
   result <- graft_neighbors_engine(
     store,
     id = request$id,
@@ -1720,7 +1832,9 @@ graft_query_traverse <- function(store, request) {
     "max_edges"
   )
   validate_request_members(request, allowed, c("from", "via"))
-  verify_projection_views(store$connection, store$schema)
+  if (!is_graft_snapshot_backend(store)) {
+    verify_projection_views(store$connection, store$schema)
+  }
   result <- graft_traverse_engine(
     store,
     from = request$from,
@@ -1774,8 +1888,9 @@ graft_query_unresolved <- function(store, request, limit) {
     }
     branches[[length(branches) + 1L]] <- paste0(
       "SELECT current.record_id, current.class, current.revision_id, ",
-      "current.payload_json, current.content_digest, current.recorded_at FROM (",
-      graft_current_source_sql(store$connection),
+      "current.schema_build_digest, current.payload_json, ",
+      "current.content_digest, current.recorded_at FROM (",
+      graft_read_source_sql(store),
       ") current WHERE current.class = ",
       graft_sql_string(store$connection, record_class),
       " AND ",
