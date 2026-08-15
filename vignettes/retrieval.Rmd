@@ -18,10 +18,11 @@ knitr::opts_chunk$set(
 )
 ```
 
-Graft provides four read functions. They read current accepted state from a
-store or state pinned by `graft_snapshot()` and `graft_at()`.
-`graft_history()` uses the exact contract recorded for each revision. None
-exposes raw SQL or a mutation path.
+Graft provides four read operations: `graft_get()`, `graft_find()`,
+`graft_query()`, and `graft_history()`. `graft_snapshot()` captures an accepted
+boundary, and `graft_at()` binds it to a read-only view that those operations
+can use. `graft_history()` uses the exact contract recorded for each revision.
+None exposes raw SQL or a mutation path.
 
 | Need | Function | Result |
 |---|---|---|

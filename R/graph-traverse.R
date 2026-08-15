@@ -25,12 +25,7 @@ graft_neighbors_engine <- function(
     hard_limit = graph_result_limits$hops
   )
   limits <- validate_graph_limits(max_nodes, max_edges)
-  graph <- if (is_graft_snapshot_backend(store)) {
-    snapshot_graph_data(store)
-  } else {
-    NULL
-  }
-  graph_assert_node_ids(store, id, field = "id", graph = graph)
+  graph_assert_node_ids(store, id, field = "id")
 
   path <- if (is.null(predicate)) {
     rep(list(NULL), hops)
@@ -43,8 +38,7 @@ graft_neighbors_engine <- function(
     predicates = path,
     direction = direction,
     projection = projection,
-    limits = limits,
-    graph = graph
+    limits = limits
   )
   new_graft_graph_result(
     nodes = result$nodes,
@@ -94,12 +88,7 @@ graft_traverse_engine <- function(
     )
   }
   limits <- validate_graph_limits(max_nodes, max_edges)
-  graph <- if (is_graft_snapshot_backend(store)) {
-    snapshot_graph_data(store)
-  } else {
-    NULL
-  }
-  graph_assert_node_ids(store, from, field = "from", graph = graph)
+  graph_assert_node_ids(store, from, field = "from")
   traversed_path <- via[seq_len(max_hops)]
 
   result <- graph_expand(
@@ -108,8 +97,7 @@ graft_traverse_engine <- function(
     predicates = as.list(traversed_path),
     direction = direction,
     projection = projection,
-    limits = limits,
-    graph = graph
+    limits = limits
   )
   new_graft_graph_result(
     nodes = result$nodes,
@@ -301,27 +289,23 @@ graph_collect_frontier_edges <- function(
     } else {
       dplyr::bind_rows(graph$semantic, graph$provenance)
     }
-    incident <- if (identical(direction, "out")) {
-      rows$subject %in% frontier
-    } else if (identical(direction, "in")) {
-      rows$object %in% frontier
-    } else {
-      rows$subject %in% frontier | rows$object %in% frontier
-    }
-    if (!is.null(predicate)) {
-      incident <- incident &
-        !is.na(rows$predicate) &
-        rows$predicate == predicate
-    }
-    incident[is.na(incident)] <- FALSE
-    rows <- graph_order_edges(rows[incident, , drop = FALSE])
-    truncated <- nrow(rows) > limit
-    if (truncated) {
-      rows <- rows[seq_len(limit), , drop = FALSE]
-    }
-    rownames(rows) <- NULL
-    attr(rows, "truncated") <- truncated
-    return(rows)
+    return(graph_filter_frontier_edges(
+      rows,
+      frontier,
+      predicate,
+      direction,
+      limit
+    ))
+  }
+  if (is_graft_snapshot_backend(store)) {
+    return(snapshot_graph_frontier_edges(
+      store,
+      frontier,
+      predicate,
+      direction,
+      projection,
+      limit
+    ))
   }
   connection <- store$connection
   placeholders <- paste(rep("?", length(frontier)), collapse = ", ")
@@ -361,6 +345,36 @@ graph_collect_frontier_edges <- function(
     "graph_neighbors",
     DBI::dbGetQuery(connection, sql, params = params)
   )
+  truncated <- nrow(rows) > limit
+  if (truncated) {
+    rows <- rows[seq_len(limit), , drop = FALSE]
+  }
+  rownames(rows) <- NULL
+  attr(rows, "truncated") <- truncated
+  rows
+}
+
+graph_filter_frontier_edges <- function(
+  rows,
+  frontier,
+  predicate,
+  direction,
+  limit
+) {
+  incident <- if (identical(direction, "out")) {
+    rows$subject %in% frontier
+  } else if (identical(direction, "in")) {
+    rows$object %in% frontier
+  } else {
+    rows$subject %in% frontier | rows$object %in% frontier
+  }
+  if (!is.null(predicate)) {
+    incident <- incident &
+      !is.na(rows$predicate) &
+      rows$predicate == predicate
+  }
+  incident[is.na(incident)] <- FALSE
+  rows <- graph_order_edges(rows[incident, , drop = FALSE])
   truncated <- nrow(rows) > limit
   if (truncated) {
     rows <- rows[seq_len(limit), , drop = FALSE]
@@ -441,6 +455,9 @@ graph_collect_nodes <- function(store, ids, graph = NULL) {
     rows <- rows[order(rows$id, rows$class), , drop = FALSE]
     rownames(rows) <- NULL
     return(rows)
+  }
+  if (is_graft_snapshot_backend(store)) {
+    return(snapshot_graph_nodes_for_ids(store, ids))
   }
   placeholders <- paste(rep("?", length(ids)), collapse = ", ")
   sql <- paste0(

@@ -394,6 +394,268 @@ test_that("snapshot graph labels match live graph slot eligibility", {
   expect_identical(pinned$nodes, live$nodes)
 })
 
+test_that("snapshot graph retrieval stays scoped and matches live traversal", {
+  local <- local_retrieval_store()
+  unrelated_ids <- vapply(
+    seq_len(25L),
+    \(index) test_graft_id(paste0("snapshot-disconnected-", index)),
+    character(1)
+  )
+  literal_values <- c(
+    percent = "%",
+    underscore = "_",
+    backslash = "\\",
+    quote = "\""
+  )
+  disconnected_edges <- vapply(
+    seq_along(unrelated_ids),
+    \(index) test_graft_id(paste0("snapshot-disconnected-edge-", index)),
+    character(1)
+  )
+  graft_ingest(
+    local$store,
+    list(
+      Entity = data.frame(
+        id = unrelated_ids,
+        preferred_name = paste("Disconnected", seq_along(unrelated_ids))
+      ),
+      SemanticClaim = data.frame(
+        id = disconnected_edges,
+        subject = unrelated_ids,
+        predicate = "schema:relatedTo",
+        object_entity = c(unrelated_ids[-1L], unrelated_ids[[1L]]),
+        status = "active",
+        polarity = "positive",
+        measurement_method = rep(
+          unname(literal_values),
+          length.out = length(disconnected_edges)
+        ),
+        temperature = 23
+      )
+    ),
+    graft_provenance(
+      "snapshot-disconnected",
+      idempotency_key = "snapshot-disconnected"
+    )
+  )
+  view <- graft_at(local$store, graft_snapshot(local$store))
+
+  requests <- list(
+    provenance_path = list(
+      operation = "traverse",
+      request = list(
+        from = local$ids$active_claim,
+        via = c(
+          "https://w3id.org/graft/evidence",
+          "https://w3id.org/graft/source_id"
+        ),
+        projection = "provenance"
+      )
+    ),
+    inbound_source = list(
+      operation = "neighbors",
+      request = list(
+        id = local$ids$source,
+        direction = "in",
+        projection = "provenance"
+      )
+    ),
+    truncated_combined = list(
+      operation = "neighbors",
+      request = list(
+        id = local$ids$active_claim,
+        direction = "both",
+        projection = "combined",
+        max_edges = 1L
+      )
+    )
+  )
+  live <- lapply(requests, \(query) {
+    graft_query(local$store, query$operation, query$request)
+  })
+
+  hydrated <- character()
+  original_hydrate <- graft_public_current_record
+  local_mocked_bindings(
+    graft_public_current_record = function(store, row) {
+      hydrated <<- c(hydrated, as.character(row$record_id[[1L]]))
+      original_hydrate(store, row)
+    }
+  )
+  pinned <- lapply(requests, \(query) {
+    graft_query(view, query$operation, query$request)
+  })
+
+  expect_identical(pinned, live)
+  expect_identical(pinned$truncated_combined$truncated, TRUE)
+  expect_in(local$ids$active_claim, hydrated)
+  expect_identical(
+    intersect(unique(hydrated), c(unrelated_ids, disconnected_edges)),
+    character()
+  )
+
+  backend <- as_graft_read_store_internal(view)
+  unscoped <- catch_graft_ingest_condition(
+    snapshot_graph_current_rows(backend, "Entity")
+  )
+  expect_s3_class(unscoped, "graft_backend_error")
+
+  DBI::dbExecute(
+    local$connection,
+    paste(
+      "UPDATE _graft_record_revisions SET content_digest = ?",
+      "WHERE record_id = ?"
+    ),
+    params = list(graft_sha256("corrupt edge"), local$ids$evidence)
+  )
+  corrupt_edge <- catch_graft_ingest_condition(
+    graft_query(
+      view,
+      requests$provenance_path$operation,
+      requests$provenance_path$request
+    )
+  )
+  expect_s3_class(corrupt_edge, "graft_backend_error")
+})
+
+test_that("snapshot graph edge hydration is bounded by max_edges", {
+  local <- local_retrieval_store()
+  edge_ids <- vapply(
+    seq_len(100L),
+    \(index) test_graft_id(paste0("snapshot-high-degree-", index)),
+    character(1)
+  )
+  graft_ingest(
+    local$store,
+    list(
+      SemanticClaim = data.frame(
+        id = edge_ids,
+        subject = local$ids$entity,
+        predicate = "schema:relatedTo",
+        object_entity = local$ids$other_entity,
+        status = "active",
+        polarity = "positive",
+        measurement_method = "bounded hydration",
+        temperature = 23
+      )
+    ),
+    graft_provenance(
+      "snapshot-high-degree",
+      idempotency_key = "snapshot-high-degree"
+    )
+  )
+  view <- graft_at(local$store, graft_snapshot(local$store))
+  request <- list(
+    id = local$ids$entity,
+    direction = "out",
+    projection = "semantic",
+    max_edges = 1L
+  )
+  live <- graft_query(local$store, "neighbors", request)
+
+  hydrated <- character()
+  original_hydrate <- graft_public_current_record
+  local_mocked_bindings(
+    graft_public_current_record = function(store, row) {
+      hydrated <<- c(
+        hydrated,
+        paste(row$class[[1L]], row$record_id[[1L]], sep = "\r")
+      )
+      original_hydrate(store, row)
+    }
+  )
+  pinned <- graft_query(view, "neighbors", request)
+  edge_sources <- unique(hydrated[startsWith(hydrated, "SemanticClaim\r")])
+
+  expect_identical(pinned, live)
+  expect_identical(pinned$truncated, TRUE)
+  expect_length(edge_sources, 2L)
+})
+
+test_that("snapshot graph SQL handles valid URI and CURIE references offline", {
+  connection <- DBI::dbConnect(
+    duckdb::duckdb(shared_home = FALSE),
+    dbdir = ":memory:",
+    config = list(
+      autoload_known_extensions = "false",
+      autoinstall_known_extensions = "false"
+    )
+  )
+  withr::defer(DBI::dbDisconnect(connection, shutdown = TRUE))
+  DBI::dbExecute(connection, "SET autoload_known_extensions = false")
+  DBI::dbExecute(connection, "SET autoinstall_known_extensions = false")
+  references <- c(
+    "https://example.org/a,b",
+    "https://[::1]/a_b",
+    "schema:item%20one"
+  )
+  owner <- "https://example.org/claim"
+  current <- data.frame(
+    record_id = owner,
+    class = "Claim",
+    revision_id = "revision-1",
+    revision_number = 1L,
+    schema_build_digest = "schema-1",
+    payload_json = canonical_json(list(about = references, id = owner)),
+    content_digest = "content-1",
+    recorded_at = as.POSIXct("2026-08-15", tz = "UTC"),
+    commit_order = 1,
+    stringsAsFactors = FALSE
+  )
+  DBI::dbWriteTable(connection, "snapshot_current", current)
+  spec <- list(
+    kind = "about",
+    record_class = "Claim",
+    edge_class = "provenance",
+    source_table = "claim__about",
+    edge_id_slot = NULL,
+    edge_kind = "about",
+    subject_slot = "id",
+    predicate_slot = NULL,
+    predicate_value = "https://w3id.org/graft/about",
+    object_slot = "about"
+  )
+  rows <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      snapshot_graph_edge_spec_sql(connection, spec),
+      " ORDER BY edge_id"
+    )
+  )
+  scalar_sql <- snapshot_graph_payload_scalar_sql(connection, "subject")
+  scalar <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      "SELECT ",
+      scalar_sql,
+      " AS value FROM (SELECT ? AS payload_json) current"
+    ),
+    params = list(paste0(
+      '{"note":"fake,\\"subject\\":\\"bad\\"",',
+      '"subject":"',
+      references[[2L]],
+      '"}'
+    ))
+  )
+  settings <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      "SELECT current_setting('autoload_known_extensions') AS autoload, ",
+      "current_setting('autoinstall_known_extensions') AS autoinstall"
+    )
+  )
+
+  expect_all_true(linkml_reference_is_valid(references))
+  expect_identical(rows$object, references)
+  expect_identical(
+    rows$edge_id,
+    paste0(owner, "#about:", seq_along(references), "#about")
+  )
+  expect_identical(scalar$value, references[[2L]])
+  expect_identical(settings$autoload, FALSE)
+  expect_identical(settings$autoinstall, FALSE)
+})
+
 test_that("snapshot graph labels use live DuckDB scalar casts", {
   graph_label_nodes <- function(type, value, example) {
     dictionary <- jsonlite::read_json(
