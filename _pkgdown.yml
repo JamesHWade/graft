@@ -126,6 +126,7 @@ reference:
     contents:
       - graft_snapshot
       - graft_at
+      - graft_view_snapshot
       - graft_get
       - graft_find
       - graft_query

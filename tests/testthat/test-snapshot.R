@@ -121,6 +121,89 @@ test_that("snapshot tampering fails before store mapping", {
   expect_s3_class(condition, "graft_snapshot_error")
 })
 
+test_that("graft_view_snapshot returns an isolated pinned snapshot", {
+  local <- local_retrieval_store()
+  fixture <- retrieval_fixture_records()
+  snapshot <- graft_snapshot(local$store)
+  view <- graft_at(local$store, snapshot)
+
+  recovered <- graft_view_snapshot(view)
+  restored <- unserialize(serialize(recovered, NULL))
+
+  expect_s7_class(recovered, graft:::GraftSnapshot)
+  expect_identical(S7::props(recovered), S7::props(snapshot))
+  expect_identical(S7::props(restored), S7::props(snapshot))
+  expect_identical(
+    intersect(S7::prop_names(recovered), c("path", "connection")),
+    character()
+  )
+
+  claim <- fixture$records$Claim[
+    fixture$records$Claim$id == local$ids$active_claim,
+    ,
+    drop = FALSE
+  ]
+  claim$statement_text <- "A later accepted statement."
+  graft_ingest(
+    local$store,
+    list(Claim = claim),
+    graft_provenance(
+      "view-snapshot-update",
+      idempotency_key = "view-snapshot-update"
+    )
+  )
+
+  expect_identical(
+    S7::props(graft_view_snapshot(view)),
+    S7::props(snapshot)
+  )
+  expect_identical(
+    identical(
+      graft_snapshot(local$store)@snapshot_id,
+      snapshot@snapshot_id
+    ),
+    FALSE
+  )
+
+  data <- snapshot_data(recovered)
+  data$batch_id <- paste0(data$batch_id, "-caller-change")
+  attr(recovered, ".data") <- data
+
+  expect_identical(
+    S7::props(graft_view_snapshot(view)),
+    S7::props(snapshot)
+  )
+
+  graft_close(local$store)
+  expect_identical(
+    S7::props(graft_view_snapshot(view)),
+    S7::props(snapshot)
+  )
+})
+
+test_that("graft_view_snapshot rejects invalid and tampered views", {
+  local <- local_retrieval_store()
+  view <- graft_at(local$store, graft_snapshot(local$store))
+  invalid <- catch_graft_ingest_condition(graft_view_snapshot(list()))
+
+  tampered <- view
+  state <- graft_view_state(tampered)
+  snapshot <- state$snapshot
+  data <- snapshot_data(snapshot)
+  data$batch_id <- paste0(data$batch_id, "-tampered")
+  attr(snapshot, ".data") <- data
+  state$snapshot <- snapshot
+  attr(tampered, ".state") <- state
+  tampered_condition <- catch_graft_ingest_condition(
+    graft_view_snapshot(tampered)
+  )
+
+  expect_s3_class(invalid, "graft_snapshot_invalid")
+  expect_s3_class(invalid, "graft_snapshot_error")
+  expect_s3_class(tampered_condition, "graft_snapshot_tampered")
+  expect_s3_class(tampered_condition, "graft_snapshot_error")
+})
+
 test_that("graft_at validates every persisted snapshot mapping field", {
   local <- local_retrieval_store()
   snapshot <- graft_snapshot(local$store)

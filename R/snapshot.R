@@ -131,6 +131,27 @@ graft_at <- function(store, snapshot) {
   ))
 }
 
+#' Recover the immutable snapshot retained by a view
+#'
+#' `graft_view_snapshot()` returns the exact path-free [graft_snapshot()]
+#' retained by a `GraftView`. The returned snapshot is an isolated value:
+#' changing its internal representation cannot change the view's pinned
+#' boundary.
+#'
+#' This accessor reads only the snapshot already owned by the view. It does not
+#' inspect the live store or advance the view to a later commit.
+#'
+#' @param view A `GraftView` returned by [graft_at()].
+#'
+#' @return An immutable, serializable `GraftSnapshot` S7 object.
+#' @export
+graft_view_snapshot <- function(view) {
+  view <- as_graft_view(view, "view")
+  snapshot <- graft_view_state(view)$snapshot
+  data <- unserialize(serialize(snapshot_data(snapshot), NULL))
+  GraftSnapshot(data)
+}
+
 new_graft_snapshot <- function(
   store_id,
   store_format_version,
@@ -621,6 +642,15 @@ as_graft_view <- function(x, arg = rlang::caller_arg(x)) {
       paste0("`", arg, "` must be a GraftView object."),
       argument = arg
     )
+  }
+  state <- graft_view_state(x)
+  if (
+    is.list(state) &&
+      !is.object(state) &&
+      identical(names(state), c("store", "snapshot", "schema")) &&
+      S7::S7_inherits(state$snapshot, GraftSnapshot)
+  ) {
+    as_graft_snapshot(state$snapshot, paste0(arg, " snapshot"))
   }
   error <- tryCatch(
     {

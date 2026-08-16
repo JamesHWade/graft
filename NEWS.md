@@ -13,3 +13,4 @@
 * `graft_schema()` compiles LinkML or the supported `graft-table-v1` data-dict profile into the same invariant-checked contract. YAML authoring uses the optional data-dict CLI, committed resolved JSON remains R-only, and unsupported provider semantics fail closed.
 * `graft_status()` and `graft_sync()` inspect and explicitly synchronize the deterministic OKF working tree without making it an independent source of accepted knowledge.
 * `graft_tools()` creates four bounded read-only ellmer tools that delegate to the public retrieval and history operations.
+* `graft_view_snapshot()` returns an isolated, path-free copy of the exact immutable snapshot retained by a `GraftView`.
