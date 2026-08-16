@@ -55,10 +55,12 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="graft-0009000">graft 0.0.0.9000<a class="anchor" aria-label="anchor" href="#graft-0009000"></a></h2>
-<ul><li>Graft v0.1 replaces the pre-production <code>kg_*</code> API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 15-function revision-first package boundary.</li>
+<ul><li>Graft v0.1 replaces the pre-production <code>kg_*</code> API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 17-function revision-first package boundary.</li>
 <li>The pkgdown site now starts with ordinary tables and a shipped data-dict example, creates a blank store explicitly, demonstrates change history, and introduces LinkML when richer semantic graph modeling is needed.</li>
 <li>Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.</li>
 <li>Store format 3 makes immutable record revisions authoritative and treats current records, multivalued relations, graph edges, and search state as verified rebuildable projections.</li>
+<li>
+<code><a href="../reference/graft_at.html">graft_at()</a></code> and <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> capture serializable accepted-knowledge references and create immutable read views; read-only tools built from a view remain pinned to that boundary.</li>
 <li>
 <code><a href="../reference/graft_commit.html">graft_commit()</a></code> and <code><a href="../reference/graft_ingest.html">graft_ingest()</a></code> atomically accept immutable reviewed plans through set-based DuckDB operations and return ordinary summaries with insert, update, match, observation, replay, and timing details.</li>
 <li>

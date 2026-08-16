@@ -3,7 +3,8 @@
 `graft_get()` hydrates one current record from its authoritative headed
 revision. Sensitive fields are filtered by the active contract. Related
 identifiers, claims, and evidence are optional and independently
-bounded.
+bounded. A `GraftView` resolves the record and related data at its
+pinned boundary.
 
 ## Usage
 
@@ -20,7 +21,7 @@ graft_get(
 
 - store:
 
-  An initialized Graft store.
+  An initialized `GraftStore` or immutable `GraftView`.
 
 - id:
 

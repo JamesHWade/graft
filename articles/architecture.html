@@ -100,7 +100,8 @@ revisions.</p>
 <p>The accepted revision ledger is the source of record content and
 history. Current records, search indexes, supported graph relationships,
 and the Open Knowledge Format (OKF) working tree are read views built
-from that ledger.</p>
+from that ledger. Snapshot views select those reads at one accepted
+commit boundary.</p>
 <figure class="graft-article-figure"><p class="graft-swipe-hint">
 Swipe to explore the diagram →
 </p>
@@ -190,7 +191,7 @@ assertion from being treated as interchangeable. See <a href="linkml-schema.html
 working semantic-statement example.</p>
 </div>
 <div class="section level2">
-<h2 id="why-graft-uses-s7-at-the-mutation-boundary">Why Graft uses S7 at the mutation boundary<a class="anchor" aria-label="anchor" href="#why-graft-uses-s7-at-the-mutation-boundary"></a>
+<h2 id="why-graft-uses-s7-at-stable-boundaries">Why Graft uses S7 at stable boundaries<a class="anchor" aria-label="anchor" href="#why-graft-uses-s7-at-stable-boundaries"></a>
 </h2>
 <p>S7 protects the objects whose invariants must survive across function
 calls:</p>
@@ -207,6 +208,12 @@ commit preconditions.</li>
 <li>
 <code>GraftStore</code> owns store identity and private connection
 state.</li>
+<li>
+<code>GraftSnapshot</code> owns a serializable accepted commit
+identity.</li>
+<li>
+<code>GraftView</code> binds that snapshot to a live store for
+read-only retrieval.</li>
 </ul>
 <p>Records remain data frames, candidate collections remain named lists,
 and retrieval results remain data frames or lists. Graft does not create

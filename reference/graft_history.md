@@ -2,7 +2,8 @@
 
 `graft_history()` reads immutable revisions and hydrates them with the
 exact historical contract and sensitivity rules. A batch ID or timestamp
-selects a deterministic commit boundary.
+selects a deterministic commit boundary. A `GraftView` defaults to its
+pinned boundary and permits only earlier explicit boundaries.
 
 ## Usage
 
@@ -14,7 +15,7 @@ graft_history(store, id, as_of = NULL, limit = 100L)
 
 - store:
 
-  An initialized Graft store.
+  An initialized `GraftStore` or immutable `GraftView`.
 
 - id:
 

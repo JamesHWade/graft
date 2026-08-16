@@ -13,9 +13,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Retrieve accepted knowledge">
-<meta name="description" content="Get current records, search public fields, inspect accepted history, and expose the same bounded reads to agent hosts.
+<meta name="description" content="Pin accepted state, get records, search public fields, inspect history, and expose the same bounded reads to agent hosts.
 ">
-<meta property="og:description" content="Get current records, search public fields, inspect accepted history, and expose the same bounded reads to agent hosts.
+<meta property="og:description" content="Pin accepted state, get records, search public fields, inspect history, and expose the same bounded reads to agent hosts.
 ">
 </head>
 <body>
@@ -92,9 +92,13 @@
 
     
     
-<p>Graft provides four read functions. Current reads use the active
-contract; <code><a href="../reference/graft_history.html">graft_history()</a></code> uses the exact contract recorded
-for each revision. None exposes raw SQL or a mutation path.</p>
+<p>Graft provides four read operations: <code><a href="../reference/graft_get.html">graft_get()</a></code>,
+<code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>, and
+<code><a href="../reference/graft_history.html">graft_history()</a></code>. <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> captures an
+accepted boundary, and <code><a href="../reference/graft_at.html">graft_at()</a></code> binds it to a read-only
+view that those operations can use. <code><a href="../reference/graft_history.html">graft_history()</a></code> uses
+the exact contract recorded for each revision. None exposes raw SQL or a
+mutation path.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -128,6 +132,13 @@ for each revision. None exposes raw SQL or a mutation path.</p>
 <td>Newest-first immutable history</td>
 </tr>
 <tr class="odd">
+<td>A pinned accepted boundary</td>
+<td>
+<code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code>, <code><a href="../reference/graft_at.html">graft_at()</a></code>
+</td>
+<td>A serializable reference and live read view</td>
+</tr>
+<tr class="even">
 <td>Read-only agent access</td>
 <td><code><a href="../reference/graft_tools.html">graft_tools()</a></code></td>
 <td>Tool definitions backed by the same reads</td>
@@ -177,11 +188,24 @@ are not semantic graph edges.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="pin-the-accepted-boundary">Pin the accepted boundary<a class="anchor" aria-label="anchor" href="#pin-the-accepted-boundary"></a>
+</h2>
+<p>Capture a serializable reference before starting work that must use
+fixed accepted knowledge. The reference contains store, schema, and
+commit identity, not a filesystem path or live connection.
+<code><a href="../reference/graft_at.html">graft_at()</a></code> binds it to the open store as a read-only
+view:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
+<span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span></code></pre></div>
+<p>Later commits do not change reads through <code>view</code>.</p>
+</div>
+<div class="section level2">
 <h2 id="get-one-current-record">Get one current record<a class="anchor" aria-label="anchor" href="#get-one-current-record"></a>
 </h2>
 <p>Use <code><a href="../reference/graft_get.html">graft_get()</a></code> when the stable identifier is already
 known:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">person</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span></span>
 <span><span class="va">person</span><span class="op">$</span><span class="va">record</span></span></code></pre></div>
 <p>The result includes its class and accepted context. A missing
@@ -193,7 +217,7 @@ the record is stored internally.</p>
 </h2>
 <p>Use <code><a href="../reference/graft_find.html">graft_find()</a></code> when you know a name or phrase rather
 than an identifier:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Lois"</span>, class <span class="op">=</span> <span class="st">"person"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/graft_find.html">graft_find</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Daily"</span>, class <span class="op">=</span> <span class="st">"organization"</span>, limit <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 <p>The compiled contract determines which fields are searchable and
@@ -204,7 +228,7 @@ every call remains bounded by its result limit.</p>
 <h2 id="recover-accepted-history">Recover accepted history<a class="anchor" aria-label="anchor" href="#recover-accepted-history"></a>
 </h2>
 <p>Accept a later version of the same person:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -219,9 +243,14 @@ every call remains bounded by its result limit.</p>
 <span>    idempotency_key <span class="op">=</span> <span class="st">"team-directory-v2"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>The live store now returns the update, while the view remains at the
+accepted boundary captured above:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span><span class="op">$</span><span class="va">record</span><span class="op">$</span><span class="va">job_title</span></span>
+<span><span class="fu"><a href="../reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">view</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span><span class="op">$</span><span class="va">record</span><span class="op">$</span><span class="va">job_title</span></span></code></pre></div>
 <p><code><a href="../reference/graft_history.html">graft_history()</a></code> returns the accepted revisions in
 newest-first order:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">history</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
@@ -239,7 +268,7 @@ domain record, defines that boundary.</p>
 <p><code><a href="../reference/graft_query.html">graft_query()</a></code> accepts named operations with validated
 request shapes. For example, the integrity operation checks the revision
 chain and, when requested, its derived projections:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_query.html">graft_query</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  operation <span class="op">=</span> <span class="st">"integrity"</span>,</span>
@@ -260,18 +289,19 @@ are rejected.</p>
 <div class="section level2">
 <h2 id="give-agents-the-same-bounded-reads">Give agents the same bounded reads<a class="anchor" aria-label="anchor" href="#give-agents-the-same-bounded-reads"></a>
 </h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span></code></pre></div>
 <p>The definitions call <code><a href="../reference/graft_find.html">graft_find()</a></code>,
 <code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>, and
-<code><a href="../reference/graft_history.html">graft_history()</a></code>. They expose no write operation, raw
+<code><a href="../reference/graft_history.html">graft_history()</a></code> through the captured view, so later commits
+cannot change their results. They expose no write operation, raw
 database connection, filesystem access, or network access. The host
 decides which provider receives them and remains responsible for tool
 authorization.</p>
 <p>Every operation reports its applicable limits and truncation state so
 a host can distinguish a complete result from a bounded prefix.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 <p>Read <a href="knowledge-change-control.html">Change control</a> for
 the path from proposal to accepted revision and <a href="architecture.html">Architecture</a> for how the ledger and derived

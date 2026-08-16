@@ -29,8 +29,8 @@ Review and accept changes, then retrieve current and historical records.
 - [Retrieve accepted
   knowledge](https://jameshwade.github.io/graft/articles/retrieval.md):
 
-  Get current records, search public fields, inspect accepted history,
-  and expose the same bounded reads to agent hosts.
+  Pin accepted state, get records, search public fields, inspect
+  history, and expose the same bounded reads to agent hosts.
 
 ### Add richer representations
 

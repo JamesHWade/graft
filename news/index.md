@@ -4,7 +4,7 @@
 
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
-  authoritative record tables with a 15-function revision-first package
+  authoritative record tables with a 17-function revision-first package
   boundary.
 - The pkgdown site now starts with ordinary tables and a shipped
   data-dict example, creates a blank store explicitly, demonstrates
@@ -17,6 +17,12 @@
 - Store format 3 makes immutable record revisions authoritative and
   treats current records, multivalued relations, graph edges, and search
   state as verified rebuildable projections.
+- [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+  and
+  [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
+  capture serializable accepted-knowledge references and create
+  immutable read views; read-only tools built from a view remain pinned
+  to that boundary.
 - [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
   and
   [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)

@@ -1,7 +1,15 @@
 # Retrieve accepted knowledge
 
-Graft provides four read functions. Current reads use the active
-contract;
+Graft provides four read operations:
+[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
+[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
+and
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md).
+[`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
+captures an accepted boundary, and
+[`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+binds it to a read-only view that those operations can use.
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
 uses the exact contract recorded for each revision. None exposes raw SQL
 or a mutation path.
@@ -12,6 +20,7 @@ or a mutation path.
 | Search public fields | [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md) | Ranked, bounded matches |
 | A fixed advanced operation | [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md) | A validated operation-specific result |
 | Accepted revisions | [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md) | Newest-first immutable history |
+| A pinned accepted boundary | [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md), [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md) | A serializable reference and live read view |
 | Read-only agent access | [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) | Tool definitions backed by the same reads |
 
 ## Create some accepted knowledge
@@ -57,6 +66,22 @@ graft_ingest(
   )
 )
 ```
+
+## Pin the accepted boundary
+
+Capture a serializable reference before starting work that must use
+fixed accepted knowledge. The reference contains store, schema, and
+commit identity, not a filesystem path or live connection.
+[`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+binds it to the open store as a read-only view:
+
+``` r
+
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+```
+
+Later commits do not change reads through `view`.
 
 ## Get one current record
 
@@ -112,6 +137,15 @@ graft_ingest(
 )
 ```
 
+The live store now returns the update, while the view remains at the
+accepted boundary captured above:
+
+``` r
+
+graft_get(store, "person:lois-lane")$record$job_title
+graft_get(view, "person:lois-lane")$record$job_title
+```
+
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
 returns the accepted revisions in newest-first order:
 
@@ -164,7 +198,7 @@ are rejected.
 
 ``` r
 
-tools <- graft_tools(store)
+tools <- graft_tools(view)
 names(tools)
 ```
 
@@ -173,7 +207,8 @@ The definitions call
 [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
 [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
 and
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md).
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+through the captured view, so later commits cannot change their results.
 They expose no write operation, raw database connection, filesystem
 access, or network access. The host decides which provider receives them
 and remains responsible for tool authorization.

@@ -93,7 +93,7 @@
     
     
 <p>v0.1 is a deliberate pre-production cutover, not a compatibility
-release. The package now teaches one revision-first model and exposes 15
+release. The package now teaches one revision-first model and exposes 17
 functions around it. The older storage-shaped <code>kg_*</code> surface,
 parallel write paths, and bundled demonstration applications are not
 part of this design.</p>
@@ -128,7 +128,9 @@ projections. This removes the need to reconcile multiple answers to
 <p><code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_find.html">graft_find()</a></code>,
 <code><a href="../reference/graft_query.html">graft_query()</a></code>, and <code><a href="../reference/graft_history.html">graft_history()</a></code> replace a
 larger family of storage- and projection-specific helpers. Advanced
-reads are named, validated operations rather than arbitrary SQL.</p>
+reads are named, validated operations rather than arbitrary SQL.
+<code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> and <code><a href="../reference/graft_at.html">graft_at()</a></code> bind those
+reads to one accepted commit boundary.</p>
 </div>
 <div class="section level3">
 <h3 id="a-smaller-package-scope">A smaller package scope<a class="anchor" aria-label="anchor" href="#a-smaller-package-scope"></a>
@@ -142,7 +144,7 @@ location.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="the-15-function-surface">The 15-function surface<a class="anchor" aria-label="anchor" href="#the-15-function-surface"></a>
+<h2 id="the-17-function-surface">The 17-function surface<a class="anchor" aria-label="anchor" href="#the-17-function-surface"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -171,6 +173,7 @@ location.</p>
 <tr class="odd">
 <td>Retrieve and inspect</td>
 <td>
+<code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code>, <code><a href="../reference/graft_at.html">graft_at()</a></code>,
 <code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_find.html">graft_find()</a></code>,
 <code><a href="../reference/graft_query.html">graft_query()</a></code>, <code><a href="../reference/graft_history.html">graft_history()</a></code>
 </td>
@@ -191,10 +194,12 @@ Reference documentation uses the same four groups.</p>
 <h2 id="why-s7-and-why-not-everywhere">Why S7, and why not everywhere<a class="anchor" aria-label="anchor" href="#why-s7-and-why-not-everywhere"></a>
 </h2>
 <p>The redesign uses S7 for <code>GraftSchema</code>,
-<code>GraftProvenance</code>, <code>GraftCommitPlan</code>, and
-<code>GraftStore</code>. These objects own invariants that must survive
+<code>GraftProvenance</code>, <code>GraftCommitPlan</code>,
+<code>GraftStore</code>, <code>GraftSnapshot</code>, and
+<code>GraftView</code>. These objects own invariants that must survive
 across calls: contract digests, producer semantics, commit
-preconditions, store identity, and connection state.</p>
+preconditions, store and snapshot identity, and connection-bound view
+state.</p>
 <p>Records remain ordinary data frames, record sets remain named lists,
 and read results remain ordinary lists or data frames. The compiled
 LinkML or data-dict contract already supplies the domain type system.

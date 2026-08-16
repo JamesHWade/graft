@@ -21,7 +21,7 @@ graft_query(
 
 - store:
 
-  An initialized Graft store.
+  An initialized `GraftStore` or immutable `GraftView`.
 
 - operation:
 
@@ -48,4 +48,5 @@ operations accept their bounded path and projection arguments;
 unresolved mentions accept optional `class` and `source_id`; and
 integrity accepts `projections`. Unknown members are rejected. Tabular
 results carry `limit`, `truncated`, and `store_schema_digest`
-attributes.
+attributes. A `GraftView` pins every operation and does not support
+`"integrity"`.

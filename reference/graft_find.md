@@ -2,7 +2,8 @@
 
 `graft_find()` searches manifest-declared public search fields in
 current headed revisions. Results are collected, deterministic, and
-bounded.
+bounded. A `GraftView` searches only records accepted at its pinned
+boundary.
 
 ## Usage
 
@@ -14,7 +15,7 @@ graft_find(store, query, class = NULL, limit = 20L)
 
 - store:
 
-  An initialized Graft store.
+  An initialized `GraftStore` or immutable `GraftView`.
 
 - query:
 

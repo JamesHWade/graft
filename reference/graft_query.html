@@ -83,7 +83,7 @@ named <code>request</code> rather than SQL. Supported operations are <code>"look
 
 
 <dl><dt id="arg-store">store<a class="anchor" aria-label="anchor" href="#arg-store"></a></dt>
-<dd><p>An initialized Graft store.</p></dd>
+<dd><p>An initialized <code>GraftStore</code> or immutable <code>GraftView</code>.</p></dd>
 
 
 <dt id="arg-operation">operation<a class="anchor" aria-label="anchor" href="#arg-operation"></a></dt>
@@ -110,7 +110,8 @@ named <code>request</code> rather than SQL. Supported operations are <code>"look
 accept their bounded path and projection arguments; unresolved mentions
 accept optional <code>class</code> and <code>source_id</code>; and integrity accepts <code>projections</code>.
 Unknown members are rejected. Tabular results carry <code>limit</code>, <code>truncated</code>,
-and <code>store_schema_digest</code> attributes.</p>
+and <code>store_schema_digest</code> attributes.
+A <code>GraftView</code> pins every operation and does not support <code>"integrity"</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

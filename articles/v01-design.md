@@ -1,7 +1,7 @@
 # The v0.1 design
 
 v0.1 is a deliberate pre-production cutover, not a compatibility
-release. The package now teaches one revision-first model and exposes 15
+release. The package now teaches one revision-first model and exposes 17
 functions around it. The older storage-shaped `kg_*` surface, parallel
 write paths, and bundled demonstration applications are not part of this
 design.
@@ -42,6 +42,10 @@ and
 replace a larger family of storage- and projection-specific helpers.
 Advanced reads are named, validated operations rather than arbitrary
 SQL.
+[`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
+and
+[`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+bind those reads to one accepted commit boundary.
 
 ### A smaller package scope
 
@@ -51,13 +55,13 @@ dependencies do not define graft’s runtime or documentation
 architecture. A public companion link will be added when that repository
 is ready; the package site does not point to an unpublished location.
 
-## The 15-function surface
+## The 17-function surface
 
 | Lifecycle | Functions |
 |----|----|
 | Define and open | [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md), [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md), [`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md) |
 | Propose and accept | [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md), [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md), [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md), [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md) |
-| Retrieve and inspect | [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md), [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md), [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md), [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md) |
+| Retrieve and inspect | [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md), [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md), [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md), [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md), [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md), [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md) |
 | Synchronize and integrate | [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md), [`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md), [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md), [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) |
 
 The grouping follows user intent instead of internal subsystems.
@@ -66,9 +70,10 @@ Reference documentation uses the same four groups.
 ## Why S7, and why not everywhere
 
 The redesign uses S7 for `GraftSchema`, `GraftProvenance`,
-`GraftCommitPlan`, and `GraftStore`. These objects own invariants that
-must survive across calls: contract digests, producer semantics, commit
-preconditions, store identity, and connection state.
+`GraftCommitPlan`, `GraftStore`, `GraftSnapshot`, and `GraftView`. These
+objects own invariants that must survive across calls: contract digests,
+producer semantics, commit preconditions, store and snapshot identity,
+and connection-bound view state.
 
 Records remain ordinary data frames, record sets remain named lists, and
 read results remain ordinary lists or data frames. The compiled LinkML

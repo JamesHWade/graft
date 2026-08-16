@@ -26,8 +26,13 @@ Record where candidates came from, inspect a plan, and commit it.
 
 ## Retrieve and inspect
 
-Read current records, search results, fixed projections, and history.
+Pin an accepted boundary, then read records, search results, fixed
+projections, and history.
 
+- [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
+  : Capture an immutable knowledge snapshot
+- [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+  : Open an immutable read view
 - [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
   : Retrieve one current accepted record
 - [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)
@@ -49,4 +54,4 @@ tools to an agent host.
 - [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
   : Review edited open knowledge as a commit plan
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-  : Create bounded read-only tools for a Graft store
+  : Create bounded read-only tools for a Graft store or view
