@@ -246,7 +246,7 @@ test_that("graft_view_snapshot rejects a tampered retained store", {
   state <- graft_view_state(view)
   store_state <- graft_store_state(state$store)
   original_store_id <- store_state$id
-  withr::defer(store_state$id <- original_store_id)
+  withr::defer(assign("id", original_store_id, envir = store_state))
   store_state$id <- foreign@store_id
   state$snapshot <- foreign
   attr(view, ".state") <- state
