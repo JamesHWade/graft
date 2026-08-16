@@ -612,6 +612,16 @@ validate_graft_view_s7 <- function(self) {
   if (!S7::S7_inherits(state$store, GraftStore)) {
     return("internal view store must be a GraftStore object")
   }
+  store_error <- tryCatch(
+    {
+      S7::validate(state$store)
+      NULL
+    },
+    error = conditionMessage
+  )
+  if (!is.null(store_error)) {
+    return("internal view store is invalid")
+  }
   if (!S7::S7_inherits(state$snapshot, GraftSnapshot)) {
     return("internal view snapshot must be a GraftSnapshot object")
   }
