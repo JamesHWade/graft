@@ -204,6 +204,37 @@ test_that("graft_view_snapshot rejects invalid and tampered views", {
   expect_s3_class(tampered_condition, "graft_snapshot_error")
 })
 
+test_that("graft_view_snapshot rejects foreign snapshots after closure", {
+  first <- local_retrieval_store()
+  second <- local_retrieval_store()
+  view <- graft_at(first$store, graft_snapshot(first$store))
+  foreign <- graft_snapshot(second$store)
+
+  expect_identical(foreign@schema_build_digest, view@schema_build_digest)
+  expect_identical(identical(foreign@store_id, view@store_id), FALSE)
+
+  graft_close(first$store)
+  graft_close(second$store)
+  injected <- view
+  state <- graft_view_state(injected)
+  state$snapshot <- foreign
+  attr(injected, ".state") <- state
+
+  validation <- tryCatch(
+    {
+      S7::validate(injected)
+      NULL
+    },
+    error = identity
+  )
+  condition <- catch_graft_ingest_condition(graft_view_snapshot(injected))
+
+  expect_s3_class(validation, "error")
+  expect_match(conditionMessage(validation), "snapshot does not match")
+  expect_s3_class(condition, "graft_snapshot_store_mismatch")
+  expect_s3_class(condition, "graft_snapshot_error")
+})
+
 test_that("graft_at validates every persisted snapshot mapping field", {
   local <- local_retrieval_store()
   snapshot <- graft_snapshot(local$store)

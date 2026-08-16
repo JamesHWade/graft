@@ -619,6 +619,13 @@ validate_graft_view_s7 <- function(self) {
   if (!is.null(snapshot_problem)) {
     return("internal view snapshot is invalid")
   }
+  store_id <- tryCatch(state$store@id, error = \(.x) NA_character_)
+  if (!is_nonempty_string(store_id)) {
+    return("internal view store identity is invalid")
+  }
+  if (!identical(state$snapshot@store_id, store_id)) {
+    return("internal view snapshot does not match the store")
+  }
   if (!is_compiled_schema(state$schema)) {
     return("internal view schema must be a compiled schema")
   }
@@ -650,7 +657,24 @@ as_graft_view <- function(x, arg = rlang::caller_arg(x)) {
       identical(names(state), c("store", "snapshot", "schema")) &&
       S7::S7_inherits(state$snapshot, GraftSnapshot)
   ) {
-    as_graft_snapshot(state$snapshot, paste0(arg, " snapshot"))
+    snapshot <- as_graft_snapshot(
+      state$snapshot,
+      paste0(arg, " snapshot")
+    )
+    if (S7::S7_inherits(state$store, GraftStore)) {
+      store_id <- tryCatch(state$store@id, error = \(.x) NA_character_)
+      if (
+        is_nonempty_string(store_id) &&
+          !identical(snapshot@store_id, store_id)
+      ) {
+        abort_snapshot_error(
+          "graft_snapshot_store_mismatch",
+          "The snapshot belongs to a different Graft store.",
+          expected_store_id = snapshot@store_id,
+          observed_store_id = store_id
+        )
+      }
+    }
   }
   error <- tryCatch(
     {

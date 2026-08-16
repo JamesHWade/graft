@@ -21,8 +21,9 @@ knitr::opts_chunk$set(
 Graft provides four read operations: `graft_get()`, `graft_find()`,
 `graft_query()`, and `graft_history()`. `graft_snapshot()` captures an accepted
 boundary, and `graft_at()` binds it to a read-only view that those operations
-can use. `graft_history()` uses the exact contract recorded for each revision.
-None exposes raw SQL or a mutation path.
+can use. `graft_view_snapshot()` recovers the exact path-free boundary retained
+by a view. `graft_history()` uses the exact contract recorded for each
+revision. None exposes raw SQL or a mutation path.
 
 | Need | Function | Result |
 |---|---|---|
@@ -31,6 +32,7 @@ None exposes raw SQL or a mutation path.
 | A fixed advanced operation | `graft_query()` | A validated operation-specific result |
 | Accepted revisions | `graft_history()` | Newest-first immutable history |
 | A pinned accepted boundary | `graft_snapshot()`, `graft_at()` | A serializable reference and live read view |
+| A view's retained boundary | `graft_view_snapshot()` | An isolated copy of the exact pinned snapshot |
 | Read-only agent access | `graft_tools()` | Tool definitions backed by the same reads |
 
 ## Create some accepted knowledge
@@ -86,9 +88,11 @@ store as a read-only view:
 ```{r snapshot}
 snapshot <- graft_snapshot(store)
 view <- graft_at(store, snapshot)
+retained_snapshot <- graft_view_snapshot(view)
 ```
 
-Later commits do not change reads through `view`.
+`retained_snapshot` has the same identity as `snapshot` and remains path-free.
+Later commits do not change it or reads through `view`.
 
 ## Get one current record
 
