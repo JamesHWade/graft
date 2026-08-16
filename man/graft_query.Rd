@@ -13,7 +13,7 @@ graft_query(
 )
 }
 \arguments{
-\item{store}{An initialized Graft store.}
+\item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 
 \item{operation}{One supported operation name.}
 
@@ -38,4 +38,5 @@ accept their bounded path and projection arguments; unresolved mentions
 accept optional \code{class} and \code{source_id}; and integrity accepts \code{projections}.
 Unknown members are rejected. Tabular results carry \code{limit}, \code{truncated},
 and \code{store_schema_digest} attributes.
+A \code{GraftView} pins every operation and does not support \code{"integrity"}.
 }

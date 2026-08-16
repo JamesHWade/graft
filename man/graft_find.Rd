@@ -7,7 +7,7 @@
 graft_find(store, query, class = NULL, limit = 20L)
 }
 \arguments{
-\item{store}{An initialized Graft store.}
+\item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 
 \item{query}{One non-empty case-insensitive search string.}
 
@@ -21,4 +21,5 @@ A bounded data frame with a public-record list-column.
 \description{
 \code{graft_find()} searches manifest-declared public search fields in current
 headed revisions. Results are collected, deterministic, and bounded.
+A \code{GraftView} searches only records accepted at its pinned boundary.
 }

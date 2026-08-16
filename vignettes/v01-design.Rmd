@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 ```
 
 v0.1 is a deliberate pre-production cutover, not a compatibility release. The
-package now teaches one revision-first model and exposes 15 functions around
+package now teaches one revision-first model and exposes 17 functions around
 it. The older storage-shaped `kg_*` surface, parallel write paths, and bundled
 demonstration applications are not part of this design.
 
@@ -49,7 +49,8 @@ This removes the need to reconcile multiple answers to "what is current?"
 
 `graft_get()`, `graft_find()`, `graft_query()`, and `graft_history()` replace a
 larger family of storage- and projection-specific helpers. Advanced reads are
-named, validated operations rather than arbitrary SQL.
+named, validated operations rather than arbitrary SQL. `graft_snapshot()` and
+`graft_at()` bind those reads to one accepted commit boundary.
 
 ### A smaller package scope
 
@@ -59,13 +60,13 @@ define graft's runtime or documentation architecture. A public companion link
 will be added when that repository is ready; the package site does not point to
 an unpublished location.
 
-## The 15-function surface
+## The 17-function surface
 
 | Lifecycle | Functions |
 |---|---|
 | Define and open | `graft_schema()`, `graft_open()`, `graft_close()` |
 | Propose and accept | `graft_provenance()`, `graft_plan()`, `graft_commit()`, `graft_ingest()` |
-| Retrieve and inspect | `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()` |
+| Retrieve and inspect | `graft_snapshot()`, `graft_at()`, `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()` |
 | Synchronize and integrate | `graft_sync()`, `graft_status()`, `graft_review()`, `graft_tools()` |
 
 The grouping follows user intent instead of internal subsystems. Reference
@@ -74,9 +75,9 @@ documentation uses the same four groups.
 ## Why S7, and why not everywhere
 
 The redesign uses S7 for `GraftSchema`, `GraftProvenance`, `GraftCommitPlan`,
-and `GraftStore`. These objects own invariants that must survive across calls:
-contract digests, producer semantics, commit preconditions, store identity,
-and connection state.
+`GraftStore`, `GraftSnapshot`, and `GraftView`. These objects own invariants
+that must survive across calls: contract digests, producer semantics, commit
+preconditions, store and snapshot identity, and connection-bound view state.
 
 Records remain ordinary data frames, record sets remain named lists, and read
 results remain ordinary lists or data frames. The compiled LinkML or data-dict

@@ -1,3 +1,27 @@
+test_that("v0.1 public API exposes exactly 17 functions", {
+  expected <- c(
+    "graft_at",
+    "graft_close",
+    "graft_commit",
+    "graft_find",
+    "graft_get",
+    "graft_history",
+    "graft_ingest",
+    "graft_open",
+    "graft_plan",
+    "graft_provenance",
+    "graft_query",
+    "graft_review",
+    "graft_schema",
+    "graft_snapshot",
+    "graft_status",
+    "graft_sync",
+    "graft_tools"
+  )
+
+  expect_identical(sort(getNamespaceExports("graft")), expected)
+})
+
 test_that("v0.1 public API completes the governed knowledge loop", {
   directory <- withr::local_tempdir()
   manifest <- file.path(directory, "tempest.graft.json")
@@ -207,7 +231,7 @@ test_that("graft_schema validates source and output boundaries", {
   expect_s3_class(manifest_output_error, "graft_schema_error")
 })
 
-test_that("graft_tools requires a GraftStore", {
+test_that("graft_tools requires a GraftStore or GraftView", {
   schema <- graft_schema(tempest_manifest_path())
   store <- graft_open(schema)
   withr::defer(graft_close(store))

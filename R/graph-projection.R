@@ -131,6 +131,25 @@ graph_node_select_sql <- function(connection, record_class, contract) {
 }
 
 graph_label_expression <- function(connection, contract) {
+  candidates <- graph_label_slots(contract)
+  if (length(candidates) == 0L) {
+    return("CAST(NULL AS VARCHAR)")
+  }
+  columns <- vapply(
+    candidates,
+    function(slot_name) {
+      paste0(
+        "NULLIF(TRIM(CAST(",
+        graph_slot_identifier(connection, contract, slot_name),
+        " AS VARCHAR)), '')"
+      )
+    },
+    character(1)
+  )
+  paste0("COALESCE(", paste(columns, collapse = ", "), ")")
+}
+
+graph_label_slots <- function(contract) {
   candidates <- unique(c(
     scalar_character(contract$label_slot),
     empty_character(contract$search_slots),
@@ -154,21 +173,6 @@ graph_label_expression <- function(connection, contract) {
     },
     candidates
   )
-  if (length(candidates) == 0L) {
-    return("CAST(NULL AS VARCHAR)")
-  }
-  columns <- vapply(
-    candidates,
-    function(slot_name) {
-      paste0(
-        "NULLIF(TRIM(CAST(",
-        graph_slot_identifier(connection, contract, slot_name),
-        " AS VARCHAR)), '')"
-      )
-    },
-    character(1)
-  )
-  paste0("COALESCE(", paste(columns, collapse = ", "), ")")
 }
 
 graph_semantic_edges_view_sql <- function(connection, schema) {
