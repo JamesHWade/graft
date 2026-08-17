@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 ```
 
 v0.1 is a deliberate pre-production cutover, not a compatibility release. The
-package now teaches one revision-first model and exposes 17 functions around
+package now teaches one revision-first model and exposes 18 functions around
 it. The older storage-shaped `kg_*` surface, parallel write paths, and bundled
 demonstration applications are not part of this design.
 
@@ -51,6 +51,7 @@ This removes the need to reconcile multiple answers to "what is current?"
 larger family of storage- and projection-specific helpers. Advanced reads are
 named, validated operations rather than arbitrary SQL. `graft_snapshot()` and
 `graft_at()` bind those reads to one accepted commit boundary.
+`graft_view_snapshot()` recovers that exact path-free boundary from a view.
 
 ### A smaller package scope
 
@@ -60,13 +61,13 @@ define graft's runtime or documentation architecture. A public companion link
 will be added when that repository is ready; the package site does not point to
 an unpublished location.
 
-## The 17-function surface
+## The 18-function surface
 
 | Lifecycle | Functions |
 |---|---|
 | Define and open | `graft_schema()`, `graft_open()`, `graft_close()` |
 | Propose and accept | `graft_provenance()`, `graft_plan()`, `graft_commit()`, `graft_ingest()` |
-| Retrieve and inspect | `graft_snapshot()`, `graft_at()`, `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()` |
+| Retrieve and inspect | `graft_snapshot()`, `graft_at()`, `graft_view_snapshot()`, `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()` |
 | Synchronize and integrate | `graft_sync()`, `graft_status()`, `graft_review()`, `graft_tools()` |
 
 The grouping follows user intent instead of internal subsystems. Reference

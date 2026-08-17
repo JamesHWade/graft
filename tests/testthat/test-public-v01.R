@@ -1,4 +1,4 @@
-test_that("v0.1 public API exposes exactly 17 functions", {
+test_that("v0.1 public API exposes exactly 18 functions", {
   expected <- c(
     "graft_at",
     "graft_close",
@@ -16,7 +16,8 @@ test_that("v0.1 public API exposes exactly 17 functions", {
     "graft_snapshot",
     "graft_status",
     "graft_sync",
-    "graft_tools"
+    "graft_tools",
+    "graft_view_snapshot"
   )
 
   expect_identical(sort(getNamespaceExports("graft")), expected)
