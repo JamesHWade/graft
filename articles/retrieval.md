@@ -10,6 +10,8 @@ and
 captures an accepted boundary, and
 [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
 binds it to a read-only view that those operations can use.
+[`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md)
+recovers the exact path-free boundary retained by a view.
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
 uses the exact contract recorded for each revision. None exposes raw SQL
 or a mutation path.
@@ -21,6 +23,7 @@ or a mutation path.
 | A fixed advanced operation | [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md) | A validated operation-specific result |
 | Accepted revisions | [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md) | Newest-first immutable history |
 | A pinned accepted boundary | [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md), [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md) | A serializable reference and live read view |
+| A view’s retained boundary | [`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md) | An isolated copy of the exact pinned snapshot |
 | Read-only agent access | [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) | Tool definitions backed by the same reads |
 
 ## Create some accepted knowledge
@@ -79,9 +82,11 @@ binds it to the open store as a read-only view:
 
 snapshot <- graft_snapshot(store)
 view <- graft_at(store, snapshot)
+retained_snapshot <- graft_view_snapshot(view)
 ```
 
-Later commits do not change reads through `view`.
+`retained_snapshot` has the same identity as `snapshot` and remains
+path-free. Later commits do not change it or reads through `view`.
 
 ## Get one current record
 

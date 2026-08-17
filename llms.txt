@@ -278,6 +278,8 @@ projections, and history.
   : Capture an immutable knowledge snapshot
 - [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
   : Open an immutable read view
+- [`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md)
+  : Recover the immutable snapshot retained by a view
 - [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md)
   : Retrieve one current accepted record
 - [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md)

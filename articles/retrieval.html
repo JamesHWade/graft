@@ -96,9 +96,10 @@
 <code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>, and
 <code><a href="../reference/graft_history.html">graft_history()</a></code>. <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> captures an
 accepted boundary, and <code><a href="../reference/graft_at.html">graft_at()</a></code> binds it to a read-only
-view that those operations can use. <code><a href="../reference/graft_history.html">graft_history()</a></code> uses
-the exact contract recorded for each revision. None exposes raw SQL or a
-mutation path.</p>
+view that those operations can use. <code><a href="../reference/graft_view_snapshot.html">graft_view_snapshot()</a></code>
+recovers the exact path-free boundary retained by a view.
+<code><a href="../reference/graft_history.html">graft_history()</a></code> uses the exact contract recorded for each
+revision. None exposes raw SQL or a mutation path.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -139,6 +140,11 @@ mutation path.</p>
 <td>A serializable reference and live read view</td>
 </tr>
 <tr class="even">
+<td>A view’s retained boundary</td>
+<td><code><a href="../reference/graft_view_snapshot.html">graft_view_snapshot()</a></code></td>
+<td>An isolated copy of the exact pinned snapshot</td>
+</tr>
+<tr class="odd">
 <td>Read-only agent access</td>
 <td><code><a href="../reference/graft_tools.html">graft_tools()</a></code></td>
 <td>Tool definitions backed by the same reads</td>
@@ -197,8 +203,11 @@ commit identity, not a filesystem path or live connection.
 view:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
-<span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span></code></pre></div>
-<p>Later commits do not change reads through <code>view</code>.</p>
+<span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span>
+<span><span class="va">retained_snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_view_snapshot.html">graft_view_snapshot</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span></code></pre></div>
+<p><code>retained_snapshot</code> has the same identity as
+<code>snapshot</code> and remains path-free. Later commits do not change
+it or reads through <code>view</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="get-one-current-record">Get one current record<a class="anchor" aria-label="anchor" href="#get-one-current-record"></a>

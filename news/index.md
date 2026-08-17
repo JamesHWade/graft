@@ -4,7 +4,7 @@
 
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
-  authoritative record tables with a 17-function revision-first package
+  authoritative record tables with an 18-function revision-first package
   boundary.
 - The pkgdown site now starts with ordinary tables and a shipped
   data-dict example, creates a blank store explicitly, demonstrates
@@ -64,3 +64,6 @@
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
   creates four bounded read-only ellmer tools that delegate to the
   public retrieval and history operations.
+- [`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md)
+  returns an isolated, path-free copy of the exact immutable snapshot
+  retained by a `GraftView`.

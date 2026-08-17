@@ -93,7 +93,7 @@
     
     
 <p>v0.1 is a deliberate pre-production cutover, not a compatibility
-release. The package now teaches one revision-first model and exposes 17
+release. The package now teaches one revision-first model and exposes 18
 functions around it. The older storage-shaped <code>kg_*</code> surface,
 parallel write paths, and bundled demonstration applications are not
 part of this design.</p>
@@ -130,7 +130,9 @@ projections. This removes the need to reconcile multiple answers to
 larger family of storage- and projection-specific helpers. Advanced
 reads are named, validated operations rather than arbitrary SQL.
 <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> and <code><a href="../reference/graft_at.html">graft_at()</a></code> bind those
-reads to one accepted commit boundary.</p>
+reads to one accepted commit boundary.
+<code><a href="../reference/graft_view_snapshot.html">graft_view_snapshot()</a></code> recovers that exact path-free
+boundary from a view.</p>
 </div>
 <div class="section level3">
 <h3 id="a-smaller-package-scope">A smaller package scope<a class="anchor" aria-label="anchor" href="#a-smaller-package-scope"></a>
@@ -144,7 +146,7 @@ location.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="the-17-function-surface">The 17-function surface<a class="anchor" aria-label="anchor" href="#the-17-function-surface"></a>
+<h2 id="the-18-function-surface">The 18-function surface<a class="anchor" aria-label="anchor" href="#the-18-function-surface"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -174,8 +176,9 @@ location.</p>
 <td>Retrieve and inspect</td>
 <td>
 <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code>, <code><a href="../reference/graft_at.html">graft_at()</a></code>,
-<code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_find.html">graft_find()</a></code>,
-<code><a href="../reference/graft_query.html">graft_query()</a></code>, <code><a href="../reference/graft_history.html">graft_history()</a></code>
+<code><a href="../reference/graft_view_snapshot.html">graft_view_snapshot()</a></code>, <code><a href="../reference/graft_get.html">graft_get()</a></code>,
+<code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>,
+<code><a href="../reference/graft_history.html">graft_history()</a></code>
 </td>
 </tr>
 <tr class="even">
