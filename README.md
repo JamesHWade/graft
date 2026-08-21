@@ -15,6 +15,13 @@ store, inspect each proposed change before writing it, and retrieve current
 records alongside their accepted history. LinkML is available when the domain
 needs richer graph semantics.
 
+That accepted knowledge is also meant to be read by agents. `graft_tools()`
+turns a store, or a pinned snapshot of one, into bounded read-only
+[ellmer](https://ellmer.tidyverse.org/) tools — no SQL, no connection, no write
+path — and an agent that proposes records goes through the same validation,
+provenance, and review as any other producer. See [Work with
+agents](https://jameshwade.github.io/graft/articles/agents.html).
+
 ## Installation
 
 Install the development version from GitHub:
@@ -129,6 +136,30 @@ unlink(store_path)
 The current record has the new title. History retains both accepted versions,
 their changed fields, and their producers.
 
+## Give an agent bounded reads
+
+Pin the accepted boundary, then hand the pinned view to a model. Later commits
+cannot change what that session reads:
+
+```r
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+
+tools <- graft_tools(view)
+names(tools)
+#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+
+chat <- ellmer::chat_anthropic()
+chat$set_tools(tools)
+chat$chat("Who works at the Daily Planet, and has that person's title changed?")
+```
+
+The four tools delegate to `graft_find()`, `graft_get()`, `graft_query()`, and
+`graft_history()`. They expose no SQL, filesystem, network, or mutation
+argument, and every result reports the limit it applied, whether it was
+truncated, and the contract digest it came from. Writes stay in R, behind a
+reviewable plan.
+
 ## Choose a contract provider
 
 Start with [data-dict](https://jameshwade.github.io/graft/articles/data-dict-schema.html)
@@ -151,9 +182,12 @@ history functions.
    control](https://jameshwade.github.io/graft/articles/knowledge-change-control.html)
    and [retrieval and
    history](https://jameshwade.github.io/graft/articles/retrieval.html).
-4. [Add graph semantics with
+4. [Work with
+   agents](https://jameshwade.github.io/graft/articles/agents.html): bounded
+   tools, pinned snapshots, and agent-authored proposals.
+5. [Add graph semantics with
    LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.html).
-5. Use [open
+6. Use [open
    knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
    for a readable file projection, or read the
    [architecture](https://jameshwade.github.io/graft/articles/architecture.html)

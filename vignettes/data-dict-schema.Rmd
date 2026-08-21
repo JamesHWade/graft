@@ -194,6 +194,13 @@ non-primary uniqueness, representative ranges, assertion text, relationship
 cardinality, join aliases, conflicts, range joins, or multi-column joins.
 Scalar foreign keys are validated references, not graph traversal edges.
 
+One column key does change what reads return. A column marked
+`display: restricted` is compiled as sensitive: its values are dropped from
+retrieved records, excluded from searchable fields, and never reach a tool
+built with `graft_tools()`. Primary IDs are public operational keys and cannot
+be restricted. This is the contract-level control over what an agent can see;
+see [Work with agents](agents.html).
+
 The compiled mapping report records these boundaries:
 
 ```{r mapping-report}

@@ -23,3 +23,8 @@ snapshot boundary and the live-store integrity diagnostic is unavailable.
 Every tool returns \code{result} plus explicit \code{truncated}, \code{limit}, and
 \code{store_schema_digest} metadata.
 }
+\seealso{
+\code{vignette("agents", package = "graft")} for pinning an accepted
+boundary, registering the tools with a chat, and accepting
+agent-authored proposals.
+}

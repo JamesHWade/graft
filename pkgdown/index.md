@@ -6,25 +6,14 @@
 <p class="graft-hero-copy">
 Start with data frames and a data-dict contract. graft creates a new local
 store, checks related records before it writes, records where each accepted
-change came from, and keeps earlier versions available.
+change came from, and keeps earlier versions available &mdash; then hands that
+accepted knowledge to an agent as bounded, read-only tools.
 </p>
 <div class="graft-actions">
 <a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a>
-<a class="btn btn-outline-secondary" href="articles/data-dict-schema.html">Start with data-dict</a>
+<a class="btn btn-outline-secondary" href="articles/agents.html">Work with agents</a>
 </div>
 </div>
-
-## Install graft
-
-graft is currently installed from GitHub:
-
-```r
-pak::pak("JamesHWade/graft")
-```
-
-Using a resolved data-dict contract and an existing `.graft.json` contract is
-R-only. The data-dict CLI is needed only to resolve authored YAML, and Python
-with `linkml-runtime` is needed only to compile LinkML source.
 
 ## Start with the data you already have
 
@@ -42,9 +31,22 @@ a correction, what a reviewer accepted, or what the previous job title was.
 
 graft adds stable record identity, relationship checks, source provenance, a
 review step, and revision history. These are the foundations of useful
-knowledge: facts that remain connected and explainable as they change.
+knowledge: facts that remain connected and explainable as they change. They are
+also what makes accepted knowledge safe to put in front of a model.
 
-## Describe the tables with data-dict
+## Install graft
+
+graft is currently installed from GitHub:
+
+```r
+pak::pak("JamesHWade/graft")
+```
+
+Using a resolved data-dict contract and an existing `.graft.json` contract is
+R-only. The data-dict CLI is needed only to resolve authored YAML, and Python
+with `linkml-runtime` is needed only to compile LinkML source.
+
+## Describe the tables with a contract
 
 [data-dict](https://data-dict.tidyverse.org/) gives the tables and their
 relationships a readable contract. The package includes this example as
@@ -61,53 +63,28 @@ relationships:
   - join: employment.organization_id = organization.id
 ```
 
-The data-dict CLI resolves the authoring YAML with `export-spec`. A resolved
-JSON export can then be compiled by graft using R alone:
+The data-dict CLI resolves authoring YAML with `export-spec` once. graft
+compiles the resolved JSON using R alone, then creates the store — no existing
+database required:
 
 ```r
 library(graft)
 
-resolved_json <- system.file(
+schema <- graft_schema(system.file(
   "extdata",
   "team-directory.data-dict.json",
   package = "graft",
   mustWork = TRUE
-)
+))
 
-schema <- graft_schema(resolved_json)
-schema@name
-names(schema@classes)
+store <- graft_open(schema, tempfile(fileext = ".duckdb"), okf = "disabled")
 ```
 
-The `@` operator reads a public property from graft's immutable S7 contract and
-plan objects; candidate records themselves remain ordinary data frames.
+## Review each change before it is written
 
-The full [data-dict guide](articles/data-dict-schema.html) shows how to author,
-resolve, and inspect the contract. The [compiler
-reference](articles/contract-compilers.html) documents the exact supported
-profiles and build requirements.
-
-## Create a new, empty store
-
-You do not need an existing database. The path below does not exist when
-`graft_open()` is called; graft creates and initializes it under the compiled
-contract.
-
-```r
-store_path <- tempfile(fileext = ".duckdb")
-file.exists(store_path)
-#> [1] FALSE
-
-store <- graft_open(schema, store_path, okf = "disabled")
-```
-
-Use `":memory:"` instead of a file path for a disposable in-memory store.
-
-## Catch a broken relationship before writing
-
-Candidate records are a named list of data frames. This batch includes a valid
-person and organization, but its employment row points to an organization that
-does not exist.
+Candidate records are ordinary data frames. This batch has a valid person and
+organization, but its employment row points to an organization that does not
+exist:
 
 ```r
 records <- list(
@@ -137,64 +114,101 @@ plan@valid
 #> [1] FALSE
 
 plan@issues[, c("class", "record_id", "field", "message")]
+#>        class                         record_id           field                                        message
+#> 1 employment employment:lois-lane:daily-planet organization_id Reference target `org:missing` does not exist.
 ```
 
-The issue reports that `org:missing` is not a known target. Planning has not
-written any records or provenance, so the caller can correct the batch and
-review it again.
-
-## Correct, review, and commit the batch
+Planning writes nothing, so a rejected batch can be corrected and reviewed
+again. `graft_commit()` rechecks the reviewed plan and accepts all three
+records in one transaction, or none of them:
 
 ```r
 records$employment$organization_id <- "org:daily-planet"
 plan <- graft_plan(store, records, origin)
 
-plan@valid
-plan@changes[, c("class", "record_id", "action", "changed_fields")]
+plan@changes[, c("class", "record_id", "action")]
+#>          class                         record_id action
+#> 1 organization                  org:daily-planet insert
+#> 2       person                  person:lois-lane insert
+#> 3   employment employment:lois-lane:daily-planet insert
 
-if (plan@valid) {
-  graft_commit(store, plan)
-}
+graft_commit(store, plan)
 ```
-
-The plan now shows three inserts. `graft_commit()` rechecks the reviewed plan
-and accepts all three records together. If a precondition fails, none of the
-batch is accepted.
 
 ## Keep the old version when a fact changes
 
-A later review changes Lois's role. The update plan identifies the field that
-would change before anything is written.
+A later review changes Lois's role. The update is another reviewable plan, not
+an overwrite:
 
 ```r
-updated_person <- list(person = data.frame(
-  id = "person:lois-lane",
-  full_name = "Lois Lane",
-  job_title = "Investigative editor"
-))
-
-update_origin <- graft_provenance(
-  producer = "hr-review",
-  idempotency_key = "hr-review-2026-08-10"
+update_plan <- graft_plan(
+  store,
+  list(person = data.frame(
+    id = "person:lois-lane",
+    full_name = "Lois Lane",
+    job_title = "Investigative editor"
+  )),
+  graft_provenance(
+    producer = "hr-review",
+    idempotency_key = "hr-review-2026-08-10"
+  )
 )
 
-update_plan <- graft_plan(store, updated_person, update_origin)
 update_plan@changes[, c("record_id", "action", "changed_fields")]
+#>          record_id action changed_fields
+#> 1 person:lois-lane update      job_title
+
 graft_commit(store, update_plan)
 
-graft_get(store, "person:lois-lane")$record
 graft_history(store, "person:lois-lane")[
-  , c("revision_number", "committed_at", "producer", "changed_fields")
+  , c("revision_number", "producer", "changed_fields")
 ]
-
-graft_close(store)
-unlink(store_path)
+#>   revision_number         producer changed_fields
+#> 1               2        hr-review      job_title
+#> 2               1 directory-import   full_nam....
 ```
 
 Current retrieval returns the new title. History retains both accepted
-versions and the producer attached to each change.
+versions and the producer behind each change.
 
-## Add LinkML when the relationships need graph meaning
+## Give an agent bounded reads
+
+An agent is only as trustworthy as the knowledge it reads. graft gives a model
+records that were validated on the way in, attributed to a producer, and pinned
+so they cannot move mid-session.
+
+`graft_snapshot()` captures the accepted boundary as a serializable, path-free
+value, `graft_at()` binds it to a read-only view, and `graft_tools()` turns that
+view into four [ellmer](https://ellmer.tidyverse.org/) tools:
+
+```r
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+
+tools <- graft_tools(view)
+names(tools)
+#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+
+chat <- ellmer::chat_anthropic()
+chat$set_tools(tools)
+chat$chat("Who works at the Daily Planet, and has that person's title changed?")
+
+graft_close(store)
+```
+
+The tools search, retrieve, run bounded advanced operations, and read revision
+history. They accept no SQL, connection, path, or write argument, and every
+result reports the limit it applied, whether it was truncated, and the digest of
+the contract it came from. Fields the contract marks restricted never reach
+them.
+
+Writes stay on the reviewed path. An agent that proposes records becomes a
+named producer whose plan is validated and inspected like any other, and a
+file-editing agent works through a readable Open Knowledge Format tree whose
+edits remain proposals until they are reviewed. [Work with
+agents](articles/agents.html) covers all three.
+
+## Choose a contract provider
 
 data-dict is the simpler starting point when the domain is naturally tabular.
 Its foreign keys let graft reject missing targets, but they are not graph
@@ -205,19 +219,19 @@ or polymorphic references.
 Both providers compile to the same Graft contract and use the same plan,
 commit, retrieval, and history functions. The provider changes how the domain
 is described; it does not create another way to write accepted knowledge.
-The evaluated LinkML guide accepts a semantic measurement and retrieves the
-typed `materials:testedWith` edge between two materials.
 
 ## Continue learning
 
-- [Get started](articles/getting-started.html) works through the complete
-  data-dict example with its results.
+- [Get started](articles/getting-started.html) works through this example with
+  its results, then hands the store to an agent.
 - [Use a data-dict contract](articles/data-dict-schema.html) covers table-first
-  authoring and compilation.
+  authoring, compilation, and what the table profile enforces.
 - [Review knowledge changes](articles/knowledge-change-control.html) explains
   plans, commit preconditions, and retries.
 - [Retrieve current records and history](articles/retrieval.html) maps each read
   function to its job.
+- [Work with agents](articles/agents.html) covers bounded tools, pinned
+  snapshots, agent-authored proposals, and file-editing agents.
 - [Add graph semantics with LinkML](articles/linkml-schema.html) continues from
   governed tables to typed traversal relationships.
 - [Understand the architecture](articles/architecture.html) explains storage,

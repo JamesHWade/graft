@@ -209,17 +209,11 @@ accepted revisions -> sync -> readable files -> edit -> review -> commit -> sync
 
 ## Give agents the accepted view
 
-`graft_tools()` creates four read-only tool definitions backed by
-`graft_find()`, `graft_get()`, `graft_query()`, and `graft_history()`:
-
-```{r tools}
-tools <- graft_tools(store)
-names(tools)
-```
-
-The tool definitions expose bounded accepted retrieval, not filesystem access
-or mutation. A modified OKF document remains a proposal until it passes review
-and commit. The host decides which model provider, if any, receives the tools.
+An agent that edits these files never gains a second route into accepted
+knowledge: a modified document stays a proposal until `graft_review()` and
+`graft_commit()` accept it. For reading, `graft_tools()` exposes bounded
+accepted retrieval rather than filesystem access. [Work with
+agents](agents.html) covers both sides of that boundary.
 
 ```{r close}
 graft_close(store)
