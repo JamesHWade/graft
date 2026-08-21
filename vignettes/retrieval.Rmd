@@ -1,8 +1,8 @@
 ---
 title: "Retrieve accepted knowledge"
 description: >
-  Pin accepted state, get records, search public fields, inspect history, and
-  expose the same bounded reads to agent hosts.
+  Pin accepted state, get records, search public fields, and inspect the
+  accepted revision history behind each answer.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Retrieve accepted knowledge}
@@ -192,19 +192,10 @@ request members, unbounded traversal, and arbitrary SQL are rejected.
 
 ## Give agents the same bounded reads
 
-```{r tools}
-tools <- graft_tools(view)
-names(tools)
-```
-
-The definitions call `graft_find()`, `graft_get()`, `graft_query()`, and
-`graft_history()` through the captured view, so later commits cannot change
-their results. They expose no write operation, raw database connection,
-filesystem access, or network access. The host decides which provider receives
-them and remains responsible for tool authorization.
-
-Every operation reports its applicable limits and truncation state so a host
-can distinguish a complete result from a bounded prefix.
+`graft_tools(view)` wraps these four operations as read-only tool definitions
+that stay pinned to the captured boundary. [Work with agents](agents.html)
+covers the tool surface, its limit and truncation metadata, and the review path
+for records an agent proposes.
 
 ```{r close}
 graft_close(store)

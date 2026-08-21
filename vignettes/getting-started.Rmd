@@ -21,8 +21,14 @@ knitr::opts_chunk$set(
 Most projects do not begin with a knowledge store. They begin with tables: a
 directory of people, a list of organizations, and a table that connects them.
 This guide starts there. It creates an empty in-memory store, rejects a broken
-relationship before writing anything, accepts corrected records, and preserves
-a later update as a second revision.
+relationship before writing anything, accepts corrected records, preserves a
+later update as a second revision, and then hands that accepted knowledge to an
+agent as read-only tools.
+
+That last step is the point of the earlier ones. An agent is only as
+trustworthy as the knowledge it reads: validated on the way in, attributed to a
+producer, and stable while the agent is reasoning about it. Graft is built to
+give a model exactly that, and nothing more.
 
 ## Load a table contract
 
@@ -260,6 +266,64 @@ the audit trail: it retains what was accepted, when, under which contract, and
 from which producer event. The displayed contract value is an abbreviated
 build digest; the history result retains the complete digest.
 
+## Hand the same knowledge to an agent
+
+Everything above was written for a person at the console. The same accepted
+knowledge is also what you want an agent to read, and graft exposes it without
+handing over a database connection.
+
+First pin the boundary. `graft_snapshot()` records the accepted state as a
+serializable value that holds no connection and no filesystem path, and
+`graft_at()` binds it to a read-only view:
+
+```{r snapshot}
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+```
+
+`graft_tools()` then turns that view into four [ellmer](https://ellmer.tidyverse.org/)
+tool definitions backed by graft's public read functions:
+
+```{r tools, eval = rlang::is_installed("ellmer")}
+tools <- graft_tools(view)
+names(tools)
+```
+
+The tools are `graft_find()`, `graft_get()`, `graft_query()`, and
+`graft_history()` — search, retrieval, bounded advanced operations, and
+revision history. They accept no SQL, no connection, no path, and no write
+argument, so a model can read accepted knowledge and cannot alter it or reach
+past it.
+
+Each call returns its result together with the limit it applied, whether the
+result was truncated, and the digest of the contract it came from:
+
+```{r tool-call, eval = rlang::is_installed("ellmer")}
+found <- tools$graft_find(query = "Lois", class = "person", limit = 5)
+
+found$truncated
+found$limit
+found$result[, c("id", "class", "label")]
+```
+
+A model that received only part of an answer is told so, instead of reasoning
+over a silent prefix. Because these tools are bound to `view`, later commits do
+not move the ground underneath a running session; a second run against the same
+snapshot reads the same knowledge.
+
+Registering them with a chat is one line:
+
+```r
+chat <- ellmer::chat_anthropic()
+chat$set_tools(tools)
+
+chat$chat("Who works at the Daily Planet, and has that person's title changed?")
+```
+
+The agent answers from accepted records and can cite the revision history
+behind them. When an agent should also propose records — and be recorded as the
+producer that did — read [Work with agents](agents.html).
+
 ## Close the store
 
 ```{r close}
@@ -295,5 +359,6 @@ linkml_schema@classes$Measurement@statement_shape
 Read [the data-dict guide](data-dict-schema.html) to adapt an existing table
 contract. Next, deepen the package workflow with [change
 control](knowledge-change-control.html) and [retrieval and
-history](retrieval.html). Then read the [LinkML guide](linkml-schema.html) when
-the domain needs richer semantic structure.
+history](retrieval.html). Read [Work with agents](agents.html) to give a model
+bounded reads and a reviewed proposal path. Then read the [LinkML
+guide](linkml-schema.html) when the domain needs richer semantic structure.

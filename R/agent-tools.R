@@ -12,6 +12,9 @@
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
 #' @return A named list of four `ellmer::ToolDef` objects.
+#' @seealso `vignette("agents", package = "graft")` for pinning an accepted
+#'   boundary, registering the tools with a chat, and accepting
+#'   agent-authored proposals.
 #' @export
 graft_tools <- function(store) {
   check_graft_tools_dependency()

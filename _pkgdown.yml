@@ -27,8 +27,8 @@ home:
   title: "graft: Connected knowledge from R tables"
   description: >
     Start with related R tables and a data-dict contract, create a new local
-    store, review changes before writing, and keep current records with their
-    accepted history.
+    store, review changes before writing, keep current records with their
+    accepted history, and give agents bounded read-only access to it.
   sidebar:
     structure: [links, license, authors, dev]
 
@@ -49,6 +49,8 @@ navbar:
           href: articles/knowledge-change-control.html
         - text: Retrieve records and history
           href: articles/retrieval.html
+        - text: Work with agents
+          href: articles/agents.html
         - text: Add graph semantics with LinkML
           href: articles/linkml-schema.html
         - text: Open knowledge
@@ -83,10 +85,12 @@ articles:
       - data-dict-schema
   - title: Use graft
     desc: >
-      Review and accept changes, then retrieve current and historical records.
+      Review and accept changes, retrieve current and historical records, and
+      give agents bounded access to both.
     contents:
       - knowledge-change-control
       - retrieval
+      - agents
   - title: Add richer representations
     desc: >
       Add semantic graph relationships with LinkML or synchronize a readable
@@ -133,8 +137,8 @@ reference:
       - graft_history
   - title: Synchronize and integrate
     desc: >
-      Synchronize readable files, review file edits, and provide read-only
-      tools to an agent host.
+      Synchronize readable files, review file edits, and provide bounded
+      read-only tools to an agent host.
     contents:
       - graft_sync
       - graft_status
