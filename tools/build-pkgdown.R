@@ -100,11 +100,14 @@ indexable_files <- list.files(
   full.names = TRUE,
   ignore.case = TRUE
 )
+# Match the instruction file by its exact uppercase name. A case-insensitive
+# pattern would also match the lowercase `agents` article, which is ordinary
+# site content.
 mentions_instructions <- vapply(
   indexable_files,
   \(path) {
     content <- readLines(path, warn = FALSE, encoding = "UTF-8")
-    any(grepl("AGENTS[.](md|html)", content, ignore.case = TRUE))
+    any(grepl("\\bAGENTS[.](md|html)\\b", content))
   },
   logical(1)
 )
