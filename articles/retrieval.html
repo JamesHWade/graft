@@ -13,9 +13,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Retrieve accepted knowledge">
-<meta name="description" content="Pin accepted state, get records, search public fields, inspect history, and expose the same bounded reads to agent hosts.
+<meta name="description" content="Pin accepted state, get records, search public fields, and inspect the accepted revision history behind each answer.
 ">
-<meta property="og:description" content="Pin accepted state, get records, search public fields, inspect history, and expose the same bounded reads to agent hosts.
+<meta property="og:description" content="Pin accepted state, get records, search public fields, and inspect the accepted revision history behind each answer.
 ">
 </head>
 <body>
@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -298,19 +299,11 @@ are rejected.</p>
 <div class="section level2">
 <h2 id="give-agents-the-same-bounded-reads">Give agents the same bounded reads<a class="anchor" aria-label="anchor" href="#give-agents-the-same-bounded-reads"></a>
 </h2>
+<p><code>graft_tools(view)</code> wraps these four operations as
+read-only tool definitions that stay pinned to the captured boundary. <a href="agents.html">Work with agents</a> covers the tool surface, its
+limit and truncation metadata, and the review path for records an agent
+proposes.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span></code></pre></div>
-<p>The definitions call <code><a href="../reference/graft_find.html">graft_find()</a></code>,
-<code><a href="../reference/graft_get.html">graft_get()</a></code>, <code><a href="../reference/graft_query.html">graft_query()</a></code>, and
-<code><a href="../reference/graft_history.html">graft_history()</a></code> through the captured view, so later commits
-cannot change their results. They expose no write operation, raw
-database connection, filesystem access, or network access. The host
-decides which provider receives them and remains responsible for tool
-authorization.</p>
-<p>Every operation reports its applicable limits and truncation state so
-a host can distinguish a complete result from a bounded prefix.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 <p>Read <a href="knowledge-change-control.html">Change control</a> for
 the path from proposal to accepted revision and <a href="architecture.html">Architecture</a> for how the ledger and derived

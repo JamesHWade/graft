@@ -30,3 +30,9 @@ objects.
 
 Every tool returns `result` plus explicit `truncated`, `limit`, and
 `store_schema_digest` metadata.
+
+## See also
+
+[`vignette("agents", package = "graft")`](https://jameshwade.github.io/graft/articles/agents.md)
+for pinning an accepted boundary, registering the tools with a chat, and
+accepting agent-authored proposals.

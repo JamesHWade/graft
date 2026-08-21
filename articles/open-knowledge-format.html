@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -284,17 +285,13 @@ heads:</p>
 <div class="section level2">
 <h2 id="give-agents-the-accepted-view">Give agents the accepted view<a class="anchor" aria-label="anchor" href="#give-agents-the-accepted-view"></a>
 </h2>
-<p><code><a href="../reference/graft_tools.html">graft_tools()</a></code> creates four read-only tool definitions
-backed by <code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_get.html">graft_get()</a></code>,
-<code><a href="../reference/graft_query.html">graft_query()</a></code>, and <code><a href="../reference/graft_history.html">graft_history()</a></code>:</p>
+<p>An agent that edits these files never gains a second route into
+accepted knowledge: a modified document stays a proposal until
+<code><a href="../reference/graft_review.html">graft_review()</a></code> and <code><a href="../reference/graft_commit.html">graft_commit()</a></code> accept it.
+For reading, <code><a href="../reference/graft_tools.html">graft_tools()</a></code> exposes bounded accepted
+retrieval rather than filesystem access. <a href="agents.html">Work with
+agents</a> covers both sides of that boundary.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span></code></pre></div>
-<p>The tool definitions expose bounded accepted retrieval, not
-filesystem access or mutation. A modified OKF document remains a
-proposal until it passes review and commit. The host decides which model
-provider, if any, receives the tools.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">store_path</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">okf_path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>

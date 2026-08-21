@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -96,8 +97,12 @@
 tables: a directory of people, a list of organizations, and a table that
 connects them. This guide starts there. It creates an empty in-memory
 store, rejects a broken relationship before writing anything, accepts
-corrected records, and preserves a later update as a second
-revision.</p>
+corrected records, preserves a later update as a second revision, and
+then hands that accepted knowledge to an agent as read-only tools.</p>
+<p>That last step is the point of the earlier ones. An agent is only as
+trustworthy as the knowledge it reads: validated on the way in,
+attributed to a producer, and stable while the agent is reasoning about
+it. Graft is built to give a model exactly that, and nothing more.</p>
 <div class="section level2">
 <h2 id="load-a-table-contract">Load a table contract<a class="anchor" aria-label="anchor" href="#load-a-table-contract"></a>
 </h2>
@@ -357,8 +362,8 @@ returns newest first.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;   revision        committed_at         producer             event</span></span>
-<span><span class="co">#&gt; 1        2 2026-08-17 03:13:34        hr-review review-2026-08-08</span></span>
-<span><span class="co">#&gt; 2        1 2026-08-17 03:13:33 directory-import import-2026-08-01</span></span>
+<span><span class="co">#&gt; 1        2 2026-08-21 01:17:59        hr-review review-2026-08-08</span></span>
+<span><span class="co">#&gt; 2        1 2026-08-21 01:17:59 directory-import import-2026-08-01</span></span>
 <span><span class="co">#&gt;              contract            job_title</span></span>
 <span><span class="co">#&gt; 1 sha256:bf79e47da7f3 Investigative editor</span></span>
 <span><span class="co">#&gt; 2 sha256:bf79e47da7f3             Reporter</span></span></code></pre></div>
@@ -369,9 +374,62 @@ value is an abbreviated build digest; the history result retains the
 complete digest.</p>
 </div>
 <div class="section level2">
+<h2 id="hand-the-same-knowledge-to-an-agent">Hand the same knowledge to an agent<a class="anchor" aria-label="anchor" href="#hand-the-same-knowledge-to-an-agent"></a>
+</h2>
+<p>Everything above was written for a person at the console. The same
+accepted knowledge is also what you want an agent to read, and graft
+exposes it without handing over a database connection.</p>
+<p>First pin the boundary. <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> records the
+accepted state as a serializable value that holds no connection and no
+filesystem path, and <code><a href="../reference/graft_at.html">graft_at()</a></code> binds it to a read-only
+view:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
+<span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/graft_tools.html">graft_tools()</a></code> then turns that view into four <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a> tool definitions backed
+by graft’s public read functions:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"</span></span></code></pre></div>
+<p>The tools are <code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_get.html">graft_get()</a></code>,
+<code><a href="../reference/graft_query.html">graft_query()</a></code>, and <code><a href="../reference/graft_history.html">graft_history()</a></code> — search,
+retrieval, bounded advanced operations, and revision history. They
+accept no SQL, no connection, no path, and no write argument, so a model
+can read accepted knowledge and cannot alter it or reach past it.</p>
+<p>Each call returns its result together with the limit it applied,
+whether the result was truncated, and the digest of the contract it came
+from:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">found</span> <span class="op">&lt;-</span> <span class="va">tools</span><span class="op">$</span><span class="fu">graft_find</span><span class="op">(</span>query <span class="op">=</span> <span class="st">"Lois"</span>, class <span class="op">=</span> <span class="st">"person"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">found</span><span class="op">$</span><span class="va">truncated</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="va">found</span><span class="op">$</span><span class="va">limit</span></span>
+<span><span class="co">#&gt; [1] 5</span></span>
+<span><span class="va">found</span><span class="op">$</span><span class="va">result</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"class"</span>, <span class="st">"label"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;                 id  class     label</span></span>
+<span><span class="co">#&gt; 1 person:lois-lane person Lois Lane</span></span></code></pre></div>
+<p>A model that received only part of an answer is told so, instead of
+reasoning over a silent prefix. Because these tools are bound to
+<code>view</code>, later commits do not move the ground underneath a
+running session; a second run against the same snapshot reads the same
+knowledge.</p>
+<p>Registering them with a chat is one line:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">chat</span><span class="op">$</span><span class="fu">set_tools</span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Who works at the Daily Planet, and has that person's title changed?"</span><span class="op">)</span></span></code></pre></div>
+<p>The agent answers from accepted records and can cite the revision
+history behind them. When an agent should also propose records — and be
+recorded as the producer that did — read <a href="agents.html">Work with
+agents</a>.</p>
+</div>
+<div class="section level2">
 <h2 id="close-the-store">Close the store<a class="anchor" aria-label="anchor" href="#close-the-store"></a>
 </h2>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -388,7 +446,7 @@ entity-valued measurements can become typed traversal edges. This is
 deliberately a second domain: the LinkML guide first explains how the
 same team-directory concepts map to LinkML, then uses materials to run a
 semantic edge that the package already ships.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">linkml_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"extdata"</span>,</span>
 <span>  <span class="st">"materials.graft.json"</span>,</span>
@@ -401,7 +459,8 @@ semantic edge that the package already ships.</p>
 <span><span class="va">linkml_schema</span><span class="op">@</span><span class="va">classes</span><span class="op">$</span><span class="va">Measurement</span><span class="op">@</span><span class="va">statement_shape</span></span>
 <span><span class="co">#&gt; [1] "semantic"</span></span></code></pre></div>
 <p>Read <a href="data-dict-schema.html">the data-dict guide</a> to adapt
-an existing table contract. Next, deepen the package workflow with <a href="knowledge-change-control.html">change control</a> and <a href="retrieval.html">retrieval and history</a>. Then read the <a href="linkml-schema.html">LinkML guide</a> when the domain needs richer
+an existing table contract. Next, deepen the package workflow with <a href="knowledge-change-control.html">change control</a> and <a href="retrieval.html">retrieval and history</a>. Read <a href="agents.html">Work with agents</a> to give a model bounded reads
+and a reviewed proposal path. Then read the <a href="linkml-schema.html">LinkML guide</a> when the domain needs richer
 semantic structure.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

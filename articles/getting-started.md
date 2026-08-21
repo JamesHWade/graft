@@ -4,7 +4,13 @@ Most projects do not begin with a knowledge store. They begin with
 tables: a directory of people, a list of organizations, and a table that
 connects them. This guide starts there. It creates an empty in-memory
 store, rejects a broken relationship before writing anything, accepts
-corrected records, and preserves a later update as a second revision.
+corrected records, preserves a later update as a second revision, and
+then hands that accepted knowledge to an agent as read-only tools.
+
+That last step is the point of the earlier ones. An agent is only as
+trustworthy as the knowledge it reads: validated on the way in,
+attributed to a producer, and stable while the agent is reasoning about
+it. Graft is built to give a model exactly that, and nothing more.
 
 ## Load a table contract
 
@@ -284,8 +290,8 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-08-17 03:13:34        hr-review review-2026-08-08
-#> 2        1 2026-08-17 03:13:33 directory-import import-2026-08-01
+#> 1        2 2026-08-21 01:17:59        hr-review review-2026-08-08
+#> 2        1 2026-08-21 01:17:59 directory-import import-2026-08-01
 #>              contract            job_title
 #> 1 sha256:bf79e47da7f3 Investigative editor
 #> 2 sha256:bf79e47da7f3             Reporter
@@ -296,6 +302,82 @@ is the audit trail: it retains what was accepted, when, under which
 contract, and from which producer event. The displayed contract value is
 an abbreviated build digest; the history result retains the complete
 digest.
+
+## Hand the same knowledge to an agent
+
+Everything above was written for a person at the console. The same
+accepted knowledge is also what you want an agent to read, and graft
+exposes it without handing over a database connection.
+
+First pin the boundary.
+[`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
+records the accepted state as a serializable value that holds no
+connection and no filesystem path, and
+[`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
+binds it to a read-only view:
+
+``` r
+
+snapshot <- graft_snapshot(store)
+view <- graft_at(store, snapshot)
+```
+
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+then turns that view into four [ellmer](https://ellmer.tidyverse.org/)
+tool definitions backed by graft’s public read functions:
+
+``` r
+
+tools <- graft_tools(view)
+names(tools)
+#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+```
+
+The tools are
+[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
+[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
+[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
+and
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+— search, retrieval, bounded advanced operations, and revision history.
+They accept no SQL, no connection, no path, and no write argument, so a
+model can read accepted knowledge and cannot alter it or reach past it.
+
+Each call returns its result together with the limit it applied, whether
+the result was truncated, and the digest of the contract it came from:
+
+``` r
+
+found <- tools$graft_find(query = "Lois", class = "person", limit = 5)
+
+found$truncated
+#> [1] FALSE
+found$limit
+#> [1] 5
+found$result[, c("id", "class", "label")]
+#>                 id  class     label
+#> 1 person:lois-lane person Lois Lane
+```
+
+A model that received only part of an answer is told so, instead of
+reasoning over a silent prefix. Because these tools are bound to `view`,
+later commits do not move the ground underneath a running session; a
+second run against the same snapshot reads the same knowledge.
+
+Registering them with a chat is one line:
+
+``` r
+
+chat <- ellmer::chat_anthropic()
+chat$set_tools(tools)
+
+chat$chat("Who works at the Daily Planet, and has that person's title changed?")
+```
+
+The agent answers from accepted records and can cite the revision
+history behind them. When an agent should also propose records — and be
+recorded as the producer that did — read [Work with
+agents](https://jameshwade.github.io/graft/articles/agents.md).
 
 ## Close the store
 
@@ -340,7 +422,9 @@ to adapt an existing table contract. Next, deepen the package workflow
 with [change
 control](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
 and [retrieval and
-history](https://jameshwade.github.io/graft/articles/retrieval.md). Then
-read the [LinkML
+history](https://jameshwade.github.io/graft/articles/retrieval.md). Read
+[Work with
+agents](https://jameshwade.github.io/graft/articles/agents.md) to give a
+model bounded reads and a reviewed proposal path. Then read the [LinkML
 guide](https://jameshwade.github.io/graft/articles/linkml-schema.md)
 when the domain needs richer semantic structure.

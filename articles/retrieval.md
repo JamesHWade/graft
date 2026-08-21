@@ -201,25 +201,11 @@ are rejected.
 
 ## Give agents the same bounded reads
 
-``` r
-
-tools <- graft_tools(view)
-names(tools)
-```
-
-The definitions call
-[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
-[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
-[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
-and
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
-through the captured view, so later commits cannot change their results.
-They expose no write operation, raw database connection, filesystem
-access, or network access. The host decides which provider receives them
-and remains responsible for tool authorization.
-
-Every operation reports its applicable limits and truncation state so a
-host can distinguish a complete result from a bounded prefix.
+`graft_tools(view)` wraps these four operations as read-only tool
+definitions that stay pinned to the captured boundary. [Work with
+agents](https://jameshwade.github.io/graft/articles/agents.md) covers
+the tool surface, its limit and truncation metadata, and the review path
+for records an agent proposes.
 
 ``` r
 

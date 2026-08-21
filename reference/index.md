@@ -46,8 +46,8 @@ projections, and history.
 
 ## Synchronize and integrate
 
-Synchronize readable files, review file edits, and provide read-only
-tools to an agent host.
+Synchronize readable files, review file edits, and provide bounded
+read-only tools to an agent host.
 
 - [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
   : Synchronize the managed open-knowledge working tree

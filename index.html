@@ -13,9 +13,9 @@
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Connected knowledge from R tables">
-<meta name="description" content="Start with related R tables and a data-dict contract, create a new local store, review changes before writing, and keep current records with their accepted history.
+<meta name="description" content="Start with related R tables and a data-dict contract, create a new local store, review changes before writing, keep current records with their accepted history, and give agents bounded read-only access to it.
 ">
-<meta property="og:description" content="Start with related R tables and a data-dict contract, create a new local store, review changes before writing, and keep current records with their accepted history.
+<meta property="og:description" content="Start with related R tables and a data-dict contract, create a new local store, review changes before writing, keep current records with their accepted history, and give agents bounded read-only access to it.
 ">
 </head>
 <body>
@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -88,19 +89,11 @@ Knowledge from ordinary R tables
 Turn related tables into knowledge you can update without losing history.
 </h2>
 <p class="graft-hero-copy">
-Start with data frames and a data-dict contract. graft creates a new local store, checks related records before it writes, records where each accepted change came from, and keeps earlier versions available.
+Start with data frames and a data-dict contract. graft creates a new local store, checks related records before it writes, records where each accepted change came from, and keeps earlier versions available — then hands that accepted knowledge to an agent as bounded, read-only tools.
 </p>
 <div class="graft-actions">
-<p><a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a> <a class="btn btn-outline-secondary" href="articles/data-dict-schema.html">Start with data-dict</a></p>
+<p><a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a> <a class="btn btn-outline-secondary" href="articles/agents.html">Work with agents</a></p>
 </div>
-</div>
-<div class="section level2">
-<h2 id="install-graft">Install graft<a class="anchor" aria-label="anchor" href="#install-graft"></a>
-</h2>
-<p>graft is currently installed from GitHub:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span><span class="op">)</span></span></code></pre></div>
-<p>Using a resolved data-dict contract and an existing <code>.graft.json</code> contract is R-only. The data-dict CLI is needed only to resolve authored YAML, and Python with <code>linkml-runtime</code> is needed only to compile LinkML source.</p>
 </div>
 <div class="section level2">
 <h2 id="start-with-the-data-you-already-have">Start with the data you already have<a class="anchor" aria-label="anchor" href="#start-with-the-data-you-already-have"></a>
@@ -142,10 +135,18 @@ Start with data frames and a data-dict contract. graft creates a new local store
 </tbody>
 </table>
 <p>Those tables can answer who works where today. They do not, by themselves, tell you whether an employment row points to a known organization, who supplied a correction, what a reviewer accepted, or what the previous job title was.</p>
-<p>graft adds stable record identity, relationship checks, source provenance, a review step, and revision history. These are the foundations of useful knowledge: facts that remain connected and explainable as they change.</p>
+<p>graft adds stable record identity, relationship checks, source provenance, a review step, and revision history. These are the foundations of useful knowledge: facts that remain connected and explainable as they change. They are also what makes accepted knowledge safe to put in front of a model.</p>
 </div>
 <div class="section level2">
-<h2 id="describe-the-tables-with-data-dict">Describe the tables with data-dict<a class="anchor" aria-label="anchor" href="#describe-the-tables-with-data-dict"></a>
+<h2 id="install-graft">Install graft<a class="anchor" aria-label="anchor" href="#install-graft"></a>
+</h2>
+<p>graft is currently installed from GitHub:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span><span class="op">)</span></span></code></pre></div>
+<p>Using a resolved data-dict contract and an existing <code>.graft.json</code> contract is R-only. The data-dict CLI is needed only to resolve authored YAML, and Python with <code>linkml-runtime</code> is needed only to compile LinkML source.</p>
+</div>
+<div class="section level2">
+<h2 id="describe-the-tables-with-a-contract">Describe the tables with a contract<a class="anchor" aria-label="anchor" href="#describe-the-tables-with-a-contract"></a>
 </h2>
 <p><a href="https://data-dict.tidyverse.org/" class="external-link">data-dict</a> gives the tables and their relationships a readable contract. The package includes this example as <code>team-directory.data-dict.yaml</code>; an abridged excerpt of its relationships is:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">tables</span><span class="kw">:</span></span>
@@ -156,40 +157,24 @@ Start with data frames and a data-dict contract. graft creates a new local store
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">relationships</span><span class="kw">:</span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">join</span><span class="kw">:</span><span class="at"> employment.person_id = person.id</span></span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">join</span><span class="kw">:</span><span class="at"> employment.organization_id = organization.id</span></span></code></pre></div>
-<p>The data-dict CLI resolves the authoring YAML with <code>export-spec</code>. A resolved JSON export can then be compiled by graft using R alone:</p>
+<p>The data-dict CLI resolves authoring YAML with <code>export-spec</code> once. graft compiles the resolved JSON using R alone, then creates the store — no existing database required:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">resolved_json</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
 <span>  <span class="st">"extdata"</span>,</span>
 <span>  <span class="st">"team-directory.data-dict.json"</span>,</span>
 <span>  package <span class="op">=</span> <span class="st">"graft"</span>,</span>
 <span>  mustWork <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_schema.html">graft_schema</a></span><span class="op">(</span><span class="va">resolved_json</span><span class="op">)</span></span>
-<span><span class="va">schema</span><span class="op">@</span><span class="va">name</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">schema</span><span class="op">@</span><span class="va">classes</span><span class="op">)</span></span></code></pre></div>
-<p>The <code>@</code> operator reads a public property from graft’s immutable S7 contract and plan objects; candidate records themselves remain ordinary data frames.</p>
-<p>The full <a href="articles/data-dict-schema.html">data-dict guide</a> shows how to author, resolve, and inspect the contract. The <a href="articles/contract-compilers.html">compiler reference</a> documents the exact supported profiles and build requirements.</p>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".duckdb"</span><span class="op">)</span>, okf <span class="op">=</span> <span class="st">"disabled"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="create-a-new-empty-store">Create a new, empty store<a class="anchor" aria-label="anchor" href="#create-a-new-empty-store"></a>
+<h2 id="review-each-change-before-it-is-written">Review each change before it is written<a class="anchor" aria-label="anchor" href="#review-each-change-before-it-is-written"></a>
 </h2>
-<p>You do not need an existing database. The path below does not exist when <code><a href="reference/graft_open.html">graft_open()</a></code> is called; graft creates and initializes it under the compiled contract.</p>
+<p>Candidate records are ordinary data frames. This batch has a valid person and organization, but its employment row points to an organization that does not exist:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">store_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".duckdb"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">store_path</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span>
-<span></span>
-<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="va">store_path</span>, okf <span class="op">=</span> <span class="st">"disabled"</span><span class="op">)</span></span></code></pre></div>
-<p>Use <code>":memory:"</code> instead of a file path for a disposable in-memory store.</p>
-</div>
-<div class="section level2">
-<h2 id="catch-a-broken-relationship-before-writing">Catch a broken relationship before writing<a class="anchor" aria-label="anchor" href="#catch-a-broken-relationship-before-writing"></a>
-</h2>
-<p>Candidate records are a named list of data frames. This batch includes a valid person and organization, but its employment row points to an organization that does not exist.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  organization <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>    id <span class="op">=</span> <span class="st">"org:daily-planet"</span>,</span>
@@ -216,71 +201,95 @@ Start with data frames and a data-dict contract. graft creates a new local store
 <span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
 <span></span>
-<span><span class="va">plan</span><span class="op">@</span><span class="va">issues</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"record_id"</span>, <span class="st">"field"</span>, <span class="st">"message"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>The issue reports that <code>org:missing</code> is not a known target. Planning has not written any records or provenance, so the caller can correct the batch and review it again.</p>
-</div>
-<div class="section level2">
-<h2 id="correct-review-and-commit-the-batch">Correct, review, and commit the batch<a class="anchor" aria-label="anchor" href="#correct-review-and-commit-the-batch"></a>
-</h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<span><span class="va">plan</span><span class="op">@</span><span class="va">issues</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"record_id"</span>, <span class="st">"field"</span>, <span class="st">"message"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;        class                         record_id           field                                        message</span></span>
+<span><span class="co">#&gt; 1 employment employment:lois-lane:daily-planet organization_id Reference target `org:missing` does not exist.</span></span></code></pre></div>
+<p>Planning writes nothing, so a rejected batch can be corrected and reviewed again. <code><a href="reference/graft_commit.html">graft_commit()</a></code> rechecks the reviewed plan and accepts all three records in one transaction, or none of them:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">records</span><span class="op">$</span><span class="va">employment</span><span class="op">$</span><span class="va">organization_id</span> <span class="op">&lt;-</span> <span class="st">"org:daily-planet"</span></span>
 <span><span class="va">plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_plan.html">graft_plan</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">records</span>, <span class="va">origin</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span></span>
-<span><span class="va">plan</span><span class="op">@</span><span class="va">changes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"record_id"</span>, <span class="st">"action"</span>, <span class="st">"changed_fields"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">plan</span><span class="op">@</span><span class="va">changes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"record_id"</span>, <span class="st">"action"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;          class                         record_id action</span></span>
+<span><span class="co">#&gt; 1 organization                  org:daily-planet insert</span></span>
+<span><span class="co">#&gt; 2       person                  person:lois-lane insert</span></span>
+<span><span class="co">#&gt; 3   employment employment:lois-lane:daily-planet insert</span></span>
 <span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">plan</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>The plan now shows three inserts. <code><a href="reference/graft_commit.html">graft_commit()</a></code> rechecks the reviewed plan and accepts all three records together. If a precondition fails, none of the batch is accepted.</p>
+<span><span class="fu"><a href="reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">plan</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="keep-the-old-version-when-a-fact-changes">Keep the old version when a fact changes<a class="anchor" aria-label="anchor" href="#keep-the-old-version-when-a-fact-changes"></a>
 </h2>
-<p>A later review changes Lois’s role. The update plan identifies the field that would change before anything is written.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">updated_person</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
-<span>  full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
-<span>  job_title <span class="op">=</span> <span class="st">"Investigative editor"</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">update_origin</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
-<span>  producer <span class="op">=</span> <span class="st">"hr-review"</span>,</span>
-<span>  idempotency_key <span class="op">=</span> <span class="st">"hr-review-2026-08-10"</span></span>
+<p>A later review changes Lois’s role. The update is another reviewable plan, not an overwrite:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">update_plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_plan.html">graft_plan</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    id <span class="op">=</span> <span class="st">"person:lois-lane"</span>,</span>
+<span>    full_name <span class="op">=</span> <span class="st">"Lois Lane"</span>,</span>
+<span>    job_title <span class="op">=</span> <span class="st">"Investigative editor"</span></span>
+<span>  <span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
+<span>    producer <span class="op">=</span> <span class="st">"hr-review"</span>,</span>
+<span>    idempotency_key <span class="op">=</span> <span class="st">"hr-review-2026-08-10"</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">update_plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_plan.html">graft_plan</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">updated_person</span>, <span class="va">update_origin</span><span class="op">)</span></span>
 <span><span class="va">update_plan</span><span class="op">@</span><span class="va">changes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"record_id"</span>, <span class="st">"action"</span>, <span class="st">"changed_fields"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;          record_id action changed_fields</span></span>
+<span><span class="co">#&gt; 1 person:lois-lane update      job_title</span></span>
+<span></span>
 <span><span class="fu"><a href="reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">update_plan</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/graft_get.html">graft_get</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span><span class="op">$</span><span class="va">record</span></span>
 <span><span class="fu"><a href="reference/graft_history.html">graft_history</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:lois-lane"</span><span class="op">)</span><span class="op">[</span></span>
-<span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"revision_number"</span>, <span class="st">"committed_at"</span>, <span class="st">"producer"</span>, <span class="st">"changed_fields"</span><span class="op">)</span></span>
+<span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"revision_number"</span>, <span class="st">"producer"</span>, <span class="st">"changed_fields"</span><span class="op">)</span></span>
 <span><span class="op">]</span></span>
-<span></span>
-<span><span class="fu"><a href="reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">store_path</span><span class="op">)</span></span></code></pre></div>
-<p>Current retrieval returns the new title. History retains both accepted versions and the producer attached to each change.</p>
+<span><span class="co">#&gt;   revision_number         producer changed_fields</span></span>
+<span><span class="co">#&gt; 1               2        hr-review      job_title</span></span>
+<span><span class="co">#&gt; 2               1 directory-import   full_nam....</span></span></code></pre></div>
+<p>Current retrieval returns the new title. History retains both accepted versions and the producer behind each change.</p>
 </div>
 <div class="section level2">
-<h2 id="add-linkml-when-the-relationships-need-graph-meaning">Add LinkML when the relationships need graph meaning<a class="anchor" aria-label="anchor" href="#add-linkml-when-the-relationships-need-graph-meaning"></a>
+<h2 id="give-an-agent-bounded-reads">Give an agent bounded reads<a class="anchor" aria-label="anchor" href="#give-an-agent-bounded-reads"></a>
+</h2>
+<p>An agent is only as trustworthy as the knowledge it reads. graft gives a model records that were validated on the way in, attributed to a producer, and pinned so they cannot move mid-session.</p>
+<p><code><a href="reference/graft_snapshot.html">graft_snapshot()</a></code> captures the accepted boundary as a serializable, path-free value, <code><a href="reference/graft_at.html">graft_at()</a></code> binds it to a read-only view, and <code><a href="reference/graft_tools.html">graft_tools()</a></code> turns that view into four <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a> tools:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
+<span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"</span></span>
+<span></span>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">chat</span><span class="op">$</span><span class="fu">set_tools</span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
+<span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Who works at the Daily Planet, and has that person's title changed?"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
+<p>The tools search, retrieve, run bounded advanced operations, and read revision history. They accept no SQL, connection, path, or write argument, and every result reports the limit it applied, whether it was truncated, and the digest of the contract it came from. Fields the contract marks restricted never reach them.</p>
+<p>Writes stay on the reviewed path. An agent that proposes records becomes a named producer whose plan is validated and inspected like any other, and a file-editing agent works through a readable Open Knowledge Format tree whose edits remain proposals until they are reviewed. <a href="articles/agents.html">Work with agents</a> covers all three.</p>
+</div>
+<div class="section level2">
+<h2 id="choose-a-contract-provider">Choose a contract provider<a class="anchor" aria-label="anchor" href="#choose-a-contract-provider"></a>
 </h2>
 <p>data-dict is the simpler starting point when the domain is naturally tabular. Its foreign keys let graft reject missing targets, but they are not graph traversal edges. Move to <a href="articles/linkml-schema.html">LinkML</a> when you need relationships that support graph traversal, inheritance, ontology identifiers, or polymorphic references.</p>
-<p>Both providers compile to the same Graft contract and use the same plan, commit, retrieval, and history functions. The provider changes how the domain is described; it does not create another way to write accepted knowledge. The evaluated LinkML guide accepts a semantic measurement and retrieves the typed <code>materials:testedWith</code> edge between two materials.</p>
+<p>Both providers compile to the same Graft contract and use the same plan, commit, retrieval, and history functions. The provider changes how the domain is described; it does not create another way to write accepted knowledge.</p>
 </div>
 <div class="section level2">
 <h2 id="continue-learning">Continue learning<a class="anchor" aria-label="anchor" href="#continue-learning"></a>
 </h2>
 <ul>
 <li>
-<a href="articles/getting-started.html">Get started</a> works through the complete data-dict example with its results.</li>
+<a href="articles/getting-started.html">Get started</a> works through this example with its results, then hands the store to an agent.</li>
 <li>
-<a href="articles/data-dict-schema.html">Use a data-dict contract</a> covers table-first authoring and compilation.</li>
+<a href="articles/data-dict-schema.html">Use a data-dict contract</a> covers table-first authoring, compilation, and what the table profile enforces.</li>
 <li>
 <a href="articles/knowledge-change-control.html">Review knowledge changes</a> explains plans, commit preconditions, and retries.</li>
 <li>
 <a href="articles/retrieval.html">Retrieve current records and history</a> maps each read function to its job.</li>
+<li>
+<a href="articles/agents.html">Work with agents</a> covers bounded tools, pinned snapshots, agent-authored proposals, and file-editing agents.</li>
 <li>
 <a href="articles/linkml-schema.html">Add graph semantics with LinkML</a> continues from governed tables to typed traversal relationships.</li>
 <li>

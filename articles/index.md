@@ -18,7 +18,8 @@ Build a new store from related tables with a data-dict contract.
 
 ### Use graft
 
-Review and accept changes, then retrieve current and historical records.
+Review and accept changes, retrieve current and historical records, and
+give agents bounded access to both.
 
 - [Govern knowledge
   changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md):
@@ -29,8 +30,15 @@ Review and accept changes, then retrieve current and historical records.
 - [Retrieve accepted
   knowledge](https://jameshwade.github.io/graft/articles/retrieval.md):
 
-  Pin accepted state, get records, search public fields, inspect
-  history, and expose the same bounded reads to agent hosts.
+  Pin accepted state, get records, search public fields, and inspect the
+  accepted revision history behind each answer.
+
+- [Work with
+  agents](https://jameshwade.github.io/graft/articles/agents.md):
+
+  Give an agent bounded reads, a pinned accepted boundary, and a
+  proposal path that still passes through validation, provenance, and
+  review.
 
 ### Add richer representations
 

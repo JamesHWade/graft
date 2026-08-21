@@ -21,6 +21,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-learn"><li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
+    <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul></li>
@@ -63,12 +64,14 @@
       </dd></dl></div>
     <div class="section ">
       <h3>Use graft</h3>
-      <div class="section-desc"><p>Review and accept changes, then retrieve current and historical records.</p></div>
+      <div class="section-desc"><p>Review and accept changes, retrieve current and historical records, and give agents bounded access to both.</p></div>
 
       <dl><dt><a href="knowledge-change-control.html">Govern knowledge changes</a></dt>
         <dd><p>Review candidate changes, commit them atomically, and recover the accepted history of a record from one authoritative revision ledger.</p>
         </dd><dt><a href="retrieval.html">Retrieve accepted knowledge</a></dt>
-        <dd><p>Pin accepted state, get records, search public fields, inspect history, and expose the same bounded reads to agent hosts.</p>
+        <dd><p>Pin accepted state, get records, search public fields, and inspect the accepted revision history behind each answer.</p>
+        </dd><dt><a href="agents.html">Work with agents</a></dt>
+        <dd><p>Give an agent bounded reads, a pinned accepted boundary, and a proposal path that still passes through validation, provenance, and review.</p>
       </dd></dl></div>
     <div class="section ">
       <h3>Add richer representations</h3>

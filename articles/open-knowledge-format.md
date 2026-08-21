@@ -214,24 +214,16 @@ accepted revisions -> sync -> readable files -> edit -> review -> commit -> sync
 
 ## Give agents the accepted view
 
-[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-creates four read-only tool definitions backed by
-[`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
-[`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
-[`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
+An agent that edits these files never gains a second route into accepted
+knowledge: a modified document stays a proposal until
+[`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
 and
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md):
-
-``` r
-
-tools <- graft_tools(store)
-names(tools)
-```
-
-The tool definitions expose bounded accepted retrieval, not filesystem
-access or mutation. A modified OKF document remains a proposal until it
-passes review and commit. The host decides which model provider, if any,
-receives the tools.
+[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
+accept it. For reading,
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+exposes bounded accepted retrieval rather than filesystem access. [Work
+with agents](https://jameshwade.github.io/graft/articles/agents.md)
+covers both sides of that boundary.
 
 ``` r
 
