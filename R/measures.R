@@ -103,3 +103,150 @@ augment_manifest_with_measures <- function(compiled) {
   compiled$manifest <- manifest
   compiled
 }
+
+measure_scalar_columns <- function(contract) {
+  slots <- Filter(
+    \(slot) !scalar_logical(slot$multivalued),
+    contract$slots
+  )
+  names(slots)
+}
+
+measure_json_list <- function(text) {
+  if (is.null(text) || is.na(text) || !nzchar(text)) {
+    return(list())
+  }
+  parsed <- tryCatch(
+    jsonlite::fromJSON(text, simplifyVector = FALSE),
+    error = \(error) error
+  )
+  if (rlang::is_condition(parsed) || !is.list(parsed)) {
+    return(NULL)
+  }
+  parsed
+}
+
+validate_measure_candidates <- function(manifest, staged) {
+  issues <- list()
+  data <- staged$data
+  add_issue <- function(index, field, rule, message) {
+    issues[[length(issues) + 1L]] <<- new_plan_issue(
+      record_class = staged$class,
+      input_row = index,
+      record_id = scalar_character(data$id[[index]]),
+      field = field,
+      rule = rule,
+      message = message
+    )
+  }
+  for (index in seq_len(nrow(data))) {
+    target <- scalar_character(data$target_class[[index]])
+    contract <- manifest$classes[[target]]
+    if (
+      is.na(target) ||
+        is.null(contract) ||
+        identical(target, graft_measure_class_name)
+    ) {
+      if (!is.na(target)) {
+        add_issue(
+          index,
+          "target_class",
+          "measure_target_class",
+          paste0("`", target, "` is not a measurable contract class.")
+        )
+      }
+      next
+    }
+    columns <- measure_scalar_columns(contract)
+    expr <- scalar_character(data$expr[[index]])
+    if (!is.na(expr)) {
+      checked <- measure_expr_check(expr, columns)
+      for (row in seq_len(nrow(checked$issues))) {
+        add_issue(
+          index,
+          "expr",
+          checked$issues$rule[[row]],
+          checked$issues$message[[row]]
+        )
+      }
+    }
+    parameters <- measure_json_list(scalar_character(
+      data$parameters[[index]]
+    ))
+    if (is.null(parameters)) {
+      add_issue(
+        index,
+        "parameters",
+        "measure_parameter_json",
+        "`parameters` must be a JSON array of parameter objects."
+      )
+    } else {
+      for (parameter in parameters) {
+        fields <- c("name", "type", "description", "column")
+        complete <- is.list(parameter) &&
+          all(vapply(
+            parameter[fields],
+            \(value) is_nonempty_string(value),
+            logical(1)
+          ))
+        if (!complete) {
+          add_issue(
+            index,
+            "parameters",
+            "measure_parameter_contract",
+            paste(
+              "Each parameter needs non-empty `name`, `type`,",
+              "`description`, and `column` strings."
+            )
+          )
+          next
+        }
+        if (!(parameter$column %in% columns)) {
+          add_issue(
+            index,
+            "parameters",
+            "measure_parameter_column",
+            paste0(
+              "Parameter `",
+              parameter$name,
+              "` binds to unknown column `",
+              parameter$column,
+              "` of class `",
+              target,
+              "`."
+            )
+          )
+        }
+      }
+    }
+    dimensions <- measure_json_list(scalar_character(
+      data$dimensions[[index]]
+    ))
+    if (is.null(dimensions)) {
+      add_issue(
+        index,
+        "dimensions",
+        "measure_dimension_json",
+        "`dimensions` must be a JSON array of column names."
+      )
+    } else {
+      for (dimension in dimensions) {
+        if (!is_nonempty_string(dimension) || !(dimension %in% columns)) {
+          add_issue(
+            index,
+            "dimensions",
+            "measure_dimension_column",
+            paste0(
+              "Dimension `",
+              if (is_nonempty_string(dimension)) dimension else "",
+              "` is not a scalar column of class `",
+              target,
+              "`."
+            )
+          )
+        }
+      }
+    }
+  }
+  issues
+}

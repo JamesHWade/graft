@@ -577,6 +577,9 @@ validate_candidate_class <- function(manifest, staged) {
     }
   }
   issues <- c(issues, validate_candidate_invariants(staged))
+  if (identical(staged$class, graft_measure_class_name)) {
+    issues <- c(issues, validate_measure_candidates(manifest, staged))
+  }
   list(staged = staged, issues = issues)
 }
 

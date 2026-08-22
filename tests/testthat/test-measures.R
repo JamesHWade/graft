@@ -45,3 +45,45 @@ test_that("a proposed measure commits like any record and is retrievable", {
   expect_identical(fetched$class, "GraftMeasure")
   expect_identical(fetched$record$expr, "COUNT(*)")
 })
+
+test_that("plan-time validation rejects invalid measure definitions", {
+  store <- local_graft_ingest_store()
+  records <- list(
+    GraftMeasure = data.frame(
+      id = c(
+        "measure:bad-expr",
+        "measure:bad-class",
+        "measure:bad-param",
+        "measure:bad-dimension"
+      ),
+      name = c("bad-expr", "bad-class", "bad-param", "bad-dimension"),
+      target_class = c("Entity", "Nope", "Entity", "Entity"),
+      expr = c("MEDIAN(label)", "COUNT(*)", "COUNT(*)", "COUNT(*)"),
+      parameters = c(
+        "[]",
+        "[]",
+        "[{\"name\":\"x\",\"type\":\"string\",\"description\":\"d\",\"column\":\"nope\"}]",
+        "[]"
+      ),
+      dimensions = c("[]", "[]", "[]", "[\"nope\"]")
+    )
+  )
+  plan <- graft_plan(store, records, graft_provenance(producer = "test"))
+  issues <- plan@issues[plan@issues$class == "GraftMeasure", ]
+  expect_identical(
+    issues$rule[issues$record_id == "measure:bad-expr"],
+    "measure_expr_function"
+  )
+  expect_identical(
+    issues$rule[issues$record_id == "measure:bad-class"],
+    "measure_target_class"
+  )
+  expect_identical(
+    issues$rule[issues$record_id == "measure:bad-param"],
+    "measure_parameter_column"
+  )
+  expect_identical(
+    issues$rule[issues$record_id == "measure:bad-dimension"],
+    "measure_dimension_column"
+  )
+})
