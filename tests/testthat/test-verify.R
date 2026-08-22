@@ -743,6 +743,78 @@ test_that("graft_verify normalizes nested and emphasized Markdown blockquotes", 
   expect_identical(emphasized$label, "cited")
 })
 
+test_that("graft_verify keeps Markdown block and paragraph boundaries fail closed", {
+  evidence <- "# Tiny Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  heading <- graft_verify(verification_test_chat(
+    list(call),
+    paste("> # Tiny", "Lois Lane is an investigative reporter.", sep = "\n")
+  ))
+
+  plain <- "Lois Lane is an investigative reporter."
+  plain_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = plain)
+  )
+  split_emphasis <- graft_verify(verification_test_chat(
+    list(plain_call),
+    paste("> **Lois Lane is an", ">", "> investigative reporter.**", sep = "\n")
+  ))
+
+  expect_identical(heading$label, "untrusted")
+  expect_identical(split_emphasis$label, "untrusted")
+})
+
+test_that("graft_verify handles indented Markdown lazy continuation", {
+  evidence <- "Tiny Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  verification <- graft_verify(verification_test_chat(
+    list(call),
+    paste("> Tiny", "    Lois Lane is an investigative reporter.", sep = "\n")
+  ))
+
+  expect_identical(verification$label, "cited")
+})
+
+test_that("graft_verify distinguishes inline and block HTML continuation", {
+  inline <- "Tiny <em>Lois Lane is an investigative reporter.</em>"
+  inline_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = inline)
+  )
+  inline_verification <- graft_verify(verification_test_chat(
+    list(inline_call),
+    paste(
+      "> Tiny",
+      "<em>Lois Lane is an investigative reporter.</em>",
+      sep = "\n"
+    )
+  ))
+
+  block <- "Tiny <div>Lois Lane is an investigative reporter.</div>"
+  block_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = block)
+  )
+  block_verification <- graft_verify(verification_test_chat(
+    list(block_call),
+    paste(
+      "> Tiny",
+      "<div>Lois Lane is an investigative reporter.</div>",
+      sep = "\n"
+    )
+  ))
+
+  expect_identical(inline_verification$label, "cited")
+  expect_identical(block_verification$label, "untrusted")
+})
+
 test_that("graft_verify requires matched evidence from every generic result", {
   employment <- "Lois Lane works at the Daily Planet."
   title <- "Lois Lane is an investigative reporter."
@@ -839,7 +911,51 @@ test_that("citation normalization removes emphasis without altering identifiers"
       "Lois Lane",
       "Daily Planet",
       "record_identifier_name",
-      "a*b*c"
+      "abc"
+    )
+  )
+})
+
+test_that("citation normalization preserves non-emphasis delimiters", {
+  evidence <- "Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_get",
+    data.frame(summary = evidence)
+  )
+  verification <- graft_verify(verification_test_chat(
+    list(call),
+    paste0("The record says \"** ", evidence, " **\"")
+  ))
+
+  expect_identical(verification$label, "untrusted")
+  expect_identical(verification$reason_codes, list("unmatched_citation"))
+})
+
+test_that("citation normalization applies Markdown delimiter-run rules", {
+  observed <- vapply(
+    c(
+      "__investigative__reporter",
+      "a**Lois Lane**",
+      "a*Lois Lane*",
+      "_record_identifier_name_",
+      "a*.investigative reporter*",
+      "**Lois *Lane* is a reporter**",
+      "é **Lois**"
+    ),
+    graft_verification_normalize_text,
+    character(1)
+  )
+
+  expect_identical(
+    unname(observed),
+    c(
+      "__investigative__reporter",
+      "aLois Lane",
+      "aLois Lane",
+      "record_identifier_name",
+      "a*.investigative reporter*",
+      "Lois Lane is a reporter",
+      "é Lois"
     )
   )
 })

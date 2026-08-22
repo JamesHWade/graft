@@ -407,8 +407,13 @@ graft_verification_blockquote_candidates <- function(text) {
           block,
           stripped
         )
-        paragraph_active <- nzchar(trimws(stripped))
-      } else if (paragraph_active && nzchar(trimws(line))) {
+        paragraph_active <- graft_verification_markdown_paragraph_line(stripped)
+      } else if (
+        paragraph_active &&
+          nzchar(trimws(line)) &&
+          (grepl("^(?: {4}|\\t)", line, perl = TRUE) ||
+            graft_verification_markdown_paragraph_line(line))
+      ) {
         block <- c(block, line)
       } else {
         break
@@ -422,6 +427,101 @@ graft_verification_blockquote_candidates <- function(text) {
     \(candidate) graft_verification_candidate(candidate, "blockquote")
   )
   Filter(Negate(is.null), candidates)
+}
+
+graft_verification_markdown_paragraph_line <- function(text) {
+  if (
+    !nzchar(trimws(text)) ||
+      grepl("^(?: {4}|\\t)", text, perl = TRUE)
+  ) {
+    return(FALSE)
+  }
+  text <- sub("^ {0,3}", "", text)
+  block_starts <- c(
+    "^#{1,6}(?:[ \\t]+|$)",
+    "^(?:`{3,}|~{3,})",
+    "^>",
+    "^(?:[-+*][ \\t]+|[0-9]{1,9}[.)][ \\t]+)",
+    "^(?:(?:\\*[ \\t]*){3,}|(?:-[ \\t]*){3,}|(?:_[ \\t]*){3,})$",
+    "^=+[ \\t]*$",
+    "^\\[[^]]+\\]:",
+    "^<(?:!--|!\\[CDATA\\[|\\?|![A-Z])",
+    paste0(
+      "^</?(?i:",
+      paste(
+        c(
+          "address",
+          "article",
+          "aside",
+          "base",
+          "basefont",
+          "blockquote",
+          "body",
+          "caption",
+          "center",
+          "col",
+          "colgroup",
+          "dd",
+          "details",
+          "dialog",
+          "dir",
+          "div",
+          "dl",
+          "dt",
+          "fieldset",
+          "figcaption",
+          "figure",
+          "footer",
+          "form",
+          "frame",
+          "frameset",
+          "h[1-6]",
+          "head",
+          "header",
+          "hr",
+          "html",
+          "iframe",
+          "legend",
+          "li",
+          "link",
+          "main",
+          "menu",
+          "menuitem",
+          "nav",
+          "noframes",
+          "ol",
+          "optgroup",
+          "option",
+          "p",
+          "param",
+          "pre",
+          "script",
+          "search",
+          "section",
+          "style",
+          "summary",
+          "table",
+          "tbody",
+          "td",
+          "textarea",
+          "tfoot",
+          "th",
+          "thead",
+          "title",
+          "tr",
+          "track",
+          "ul"
+        ),
+        collapse = "|"
+      ),
+      ")(?:[ \\t/>]|$)"
+    )
+  )
+  !any(vapply(
+    block_starts,
+    \(pattern) grepl(pattern, text, perl = TRUE),
+    logical(1)
+  ))
 }
 
 graft_verification_candidate <- function(text, type) {
@@ -445,14 +545,80 @@ graft_verification_normalize_text <- function(text) {
 }
 
 graft_verification_strip_emphasis <- function(text) {
-  patterns <- c(
-    "(^|[[:space:][:punct:]])(\\*\\*\\*|\\*\\*|\\*)([^*]+)\\2(?=$|[[:space:][:punct:]])",
-    "(^|[[:space:][:punct:]])(___|__|_)([^_]+)\\2(?=$|[[:space:][:punct:]])"
+  xml <- commonmark::markdown_xml(text, sourcepos = TRUE)
+  pattern <- paste0(
+    "<(emph|strong) sourcepos=\"",
+    "([0-9]+):([0-9]+)-([0-9]+):([0-9]+)\""
   )
-  for (pattern in patterns) {
-    text <- gsub(pattern, "\\1\\3", text, perl = TRUE)
+  matches <- regmatches(
+    xml,
+    gregexpr(pattern, xml, perl = TRUE)
+  )[[1L]]
+  if (length(matches) == 0L) {
+    return(text)
   }
-  text
+  captures <- do.call(
+    rbind,
+    lapply(matches, function(match) {
+      regmatches(match, regexec(pattern, match, perl = TRUE))[[1L]]
+    })
+  )
+  ranges <- data.frame(
+    type = captures[, 2L],
+    start_line = as.integer(captures[, 3L]),
+    start_column = as.integer(captures[, 4L]),
+    end_line = as.integer(captures[, 5L]),
+    end_column = as.integer(captures[, 6L])
+  )
+  ranges$width <- ifelse(ranges$type == "strong", 2L, 1L)
+  range_key <- paste(
+    ranges$start_line,
+    ranges$start_column,
+    ranges$end_line,
+    ranges$end_column,
+    sep = ":"
+  )
+  groups <- split(seq_len(nrow(ranges)), range_key)
+  lines <- strsplit(text, "\\r?\\n", perl = TRUE)[[1L]]
+  bytes <- lapply(lines, charToRaw)
+  removed <- lapply(bytes, \(line) rep(FALSE, length(line)))
+  for (indices in groups) {
+    range <- ranges[indices[[1L]], , drop = FALSE]
+    width <- sum(ranges$width[indices])
+    if (
+      range$start_line > length(bytes) ||
+        range$end_line > length(bytes)
+    ) {
+      next
+    }
+    start <- range$start_column + seq_len(width) - 1L
+    end <- seq.int(range$end_column - width + 1L, range$end_column)
+    if (
+      any(start > length(bytes[[range$start_line]])) ||
+        any(end < 1L) ||
+        any(end > length(bytes[[range$end_line]]))
+    ) {
+      next
+    }
+    markers <- c(
+      bytes[[range$start_line]][start],
+      bytes[[range$end_line]][end]
+    )
+    if (
+      !all(as.integer(markers) %in% c(42L, 95L)) ||
+        length(unique(as.integer(markers))) != 1L
+    ) {
+      next
+    }
+    removed[[range$start_line]][start] <- TRUE
+    removed[[range$end_line]][end] <- TRUE
+  }
+  lines <- Map(
+    \(line, drop) rawToChar(line[!drop]),
+    bytes,
+    removed
+  )
+  paste(unlist(lines, use.names = FALSE), collapse = "\n")
 }
 
 graft_verification_text_values <- function(value, path = "result") {
