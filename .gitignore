@@ -1,4 +1,6 @@
-docs
+docs/*
+!docs/agents/
+!docs/adr/
 inst/doc
 /doc/
 /Meta/
