@@ -629,6 +629,31 @@ test_that("graft_verify normalizes candidates without weakening fixed matching",
   )
 })
 
+test_that("graft_verify detects typographic quotation forms and nested emphasis", {
+  evidence <- "Lois Lane is an investigative reporter."
+  verify <- function(answer) {
+    call <- verification_test_call(
+      "graft_get",
+      data.frame(summary = evidence)
+    )
+    graft_verify(verification_test_chat(list(call), answer))
+  }
+
+  observed <- lapply(
+    c(
+      "The record says „Lois Lane is an investigative reporter.“",
+      "The record says ‘Lois Lane is an investigative reporter.’",
+      "The record says \"***Lois Lane is an investigative reporter.***\""
+    ),
+    verify
+  )
+
+  expect_identical(
+    vapply(observed, \(result) result$label, character(1)),
+    rep("cited", 3L)
+  )
+})
+
 test_that("graft_verify cites consecutive Markdown blockquote lines", {
   evidence <- "Lois Lane is an investigative reporter at the Daily Planet."
   quoted <- paste(
@@ -663,6 +688,36 @@ test_that("graft_verify cites consecutive Markdown blockquote lines", {
       result_text = evidence
     )))
   )
+})
+
+test_that("graft_verify respects Markdown blockquote continuation and indentation", {
+  cited_text <- "Lois Lane is an investigative reporter."
+  cited_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = cited_text)
+  )
+  cited <- graft_verify(verification_test_chat(
+    list(cited_call),
+    paste("> Lois Lane is an investigative", "reporter.", sep = "\n")
+  ))
+
+  prefix_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = "Lois Lane is an investigative doctor.")
+  )
+  prefix <- graft_verify(verification_test_chat(
+    list(prefix_call),
+    paste("> Lois Lane is an investigative", "reporter.", sep = "\n")
+  ))
+
+  code_block <- graft_verify(verification_test_chat(
+    list(cited_call),
+    paste0("    > ", cited_text)
+  ))
+
+  expect_identical(cited$label, "cited")
+  expect_identical(prefix$label, "untrusted")
+  expect_identical(code_block$label, "untrusted")
 })
 
 test_that("graft_verify requires matched evidence from every generic result", {

@@ -351,7 +351,29 @@ graft_verification_match_citations <- function(
 }
 
 graft_verification_quotation_candidates <- function(text) {
-  pattern <- "(\"[^\"\r\n]+\")|(“[^”\r\n]+”)|(«[^»\r\n]+»)"
+  pattern <- paste(
+    c(
+      "(\"[^\"\r\n]+\")",
+      "(\u201c[^\u201d\r\n]+\u201d)",
+      "(\u201e[^\u201c\r\n]+\u201c)",
+      "(\u201f[^\u201d\r\n]+\u201d)",
+      "(\u00ab[^\u00bb\r\n]+\u00bb)",
+      "(\u2018[^\u2019\r\n]+\u2019)",
+      "(\u201a[^\u2018\r\n]+\u2018)",
+      "(\u201b[^\u2019\r\n]+\u2019)",
+      "(\u2039[^\u203a\r\n]+\u203a)"
+    ),
+    collapse = "|"
+  )
+  graft_verification_candidates(
+    text,
+    pattern,
+    "quotation",
+    \(quoted) substr(quoted, 2L, nchar(quoted) - 1L)
+  )
+}
+
+graft_verification_candidates <- function(text, pattern, type, extract) {
   locations <- gregexpr(pattern, text, perl = TRUE)[[1L]]
   if (identical(locations, -1L)) {
     return(list())
@@ -359,17 +381,9 @@ graft_verification_quotation_candidates <- function(text) {
   lengths <- attr(locations, "match.length")
   candidates <- Map(
     function(start, length) {
-      quoted <- substr(text, start, start + length - 1L)
-      candidate <- substr(quoted, 2L, nchar(quoted) - 1L)
-      normalized <- graft_verification_normalize_text(candidate)
-      if (nchar(normalized) < 10L) {
-        return(NULL)
-      }
-      list(
-        type = "quotation",
-        text = candidate,
-        normalized_text = normalized
-      )
+      matched <- substr(text, start, start + length - 1L)
+      candidate <- extract(matched)
+      graft_verification_candidate(candidate, type)
     },
     locations,
     lengths
@@ -378,49 +392,63 @@ graft_verification_quotation_candidates <- function(text) {
 }
 
 graft_verification_blockquote_candidates <- function(text) {
-  pattern <- "(?m)(?:^[ \\t]*>[ \\t]?[^\\r\\n]*(?:\\r?\\n|$))+"
-  locations <- gregexpr(pattern, text, perl = TRUE)[[1L]]
-  if (identical(locations, -1L)) {
-    return(list())
-  }
-  lengths <- attr(locations, "match.length")
-  candidates <- Map(
-    function(start, length) {
-      block <- substr(text, start, start + length - 1L)
-      block <- sub("(?:\\r?\\n)+$", "", block, perl = TRUE)
-      lines <- strsplit(block, "\\r?\\n", perl = TRUE)[[1L]]
-      candidate <- paste(
-        sub("^[ \\t]*>+[ \\t]?", "", lines, perl = TRUE),
-        collapse = "\n"
-      )
-      normalized <- graft_verification_normalize_text(candidate)
-      if (nchar(normalized) < 10L) {
-        return(NULL)
+  lines <- strsplit(text, "\\r?\\n", perl = TRUE)[[1L]]
+  is_marker <- grepl("^[ ]{0,3}>", lines, perl = TRUE)
+  blocks <- list()
+  index <- 1L
+  while (index <= length(lines)) {
+    if (!is_marker[[index]]) {
+      index <- index + 1L
+      next
+    }
+    block <- character()
+    while (index <= length(lines)) {
+      line <- lines[[index]]
+      if (is_marker[[index]]) {
+        block <- c(
+          block,
+          sub("^[ ]{0,3}>[ \\t]?", "", line, perl = TRUE)
+        )
+      } else if (nzchar(trimws(line))) {
+        block <- c(block, line)
+      } else {
+        break
       }
-      list(
-        type = "blockquote",
-        text = candidate,
-        normalized_text = normalized
-      )
-    },
-    locations,
-    lengths
+      index <- index + 1L
+    }
+    blocks[[length(blocks) + 1L]] <- paste(block, collapse = "\n")
+  }
+  candidates <- lapply(
+    blocks,
+    \(candidate) graft_verification_candidate(candidate, "blockquote")
   )
   Filter(Negate(is.null), candidates)
 }
 
+graft_verification_candidate <- function(text, type) {
+  normalized <- graft_verification_normalize_text(text)
+  if (nchar(normalized) < 10L) {
+    return(NULL)
+  }
+  list(
+    type = type,
+    text = text,
+    normalized_text = normalized
+  )
+}
+
 graft_verification_normalize_text <- function(text) {
-  text <- gsub("[‘’‚‛]", "'", text)
-  text <- gsub("[“”„‟«»]", "\"", text)
-  text <- gsub("[‐‑‒–—―−]", "-", text)
+  text <- gsub("[\u2018\u2019\u201a\u201b\u2039\u203a]", "'", text)
+  text <- gsub("[\u201c\u201d\u201e\u201f\u00ab\u00bb]", "\"", text)
+  text <- gsub("[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]", "-", text)
   text <- graft_verification_strip_emphasis(text)
   trimws(gsub("[[:space:]]+", " ", text))
 }
 
 graft_verification_strip_emphasis <- function(text) {
   patterns <- c(
-    "(^|[[:space:][:punct:]])(\\*\\*|\\*)([^*\\r\\n]+)\\2(?=$|[[:space:][:punct:]])",
-    "(^|[[:space:][:punct:]])(__|_)([^_\\r\\n]+)\\2(?=$|[[:space:][:punct:]])"
+    "(^|[[:space:][:punct:]])(\\*\\*\\*|\\*\\*|\\*)([^*\\r\\n]+)\\2(?=$|[[:space:][:punct:]])",
+    "(^|[[:space:][:punct:]])(___|__|_)([^_\\r\\n]+)\\2(?=$|[[:space:][:punct:]])"
   )
   for (pattern in patterns) {
     text <- gsub(pattern, "\\1\\3", text, perl = TRUE)
