@@ -118,6 +118,40 @@ built from a `GraftView` also carry its immutable snapshot identifier. A
 measure result adds the accepted measure record and revision under
 `receipt$definition`.
 
+## Verify recorded answers offline
+
+After the host has recorded a chat,
+[`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
+classifies its completed, text-bearing assistant answers from the trace
+already held by ellmer. It is a deterministic, read-only inspection: it
+does not call the model, use the network, reopen the store, or
+authenticate identifiers in a receipt.
+
+``` r
+
+verification <- graft_verify(chat)
+verification[, c("answer_index", "turn_index", "answer_text", "label")]
+verification$reason_codes
+verification$diagnostics
+```
+
+The result has one row per answer, excluding tool-only turns and partial
+answers. Each row includes the answer text, its label, stable reason
+codes, the receipts and paired tool calls considered, and any
+diagnostics.
+
+In this verification phase, an evidence window made only of successful
+`graft_measure` calls with valid governed receipts is `"verified"`.
+Missing evidence, non-Graft tools, tool errors, malformed receipts, and
+unsupported trace shapes fail closed as `"untrusted"`. Generic Graft
+reads are also `"untrusted"` with an `"unmatched_citation"` reason until
+citation matching is added in the next phase.
+
+Diagnostics are separate from trust. For example, a truncated measure
+result or valid results from mixed accepted boundaries are reported in
+`diagnostics`, but do not downgrade an otherwise valid `"verified"`
+label.
+
 ## Pin the boundary the agent reasons over
 
 A long-running agent session should not change its mind because another

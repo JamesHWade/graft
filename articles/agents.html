@@ -226,6 +226,35 @@ identifier. A measure result adds the accepted measure record and
 revision under <code>receipt$definition</code>.</p>
 </div>
 <div class="section level2">
+<h2 id="verify-recorded-answers-offline">Verify recorded answers offline<a class="anchor" aria-label="anchor" href="#verify-recorded-answers-offline"></a>
+</h2>
+<p>After the host has recorded a chat, <code><a href="../reference/graft_verify.html">graft_verify()</a></code>
+classifies its completed, text-bearing assistant answers from the trace
+already held by ellmer. It is a deterministic, read-only inspection: it
+does not call the model, use the network, reopen the store, or
+authenticate identifiers in a receipt.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">verification</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_verify.html">graft_verify</a></span><span class="op">(</span><span class="va">chat</span><span class="op">)</span></span>
+<span><span class="va">verification</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"answer_index"</span>, <span class="st">"turn_index"</span>, <span class="st">"answer_text"</span>, <span class="st">"label"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">verification</span><span class="op">$</span><span class="va">reason_codes</span></span>
+<span><span class="va">verification</span><span class="op">$</span><span class="va">diagnostics</span></span></code></pre></div>
+<p>The result has one row per answer, excluding tool-only turns and
+partial answers. Each row includes the answer text, its label, stable
+reason codes, the receipts and paired tool calls considered, and any
+diagnostics.</p>
+<p>In this verification phase, an evidence window made only of
+successful <code>graft_measure</code> calls with valid governed receipts
+is <code>"verified"</code>. Missing evidence, non-Graft tools, tool
+errors, malformed receipts, and unsupported trace shapes fail closed as
+<code>"untrusted"</code>. Generic Graft reads are also
+<code>"untrusted"</code> with an <code>"unmatched_citation"</code>
+reason until citation matching is added in the next phase.</p>
+<p>Diagnostics are separate from trust. For example, a truncated measure
+result or valid results from mixed accepted boundaries are reported in
+<code>diagnostics</code>, but do not downgrade an otherwise valid
+<code>"verified"</code> label.</p>
+</div>
+<div class="section level2">
 <h2 id="pin-the-boundary-the-agent-reasons-over">Pin the boundary the agent reasons over<a class="anchor" aria-label="anchor" href="#pin-the-boundary-the-agent-reasons-over"></a>
 </h2>
 <p>A long-running agent session should not change its mind because
@@ -233,12 +262,12 @@ another process committed a batch halfway through.
 <code><a href="../reference/graft_snapshot.html">graft_snapshot()</a></code> captures the accepted boundary as a
 serializable, path-free value, <code><a href="../reference/graft_at.html">graft_at()</a></code> binds it to a
 read-only view, and tools built from that view stay pinned:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span>
 <span><span class="va">pinned_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span></code></pre></div>
 <p>Accept a change after pinning:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>person <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -274,7 +303,7 @@ the pinned boundary.</p>
 data frames that go through the same plan, review, and commit path as
 any other producer. What matters is that the agent is named as the
 producer and that the plan is inspected before it is accepted.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">proposal</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
 <span>  producer <span class="op">=</span> <span class="st">"directory-agent"</span>,</span>
 <span>  version <span class="op">=</span> <span class="st">"2026.08"</span>,</span>
@@ -302,7 +331,7 @@ a host policy can read <code>@changes</code> and <code>@issues</code>,
 decide, and then call <code><a href="../reference/graft_commit.html">graft_commit()</a></code>. If the store moved
 underneath the plan, the commit fails its preconditions instead of
 writing a decision that was reviewed against different state.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="va">plan</span><span class="op">@</span><span class="va">valid</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/graft_commit.html">graft_commit</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">plan</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
@@ -319,7 +348,7 @@ duplicate revision.</li>
 Use it for a trusted pipeline; keep the two-step form when an agent is
 the producer and something, or someone, should look at the change
 first.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"person:clark-kent"</span><span class="op">)</span><span class="op">[</span></span>
 <span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"revision_number"</span>, <span class="st">"committed_at"</span>, <span class="st">"producer"</span>, <span class="st">"changed_fields"</span><span class="op">)</span></span>
 <span><span class="op">]</span></span></code></pre></div>
@@ -334,7 +363,7 @@ tree: a deterministic Markdown projection of accepted knowledge that an
 agent can read, grep, and edit directly. A file-backed store uses a
 sibling directory, so <code>team.duckdb</code> projects into
 <code>team.okf</code> unless <code>okf_path</code> says otherwise.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">okf_store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_open.html">graft_open</a></span><span class="op">(</span><span class="va">schema</span>, <span class="st">"team.duckdb"</span>, okf <span class="op">=</span> <span class="st">"managed"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/graft_sync.html">graft_sync</a></span><span class="op">(</span><span class="va">okf_store</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/graft_status.html">graft_status</a></span><span class="op">(</span><span class="va">okf_store</span><span class="op">)</span></span></code></pre></div>
@@ -342,7 +371,7 @@ sibling directory, so <code>team.duckdb</code> projects into
 <code><a href="../reference/graft_status.html">graft_status()</a></code> reports that the tree is modified, and
 <code><a href="../reference/graft_review.html">graft_review()</a></code> turns the edits into the same plan type
 <code><a href="../reference/graft_plan.html">graft_plan()</a></code> returns:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">edit_plan</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_review.html">graft_review</a></span><span class="op">(</span></span>
 <span>  <span class="va">okf_store</span>,</span>
 <span>  provenance <span class="op">=</span> <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span></span>
@@ -384,7 +413,7 @@ the underlying read.</li>
 <li>The host decides which provider receives the tools and remains
 responsible for tool authorization.</li>
 </ul>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 <p>Read <a href="retrieval.html">Retrieve accepted knowledge</a> for the
 read operations behind the tools, <a href="knowledge-change-control.html">Review knowledge changes</a> for

@@ -27,6 +27,13 @@
   also identify the accepted definition
   ([\#19](https://github.com/JamesHWade/graft/issues/19),
   [\#23](https://github.com/JamesHWade/graft/issues/23)).
+- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
+  classifies every completed text-bearing assistant answer in a recorded
+  ellmer chat from deterministic, offline Graft evidence: valid
+  governed-measure-only evidence is verified, while missing, non-Graft,
+  errored, malformed, or citation-unmatched read evidence fails closed
+  as untrusted with stable reasons
+  ([\#24](https://github.com/JamesHWade/graft/issues/24)).
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
   authoritative record tables with an 18-function revision-first package
