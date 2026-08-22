@@ -7,7 +7,7 @@ test_that("compiled manifests load without Python", {
 
   expect_identical(S7::S7_inherits(schema, GraftSchema), TRUE)
   expect_identical(schema@name, "tempest-artifacts")
-  expect_length(schema@classes, 10L)
+  expect_length(schema@classes, 11L)
   expect_identical(schema@manifest$manifest_version, "2.0.0")
   expect_identical(schema@manifest$projection_mapping_version, "1")
   expect_null(schema@manifest$tables)
@@ -1180,7 +1180,10 @@ test_that("data-dict manifest extensions enforce their nested contract", {
     "urn:data-dict:impostor"
   mismatched_source$schema$source_files[[1L]]$name <- "impostor"
   mismatched_source$schema$source_files[[1L]]$version <- "999"
-  for (class_name in names(mismatched_source$classes)) {
+  for (class_name in setdiff(
+    names(mismatched_source$classes),
+    "GraftMeasure"
+  )) {
     mismatched_source$classes[[class_name]]$type_uri <- paste0(
       "urn:data-dict:impostor#",
       utils::URLencode(class_name, reserved = TRUE)

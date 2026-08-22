@@ -1,17 +1,21 @@
 #' Create bounded read-only tools for a Graft store or view
 #'
-#' `graft_tools()` returns four [ellmer::tool()] definitions that delegate only
+#' `graft_tools()` returns [ellmer::tool()] definitions that delegate only
 #' to Graft's public bounded retrieval operations. The tools do not expose SQL,
 #' filesystem, network, connection, or mutation arguments.
-#' When given a `GraftView`, all four tools remain pinned to its immutable
+#' When the store has accepted measures, a fifth `graft_measure` tool
+#' evaluates them by name through [graft_measure()]; it is omitted when no
+#' measures are accepted.
+#' When given a `GraftView`, all tools remain pinned to its immutable
 #' snapshot boundary and the live-store integrity diagnostic is unavailable.
 #'
 #' Every tool returns `result` plus explicit `truncated`, `limit`, and
-#' `store_schema_digest` metadata.
+#' `store_schema_digest` metadata; `graft_measure` results add `measure_id`
+#' and `revision_id`.
 #'
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
-#' @return A named list of four `ellmer::ToolDef` objects.
+#' @return A named list of `ellmer::ToolDef` objects.
 #' @seealso `vignette("agents", package = "graft")` for pinning an accepted
 #'   boundary, registering the tools with a chat, and accepting
 #'   agent-authored proposals.
@@ -21,7 +25,7 @@ graft_tools <- function(store) {
   read_store <- as_graft_read_store_internal(store, "store")
   annotations <- graft_tool_annotations()
 
-  list(
+  tools <- list(
     graft_find = ellmer::tool(
       function(query, class = NULL, limit = 20) {
         result <- graft_find(
@@ -169,6 +173,54 @@ graft_tools <- function(store) {
       ),
       annotations = annotations
     )
+  )
+  measures <- graft_measures(store)
+  if (nrow(measures) > 0L) {
+    tools$graft_measure <- graft_measure_tool(store, measures, annotations)
+  }
+  tools
+}
+
+graft_measure_tool <- function(store, measures, annotations) {
+  ellmer::tool(
+    function(name, arguments = list(), by = NULL) {
+      result <- graft_measure(
+        store,
+        name = name,
+        arguments = arguments,
+        by = by
+      )
+      wrapped <- graft_tool_bounded_result(
+        result,
+        graft_retrieval_limits$measure_rows
+      )
+      wrapped$measure_id <- attr(result, "measure_id")
+      wrapped$revision_id <- attr(result, "revision_id")
+      wrapped
+    },
+    name = "graft_measure",
+    description = paste(
+      "Evaluate one accepted, governed measure over accepted state.",
+      "Arguments bind to declared parameters as equality filters and",
+      "`by` groups by declared dimensions. Results are deterministic",
+      "and bounded; no SQL is accepted."
+    ),
+    arguments = list(
+      name = ellmer::type_enum(
+        sort(measures$name),
+        "Name of one accepted measure."
+      ),
+      arguments = graft_tool_json_type(
+        list(type = "object", additionalProperties = TRUE),
+        required = FALSE
+      ),
+      by = ellmer::type_array(
+        ellmer::type_string("A declared dimension column."),
+        "Declared dimensions to group by.",
+        required = FALSE
+      )
+    ),
+    annotations = annotations
   )
 }
 

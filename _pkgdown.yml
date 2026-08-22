@@ -135,6 +135,8 @@ reference:
       - graft_find
       - graft_query
       - graft_history
+      - graft_measures
+      - graft_measure
   - title: Synchronize and integrate
     desc: >
       Synchronize readable files, review file edits, and provide bounded

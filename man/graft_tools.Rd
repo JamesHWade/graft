@@ -10,18 +10,22 @@ graft_tools(store)
 \item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
 }
 \value{
-A named list of four \code{ellmer::ToolDef} objects.
+A named list of \code{ellmer::ToolDef} objects.
 }
 \description{
-\code{graft_tools()} returns four \code{\link[ellmer:tool]{ellmer::tool()}} definitions that delegate only
+\code{graft_tools()} returns \code{\link[ellmer:tool]{ellmer::tool()}} definitions that delegate only
 to Graft's public bounded retrieval operations. The tools do not expose SQL,
 filesystem, network, connection, or mutation arguments.
-When given a \code{GraftView}, all four tools remain pinned to its immutable
+When the store has accepted measures, a fifth \code{graft_measure} tool
+evaluates them by name through \code{\link[=graft_measure]{graft_measure()}}; it is omitted when no
+measures are accepted.
+When given a \code{GraftView}, all tools remain pinned to its immutable
 snapshot boundary and the live-store integrity diagnostic is unavailable.
 }
 \details{
 Every tool returns \code{result} plus explicit \code{truncated}, \code{limit}, and
-\code{store_schema_digest} metadata.
+\code{store_schema_digest} metadata; \code{graft_measure} results add \code{measure_id}
+and \code{revision_id}.
 }
 \seealso{
 \code{vignette("agents", package = "graft")} for pinning an accepted

@@ -318,11 +318,15 @@ graft_schema <- function(path, output = NULL) {
         schema_path = path
       )
     }
-    return(new_graft_schema(load_schema_manifest(path)))
+    return(new_graft_schema(augment_manifest_with_measures(
+      load_schema_manifest(path)
+    )))
   }
   if (is_data_dict_document(path)) {
     output <- normalize_graft_schema_output(output)
-    return(new_graft_schema(compile_data_dict_source(path, output)))
+    return(new_graft_schema(augment_manifest_with_measures(
+      compile_data_dict_source(path, output)
+    )))
   }
   if (!grepl("\\.ya?ml$", lower)) {
     abort_schema_error(
@@ -336,7 +340,9 @@ graft_schema <- function(path, output = NULL) {
     )
   }
   output <- normalize_graft_schema_output(output)
-  new_graft_schema(compile_schema_manifest(path, output))
+  new_graft_schema(augment_manifest_with_measures(
+    compile_schema_manifest(path, output)
+  ))
 }
 
 normalize_graft_schema_path <- function(path) {
@@ -450,7 +456,11 @@ graft_open <- function(
       state$schema <- schema
       state$id <- scalar_character(metadata$store_id)
       state$id_digest <- graft_sha256(canonical_json(state$id))
-      GraftStore(state)
+      store <- GraftStore(state)
+      if (!isTRUE(read_only)) {
+        seed_contract_measures(store, compiled_schema)
+      }
+      store
     },
     error = function(error) {
       close_store_backend(backend)

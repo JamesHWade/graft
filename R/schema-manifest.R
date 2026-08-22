@@ -1209,6 +1209,9 @@ manifest_class_hierarchy_problem <- function(classes, data_dict) {
   core_parent <- manifest_core_class_parents()
   observed_parent <- character()
   for (class_name in names(classes)) {
+    if (identical(class_name, graft_measure_class_name)) {
+      next
+    }
     class <- classes[[class_name]]
     ancestors <- unlist(class$ancestors, use.names = FALSE)
     if (data_dict) {
@@ -1547,8 +1550,11 @@ manifest_semantic_contract_problem <- function(manifest, data_dict) {
     return(hierarchy_problem)
   }
   class_names <- names(manifest$classes)
+  user_classes <- manifest$classes[
+    setdiff(class_names, graft_measure_class_name)
+  ]
   ancestors <- unlist(
-    lapply(manifest$classes, \(class) class$ancestors),
+    lapply(user_classes, \(class) class$ancestors),
     use.names = FALSE
   )
   known_class_ranges <- unique(c(
@@ -1594,6 +1600,20 @@ manifest_semantic_contract_problem <- function(manifest, data_dict) {
 
   for (class_name in class_names) {
     class <- manifest$classes[[class_name]]
+    if (identical(class_name, graft_measure_class_name)) {
+      contract_matches <- identical(
+        canonical_json(class),
+        canonical_json(graft_measure_class_contract())
+      )
+      if (!contract_matches) {
+        return(manifest_contract_problem(
+          "The GraftMeasure system class does not match its fixed contract.",
+          paste0("classes.", class_name),
+          "system_class_contract"
+        ))
+      }
+      next
+    }
     if (!identical(class$name, class_name)) {
       return(manifest_contract_problem(
         "A class key must match its declared name.",
@@ -2688,6 +2708,7 @@ validate_data_dict_projection_contract <- function(manifest, path) {
     )
   )
   observed_projection <- manifest[names(expected_projection)]
+  observed_projection$classes[[graft_measure_class_name]] <- NULL
   if (
     !identical(dictionary, expected_dictionary) ||
       !identical(observed_projection, expected_projection)
