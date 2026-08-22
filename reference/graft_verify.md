@@ -24,13 +24,19 @@ graft_verify(chat)
 A `graft_verification` data frame with one row per completed answer.
 Scalar columns contain `answer_index`, `turn_index`, `answer_text`, and
 `label`. List columns contain `reason_codes`, `receipts`, `citations`,
-`tool_calls`, and `diagnostics`. A chat without completed answers
-returns the same columns with zero rows.
+`tool_calls`, and `diagnostics`. Each citation records its tool-call
+index, candidate type and text, and matched result path and text. A chat
+without completed answers returns the same columns with zero rows.
 
 ## Details
 
-In this release, successful governed-measure-only evidence is
-`"verified"`. Generic Graft reads remain `"untrusted"` with an
-`"unmatched_citation"` reason until citation matching is applied.
-Unknown, errored, malformed, and unsupported evidence paths fail closed
-as `"untrusted"`.
+Successful governed-measure-only evidence is `"verified"`. Successful
+generic Graft reads are `"cited"` only when every result is
+independently matched to an explicit quotation or Markdown blockquote in
+the answer. A generic read caps mixed measure and generic evidence at
+`"cited"`. Unknown, errored, malformed, unsupported, and
+citation-unmatched evidence paths fail closed as `"untrusted"`.
+
+Verification classifies the recorded evidence path. It does not
+fact-check the answer or cryptographically authenticate receipt
+identifiers.

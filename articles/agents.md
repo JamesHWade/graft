@@ -137,15 +137,32 @@ verification$diagnostics
 
 The result has one row per answer, excluding tool-only turns and partial
 answers. Each row includes the answer text, its label, stable reason
-codes, the receipts and paired tool calls considered, and any
-diagnostics.
+codes, the receipts and paired tool calls considered, matched citations,
+and any diagnostics.
 
-In this verification phase, an evidence window made only of successful
-`graft_measure` calls with valid governed receipts is `"verified"`.
-Missing evidence, non-Graft tools, tool errors, malformed receipts, and
-unsupported trace shapes fail closed as `"untrusted"`. Generic Graft
-reads are also `"untrusted"` with an `"unmatched_citation"` reason until
-citation matching is added in the next phase.
+The three labels classify the recorded evidence path:
+
+- **Verified** (`"verified"`) means the window contains only successful
+  `graft_measure` calls with valid governed receipts.
+- **Cited** (`"cited"`) means every successful generic Graft result is
+  independently matched to an explicit quotation or Markdown blockquote
+  in the answer. A generic read caps mixed measure and generic evidence
+  at this label.
+- **Untrusted** (`"untrusted"`) covers missing evidence, unmatched
+  generic reads, non-Graft tools, tool errors, malformed receipts, and
+  unsupported trace shapes.
+
+Citation candidates are normalized for whitespace, Markdown emphasis,
+typographic quotation marks, and dashes. They must contain at least ten
+characters and match a textual value in the bounded result with a
+case-sensitive fixed match. Unquoted overlap, receipt fields, tool
+arguments, and unrelated chat text are not citation evidence.
+
+This is deterministic provenance classification, not fact-checking or
+cryptographic authentication.
+[`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
+does not prove that every claim follows from the cited text, and it does
+not reopen a store to authenticate receipt identifiers.
 
 Diagnostics are separate from trust. For example, a truncated measure
 result or valid results from mixed accepted boundaries are reported in

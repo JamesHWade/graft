@@ -86,15 +86,20 @@ store, or authenticate receipt identifiers.</p>
     <p>A <code>graft_verification</code> data frame with one row per completed answer.
 Scalar columns contain <code>answer_index</code>, <code>turn_index</code>, <code>answer_text</code>, and
 <code>label</code>. List columns contain <code>reason_codes</code>, <code>receipts</code>, <code>citations</code>,
-<code>tool_calls</code>, and <code>diagnostics</code>. A chat without completed answers returns
-the same columns with zero rows.</p>
+<code>tool_calls</code>, and <code>diagnostics</code>. Each citation records its tool-call index,
+candidate type and text, and matched result path and text. A chat without
+completed answers returns the same columns with zero rows.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>In this release, successful governed-measure-only evidence is <code>"verified"</code>.
-Generic Graft reads remain <code>"untrusted"</code> with an <code>"unmatched_citation"</code>
-reason until citation matching is applied. Unknown, errored, malformed, and
-unsupported evidence paths fail closed as <code>"untrusted"</code>.</p>
+    <p>Successful governed-measure-only evidence is <code>"verified"</code>. Successful
+generic Graft reads are <code>"cited"</code> only when every result is independently
+matched to an explicit quotation or Markdown blockquote in the answer. A
+generic read caps mixed measure and generic evidence at <code>"cited"</code>. Unknown,
+errored, malformed, unsupported, and citation-unmatched evidence paths fail
+closed as <code>"untrusted"</code>.</p>
+<p>Verification classifies the recorded evidence path. It does not fact-check
+the answer or cryptographically authenticate receipt identifiers.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

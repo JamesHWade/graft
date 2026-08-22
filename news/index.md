@@ -34,6 +34,12 @@
   errored, malformed, or citation-unmatched read evidence fails closed
   as untrusted with stable reasons
   ([\#24](https://github.com/JamesHWade/graft/issues/24)).
+- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
+  now labels successful generic Graft reads as cited only when every
+  contributing result is independently matched to an explicit quotation
+  or Markdown blockquote; mixed measure and generic evidence is capped
+  at cited, while unmatched or failed paths remain untrusted
+  ([\#25](https://github.com/JamesHWade/graft/issues/25)).
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
   authoritative record tables with an 18-function revision-first package

@@ -240,15 +240,33 @@ authenticate identifiers in a receipt.</p>
 <span><span class="va">verification</span><span class="op">$</span><span class="va">diagnostics</span></span></code></pre></div>
 <p>The result has one row per answer, excluding tool-only turns and
 partial answers. Each row includes the answer text, its label, stable
-reason codes, the receipts and paired tool calls considered, and any
-diagnostics.</p>
-<p>In this verification phase, an evidence window made only of
-successful <code>graft_measure</code> calls with valid governed receipts
-is <code>"verified"</code>. Missing evidence, non-Graft tools, tool
-errors, malformed receipts, and unsupported trace shapes fail closed as
-<code>"untrusted"</code>. Generic Graft reads are also
-<code>"untrusted"</code> with an <code>"unmatched_citation"</code>
-reason until citation matching is added in the next phase.</p>
+reason codes, the receipts and paired tool calls considered, matched
+citations, and any diagnostics.</p>
+<p>The three labels classify the recorded evidence path:</p>
+<ul>
+<li>
+<strong>Verified</strong> (<code>"verified"</code>) means the window
+contains only successful <code>graft_measure</code> calls with valid
+governed receipts.</li>
+<li>
+<strong>Cited</strong> (<code>"cited"</code>) means every successful
+generic Graft result is independently matched to an explicit quotation
+or Markdown blockquote in the answer. A generic read caps mixed measure
+and generic evidence at this label.</li>
+<li>
+<strong>Untrusted</strong> (<code>"untrusted"</code>) covers missing
+evidence, unmatched generic reads, non-Graft tools, tool errors,
+malformed receipts, and unsupported trace shapes.</li>
+</ul>
+<p>Citation candidates are normalized for whitespace, Markdown emphasis,
+typographic quotation marks, and dashes. They must contain at least ten
+characters and match a textual value in the bounded result with a
+case-sensitive fixed match. Unquoted overlap, receipt fields, tool
+arguments, and unrelated chat text are not citation evidence.</p>
+<p>This is deterministic provenance classification, not fact-checking or
+cryptographic authentication. <code><a href="../reference/graft_verify.html">graft_verify()</a></code> does not prove
+that every claim follows from the cited text, and it does not reopen a
+store to authenticate receipt identifiers.</p>
 <p>Diagnostics are separate from trust. For example, a truncated measure
 result or valid results from mixed accepted boundaries are reported in
 <code>diagnostics</code>, but do not downgrade an otherwise valid
