@@ -5,18 +5,24 @@
 #' is deterministic and offline: it does not call a model, reopen a Graft
 #' store, or authenticate receipt identifiers.
 #'
-#' In this release, successful governed-measure-only evidence is `"verified"`.
-#' Generic Graft reads remain `"untrusted"` with an `"unmatched_citation"`
-#' reason until citation matching is applied. Unknown, errored, malformed, and
-#' unsupported evidence paths fail closed as `"untrusted"`.
+#' Successful governed-measure-only evidence is `"verified"`. Successful
+#' generic Graft reads are `"cited"` only when every result is independently
+#' matched to an explicit quotation or Markdown blockquote in the answer. A
+#' generic read caps mixed measure and generic evidence at `"cited"`. Unknown,
+#' errored, malformed, unsupported, and citation-unmatched evidence paths fail
+#' closed as `"untrusted"`.
+#'
+#' Verification classifies the recorded evidence path. It does not fact-check
+#' the answer or cryptographically authenticate receipt identifiers.
 #'
 #' @param chat An [ellmer::Chat] whose recorded turns should be verified.
 #'
 #' @return A `graft_verification` data frame with one row per completed answer.
 #'   Scalar columns contain `answer_index`, `turn_index`, `answer_text`, and
 #'   `label`. List columns contain `reason_codes`, `receipts`, `citations`,
-#'   `tool_calls`, and `diagnostics`. A chat without completed answers returns
-#'   the same columns with zero rows.
+#'   `tool_calls`, and `diagnostics`. Each citation records its tool-call index,
+#'   candidate type and text, and matched result path and text. A chat without
+#'   completed answers returns the same columns with zero rows.
 #' @export
 graft_verify <- function(chat) {
   if (!inherits(chat, "Chat")) {
@@ -55,20 +61,25 @@ graft_verify <- function(chat) {
     window_starts,
     answer_turns
   )
-  classifications <- lapply(windows, graft_verification_classify)
+  answer_text <- vapply(
+    turns[answer_turns],
+    \(turn) turn@text,
+    character(1)
+  )
+  classifications <- Map(
+    graft_verification_classify,
+    windows,
+    answer_text
+  )
   result <- data.frame(
     answer_index = seq_along(answer_turns),
     turn_index = as.integer(answer_turns),
-    answer_text = vapply(
-      turns[answer_turns],
-      \(turn) turn@text,
-      character(1)
-    ),
+    answer_text = answer_text,
     label = vapply(classifications, `[[`, character(1), "label")
   )
   result$reason_codes <- lapply(classifications, `[[`, "reason_codes")
   result$receipts <- lapply(windows, `[[`, "receipts")
-  result$citations <- rep(list(list()), nrow(result))
+  result$citations <- lapply(classifications, `[[`, "citations")
   result$tool_calls <- lapply(windows, `[[`, "tool_calls")
   result$diagnostics <- lapply(classifications, `[[`, "diagnostics")
   new_graft_verification(result)
@@ -179,11 +190,12 @@ graft_verification_window <- function(turns) {
   )
 }
 
-graft_verification_classify <- function(window) {
+graft_verification_classify <- function(window, answer_text) {
   if (length(window$tool_calls) == 0L && !window$unsupported) {
     return(list(
       label = "untrusted",
       reason_codes = "no_evidence",
+      citations = list(),
       diagnostics = character()
     ))
   }
@@ -200,6 +212,9 @@ graft_verification_classify <- function(window) {
   reasons <- stats::setNames(rep(FALSE, length(reason_order)), reason_order)
   reasons[["unsupported_trace"]] <- window$unsupported
   measure_count <- 0L
+  generic_count <- 0L
+  matched_generic_count <- 0L
+  citations <- list()
   truncated <- FALSE
   boundary_keys <- character()
   supported <- c(
@@ -209,7 +224,8 @@ graft_verification_classify <- function(window) {
     "graft_history",
     "graft_measure"
   )
-  for (call in window$tool_calls) {
+  for (call_index in seq_along(window$tool_calls)) {
+    call <- window$tool_calls[[call_index]]
     request <- call$request
     result <- call$result
     if (!is.null(result) && !is.null(result@error)) {
@@ -246,7 +262,18 @@ graft_verification_classify <- function(window) {
     if (identical(name, "graft_measure")) {
       measure_count <- measure_count + 1L
     } else {
-      reasons[["unmatched_citation"]] <- TRUE
+      generic_count <- generic_count + 1L
+      matches <- graft_verification_match_citations(
+        answer_text,
+        result@value$result,
+        call_index
+      )
+      if (length(matches) == 0L) {
+        reasons[["unmatched_citation"]] <- TRUE
+      } else {
+        matched_generic_count <- matched_generic_count + 1L
+        citations <- c(citations, matches)
+      }
     }
   }
   observed <- names(reasons)[reasons]
@@ -257,18 +284,193 @@ graft_verification_classify <- function(window) {
   if (length(unique(boundary_keys)) > 1L) {
     diagnostics <- c(diagnostics, "mixed_boundaries")
   }
+  if (
+    length(observed) == 0L &&
+      generic_count > 0L &&
+      identical(matched_generic_count, generic_count)
+  ) {
+    return(list(
+      label = "cited",
+      reason_codes = "matched_citations",
+      citations = citations,
+      diagnostics = diagnostics
+    ))
+  }
   if (length(observed) == 0L && measure_count > 0L) {
     return(list(
       label = "verified",
       reason_codes = "governed_measure_only",
+      citations = citations,
       diagnostics = diagnostics
     ))
   }
   list(
     label = "untrusted",
     reason_codes = observed,
+    citations = citations,
     diagnostics = diagnostics
   )
+}
+
+graft_verification_match_citations <- function(
+  answer_text,
+  result,
+  tool_call_index
+) {
+  candidates <- c(
+    graft_verification_quotation_candidates(answer_text),
+    graft_verification_blockquote_candidates(answer_text)
+  )
+  values <- graft_verification_text_values(result)
+  matches <- list()
+  for (candidate in candidates) {
+    matching <- which(vapply(
+      values,
+      \(value) {
+        grepl(
+          candidate$normalized_text,
+          graft_verification_normalize_text(value$text),
+          fixed = TRUE
+        )
+      },
+      logical(1)
+    ))
+    if (length(matching) == 0L) {
+      next
+    }
+    value <- values[[matching[[1L]]]]
+    matches[[length(matches) + 1L]] <- list(
+      tool_call_index = as.integer(tool_call_index),
+      candidate_type = candidate$type,
+      text = candidate$text,
+      result_path = value$path,
+      result_text = value$text
+    )
+  }
+  matches
+}
+
+graft_verification_quotation_candidates <- function(text) {
+  pattern <- "(\"[^\"\r\n]+\")|(“[^”\r\n]+”)|(«[^»\r\n]+»)"
+  locations <- gregexpr(pattern, text, perl = TRUE)[[1L]]
+  if (identical(locations, -1L)) {
+    return(list())
+  }
+  lengths <- attr(locations, "match.length")
+  candidates <- Map(
+    function(start, length) {
+      quoted <- substr(text, start, start + length - 1L)
+      candidate <- substr(quoted, 2L, nchar(quoted) - 1L)
+      normalized <- graft_verification_normalize_text(candidate)
+      if (nchar(normalized) < 10L) {
+        return(NULL)
+      }
+      list(
+        type = "quotation",
+        text = candidate,
+        normalized_text = normalized
+      )
+    },
+    locations,
+    lengths
+  )
+  Filter(Negate(is.null), candidates)
+}
+
+graft_verification_blockquote_candidates <- function(text) {
+  pattern <- "(?m)(?:^[ \\t]*>[ \\t]?[^\\r\\n]*(?:\\r?\\n|$))+"
+  locations <- gregexpr(pattern, text, perl = TRUE)[[1L]]
+  if (identical(locations, -1L)) {
+    return(list())
+  }
+  lengths <- attr(locations, "match.length")
+  candidates <- Map(
+    function(start, length) {
+      block <- substr(text, start, start + length - 1L)
+      block <- sub("(?:\\r?\\n)+$", "", block, perl = TRUE)
+      lines <- strsplit(block, "\\r?\\n", perl = TRUE)[[1L]]
+      candidate <- paste(
+        sub("^[ \\t]*>+[ \\t]?", "", lines, perl = TRUE),
+        collapse = "\n"
+      )
+      normalized <- graft_verification_normalize_text(candidate)
+      if (nchar(normalized) < 10L) {
+        return(NULL)
+      }
+      list(
+        type = "blockquote",
+        text = candidate,
+        normalized_text = normalized
+      )
+    },
+    locations,
+    lengths
+  )
+  Filter(Negate(is.null), candidates)
+}
+
+graft_verification_normalize_text <- function(text) {
+  text <- gsub("[‘’‚‛]", "'", text)
+  text <- gsub("[“”„‟«»]", "\"", text)
+  text <- gsub("[‐‑‒–—―−]", "-", text)
+  text <- graft_verification_strip_emphasis(text)
+  trimws(gsub("[[:space:]]+", " ", text))
+}
+
+graft_verification_strip_emphasis <- function(text) {
+  patterns <- c(
+    "(^|[[:space:][:punct:]])(\\*\\*|\\*)([^*\\r\\n]+)\\2(?=$|[[:space:][:punct:]])",
+    "(^|[[:space:][:punct:]])(__|_)([^_\\r\\n]+)\\2(?=$|[[:space:][:punct:]])"
+  )
+  for (pattern in patterns) {
+    text <- gsub(pattern, "\\1\\3", text, perl = TRUE)
+  }
+  text
+}
+
+graft_verification_text_values <- function(value, path = "result") {
+  if (is.factor(value)) {
+    value <- as.character(value)
+  }
+  if (is.data.frame(value)) {
+    values <- list()
+    for (name in names(value)) {
+      values <- c(
+        values,
+        graft_verification_text_values(value[[name]], paste0(path, "$", name))
+      )
+    }
+    return(values)
+  }
+  if (is.list(value)) {
+    values <- list()
+    value_names <- names(value)
+    for (index in seq_along(value)) {
+      name <- if (is.null(value_names)) "" else value_names[[index]]
+      item_path <- if (nzchar(name)) {
+        paste0(path, "$", name)
+      } else {
+        paste0(path, "[[", index, "]]")
+      }
+      values <- c(
+        values,
+        graft_verification_text_values(value[[index]], item_path)
+      )
+    }
+    return(values)
+  }
+  if (!is.character(value)) {
+    return(list())
+  }
+  indices <- which(!is.na(value))
+  lapply(indices, function(index) {
+    item_path <- if (length(value) == 1L) {
+      path
+    } else {
+      paste0(path, "[", index, "]")
+    }
+    list(path = item_path, text = value[[index]])
+  })
 }
 
 graft_verification_receipt_valid <- function(tool_name, value) {
