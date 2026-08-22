@@ -15,6 +15,7 @@ Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.3.0)
 Imports:
+    commonmark,
     DBI,
     digest,
     dplyr,

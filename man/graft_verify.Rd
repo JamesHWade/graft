@@ -13,8 +13,9 @@ graft_verify(chat)
 A \code{graft_verification} data frame with one row per completed answer.
 Scalar columns contain \code{answer_index}, \code{turn_index}, \code{answer_text}, and
 \code{label}. List columns contain \code{reason_codes}, \code{receipts}, \code{citations},
-\code{tool_calls}, and \code{diagnostics}. A chat without completed answers returns
-the same columns with zero rows.
+\code{tool_calls}, and \code{diagnostics}. Each citation records its tool-call index,
+candidate type and text, and matched result path and text. A chat without
+completed answers returns the same columns with zero rows.
 }
 \description{
 \code{graft_verify()} inspects the turns already recorded by an \link[ellmer:Chat]{ellmer::Chat}
@@ -23,8 +24,13 @@ is deterministic and offline: it does not call a model, reopen a Graft
 store, or authenticate receipt identifiers.
 }
 \details{
-In this release, successful governed-measure-only evidence is \code{"verified"}.
-Generic Graft reads remain \code{"untrusted"} with an \code{"unmatched_citation"}
-reason until citation matching is applied. Unknown, errored, malformed, and
-unsupported evidence paths fail closed as \code{"untrusted"}.
+Successful governed-measure-only evidence is \code{"verified"}. Successful
+generic Graft reads are \code{"cited"} only when every result is independently
+matched to an explicit quotation or Markdown blockquote in the answer. A
+generic read caps mixed measure and generic evidence at \code{"cited"}. Unknown,
+errored, malformed, unsupported, and citation-unmatched evidence paths fail
+closed as \code{"untrusted"}.
+
+Verification classifies the recorded evidence path. It does not fact-check
+the answer or cryptographically authenticate receipt identifiers.
 }

@@ -564,3 +564,465 @@ test_that("graft_verify pairs each answer with its recorded tool window", {
     list(c("measure:first", "measure:second"), "measure:third")
   )
 })
+
+test_that("graft_verify cites an explicit quotation from a generic result", {
+  evidence <- "Lois Lane is an investigative reporter at the Daily Planet."
+  call <- verification_test_call(
+    "graft_find",
+    data.frame(summary = evidence)
+  )
+  chat <- verification_test_chat(
+    list(call),
+    paste0("The record says \"", evidence, "\"")
+  )
+
+  verification <- graft_verify(chat)
+
+  expect_identical(verification$label, "cited")
+  expect_identical(verification$reason_codes, list("matched_citations"))
+  expect_identical(
+    verification$citations,
+    list(list(list(
+      tool_call_index = 1L,
+      candidate_type = "quotation",
+      text = evidence,
+      result_path = "result$summary",
+      result_text = evidence
+    )))
+  )
+})
+
+test_that("graft_verify normalizes candidates without weakening fixed matching", {
+  evidence <- "Lois Lane - investigative reporter"
+  verify <- function(answer) {
+    call <- verification_test_call(
+      "graft_get",
+      data.frame(summary = evidence)
+    )
+    graft_verify(verification_test_chat(list(call), answer))
+  }
+
+  normalized <- verify(
+    "According to Graft, “**Lois   Lane** — investigative reporter”."
+  )
+  wrong_case <- verify(
+    "According to Graft, \"lois Lane - investigative reporter\"."
+  )
+  too_short <- verify("The record names \"Lois Lane\".")
+  unquoted <- verify(paste("The record says", evidence))
+
+  expect_identical(normalized$label, "cited")
+  expect_identical(
+    normalized$citations[[1L]][[1L]]$text,
+    "**Lois   Lane** — investigative reporter"
+  )
+  expect_identical(
+    c(wrong_case$label, too_short$label, unquoted$label),
+    rep("untrusted", 3L)
+  )
+  expect_identical(
+    lapply(
+      list(wrong_case, too_short, unquoted),
+      \(value) value$reason_codes[[1L]]
+    ),
+    rep(list("unmatched_citation"), 3L)
+  )
+})
+
+test_that("graft_verify detects typographic quotation forms and nested emphasis", {
+  evidence <- "Lois Lane is an investigative reporter."
+  verify <- function(answer) {
+    call <- verification_test_call(
+      "graft_get",
+      data.frame(summary = evidence)
+    )
+    graft_verify(verification_test_chat(list(call), answer))
+  }
+
+  observed <- lapply(
+    c(
+      "The record says „Lois Lane is an investigative reporter.“",
+      "The record says ‘Lois Lane is an investigative reporter.’",
+      "The record says \"***Lois Lane is an investigative reporter.***\""
+    ),
+    verify
+  )
+
+  expect_identical(
+    vapply(observed, \(result) result$label, character(1)),
+    rep("cited", 3L)
+  )
+})
+
+test_that("graft_verify cites consecutive Markdown blockquote lines", {
+  evidence <- "Lois Lane is an investigative reporter at the Daily Planet."
+  quoted <- paste(
+    "Lois Lane is an investigative reporter",
+    "at the Daily Planet.",
+    sep = "\n"
+  )
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  chat <- verification_test_chat(
+    list(call),
+    paste(
+      "The accepted record says:",
+      "> Lois Lane is an investigative reporter",
+      "> at the Daily Planet.",
+      sep = "\n"
+    )
+  )
+
+  verification <- graft_verify(chat)
+
+  expect_identical(verification$label, "cited")
+  expect_identical(
+    verification$citations,
+    list(list(list(
+      tool_call_index = 1L,
+      candidate_type = "blockquote",
+      text = quoted,
+      result_path = "result$summary",
+      result_text = evidence
+    )))
+  )
+})
+
+test_that("graft_verify respects Markdown blockquote continuation and indentation", {
+  cited_text <- "Lois Lane is an investigative reporter."
+  cited_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = cited_text)
+  )
+  cited <- graft_verify(verification_test_chat(
+    list(cited_call),
+    paste("> Lois Lane is an investigative", "reporter.", sep = "\n")
+  ))
+
+  prefix_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = "Lois Lane is an investigative doctor.")
+  )
+  prefix <- graft_verify(verification_test_chat(
+    list(prefix_call),
+    paste("> Lois Lane is an investigative", "reporter.", sep = "\n")
+  ))
+
+  code_block <- graft_verify(verification_test_chat(
+    list(cited_call),
+    paste0("    > ", cited_text)
+  ))
+
+  expect_identical(cited$label, "cited")
+  expect_identical(prefix$label, "untrusted")
+  expect_identical(code_block$label, "untrusted")
+})
+
+test_that("graft_verify normalizes nested and emphasized Markdown blockquotes", {
+  evidence <- "Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  verify <- function(answer) {
+    graft_verify(verification_test_chat(list(call), answer))
+  }
+
+  empty_marker <- verify(paste(">", evidence, sep = "\n"))
+  nested <- verify(paste0(">> ", evidence))
+  emphasized <- verify(paste(
+    "> **Lois Lane is an",
+    "> investigative reporter.**",
+    sep = "\n"
+  ))
+
+  expect_identical(empty_marker$label, "untrusted")
+  expect_identical(nested$label, "cited")
+  expect_identical(emphasized$label, "cited")
+})
+
+test_that("graft_verify keeps Markdown block and paragraph boundaries fail closed", {
+  evidence <- "# Tiny Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  heading <- graft_verify(verification_test_chat(
+    list(call),
+    paste("> # Tiny", "Lois Lane is an investigative reporter.", sep = "\n")
+  ))
+
+  plain <- "Lois Lane is an investigative reporter."
+  plain_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = plain)
+  )
+  split_emphasis <- graft_verify(verification_test_chat(
+    list(plain_call),
+    paste("> **Lois Lane is an", ">", "> investigative reporter.**", sep = "\n")
+  ))
+
+  expect_identical(heading$label, "untrusted")
+  expect_identical(split_emphasis$label, "untrusted")
+})
+
+test_that("graft_verify handles indented Markdown lazy continuation", {
+  evidence <- "Tiny Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  verification <- graft_verify(verification_test_chat(
+    list(call),
+    paste("> Tiny", "    Lois Lane is an investigative reporter.", sep = "\n")
+  ))
+
+  expect_identical(verification$label, "cited")
+})
+
+test_that("graft_verify distinguishes inline and block HTML continuation", {
+  inline <- "Tiny <em>Lois Lane is an investigative reporter.</em>"
+  inline_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = inline)
+  )
+  inline_verification <- graft_verify(verification_test_chat(
+    list(inline_call),
+    paste(
+      "> Tiny",
+      "<em>Lois Lane is an investigative reporter.</em>",
+      sep = "\n"
+    )
+  ))
+
+  block <- "Tiny <div>Lois Lane is an investigative reporter.</div>"
+  block_call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = block)
+  )
+  block_verification <- graft_verify(verification_test_chat(
+    list(block_call),
+    paste(
+      "> Tiny",
+      "<div>Lois Lane is an investigative reporter.</div>",
+      sep = "\n"
+    )
+  ))
+
+  expect_identical(inline_verification$label, "cited")
+  expect_identical(block_verification$label, "untrusted")
+})
+
+test_that("graft_verify requires matched evidence from every generic result", {
+  employment <- "Lois Lane works at the Daily Planet."
+  title <- "Lois Lane is an investigative reporter."
+  first <- verification_test_call(
+    "graft_find",
+    data.frame(summary = employment),
+    id = "employment"
+  )
+  title_data <- data.frame(id = "person:lois-lane")
+  title_data$details <- list(list(summary = title))
+  second <- verification_test_call(
+    "graft_get",
+    title_data,
+    id = "title"
+  )
+  calls <- list(first, second)
+
+  complete <- graft_verify(verification_test_chat(
+    calls,
+    paste0("The records say \"", employment, "\" and \"", title, "\"")
+  ))
+  partial <- graft_verify(verification_test_chat(
+    calls,
+    paste0("The record says \"", employment, "\"")
+  ))
+
+  expect_identical(complete$label, "cited")
+  expect_identical(
+    vapply(
+      complete$citations[[1L]],
+      `[[`,
+      integer(1),
+      "tool_call_index"
+    ),
+    c(1L, 2L)
+  )
+  expect_identical(
+    complete$citations[[1L]][[2L]]$result_path,
+    "result$details[[1]]$summary"
+  )
+  expect_identical(partial$label, "untrusted")
+  expect_identical(partial$reason_codes, list("unmatched_citation"))
+  expect_identical(lengths(partial$citations), 1L)
+})
+
+test_that("graft_verify caps mixed measure and generic evidence at cited", {
+  evidence <- "Lois Lane works at the Daily Planet."
+  measure <- verification_test_call(
+    "graft_measure",
+    data.frame(value = 1),
+    id = "count"
+  )
+  generic <- verification_test_call(
+    "graft_history",
+    data.frame(summary = evidence),
+    id = "history"
+  )
+  calls <- list(measure, generic)
+
+  matched <- graft_verify(verification_test_chat(
+    calls,
+    paste0("The accepted record says \"", evidence, "\"")
+  ))
+  unmatched <- graft_verify(verification_test_chat(
+    calls,
+    "The accepted record supports the answer."
+  ))
+
+  expect_identical(matched$label, "cited")
+  expect_identical(matched$reason_codes, list("matched_citations"))
+  expect_identical(
+    matched$citations[[1L]][[1L]]$tool_call_index,
+    2L
+  )
+  expect_identical(unmatched$label, "untrusted")
+  expect_identical(unmatched$reason_codes, list("unmatched_citation"))
+})
+
+test_that("citation normalization removes emphasis without altering identifiers", {
+  observed <- vapply(
+    c(
+      "**Lois** _Lane_",
+      "__Daily Planet__",
+      "record_identifier_name",
+      "a*b*c"
+    ),
+    graft_verification_normalize_text,
+    character(1)
+  )
+
+  expect_identical(
+    unname(observed),
+    c(
+      "Lois Lane",
+      "Daily Planet",
+      "record_identifier_name",
+      "abc"
+    )
+  )
+})
+
+test_that("citation normalization preserves non-emphasis delimiters", {
+  evidence <- "Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_get",
+    data.frame(summary = evidence)
+  )
+  verification <- graft_verify(verification_test_chat(
+    list(call),
+    paste0("The record says \"** ", evidence, " **\"")
+  ))
+
+  expect_identical(verification$label, "untrusted")
+  expect_identical(verification$reason_codes, list("unmatched_citation"))
+})
+
+test_that("citation normalization applies Markdown delimiter-run rules", {
+  observed <- vapply(
+    c(
+      "__investigative__reporter",
+      "a**Lois Lane**",
+      "a*Lois Lane*",
+      "_record_identifier_name_",
+      "a*.investigative reporter*",
+      "**Lois *Lane* is a reporter**",
+      "é **Lois**"
+    ),
+    graft_verification_normalize_text,
+    character(1)
+  )
+
+  expect_identical(
+    unname(observed),
+    c(
+      "__investigative__reporter",
+      "aLois Lane",
+      "aLois Lane",
+      "record_identifier_name",
+      "a*.investigative reporter*",
+      "Lois Lane is a reporter",
+      "é Lois"
+    )
+  )
+})
+
+test_that("graft_verify searches only explicit answer citations and result values", {
+  evidence <- "Lois Lane works at the Daily Planet."
+  receipt <- verification_test_receipt("graft_find")
+  receipt$store$id <- "store-identifier-only-in-receipt"
+  call <- verification_test_call(
+    "graft_find",
+    data.frame(summary = evidence),
+    receipt = receipt
+  )
+  receipt_only <- graft_verify(verification_test_chat(
+    list(call),
+    "The receipt says \"store-identifier-only-in-receipt\"."
+  ))
+  chat <- ellmer::chat_openai(model = "gpt-4o-mini")
+  chat$set_turns(list(
+    ellmer::UserTurn(list(ellmer::ContentText(
+      paste0("Does the record say \"", evidence, "\"?")
+    ))),
+    ellmer::AssistantTurn(list(call$request)),
+    ellmer::UserTurn(list(call$result)),
+    ellmer::AssistantTurn(list(ellmer::ContentText(
+      "The accepted record supports that statement."
+    )))
+  ))
+
+  question_only <- graft_verify(chat)
+
+  expect_identical(receipt_only$label, "untrusted")
+  expect_identical(question_only$label, "untrusted")
+  expect_identical(
+    list(receipt_only$reason_codes, question_only$reason_codes),
+    list(list("unmatched_citation"), list("unmatched_citation"))
+  )
+})
+
+test_that("graft_verify preserves diagnostics for cited evidence", {
+  first_text <- "Lois Lane works at the Daily Planet."
+  second_text <- "Lois Lane is an investigative reporter."
+  first <- verification_test_call(
+    "graft_find",
+    data.frame(summary = first_text),
+    id = "first",
+    truncated = TRUE
+  )
+  later_receipt <- verification_test_receipt("graft_get")
+  later_receipt$boundary$batch_id <- "batch-2"
+  later_receipt$boundary$commit_order <- 2
+  second <- verification_test_call(
+    "graft_get",
+    data.frame(summary = second_text),
+    id = "second",
+    receipt = later_receipt
+  )
+  chat <- verification_test_chat(
+    list(first, second),
+    paste0("The records say \"", first_text, "\" and \"", second_text, "\"")
+  )
+
+  verification <- graft_verify(chat)
+
+  expect_identical(verification$label, "cited")
+  expect_identical(
+    verification$diagnostics,
+    list(c("truncated_result", "mixed_boundaries"))
+  )
+})
