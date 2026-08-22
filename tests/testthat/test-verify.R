@@ -720,6 +720,29 @@ test_that("graft_verify respects Markdown blockquote continuation and indentatio
   expect_identical(code_block$label, "untrusted")
 })
 
+test_that("graft_verify normalizes nested and emphasized Markdown blockquotes", {
+  evidence <- "Lois Lane is an investigative reporter."
+  call <- verification_test_call(
+    "graft_query",
+    data.frame(summary = evidence)
+  )
+  verify <- function(answer) {
+    graft_verify(verification_test_chat(list(call), answer))
+  }
+
+  empty_marker <- verify(paste(">", evidence, sep = "\n"))
+  nested <- verify(paste0(">> ", evidence))
+  emphasized <- verify(paste(
+    "> **Lois Lane is an",
+    "> investigative reporter.**",
+    sep = "\n"
+  ))
+
+  expect_identical(empty_marker$label, "untrusted")
+  expect_identical(nested$label, "cited")
+  expect_identical(emphasized$label, "cited")
+})
+
 test_that("graft_verify requires matched evidence from every generic result", {
   employment <- "Lois Lane works at the Daily Planet."
   title <- "Lois Lane is an investigative reporter."

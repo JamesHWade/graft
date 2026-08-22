@@ -365,15 +365,6 @@ graft_verification_quotation_candidates <- function(text) {
     ),
     collapse = "|"
   )
-  graft_verification_candidates(
-    text,
-    pattern,
-    "quotation",
-    \(quoted) substr(quoted, 2L, nchar(quoted) - 1L)
-  )
-}
-
-graft_verification_candidates <- function(text, pattern, type, extract) {
   locations <- gregexpr(pattern, text, perl = TRUE)[[1L]]
   if (identical(locations, -1L)) {
     return(list())
@@ -381,9 +372,9 @@ graft_verification_candidates <- function(text, pattern, type, extract) {
   lengths <- attr(locations, "match.length")
   candidates <- Map(
     function(start, length) {
-      matched <- substr(text, start, start + length - 1L)
-      candidate <- extract(matched)
-      graft_verification_candidate(candidate, type)
+      quoted <- substr(text, start, start + length - 1L)
+      candidate <- substr(quoted, 2L, nchar(quoted) - 1L)
+      graft_verification_candidate(candidate, "quotation")
     },
     locations,
     lengths
@@ -402,14 +393,22 @@ graft_verification_blockquote_candidates <- function(text) {
       next
     }
     block <- character()
+    paragraph_active <- FALSE
     while (index <= length(lines)) {
       line <- lines[[index]]
       if (is_marker[[index]]) {
+        stripped <- sub(
+          "^(?:[ ]{0,3}>[ \\t]?)+",
+          "",
+          line,
+          perl = TRUE
+        )
         block <- c(
           block,
-          sub("^[ ]{0,3}>[ \\t]?", "", line, perl = TRUE)
+          stripped
         )
-      } else if (nzchar(trimws(line))) {
+        paragraph_active <- nzchar(trimws(stripped))
+      } else if (paragraph_active && nzchar(trimws(line))) {
         block <- c(block, line)
       } else {
         break
@@ -447,8 +446,8 @@ graft_verification_normalize_text <- function(text) {
 
 graft_verification_strip_emphasis <- function(text) {
   patterns <- c(
-    "(^|[[:space:][:punct:]])(\\*\\*\\*|\\*\\*|\\*)([^*\\r\\n]+)\\2(?=$|[[:space:][:punct:]])",
-    "(^|[[:space:][:punct:]])(___|__|_)([^_\\r\\n]+)\\2(?=$|[[:space:][:punct:]])"
+    "(^|[[:space:][:punct:]])(\\*\\*\\*|\\*\\*|\\*)([^*]+)\\2(?=$|[[:space:][:punct:]])",
+    "(^|[[:space:][:punct:]])(___|__|_)([^_]+)\\2(?=$|[[:space:][:punct:]])"
   )
   for (pattern in patterns) {
     text <- gsub(pattern, "\\1\\3", text, perl = TRUE)
