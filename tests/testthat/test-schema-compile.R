@@ -77,9 +77,12 @@ test_that("structural digest excludes compiler provenance", {
     simplifyVector = FALSE
   )
 
+  variant_augmented <- augment_manifest_with_measures(
+    new_compiled_schema(variant_manifest)
+  )$manifest
   expect_identical(
     base@structural_digest,
-    variant_manifest$fingerprints$structural_digest
+    variant_augmented$fingerprints$structural_digest
   )
   expect_identical(
     base@source_digest,
@@ -165,7 +168,10 @@ test_that("plain LinkML schemas compile without graft annotations", {
   )
   person <- schema@manifest$classes$Person
 
-  expect_setequal(names(schema@classes), c("Organization", "Person"))
+  expect_setequal(
+    names(schema@classes),
+    c("Organization", "Person", "GraftMeasure")
+  )
   expect_identical(person$role, "node")
   expect_identical(person$id_policy, "require")
   expect_identical(person$id_format, "linkml")

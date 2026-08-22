@@ -23,3 +23,4 @@
       Caused by error in `py_call_impl()`:
       ! compile_schema.GraftCompilerError: Class BadSemanticClaim graft.qualifier_slots references missing slot(s): missing_slot.
       Run `reticulate::py_last_error()` for details.
+
