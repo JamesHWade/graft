@@ -18,3 +18,5 @@
 ^Meta$
 ^design$
 ^specs$
+^skills-lock\.json$
+^\.agents$

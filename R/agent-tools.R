@@ -1,17 +1,21 @@
 #' Create bounded read-only tools for a Graft store or view
 #'
-#' `graft_tools()` returns four [ellmer::tool()] definitions that delegate only
+#' `graft_tools()` returns [ellmer::tool()] definitions that delegate only
 #' to Graft's public bounded retrieval operations. The tools do not expose SQL,
 #' filesystem, network, connection, or mutation arguments.
-#' When given a `GraftView`, all four tools remain pinned to its immutable
+#' When the store has accepted measures, a fifth `graft_measure` tool
+#' evaluates them by name through [graft_measure()]; it is omitted when no
+#' measures are accepted.
+#' When given a `GraftView`, all tools remain pinned to its immutable
 #' snapshot boundary and the live-store integrity diagnostic is unavailable.
 #'
 #' Every tool returns `result` plus explicit `truncated`, `limit`, and
-#' `store_schema_digest` metadata.
+#' `store_schema_digest` metadata; `graft_measure` results add `measure_id`
+#' and `revision_id`.
 #'
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
-#' @return A named list of four `ellmer::ToolDef` objects.
+#' @return A named list of `ellmer::ToolDef` objects.
 #' @seealso `vignette("agents", package = "graft")` for pinning an accepted
 #'   boundary, registering the tools with a chat, and accepting
 #'   agent-authored proposals.
