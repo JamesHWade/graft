@@ -225,3 +225,64 @@ test_that("graft_tools has no mutation surface and leaves the store unchanged", 
   expect_s3_class(cap, "graft_limit_error")
   expect_s3_class(arbitrary, "graft_validation_error")
 })
+
+test_that("graft_tools adds a bounded graft_measure tool when measures exist", {
+  fixture <- local_retrieval_store()
+  store <- fixture$store
+  graft_ingest(
+    store,
+    list(
+      GraftMeasure = data.frame(
+        id = "measure:entity-count",
+        name = "entity-count",
+        title = "Entity count",
+        description = "Number of accepted entities.",
+        target_class = "Entity",
+        expr = "COUNT(*)",
+        parameters = "[]",
+        dimensions = "[\"preferred_name\"]"
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "measure-tool-v1")
+  )
+
+  tools <- graft_tools(store)
+  expect_named(
+    tools,
+    c(
+      "graft_find",
+      "graft_get",
+      "graft_query",
+      "graft_history",
+      "graft_measure"
+    )
+  )
+  properties <- agent_tool_prop(
+    agent_tool_prop(tools$graft_measure, "arguments"),
+    "properties"
+  )
+  expect_identical(agent_tool_prop(properties$name, "values"), "entity-count")
+  expect_identical(
+    agent_tool_prop(tools$graft_measure, "annotations"),
+    list(
+      read_only_hint = TRUE,
+      open_world_hint = FALSE,
+      idempotent_hint = TRUE,
+      destructive_hint = FALSE
+    )
+  )
+
+  result <- tools$graft_measure(name = "entity-count")
+  expect_identical(result$result$value, 2)
+  expect_identical(result$truncated, FALSE)
+  expect_identical(result$measure_id, "measure:entity-count")
+  expect_match(result$store_schema_digest, "^sha256:")
+})
+
+test_that("graft_tools omits graft_measure when no measures are accepted", {
+  fixture <- local_retrieval_store()
+  expect_named(
+    graft_tools(fixture$store),
+    c("graft_find", "graft_get", "graft_query", "graft_history")
+  )
+})

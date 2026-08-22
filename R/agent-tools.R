@@ -21,7 +21,7 @@ graft_tools <- function(store) {
   read_store <- as_graft_read_store_internal(store, "store")
   annotations <- graft_tool_annotations()
 
-  list(
+  tools <- list(
     graft_find = ellmer::tool(
       function(query, class = NULL, limit = 20) {
         result <- graft_find(
@@ -169,6 +169,54 @@ graft_tools <- function(store) {
       ),
       annotations = annotations
     )
+  )
+  measures <- graft_measures(store)
+  if (nrow(measures) > 0L) {
+    tools$graft_measure <- graft_measure_tool(store, measures, annotations)
+  }
+  tools
+}
+
+graft_measure_tool <- function(store, measures, annotations) {
+  ellmer::tool(
+    function(name, arguments = list(), by = NULL) {
+      result <- graft_measure(
+        store,
+        name = name,
+        arguments = arguments,
+        by = by
+      )
+      wrapped <- graft_tool_bounded_result(
+        result,
+        graft_retrieval_limits$measure_rows
+      )
+      wrapped$measure_id <- attr(result, "measure_id")
+      wrapped$revision_id <- attr(result, "revision_id")
+      wrapped
+    },
+    name = "graft_measure",
+    description = paste(
+      "Evaluate one accepted, governed measure over accepted state.",
+      "Arguments bind to declared parameters as equality filters and",
+      "`by` groups by declared dimensions. Results are deterministic",
+      "and bounded; no SQL is accepted."
+    ),
+    arguments = list(
+      name = ellmer::type_enum(
+        sort(measures$name),
+        "Name of one accepted measure."
+      ),
+      arguments = graft_tool_json_type(
+        list(type = "object", additionalProperties = TRUE),
+        required = FALSE
+      ),
+      by = ellmer::type_array(
+        ellmer::type_string("A declared dimension column."),
+        "Declared dimensions to group by.",
+        required = FALSE
+      )
+    ),
+    annotations = annotations
   )
 }
 

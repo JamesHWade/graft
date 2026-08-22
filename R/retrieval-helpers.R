@@ -1,6 +1,7 @@
 graft_retrieval_limits <- list(
   batches = 1000L,
   measures = 1000L,
+  measure_rows = 1000L,
   changes = 5000L,
   history = 1000L,
   integrity_issues = 1000L,

@@ -222,6 +222,11 @@ graft_measure <- function(store, name, arguments = list(), by = NULL) {
     arguments = arguments,
     by = by
   )
+  result <- trim_bounded_rows(
+    result,
+    read_store,
+    graft_retrieval_limits$measure_rows
+  )
   attr(result, "measure_id") <- measure$id
   attr(result, "revision_id") <- measure$revision_id
   attr(result, "store_schema_digest") <- store_schema_digest(read_store)
