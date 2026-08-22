@@ -250,3 +250,53 @@ validate_measure_candidates <- function(manifest, staged) {
   }
   issues
 }
+
+contract_measure_records <- function(manifest) {
+  document <- manifest$dictionary$document
+  if (is.null(document)) {
+    return(NULL)
+  }
+  rows <- list()
+  for (table in document$tables) {
+    definitions <- table$definitions
+    if (is.null(definitions)) {
+      next
+    }
+    for (definition in definitions) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        id = paste0("measure:", scalar_character(definition$name)),
+        name = scalar_character(definition$name),
+        title = scalar_character(definition$label),
+        description = scalar_character(definition$description),
+        target_class = scalar_character(table$name),
+        expr = scalar_character(definition$expr),
+        parameters = "[]",
+        dimensions = "[]",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (length(rows) == 0L) {
+    return(NULL)
+  }
+  do.call(rbind, rows)
+}
+
+seed_contract_measures <- function(store, compiled_schema) {
+  records <- contract_measure_records(compiled_schema$manifest)
+  if (is.null(records)) {
+    return(invisible(store))
+  }
+  graft_ingest(
+    store,
+    stats::setNames(list(records), graft_measure_class_name),
+    graft_provenance(
+      producer = "contract",
+      idempotency_key = paste0(
+        "contract-measures:",
+        compiled_schema$manifest$fingerprints$source_digest
+      )
+    )
+  )
+  invisible(store)
+}

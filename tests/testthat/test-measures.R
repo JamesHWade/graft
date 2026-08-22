@@ -87,3 +87,49 @@ test_that("plan-time validation rejects invalid measure definitions", {
     "measure_dimension_column"
   )
 })
+
+test_that("data-dict contract definitions seed measures at graft_open()", {
+  document <- jsonlite::fromJSON(
+    system.file(
+      "extdata",
+      "team-directory.data-dict.json",
+      package = "graft",
+      mustWork = TRUE
+    ),
+    simplifyVector = FALSE
+  )
+  table_names <- vapply(
+    document$tables,
+    \(table) table$name,
+    character(1)
+  )
+  person <- match("person", table_names)
+  document$tables[[person]]$definitions <- list(
+    list(
+      name = "headcount",
+      label = "Headcount",
+      description = "Number of people in the directory.",
+      expr = "COUNT(*)"
+    )
+  )
+  contract <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(
+    document,
+    contract,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+
+  schema <- graft_schema(contract)
+  store <- graft_open(schema, ":memory:", okf = "disabled")
+  withr::defer(graft_close(store))
+
+  measures <- graft_measures(store)
+  expect_identical(measures$name, "headcount")
+  expect_identical(measures$title, "Headcount")
+  expect_identical(measures$target_class, "person")
+  expect_identical(graft_measure(store, "headcount")$value, 0)
+
+  history <- graft_history(store, "measure:headcount")
+  expect_identical(nrow(history), 1L)
+})

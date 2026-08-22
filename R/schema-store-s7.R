@@ -456,7 +456,11 @@ graft_open <- function(
       state$schema <- schema
       state$id <- scalar_character(metadata$store_id)
       state$id_digest <- graft_sha256(canonical_json(state$id))
-      GraftStore(state)
+      store <- GraftStore(state)
+      if (!isTRUE(read_only)) {
+        seed_contract_measures(store, compiled_schema)
+      }
+      store
     },
     error = function(error) {
       close_store_backend(backend)
