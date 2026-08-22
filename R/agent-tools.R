@@ -9,9 +9,11 @@
 #' When given a `GraftView`, all tools remain pinned to its immutable
 #' snapshot boundary and the live-store integrity diagnostic is unavailable.
 #'
-#' Every tool returns `result` plus explicit `truncated`, `limit`, and
-#' `store_schema_digest` metadata; `graft_measure` results add `measure_id`
-#' and `revision_id`.
+#' Every tool returns `result`, `truncated`, `limit`, and one canonical nested
+#' `receipt`. The receipt identifies the store, exact accepted boundary, and
+#' structural and build schema digests. Measure receipts also identify the
+#' accepted measure definition. Live-store tools pin a fresh boundary for each
+#' invocation; tools created from a `GraftView` retain its snapshot boundary.
 #'
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
@@ -28,13 +30,14 @@ graft_tools <- function(store) {
   tools <- list(
     graft_find = ellmer::tool(
       function(query, class = NULL, limit = 20) {
+        context <- graft_tool_context(store)
         result <- graft_find(
-          store,
+          context$store,
           query = query,
           class = class,
           limit = limit
         )
-        graft_tool_bounded_result(result, limit)
+        graft_tool_bounded_result(result, limit, context$receipt)
       },
       name = "graft_find",
       description = paste(
@@ -66,8 +69,9 @@ graft_tools <- function(store) {
           evidence = 100L
         )
       ) {
+        context <- graft_tool_context(store)
         result <- graft_get(
-          store,
+          context$store,
           id = id,
           include = include,
           limits = limits
@@ -76,7 +80,7 @@ graft_tools <- function(store) {
           result,
           truncated = any(unlist(result$truncated, use.names = FALSE)),
           limit = result$limits,
-          store_schema_digest = result$store_schema_digest
+          receipt = context$receipt
         )
       },
       name = "graft_get",
@@ -118,13 +122,17 @@ graft_tools <- function(store) {
     ),
     graft_query = ellmer::tool(
       function(operation, request = list(), limit = 100) {
+        if (identical(operation, "integrity") && !is_graft_view(store)) {
+          return(graft_tool_integrity_result(store, request, limit))
+        }
+        context <- graft_tool_context(store)
         result <- graft_query(
-          store,
+          context$store,
           operation = operation,
           request = request,
           limit = limit
         )
-        graft_tool_bounded_result(result, limit)
+        graft_tool_bounded_result(result, limit, context$receipt)
       },
       name = "graft_query",
       description = paste(
@@ -145,13 +153,20 @@ graft_tools <- function(store) {
     ),
     graft_history = ellmer::tool(
       function(id, as_of = NULL, limit = 100) {
+        context <- graft_tool_context(store)
         result <- graft_history(
-          store,
+          context$store,
           id = id,
           as_of = as_of,
           limit = limit
         )
-        graft_tool_bounded_result(result, limit)
+        receipt <- graft_tool_history_receipt(
+          context$receipt,
+          result,
+          as_of,
+          context$store
+        )
+        graft_tool_bounded_result(result, limit, receipt)
       },
       name = "graft_history",
       description = paste(
@@ -184,19 +199,22 @@ graft_tools <- function(store) {
 graft_measure_tool <- function(store, measures, annotations) {
   ellmer::tool(
     function(name, arguments = list(), by = NULL) {
+      context <- graft_tool_context(store)
       result <- graft_measure(
-        store,
+        context$store,
         name = name,
         arguments = arguments,
         by = by
       )
-      wrapped <- graft_tool_bounded_result(
-        result,
-        graft_retrieval_limits$measure_rows
+      context$receipt$definition <- list(
+        id = attr(result, "measure_id"),
+        revision_id = attr(result, "revision_id")
       )
-      wrapped$measure_id <- attr(result, "measure_id")
-      wrapped$revision_id <- attr(result, "revision_id")
-      wrapped
+      graft_tool_bounded_result(
+        result,
+        graft_retrieval_limits$measure_rows,
+        context$receipt
+      )
     },
     name = "graft_measure",
     description = paste(
@@ -318,7 +336,7 @@ graft_tool_json_type <- function(schema, required = TRUE) {
   type
 }
 
-graft_tool_bounded_result <- function(result, fallback_limit) {
+graft_tool_bounded_result <- function(result, fallback_limit, receipt) {
   if (is.data.frame(result)) {
     limit <- attr(result, "limit")
     if (is.null(limit)) {
@@ -328,7 +346,7 @@ graft_tool_bounded_result <- function(result, fallback_limit) {
       result,
       truncated = isTRUE(attr(result, "truncated")),
       limit = limit,
-      store_schema_digest = attr(result, "store_schema_digest")
+      receipt = receipt
     ))
   }
   truncated <- result$truncated
@@ -343,11 +361,11 @@ graft_tool_bounded_result <- function(result, fallback_limit) {
     result,
     truncated = isTRUE(truncated),
     limit = limit,
-    store_schema_digest = result$store_schema_digest
+    receipt = receipt
   )
 }
 
-graft_tool_result <- function(result, truncated, limit, store_schema_digest) {
+graft_tool_result <- function(result, truncated, limit, receipt) {
   list(
     result = if (is.list(result) && !is.data.frame(result)) {
       unclass(result)
@@ -356,6 +374,175 @@ graft_tool_result <- function(result, truncated, limit, store_schema_digest) {
     },
     truncated = isTRUE(truncated),
     limit = limit,
-    store_schema_digest = store_schema_digest
+    receipt = receipt
+  )
+}
+
+graft_tool_context <- function(store) {
+  if (is_graft_view(store)) {
+    return(list(
+      store = store,
+      receipt = graft_tool_receipt(store, "snapshot")
+    ))
+  }
+  snapshot <- graft_snapshot(store)
+  view <- graft_at(store, snapshot)
+  list(
+    store = view,
+    receipt = graft_tool_receipt(view, "live")
+  )
+}
+
+graft_tool_integrity_result <- function(store, request, limit) {
+  backend <- as_graft_store_internal(store, "store")
+  DBI::dbWithTransaction(backend$connection, {
+    snapshot <- graft_snapshot(store)
+    view <- graft_at(store, snapshot)
+    result <- graft_query(
+      store,
+      operation = "integrity",
+      request = request,
+      limit = limit
+    )
+    graft_tool_bounded_result(
+      result,
+      limit,
+      graft_tool_receipt(view, "live")
+    )
+  })
+}
+
+graft_tool_history_receipt <- function(receipt, result, as_of, store) {
+  if (is.null(as_of)) {
+    return(receipt)
+  }
+  receipt$boundary <- graft_tool_boundary(
+    "history",
+    attr(result, "as_of_batch_id"),
+    attr(result, "as_of_commit_order")
+  )
+  receipt$schema <- graft_tool_history_schema(
+    store,
+    receipt$boundary$commit_order
+  )
+  receipt
+}
+
+graft_tool_receipt <- function(view, kind) {
+  state <- graft_view_state(view)
+  snapshot <- state$snapshot
+  schema <- state$schema
+  list(
+    store = list(id = snapshot@store_id),
+    boundary = graft_tool_boundary(
+      kind,
+      snapshot@batch_id,
+      snapshot@commit_order,
+      snapshot@snapshot_id
+    ),
+    schema = graft_tool_schema(
+      schema,
+      snapshot@schema_build_digest
+    )
+  )
+}
+
+graft_tool_boundary <- function(
+  kind,
+  batch_id,
+  commit_order,
+  snapshot_id = NULL
+) {
+  if (
+    !is_nonempty_string(kind) ||
+      !kind %in%
+        c(
+          "live",
+          "snapshot",
+          "history"
+        )
+  ) {
+    abort_backend_error(
+      "An internal tool receipt has an invalid boundary kind.",
+      operation = "graft_tools",
+      boundary_kind = kind
+    )
+  }
+  if (length(batch_id) == 1L && is.na(batch_id)) {
+    batch_id <- NULL
+  }
+  if (!is.null(batch_id) && !is_nonempty_string(batch_id)) {
+    abort_backend_error(
+      "An internal tool receipt has an invalid batch identifier.",
+      operation = "graft_tools",
+      batch_id = batch_id
+    )
+  }
+  if (
+    !is.numeric(commit_order) ||
+      length(commit_order) != 1L ||
+      is.na(commit_order) ||
+      !is.finite(commit_order) ||
+      commit_order < 0 ||
+      commit_order != floor(commit_order) ||
+      commit_order >= 2^53
+  ) {
+    abort_backend_error(
+      "An internal tool receipt has an invalid commit order.",
+      operation = "graft_tools",
+      commit_order = commit_order
+    )
+  }
+  boundary <- list(
+    kind = kind,
+    batch_id = batch_id,
+    commit_order = commit_order
+  )
+  if (identical(kind, "snapshot")) {
+    if (!is_nonempty_string(snapshot_id)) {
+      abort_backend_error(
+        "A snapshot tool receipt requires a snapshot identifier.",
+        operation = "graft_tools",
+        snapshot_id = snapshot_id
+      )
+    }
+    boundary <- c(boundary, list(snapshot_id = snapshot_id))
+  }
+  boundary
+}
+
+graft_tool_history_schema <- function(store, commit_order) {
+  store <- as_graft_read_store_internal(store, "store")
+  row <- with_duckdb_error(
+    "graft_tool_history_receipt",
+    DBI::dbGetQuery(
+      store$connection,
+      paste0(
+        "SELECT schema_build_digest FROM ",
+        quote_identifier(store$connection, "_graft_batches"),
+        " WHERE status = 'committed' AND commit_order = ?"
+      ),
+      params = list(commit_order)
+    )
+  )
+  if (nrow(row) != 1L) {
+    abort_backend_error(
+      "A history tool receipt requires one committed boundary schema.",
+      operation = "graft_tool_history_receipt",
+      commit_order = commit_order,
+      schema_count = nrow(row)
+    )
+  }
+  build_digest <- scalar_character(row$schema_build_digest)
+  schema <- historical_schemas(store, build_digest)[[build_digest]]
+  graft_tool_schema(schema, build_digest)
+}
+
+graft_tool_schema <- function(schema, build_digest) {
+  list(
+    structural_digest = scalar_character(
+      schema$manifest$fingerprints$structural_digest
+    ),
+    build_digest = build_digest
   )
 }

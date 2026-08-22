@@ -2,7 +2,7 @@
 
 * A new `vignette("agents")` documents how Graft is used from an agent host: bounded read-only tools, snapshot-pinned sessions, agent-authored proposals that pass through validation and review, and file-editing agents working through the OKF tree. Getting started, the README, and the site home page now show the same path.
 * `graft_measure()` and `graft_measures()` add governed measures inspired by the semantic layer in [posit-dev/commons](https://github.com/posit-dev/commons): declarative, reviewed calculations stored as `GraftMeasure` records with full plan/review/commit history, validated at plan time, evaluated over accepted state or a pinned `GraftView`, and seeded from data-dict contract `definitions` at `graft_open()` (#19).
-* `graft_tools()` adds a fifth bounded `graft_measure` tool when the store has accepted measures, with the measure name as a closed enum and results carrying `measure_id` and `revision_id` receipts (#19).
+* `graft_tools()` adds a fifth bounded `graft_measure` tool when the store has accepted measures and gives every tool result one canonical nested receipt identifying its exact accepted boundary and schema; measure receipts also identify the accepted definition (#19, #23).
 * Graft v0.1 replaces the pre-production `kg_*` API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with an 18-function revision-first package boundary.
 * The pkgdown site now starts with ordinary tables and a shipped data-dict example, creates a blank store explicitly, demonstrates change history, and introduces LinkML when richer semantic graph modeling is needed.
 * Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.
@@ -15,5 +15,4 @@
 * `graft_provenance()` creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.
 * `graft_schema()` compiles LinkML or the supported `graft-table-v1` data-dict profile into the same invariant-checked contract. YAML authoring uses the optional data-dict CLI, committed resolved JSON remains R-only, and unsupported provider semantics fail closed.
 * `graft_status()` and `graft_sync()` inspect and explicitly synchronize the deterministic OKF working tree without making it an independent source of accepted knowledge.
-* `graft_tools()` creates four bounded read-only ellmer tools that delegate to the public retrieval and history operations.
 * `graft_view_snapshot()` returns an isolated, path-free copy of the exact immutable snapshot retained by a `GraftView`.
