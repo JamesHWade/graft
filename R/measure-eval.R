@@ -235,21 +235,19 @@ graft_measure <- function(store, name, arguments = list(), by = NULL) {
 
 measure_evaluate <- function(store, contract, sql, parameters, arguments, by) {
   connection <- store$connection
-  projections <- vapply(
-    measure_scalar_columns(contract),
-    function(column) {
-      slot <- contract$slots[[column]]
-      paste0(
-        "CAST(json_extract_string(payload_json, '$.",
-        column,
-        "') AS ",
-        safe_duckdb_type(scalar_character(slot$duckdb_type)),
-        ") AS ",
-        quote_identifier(connection, column)
-      )
-    },
-    character(1)
+  rows <- retrieval_query(
+    connection,
+    paste0(
+      "SELECT payload_json FROM (",
+      graft_read_source_sql(store),
+      ") measure_source WHERE class = ?"
+    ),
+    params = list(scalar_character(contract$name))
   )
+  frame <- measure_target_frame(rows$payload_json, contract)
+  view_name <- "_graft_measure_target"
+  duckdb::duckdb_register(connection, view_name, frame)
+  on.exit(duckdb::duckdb_unregister(connection, view_name), add = TRUE)
   predicates <- character()
   params <- list()
   for (argument in names(arguments)) {
@@ -266,14 +264,10 @@ measure_evaluate <- function(store, contract, sql, parameters, arguments, by) {
     character(1)
   )
   query <- paste0(
-    "WITH measure_target AS (SELECT ",
-    paste(projections, collapse = ", "),
-    " FROM (",
-    graft_read_source_sql(store),
-    ") measure_source WHERE class = ?",
-    ") SELECT ",
+    "SELECT ",
     paste(c(grouped, paste0(sql, " AS value")), collapse = ", "),
-    " FROM measure_target",
+    " FROM ",
+    quote_identifier(connection, view_name),
     if (length(predicates) > 0L) {
       paste0(" WHERE ", paste(predicates, collapse = " AND "))
     } else {
@@ -290,9 +284,40 @@ measure_evaluate <- function(store, contract, sql, parameters, arguments, by) {
       ""
     }
   )
-  retrieval_query(
-    connection,
-    query,
-    params = c(list(scalar_character(contract$name)), params)
+  retrieval_query(connection, query, params = params)
+}
+
+measure_target_frame <- function(payloads, contract) {
+  columns <- measure_scalar_columns(contract)
+  payloads <- lapply(payloads, jsonlite::fromJSON, simplifyVector = FALSE)
+  values <- lapply(columns, function(column) {
+    slot <- contract$slots[[column]]
+    raw <- lapply(payloads, \(payload) payload[[column]])
+    measure_column_values(raw, scalar_character(slot$duckdb_type))
+  })
+  stats::setNames(
+    data.frame(values, stringsAsFactors = FALSE),
+    columns
   )
+}
+
+measure_column_values <- function(raw, duckdb_type) {
+  scalars <- vapply(
+    raw,
+    function(value) {
+      if (is.null(value) || length(value) != 1L) {
+        NA_character_
+      } else {
+        as.character(value)
+      }
+    },
+    character(1)
+  )
+  if (duckdb_type %in% c("DOUBLE", "FLOAT", "BIGINT", "INTEGER")) {
+    return(suppressWarnings(as.numeric(scalars)))
+  }
+  if (identical(duckdb_type, "BOOLEAN")) {
+    return(as.logical(scalars))
+  }
+  scalars
 }

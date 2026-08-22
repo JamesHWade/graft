@@ -20,3 +20,5 @@
 ^specs$
 ^skills-lock\.json$
 ^\.agents$
+^agents$
+^adr$

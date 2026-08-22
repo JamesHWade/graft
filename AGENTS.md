@@ -118,12 +118,12 @@ Only report what you have changed.
 
 ### Issue tracker
 
-Issues are tracked in GitHub Issues for JamesHWade/graft via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues for JamesHWade/graft via the `gh` CLI. See `agents/issue-tracker.md`.
 
 ### Triage labels
 
-The five canonical triage labels are used as-is (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+The five canonical triage labels are used as-is (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` at the repo root, ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+Single-context: `CONTEXT.md` at the repo root, ADRs in `adr/`. See `agents/domain.md`.
