@@ -1,11 +1,14 @@
 # Create bounded read-only tools for a Graft store or view
 
-`graft_tools()` returns four
+`graft_tools()` returns
 [`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html)
 definitions that delegate only to Graft's public bounded retrieval
 operations. The tools do not expose SQL, filesystem, network,
-connection, or mutation arguments. When given a `GraftView`, all four
-tools remain pinned to its immutable snapshot boundary and the
+connection, or mutation arguments. When the store has accepted measures,
+a fifth `graft_measure` tool evaluates them by name through
+[`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md);
+it is omitted when no measures are accepted. When given a `GraftView`,
+all tools remain pinned to its immutable snapshot boundary and the
 live-store integrity diagnostic is unavailable.
 
 ## Usage
@@ -22,14 +25,15 @@ graft_tools(store)
 
 ## Value
 
-A named list of four
+A named list of
 [`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/tool.html)
 objects.
 
 ## Details
 
 Every tool returns `result` plus explicit `truncated`, `limit`, and
-`store_schema_digest` metadata.
+`store_schema_digest` metadata; `graft_measure` results add `measure_id`
+and `revision_id`.
 
 ## See also
 

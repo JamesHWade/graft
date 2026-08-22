@@ -9,6 +9,22 @@
   through validation and review, and file-editing agents working through
   the OKF tree. Getting started, the README, and the site home page now
   show the same path.
+- [`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md)
+  and
+  [`graft_measures()`](https://jameshwade.github.io/graft/reference/graft_measures.md)
+  add governed measures inspired by the semantic layer in
+  [posit-dev/commons](https://github.com/posit-dev/commons):
+  declarative, reviewed calculations stored as `GraftMeasure` records
+  with full plan/review/commit history, validated at plan time,
+  evaluated over accepted state or a pinned `GraftView`, and seeded from
+  data-dict contract `definitions` at
+  [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+  ([\#19](https://github.com/JamesHWade/graft/issues/19)).
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  adds a fifth bounded `graft_measure` tool when the store has accepted
+  measures, with the measure name as a closed enum and results carrying
+  `measure_id` and `revision_id` receipts
+  ([\#19](https://github.com/JamesHWade/graft/issues/19)).
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
   authoritative record tables with an 18-function revision-first package

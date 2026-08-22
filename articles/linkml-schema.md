@@ -159,9 +159,10 @@ schema@name
 schema@version
 #> [1] "0.1.0"
 schema@structural_digest
-#> [1] "sha256:5eb12af7a75caa1d99d405db168634b58a8655addf5cf3d0200aea635d36286a"
+#> [1] "sha256:2044c075dd8d683af90969868d6454a954266b8a80a06d34cb762e2ab57090e9"
 names(schema@classes)
-#> [1] "Claim"       "Evidence"    "Material"    "Measurement" "Source"
+#> [1] "Claim"        "Evidence"     "Material"     "Measurement"  "Source"      
+#> [6] "GraftMeasure"
 
 material <- schema@classes$Material
 material@role

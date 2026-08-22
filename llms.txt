@@ -309,6 +309,10 @@ projections, and history.
   : Run a bounded advanced retrieval operation
 - [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
   : Retrieve accepted record history
+- [`graft_measures()`](https://jameshwade.github.io/graft/reference/graft_measures.md)
+  : List accepted measures
+- [`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md)
+  : Evaluate an accepted measure
 
 ## Synchronize and integrate
 

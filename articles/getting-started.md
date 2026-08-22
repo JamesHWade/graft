@@ -37,7 +37,7 @@ schema <- graft_schema(dictionary_path)
 schema@name
 #> [1] "team_directory"
 names(schema@classes)
-#> [1] "organization" "person"       "employment"
+#> [1] "organization" "person"       "employment"   "GraftMeasure"
 ```
 
 The three class names are the three table names: `organization`,
@@ -290,11 +290,11 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-08-21 01:17:59        hr-review review-2026-08-08
-#> 2        1 2026-08-21 01:17:59 directory-import import-2026-08-01
+#> 1        2 2026-08-22 16:16:32        hr-review review-2026-08-08
+#> 2        1 2026-08-22 16:16:31 directory-import import-2026-08-01
 #>              contract            job_title
-#> 1 sha256:bf79e47da7f3 Investigative editor
-#> 2 sha256:bf79e47da7f3             Reporter
+#> 1 sha256:c2e210a75758 Investigative editor
+#> 2 sha256:c2e210a75758             Reporter
 ```
 
 The current record is convenient for applications. The revision history
