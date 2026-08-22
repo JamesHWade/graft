@@ -204,21 +204,26 @@ person calls from the console. They accept no SQL, no connection, no
 path, and no mutation argument, and each one is annotated read-only,
 non-destructive, idempotent, and closed-world for hosts that act on
 those hints.</p>
-<p>Every tool result is a named list with <code>result</code> plus
-<code>truncated</code>, <code>limit</code>, and
-<code>store_schema_digest</code>. A model that receives a bounded prefix
-is told that it received one, rather than silently reasoning over a
-partial answer:</p>
+<p>Every tool result is a named list with <code>result</code>,
+<code>truncated</code>, <code>limit</code>, and one canonical
+<code>receipt</code>. A model that receives a bounded prefix is told
+that it received one, rather than silently reasoning over a partial
+answer:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">tools</span><span class="op">$</span><span class="fu">graft_find</span><span class="op">(</span>query <span class="op">=</span> <span class="st">"Lois"</span>, class <span class="op">=</span> <span class="st">"person"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>, max.level <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">tools</span><span class="op">$</span><span class="fu">graft_find</span><span class="op">(</span>query <span class="op">=</span> <span class="st">"Lois"</span>, class <span class="op">=</span> <span class="st">"person"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>, max.level <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; List of 4</span></span>
-<span><span class="co">#&gt;  $ result             :'data.frame': 1 obs. of 5 variables:</span></span>
-<span><span class="co">#&gt;  $ truncated          : logi FALSE</span></span>
-<span><span class="co">#&gt;  $ limit              : int 5</span></span>
-<span><span class="co">#&gt;  $ store_schema_digest: chr "sha256:752574346c168754..."</span></span></code></pre></div>
-<p><code>store_schema_digest</code> identifies the contract the answer
-came from, so a transcript can be checked later against the schema in
-force at the time.</p>
+<span><span class="co">#&gt;  $ result   :'data.frame': 1 obs. of 5 variables:</span></span>
+<span><span class="co">#&gt;  $ truncated: logi FALSE</span></span>
+<span><span class="co">#&gt;  $ limit    : int 5</span></span>
+<span><span class="co">#&gt;  $ receipt  :List of 3</span></span>
+<span><span class="co">#&gt;   ..$ store   :List of 1</span></span>
+<span><span class="co">#&gt;   ..$ boundary:List of 4</span></span>
+<span><span class="co">#&gt;   ..$ schema  :List of 2</span></span></code></pre></div>
+<p>The receipt names the store, accepted batch and commit order, and
+both schema digests. Live tools pin that state for one invocation; tools
+built from a <code>GraftView</code> also carry its immutable snapshot
+identifier. A measure result adds the accepted measure record and
+revision under <code>receipt$definition</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="pin-the-boundary-the-agent-reasons-over">Pin the boundary the agent reasons over<a class="anchor" aria-label="anchor" href="#pin-the-boundary-the-agent-reasons-over"></a>

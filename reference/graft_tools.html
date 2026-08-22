@@ -99,9 +99,11 @@ snapshot boundary and the live-store integrity diagnostic is unavailable.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Every tool returns <code>result</code> plus explicit <code>truncated</code>, <code>limit</code>, and
-<code>store_schema_digest</code> metadata; <code>graft_measure</code> results add <code>measure_id</code>
-and <code>revision_id</code>.</p>
+    <p>Every tool returns <code>result</code>, <code>truncated</code>, <code>limit</code>, and one canonical nested
+<code>receipt</code>. The receipt identifies the store, exact accepted boundary, and
+structural and build schema digests. Measure receipts also identify the
+accepted measure definition. Live-store tools pin a fresh boundary for each
+invocation; tools created from a <code>GraftView</code> retain its snapshot boundary.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

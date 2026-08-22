@@ -22,9 +22,11 @@
   ([\#19](https://github.com/JamesHWade/graft/issues/19)).
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
   adds a fifth bounded `graft_measure` tool when the store has accepted
-  measures, with the measure name as a closed enum and results carrying
-  `measure_id` and `revision_id` receipts
-  ([\#19](https://github.com/JamesHWade/graft/issues/19)).
+  measures and gives every tool result one canonical nested receipt
+  identifying its exact accepted boundary and schema; measure receipts
+  also identify the accepted definition
+  ([\#19](https://github.com/JamesHWade/graft/issues/19),
+  [\#23](https://github.com/JamesHWade/graft/issues/23)).
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
   authoritative record tables with an 18-function revision-first package
@@ -84,9 +86,6 @@
   [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
   inspect and explicitly synchronize the deterministic OKF working tree
   without making it an independent source of accepted knowledge.
-- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-  creates four bounded read-only ellmer tools that delegate to the
-  public retrieval and history operations.
 - [`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md)
   returns an isolated, path-free copy of the exact immutable snapshot
   retained by a `GraftView`.

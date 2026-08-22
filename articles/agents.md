@@ -94,23 +94,29 @@ no mutation argument, and each one is annotated read-only,
 non-destructive, idempotent, and closed-world for hosts that act on
 those hints.
 
-Every tool result is a named list with `result` plus `truncated`,
-`limit`, and `store_schema_digest`. A model that receives a bounded
-prefix is told that it received one, rather than silently reasoning over
-a partial answer:
+Every tool result is a named list with `result`, `truncated`, `limit`,
+and one canonical `receipt`. A model that receives a bounded prefix is
+told that it received one, rather than silently reasoning over a partial
+answer:
 
 ``` r
 
-str(tools$graft_find(query = "Lois", class = "person", limit = 5), max.level = 1)
+str(tools$graft_find(query = "Lois", class = "person", limit = 5), max.level = 2)
 #> List of 4
-#>  $ result             :'data.frame': 1 obs. of 5 variables:
-#>  $ truncated          : logi FALSE
-#>  $ limit              : int 5
-#>  $ store_schema_digest: chr "sha256:752574346c168754..."
+#>  $ result   :'data.frame': 1 obs. of 5 variables:
+#>  $ truncated: logi FALSE
+#>  $ limit    : int 5
+#>  $ receipt  :List of 3
+#>   ..$ store   :List of 1
+#>   ..$ boundary:List of 4
+#>   ..$ schema  :List of 2
 ```
 
-`store_schema_digest` identifies the contract the answer came from, so a
-transcript can be checked later against the schema in force at the time.
+The receipt names the store, accepted batch and commit order, and both
+schema digests. Live tools pin that state for one invocation; tools
+built from a `GraftView` also carry its immutable snapshot identifier. A
+measure result adds the accepted measure record and revision under
+`receipt$definition`.
 
 ## Pin the boundary the agent reasons over
 

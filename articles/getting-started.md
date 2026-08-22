@@ -290,11 +290,11 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-08-22 16:16:32        hr-review review-2026-08-08
-#> 2        1 2026-08-22 16:16:31 directory-import import-2026-08-01
+#> 1        2 2026-08-22 18:45:47        hr-review review-2026-08-08
+#> 2        1 2026-08-22 18:45:46 directory-import import-2026-08-01
 #>              contract            job_title
-#> 1 sha256:c2e210a75758 Investigative editor
-#> 2 sha256:c2e210a75758             Reporter
+#> 1 sha256:9e1570dd7a9f Investigative editor
+#> 2 sha256:9e1570dd7a9f             Reporter
 ```
 
 The current record is convenient for applications. The revision history

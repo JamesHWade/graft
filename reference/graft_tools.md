@@ -31,9 +31,12 @@ objects.
 
 ## Details
 
-Every tool returns `result` plus explicit `truncated`, `limit`, and
-`store_schema_digest` metadata; `graft_measure` results add `measure_id`
-and `revision_id`.
+Every tool returns `result`, `truncated`, `limit`, and one canonical
+nested `receipt`. The receipt identifies the store, exact accepted
+boundary, and structural and build schema digests. Measure receipts also
+identify the accepted measure definition. Live-store tools pin a fresh
+boundary for each invocation; tools created from a `GraftView` retain
+its snapshot boundary.
 
 ## See also
 
