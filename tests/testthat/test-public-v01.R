@@ -174,10 +174,8 @@ test_that("v0.1 public API completes the governed knowledge loop", {
     character()
   )
   for (tool_result in tool_results) {
-    expect_named(
-      tool_result,
-      c("result", "truncated", "limit", "store_schema_digest")
-    )
+    expect_named(tool_result, c("result", "truncated", "limit", "receipt"))
+    expect_named(tool_result$receipt, c("store", "boundary", "schema"))
   }
 
   graft_close(store)

@@ -22,3 +22,4 @@
 ^\.agents$
 ^agents$
 ^adr$
+^CONTEXT[.]md$

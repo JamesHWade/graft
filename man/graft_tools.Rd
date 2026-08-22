@@ -23,9 +23,11 @@ When given a \code{GraftView}, all tools remain pinned to its immutable
 snapshot boundary and the live-store integrity diagnostic is unavailable.
 }
 \details{
-Every tool returns \code{result} plus explicit \code{truncated}, \code{limit}, and
-\code{store_schema_digest} metadata; \code{graft_measure} results add \code{measure_id}
-and \code{revision_id}.
+Every tool returns \code{result}, \code{truncated}, \code{limit}, and one canonical nested
+\code{receipt}. The receipt identifies the store, exact accepted boundary, and
+structural and build schema digests. Measure receipts also identify the
+accepted measure definition. Live-store tools pin a fresh boundary for each
+invocation; tools created from a \code{GraftView} retain its snapshot boundary.
 }
 \seealso{
 \code{vignette("agents", package = "graft")} for pinning an accepted

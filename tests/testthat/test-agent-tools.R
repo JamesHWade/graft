@@ -78,6 +78,209 @@ test_that("graft_tools schemas are closed and hard bounded", {
   )
 })
 
+test_that("graft_tools returns one canonical receipt", {
+  fixture <- local_retrieval_store()
+  snapshot <- graft_snapshot(fixture$store)
+  view <- graft_at(fixture$store, snapshot)
+  tool <- graft_tools(view)$graft_find
+
+  first <- tool(query = "polypropylene")
+  graft_ingest(
+    fixture$store,
+    list(
+      Entity = data.frame(
+        id = test_graft_id("pinned-tool-polypropylene"),
+        preferred_name = "Polypropylene"
+      )
+    ),
+    graft_provenance("test", idempotency_key = "pinned-tool-v2")
+  )
+  second <- tool(query = "polypropylene")
+
+  expect_named(first, c("result", "truncated", "limit", "receipt"))
+  expect_equal(nrow(first$result), 0L)
+  expect_identical(second$result, first$result)
+  expect_identical(second$receipt, first$receipt)
+  expect_identical(
+    first$receipt,
+    list(
+      store = list(id = fixture$store@id),
+      boundary = list(
+        kind = "snapshot",
+        batch_id = snapshot@batch_id,
+        commit_order = snapshot@commit_order,
+        snapshot_id = snapshot@snapshot_id
+      ),
+      schema = list(
+        structural_digest = fixture$store@schema@structural_digest,
+        build_digest = snapshot@schema_build_digest
+      )
+    )
+  )
+})
+
+test_that("live tool calls pin an exact boundary per invocation", {
+  fixture <- local_retrieval_store()
+  original_find <- graft_find
+  observed <- list()
+  local_mocked_bindings(
+    graft_find = function(store, query, class, limit) {
+      expect_s7_class(store, graft:::GraftView)
+      observed[[length(observed) + 1L]] <<- graft_view_snapshot(store)
+      original_find(store, query = query, class = class, limit = limit)
+    }
+  )
+  tool <- graft_tools(fixture$store)$graft_find
+  polypropylene_id <- test_graft_id("tool-receipt-polypropylene")
+
+  first <- tool(query = "polypropylene")
+  graft_ingest(
+    fixture$store,
+    list(
+      Entity = data.frame(
+        id = polypropylene_id,
+        preferred_name = "Polypropylene"
+      )
+    ),
+    graft_provenance("test", idempotency_key = "tool-receipt-v2")
+  )
+  second <- tool(query = "polypropylene")
+
+  expect_equal(nrow(first$result), 0L)
+  expect_in(polypropylene_id, second$result$id)
+  expect_identical(first$receipt$boundary$kind, "live")
+  expect_named(
+    first$receipt$boundary,
+    c("kind", "batch_id", "commit_order")
+  )
+  expect_identical(
+    first$receipt$boundary$batch_id,
+    observed[[1L]]@batch_id
+  )
+  expect_identical(
+    first$receipt$boundary$commit_order,
+    observed[[1L]]@commit_order
+  )
+  expect_identical(
+    second$receipt$boundary$batch_id,
+    observed[[2L]]@batch_id
+  )
+  expect_identical(
+    second$receipt$boundary$commit_order,
+    observed[[2L]]@commit_order
+  )
+  expect_gt(
+    second$receipt$boundary$commit_order,
+    first$receipt$boundary$commit_order
+  )
+})
+
+test_that("graft_history receipts its explicit historical boundary", {
+  fixture <- local_retrieval_store()
+  historical <- graft_snapshot(fixture$store)
+  entity <- retrieval_fixture_records()$records$Entity[1L, , drop = FALSE]
+  entity$preferred_name <- "Polyethylene resin"
+  graft_ingest(
+    fixture$store,
+    list(Entity = entity),
+    graft_provenance("test", idempotency_key = "tool-history-receipt-v2")
+  )
+
+  result <- graft_tools(fixture$store)$graft_history(
+    id = fixture$ids$entity,
+    as_of = historical@batch_id
+  )
+
+  expect_identical(
+    result$receipt$boundary,
+    list(
+      kind = "history",
+      batch_id = historical@batch_id,
+      commit_order = historical@commit_order
+    )
+  )
+  expect_equal(nrow(result$result), 1L)
+})
+
+test_that("explicit history receipts the selected boundary schema", {
+  path <- withr::local_tempfile(fileext = ".duckdb")
+  schema <- graft_schema(tempest_manifest_path())
+  store <- graft_open(schema, path, okf = "disabled")
+  fixture <- retrieval_fixture_records()
+  graft_ingest(
+    store,
+    fixture$records,
+    graft_provenance("test", idempotency_key = "history-schema-v1")
+  )
+  historical <- graft_snapshot(store)
+  graft_close(store)
+
+  rebuilt <- as_graft_schema_internal(schema)
+  rebuilt$manifest$schema$source_files[[1L]]$content_digest <-
+    graft_sha256("history receipt rebuilt source")
+  rebuilt$manifest$fingerprints$source_digest <- graft_linkml_source_digest(
+    rebuilt$manifest$schema$source_files
+  )
+  rebuilt$manifest$fingerprints$build_digest <-
+    manifest_build_digest(rebuilt$manifest)
+  rebuilt <- new_graft_schema(rebuilt)
+  reopened <- graft_open(rebuilt, path, okf = "disabled")
+  withr::defer(graft_close(reopened))
+  entity <- fixture$records$Entity[1L, , drop = FALSE]
+  entity$preferred_name <- "Polyethylene resin"
+  graft_ingest(
+    reopened,
+    list(Entity = entity),
+    graft_provenance("test", idempotency_key = "history-schema-v2")
+  )
+
+  result <- graft_tools(reopened)$graft_history(
+    id = fixture$ids$entity,
+    as_of = historical@batch_id
+  )
+
+  expect_identical(
+    result$receipt$schema,
+    list(
+      structural_digest = schema@structural_digest,
+      build_digest = schema@build_digest
+    )
+  )
+})
+
+test_that("empty-store tool receipts name the empty accepted boundary", {
+  store <- local_graft_ingest_store()
+
+  result <- graft_tools(store)$graft_find(query = "nothing")
+
+  expect_identical(
+    result$receipt$boundary,
+    list(
+      kind = "live",
+      batch_id = NULL,
+      commit_order = 0
+    )
+  )
+})
+
+test_that("live integrity queries return a canonical receipt", {
+  fixture <- local_retrieval_store()
+
+  result <- graft_tools(fixture$store)$graft_query(operation = "integrity")
+  boundary <- graft_snapshot(fixture$store)
+
+  expect_named(result, c("result", "truncated", "limit", "receipt"))
+  expect_s3_class(result$result, "data.frame")
+  expect_identical(
+    result$receipt$boundary,
+    list(
+      kind = "live",
+      batch_id = boundary@batch_id,
+      commit_order = boundary@commit_order
+    )
+  )
+})
+
 test_that("graft_tools delegates through the public retrieval API", {
   fixture <- local_retrieval_store()
   view <- graft_at(fixture$store, graft_snapshot(fixture$store))
@@ -149,13 +352,23 @@ test_that("graft_tools delegates through the public retrieval API", {
     calls,
     c("graft_find", "graft_get", "graft_query", "graft_history")
   )
-  for (output in outputs) {
-    expect_named(
-      output,
-      c("result", "truncated", "limit", "store_schema_digest")
+  expected_receipt <- list(
+    store = list(id = fixture$store@id),
+    boundary = list(
+      kind = "snapshot",
+      batch_id = view@batch_id,
+      commit_order = view@commit_order,
+      snapshot_id = view@snapshot_id
+    ),
+    schema = list(
+      structural_digest = fixture$store@schema@structural_digest,
+      build_digest = view@schema_build_digest
     )
+  )
+  for (output in outputs) {
+    expect_named(output, c("result", "truncated", "limit", "receipt"))
     expect_identical(output$truncated, FALSE)
-    expect_identical(output$store_schema_digest, digest)
+    expect_identical(output$receipt, expected_receipt)
   }
 })
 
@@ -273,10 +486,15 @@ test_that("graft_tools adds a bounded graft_measure tool when measures exist", {
   )
 
   result <- tools$graft_measure(name = "entity-count")
+  revision_id <- graft_history(store, "measure:entity-count")$revision_id[[1L]]
+  expect_named(result, c("result", "truncated", "limit", "receipt"))
   expect_identical(result$result$value, 2)
   expect_identical(result$truncated, FALSE)
-  expect_identical(result$measure_id, "measure:entity-count")
-  expect_match(result$store_schema_digest, "^sha256:")
+  expect_identical(
+    result$receipt$definition,
+    list(id = "measure:entity-count", revision_id = revision_id)
+  )
+  expect_match(result$receipt$schema$structural_digest, "^sha256:")
 })
 
 test_that("graft_tools omits graft_measure when no measures are accepted", {
