@@ -393,7 +393,7 @@ commons_data_source_call <- function(tables, dictionary) {
 commons_validate_table_names <- function(table_names) {
   if (
     anyNA(table_names) ||
-      any(!nzchar(table_names)) ||
+      !all(nzchar(table_names)) ||
       anyDuplicated(table_names)
   ) {
     abort_validation_error(
