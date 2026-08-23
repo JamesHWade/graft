@@ -26,6 +26,7 @@ Imports:
     S7 (>= 0.2.2),
     yaml
 Suggests:
+    commons (>= 0.0.0.9002),
     ellmer (>= 0.3.0),
     knitr,
     rmarkdown,
@@ -33,6 +34,7 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
+Config/Needs/check: posit-dev/commons@4b2cd5a92e573506dbd9341d61072de6780eb84a
 Config/Needs/website: brand.yml
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 VignetteBuilder: knitr

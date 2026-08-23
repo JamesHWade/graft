@@ -16,18 +16,19 @@ A named list of \code{ellmer::ToolDef} objects.
 \code{graft_tools()} returns \code{\link[ellmer:tool]{ellmer::tool()}} definitions that delegate only
 to Graft's public bounded retrieval operations. The tools do not expose SQL,
 filesystem, network, connection, or mutation arguments.
-When the store has accepted measures, a fifth \code{graft_measure} tool
-evaluates them by name through \code{\link[=graft_measure]{graft_measure()}}; it is omitted when no
-measures are accepted.
+When the store has accepted definitions, \code{graft_definitions} exposes their
+bounded catalog and one \code{graft_calculate} tool composes them through
+\code{\link[=graft_calculate]{graft_calculate()}}. Both are omitted when no definitions are accepted.
 When given a \code{GraftView}, all tools remain pinned to its immutable
 snapshot boundary and the live-store integrity diagnostic is unavailable.
 }
 \details{
 Every tool returns \code{result}, \code{truncated}, \code{limit}, and one canonical nested
 \code{receipt}. The receipt identifies the store, exact accepted boundary, and
-structural and build schema digests. Measure receipts also identify the
-accepted measure definition. Live-store tools pin a fresh boundary for each
-invocation; tools created from a \code{GraftView} retain its snapshot boundary.
+structural and build schema digests. Calculation receipts also identify the
+complete accepted definition closure. Live-store tools pin a fresh boundary
+for each invocation; tools created from a \code{GraftView} retain its snapshot
+boundary.
 }
 \seealso{
 \code{vignette("agents", package = "graft")} for pinning an accepted

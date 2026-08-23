@@ -19,7 +19,7 @@ test_that("graft_schema routes resolved data-dict exports deterministically", {
   expect_identical(first@version, "0.1.0")
   expect_setequal(
     names(first@classes),
-    c("person", "organization", "person_employment", "GraftMeasure")
+    c("person", "organization", "person_employment", "GraftDefinition")
   )
   expect_identical(first@structural_digest, second@structural_digest)
   expect_identical(first@source_digest, second@source_digest)
@@ -289,7 +289,7 @@ test_that("the shipped data-dict example builds knowledge from an empty store", 
   expect_identical(schema@name, "team_directory")
   expect_setequal(
     names(schema@classes),
-    c("organization", "person", "employment", "GraftMeasure")
+    c("organization", "person", "employment", "GraftDefinition")
   )
 
   store <- graft_open(schema, path = ":memory:", okf = "disabled")

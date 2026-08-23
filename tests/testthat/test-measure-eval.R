@@ -1,79 +1,85 @@
-local_measure_store <- function(env = parent.frame()) {
-  store <- local_graft_ingest_store(env = env)
-  graft_ingest(
+test_that("graft_calculate() composes same-table definitions", {
+  store <- local_definition_store()
+
+  total <- graft_calculate(
     store,
-    list(
-      Entity = data.frame(
-        id = c(
-          test_graft_id("measure-entity-a"),
-          test_graft_id("measure-entity-b"),
-          test_graft_id("measure-entity-c")
-        ),
-        label = c("solvent", "solvent", "acid"),
-        preferred_name = c("Acetone", "Benzene", "Citric acid")
-      )
-    ),
-    graft_provenance(producer = "fixture", idempotency_key = "entities-v1")
+    metrics = c("entity_count", "named_count")
   )
-  graft_ingest(
+  expect_identical(names(total), c("entity_count", "named_count"))
+  expect_identical(total$entity_count, 3)
+  expect_identical(total$named_count, 3)
+
+  grouped <- graft_calculate(
     store,
-    list(
-      GraftMeasure = data.frame(
-        id = "measure:entity-count",
-        name = "entity-count",
-        title = "Entity count",
-        description = "Number of accepted entities.",
-        target_class = "Entity",
-        expr = "COUNT(*)",
-        parameters = paste0(
-          "[{\"name\":\"label\",\"type\":\"string\",",
-          "\"description\":\"Entity label.\",\"column\":\"label\"}]"
-        ),
-        dimensions = "[\"label\",\"preferred_name\"]"
-      )
-    ),
-    graft_provenance(producer = "fixture", idempotency_key = "measure-v1")
+    metrics = "entity_count",
+    dimensions = "label"
   )
-  store
-}
-
-test_that("graft_measures() lists accepted measures", {
-  store <- local_measure_store()
-  measures <- graft_measures(store)
-  expect_identical(measures$name, "entity-count")
-  expect_identical(measures$target_class, "Entity")
-  expect_identical(measures$dimensions[[1L]], c("label", "preferred_name"))
-  expect_identical(
-    measures$parameters[[1L]]$column,
-    "label"
-  )
-  expect_match(attr(measures, "store_schema_digest"), "^sha256:")
-})
-
-test_that("graft_measure() evaluates totals, arguments, and dimensions", {
-  store <- local_measure_store()
-
-  total <- graft_measure(store, "entity-count")
-  expect_identical(total$value, 3)
-
-  filtered <- graft_measure(
-    store,
-    "entity-count",
-    arguments = list(label = "solvent")
-  )
-  expect_identical(filtered$value, 2)
-
-  grouped <- graft_measure(store, "entity-count", by = "label")
   expect_identical(grouped$label, c("acid", "solvent"))
-  expect_identical(grouped$value, c(1, 2))
+  expect_identical(grouped$entity_count, c(1, 2))
 
-  expect_identical(attr(total, "measure_id"), "measure:entity-count")
-  expect_match(attr(total, "revision_id"), ".")
-  expect_match(attr(total, "store_schema_digest"), "^sha256:")
+  filtered <- graft_calculate(
+    store,
+    metrics = "entity_count",
+    filters = "solvent_filter"
+  )
+  expect_identical(filtered$entity_count, 2)
+
+  derived <- graft_calculate(
+    store,
+    metrics = "entity_count",
+    dimensions = "lowercase_label"
+  )
+  expect_identical(derived$lowercase_label, c("acid", "solvent"))
 })
 
-test_that("graft_measure() over a pinned view ignores later commits", {
-  store <- local_measure_store()
+test_that("graft_calculate() binds predicates and records definition closure", {
+  store <- local_definition_store()
+
+  result <- graft_calculate(
+    store,
+    metrics = c("entity_count", "has_solvent"),
+    where = list(list(value = "acid", op = "!=", column = "label"))
+  )
+
+  expect_identical(result$entity_count, 2)
+  expect_identical(result$has_solvent, TRUE)
+  definitions <- attr(result, "definitions")
+  expect_identical(definitions$id, sort(definitions$id, method = "radix"))
+  expect_setequal(
+    graft_definitions(store)$name[
+      graft_definitions(store)$id %in% definitions$id
+    ],
+    c("entity_count", "has_solvent", "solvent_filter")
+  )
+})
+
+test_that("new definitions may compose accepted sibling definitions", {
+  store <- local_definition_store()
+  plan <- graft_plan(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = "all_solvent",
+        target = "Entity",
+        expr = "ALL(solvent_filter)"
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "all-solvent-v1")
+  )
+
+  expect_identical(nrow(plan@issues), 0L)
+  graft_commit(store, plan)
+  result <- graft_calculate(store, metrics = "all_solvent")
+  expect_identical(result$all_solvent, FALSE)
+  definitions <- graft_definitions(store)
+  names <- definitions$name[
+    definitions$id %in% attr(result, "definitions")$id
+  ]
+  expect_setequal(names, c("all_solvent", "solvent_filter"))
+})
+
+test_that("graft_calculate() over a pinned view ignores later commits", {
+  store <- local_definition_store()
   snapshot <- graft_snapshot(store)
   view <- graft_at(store, snapshot)
 
@@ -81,7 +87,7 @@ test_that("graft_measure() over a pinned view ignores later commits", {
     store,
     list(
       Entity = data.frame(
-        id = test_graft_id("measure-entity-d"),
+        id = test_graft_id("definition-entity-d"),
         label = "acid",
         preferred_name = "Formic acid"
       )
@@ -89,19 +95,232 @@ test_that("graft_measure() over a pinned view ignores later commits", {
     graft_provenance(producer = "fixture", idempotency_key = "entities-v2")
   )
 
-  expect_identical(graft_measure(store, "entity-count")$value, 4)
-  expect_identical(graft_measure(view, "entity-count")$value, 3)
+  expect_identical(
+    graft_calculate(store, metrics = "entity_count")$entity_count,
+    4
+  )
+  expect_identical(
+    graft_calculate(view, metrics = "entity_count")$entity_count,
+    3
+  )
 })
 
-test_that("graft_measure() rejects unknown names, arguments, and dimensions", {
-  store <- local_measure_store()
-  expect_snapshot(error = TRUE, graft_measure(store, "nope"))
+test_that("graft_calculate() rejects invalid requests with classed errors", {
+  store <- local_definition_store()
+  expect_snapshot(error = TRUE, graft_calculate(store, metrics = "nope"))
   expect_snapshot(
     error = TRUE,
-    graft_measure(store, "entity-count", arguments = list(nope = 1))
+    graft_calculate(
+      store,
+      metrics = "entity_count",
+      dimensions = "nope"
+    )
   )
   expect_snapshot(
     error = TRUE,
-    graft_measure(store, "entity-count", by = "nope")
+    graft_calculate(
+      store,
+      metrics = "entity_count",
+      where = list(list(column = "label", op = "=", value = 1))
+    )
   )
+})
+
+test_that("graft_calculate() parses predicate values by contract type", {
+  fixture <- local_retrieval_store()
+  graft_ingest(
+    fixture$store,
+    list(
+      GraftDefinition = data.frame(
+        name = "evidence_count",
+        target = "ClaimEvidence",
+        expr = "ROW_COUNT()"
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "evidence-count")
+  )
+
+  result <- graft_calculate(
+    fixture$store,
+    metrics = "evidence_count",
+    where = list(list(column = "page_start", op = "=", value = "4"))
+  )
+  expect_identical(result$evidence_count, 1)
+
+  ambiguous <- rlang::catch_cnd(graft_calculate(
+    fixture$store,
+    metrics = "evidence_count",
+    where = list(list(column = "page_start", op = "=", value = "4.5"))
+  ))
+  non_finite <- rlang::catch_cnd(graft_calculate(
+    fixture$store,
+    metrics = "evidence_count",
+    where = list(list(column = "page_start", op = "=", value = "Inf"))
+  ))
+  expect_s3_class(ambiguous, "graft_calculation_error")
+  expect_identical(ambiguous$rule, "calculation_where_value")
+  expect_s3_class(non_finite, "graft_calculation_error")
+  expect_identical(non_finite$rule, "calculation_where_value")
+})
+
+test_that("graft_calculate() validates timestamps and enums before execution", {
+  fixture <- local_retrieval_store()
+  graft_ingest(
+    fixture$store,
+    list(
+      GraftDefinition = data.frame(
+        name = "claim_count",
+        target = "Claim",
+        expr = "ROW_COUNT()"
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "claim-count")
+  )
+
+  valid <- graft_calculate(
+    fixture$store,
+    metrics = "claim_count",
+    where = list(list(column = "status", op = "=", value = "active"))
+  )
+  invalid_timestamp <- rlang::catch_cnd(graft_calculate(
+    fixture$store,
+    metrics = "claim_count",
+    where = list(list(
+      column = "created_at",
+      op = "=",
+      value = "2025-02-30T12:00:00Z"
+    ))
+  ))
+  invalid_enum <- rlang::catch_cnd(graft_calculate(
+    fixture$store,
+    metrics = "claim_count",
+    where = list(list(column = "status", op = "=", value = "unknown"))
+  ))
+
+  expect_identical(valid$claim_count, 2)
+  expect_s3_class(invalid_timestamp, "graft_calculation_error")
+  expect_identical(invalid_timestamp$rule, "calculation_where_value")
+  expect_s3_class(invalid_enum, "graft_calculation_error")
+  expect_identical(invalid_enum$rule, "calculation_where_value")
+})
+
+test_that("predicate date and time parsing rejects normalized invalid values", {
+  manifest <- list(enums = list())
+  date_slot <- list(enum = NULL, duckdb_type = "DATE")
+  time_slot <- list(enum = NULL, duckdb_type = "TIME")
+  integer_slot <- list(enum = NULL, duckdb_type = "BIGINT")
+
+  invalid_date <- rlang::catch_cnd(definition_where_value(
+    "2025-02-30",
+    date_slot,
+    manifest
+  ))
+  invalid_time <- rlang::catch_cnd(definition_where_value(
+    "25:00:00",
+    time_slot,
+    manifest
+  ))
+  exact_integer <- definition_where_value(
+    "9223372036854775807",
+    integer_slot,
+    manifest
+  )
+  invalid_integer <- rlang::catch_cnd(definition_where_value(
+    "9223372036854775808",
+    integer_slot,
+    manifest
+  ))
+
+  expect_s3_class(invalid_date, "graft_calculation_error")
+  expect_identical(invalid_date$rule, "calculation_where_value")
+  expect_s3_class(invalid_time, "graft_calculation_error")
+  expect_identical(invalid_time$rule, "calculation_where_value")
+  expect_identical(exact_integer, "9223372036854775807")
+  expect_s3_class(invalid_integer, "graft_calculation_error")
+  expect_identical(invalid_integer$rule, "calculation_where_value")
+})
+
+test_that("graft_calculate() fails instead of truncating grouped results", {
+  store <- local_definition_store()
+  limits <- graft_retrieval_limits
+  limits$calculation_rows <- 1L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  condition <- rlang::catch_cnd(graft_calculate(
+    store,
+    metrics = "entity_count",
+    dimensions = "label"
+  ))
+
+  expect_s3_class(condition, "graft_calculation_error")
+  expect_identical(condition$rule, "calculation_row_bound")
+})
+
+test_that("graft_calculate() preserves empty-table semantics", {
+  store <- local_graft_ingest_store()
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("entity_count", "one"),
+        target = "Entity",
+        expr = c("ROW_COUNT()", "1")
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "empty-count")
+  )
+
+  total <- graft_calculate(store, metrics = c("entity_count", "one"))
+  grouped <- graft_calculate(
+    store,
+    metrics = "entity_count",
+    dimensions = "label"
+  )
+
+  expect_identical(total$entity_count, 0)
+  expect_identical(total$one, 1L)
+  expect_identical(nrow(grouped), 0L)
+})
+
+test_that("quoted definition names compose during evaluation", {
+  store <- local_definition_store()
+  plan <- graft_plan(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c('label"length', "total_quoted_length"),
+        target = "Entity",
+        expr = c("LENGTH(label)", 'SUM(`label"length`)')
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "quoted-name")
+  )
+
+  expect_identical(nrow(plan@issues), 0L)
+  graft_commit(store, plan)
+  result <- graft_calculate(store, metrics = "total_quoted_length")
+  expect_identical(result$total_quoted_length, 18)
+})
+
+test_that("normalized public relations are valid definition targets", {
+  fixture <- local_retrieval_store()
+  plan <- graft_plan(
+    fixture$store,
+    list(
+      GraftDefinition = data.frame(
+        name = "about_count",
+        target = "claim__about",
+        expr = "ROW_COUNT()"
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "about-count")
+  )
+  expect_identical(nrow(plan@issues), 0L)
+  graft_commit(fixture$store, plan)
+
+  definitions <- graft_definitions(fixture$store, target = "claim__about")
+  result <- graft_calculate(fixture$store, metrics = "about_count")
+
+  expect_identical(definitions$target, "claim__about")
+  expect_identical(result$about_count, 3)
 })

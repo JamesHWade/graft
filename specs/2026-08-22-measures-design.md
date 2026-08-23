@@ -1,7 +1,13 @@
 # Measures: governed calculations as reviewed knowledge
 
 Date: 2026-08-22
-Status: approved design, phase 1 of 3
+Status: implemented phase 1; superseded for Phase 3 by
+`2026-08-23-definitions-commons-design.md`
+
+This document records the original measure design that shipped in Phase 1.
+Phase 3 intentionally replaces its public model, API, tool, and singular
+receipt definition with composable definitions. It is retained as historical
+implementation context, not as the current product contract.
 
 ## Motivation
 

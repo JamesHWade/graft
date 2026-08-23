@@ -318,13 +318,13 @@ graft_schema <- function(path, output = NULL) {
         schema_path = path
       )
     }
-    return(new_graft_schema(augment_manifest_with_measures(
+    return(new_graft_schema(augment_manifest_with_definitions(
       load_schema_manifest(path)
     )))
   }
   if (is_data_dict_document(path)) {
     output <- normalize_graft_schema_output(output)
-    return(new_graft_schema(augment_manifest_with_measures(
+    return(new_graft_schema(augment_manifest_with_definitions(
       compile_data_dict_source(path, output)
     )))
   }
@@ -340,7 +340,7 @@ graft_schema <- function(path, output = NULL) {
     )
   }
   output <- normalize_graft_schema_output(output)
-  new_graft_schema(augment_manifest_with_measures(
+  new_graft_schema(augment_manifest_with_definitions(
     compile_schema_manifest(path, output)
   ))
 }
@@ -458,7 +458,7 @@ graft_open <- function(
       state$id_digest <- graft_sha256(canonical_json(state$id))
       store <- GraftStore(state)
       if (!isTRUE(read_only)) {
-        seed_contract_measures(store, compiled_schema)
+        seed_contract_definitions(store, compiled_schema)
       }
       store
     },

@@ -14,7 +14,8 @@ plan_candidate_records <- function(store, batch, records, metadata) {
   validation <- validate_candidate_stages(
     store$schema$manifest,
     staged,
-    snapshot
+    snapshot,
+    store$connection
   )
   staged <- validation$staged
   issues <- c(issues, validation$issues)
@@ -495,10 +496,15 @@ coerce_candidate_vector <- function(x, slot) {
   )
 }
 
-validate_candidate_stages <- function(manifest, staged, snapshot) {
+validate_candidate_stages <- function(manifest, staged, snapshot, connection) {
   issues <- list()
   for (record_class in names(staged)) {
-    result <- validate_candidate_class(manifest, staged[[record_class]])
+    result <- validate_candidate_class(
+      manifest,
+      staged[[record_class]],
+      snapshot,
+      connection
+    )
     staged[[record_class]] <- result$staged
     issues <- c(issues, result$issues)
   }
@@ -510,7 +516,7 @@ validate_candidate_stages <- function(manifest, staged, snapshot) {
   )
 }
 
-validate_candidate_class <- function(manifest, staged) {
+validate_candidate_class <- function(manifest, staged, snapshot, connection) {
   issues <- list()
   for (slot_name in names(staged$contract$slots)) {
     slot <- staged$contract$slots[[slot_name]]
@@ -577,8 +583,16 @@ validate_candidate_class <- function(manifest, staged) {
     }
   }
   issues <- c(issues, validate_candidate_invariants(staged))
-  if (identical(staged$class, graft_measure_class_name)) {
-    issues <- c(issues, validate_measure_candidates(manifest, staged))
+  if (identical(staged$class, graft_definition_class_name)) {
+    issues <- c(
+      issues,
+      validate_definition_candidates(
+        manifest,
+        staged,
+        snapshot$current,
+        connection
+      )
+    )
   }
   list(staged = staged, issues = issues)
 }

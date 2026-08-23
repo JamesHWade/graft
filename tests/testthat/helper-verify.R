@@ -12,11 +12,12 @@ verification_test_receipt <- function(tool_name = "graft_find") {
       build_digest = digest
     )
   )
-  if (identical(tool_name, "graft_measure")) {
-    receipt$definition <- list(
-      id = "measure:count",
-      revision_id = "revision-1"
-    )
+  if (identical(tool_name, "graft_calculate")) {
+    receipt$definitions <- list(list(
+      id = "definition:count",
+      revision_id = "revision-1",
+      kind = "metric"
+    ))
   }
   receipt
 }

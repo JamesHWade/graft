@@ -5,10 +5,10 @@
 #' is deterministic and offline: it does not call a model, reopen a Graft
 #' store, or authenticate receipt identifiers.
 #'
-#' Successful governed-measure-only evidence is `"verified"`. Successful
+#' Successful governed-calculation-only evidence is `"verified"`. Successful
 #' generic Graft reads are `"cited"` only when every result is independently
 #' matched to an explicit quotation or Markdown blockquote in the answer. A
-#' generic read caps mixed measure and generic evidence at `"cited"`. Unknown,
+#' generic read caps mixed calculation and generic evidence at `"cited"`. Unknown,
 #' errored, malformed, unsupported, and citation-unmatched evidence paths fail
 #' closed as `"untrusted"`.
 #'
@@ -200,7 +200,7 @@ graft_verification_classify <- function(window, answer_text) {
     ))
   }
   reason_order <- c(
-    "governed_measure_only",
+    "governed_calculation_only",
     "matched_citations",
     "no_evidence",
     "non_graft_tool",
@@ -211,7 +211,7 @@ graft_verification_classify <- function(window, answer_text) {
   )
   reasons <- stats::setNames(rep(FALSE, length(reason_order)), reason_order)
   reasons[["unsupported_trace"]] <- window$unsupported
-  measure_count <- 0L
+  calculation_count <- 0L
   generic_count <- 0L
   matched_generic_count <- 0L
   citations <- list()
@@ -222,7 +222,8 @@ graft_verification_classify <- function(window, answer_text) {
     "graft_get",
     "graft_query",
     "graft_history",
-    "graft_measure"
+    "graft_definitions",
+    "graft_calculate"
   )
   for (call_index in seq_along(window$tool_calls)) {
     call <- window$tool_calls[[call_index]]
@@ -259,8 +260,8 @@ graft_verification_classify <- function(window, answer_text) {
         commit_order = receipt$boundary$commit_order
       ))
     )
-    if (identical(name, "graft_measure")) {
-      measure_count <- measure_count + 1L
+    if (identical(name, "graft_calculate")) {
+      calculation_count <- calculation_count + 1L
     } else {
       generic_count <- generic_count + 1L
       matches <- graft_verification_match_citations(
@@ -296,10 +297,10 @@ graft_verification_classify <- function(window, answer_text) {
       diagnostics = diagnostics
     ))
   }
-  if (length(observed) == 0L && measure_count > 0L) {
+  if (length(observed) == 0L && calculation_count > 0L) {
     return(list(
       label = "verified",
-      reason_codes = "governed_measure_only",
+      reason_codes = "governed_calculation_only",
       citations = citations,
       diagnostics = diagnostics
     ))
@@ -680,8 +681,8 @@ graft_verification_receipt_valid <- function(tool_name, value) {
   }
   receipt <- value$receipt
   expected <- c("store", "boundary", "schema")
-  if (identical(tool_name, "graft_measure")) {
-    expected <- c(expected, "definition")
+  if (identical(tool_name, "graft_calculate")) {
+    expected <- c(expected, "definitions")
   }
   if (
     !is.list(receipt) ||
@@ -693,15 +694,44 @@ graft_verification_receipt_valid <- function(tool_name, value) {
   ) {
     return(FALSE)
   }
-  if (!identical(tool_name, "graft_measure")) {
+  if (!identical(tool_name, "graft_calculate")) {
     return(TRUE)
   }
-  definition <- receipt$definition
-  is.list(definition) &&
-    !is.object(definition) &&
-    identical(names(definition), c("id", "revision_id")) &&
-    is_nonempty_string(definition$id) &&
-    is_nonempty_string(definition$revision_id)
+  graft_verification_definitions_valid(receipt$definitions)
+}
+
+graft_verification_definitions_valid <- function(definitions) {
+  if (
+    !is.list(definitions) ||
+      is.object(definitions) ||
+      length(definitions) == 0L
+  ) {
+    return(FALSE)
+  }
+  valid <- vapply(
+    definitions,
+    function(definition) {
+      is.list(definition) &&
+        !is.object(definition) &&
+        identical(names(definition), c("id", "revision_id", "kind")) &&
+        is_nonempty_string(definition$id) &&
+        is_nonempty_string(definition$revision_id) &&
+        is_nonempty_string(definition$kind) &&
+        definition$kind %in% c("metric", "filter", "derived")
+    },
+    logical(1)
+  )
+  if (!all(valid)) {
+    return(FALSE)
+  }
+  ids <- vapply(definitions, \(definition) definition$id, character(1))
+  !anyDuplicated(ids) &&
+    identical(ids, sort(ids, method = "radix")) &&
+    any(vapply(
+      definitions,
+      \(definition) identical(definition$kind, "metric"),
+      logical(1)
+    ))
 }
 
 graft_verification_store_valid <- function(store) {

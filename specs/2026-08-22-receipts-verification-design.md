@@ -1,7 +1,13 @@
 # Receipts and deterministic answer verification
 
 Date: 2026-08-22
-Status: approved design, phase 2 of 3
+Status: implemented Phase 2; calculation-specific receipt fields are
+superseded for Phase 3 by `2026-08-23-definitions-commons-design.md`
+
+This document records the Phase 2 contract that shipped. Phase 3 retains its
+generic receipt and per-answer verification principles while replacing the
+single-measure evidence path and singular `definition` field with composable
+calculations and a canonical `definitions` array.
 
 ## Problem Statement
 

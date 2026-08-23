@@ -1182,7 +1182,7 @@ test_that("data-dict manifest extensions enforce their nested contract", {
   mismatched_source$schema$source_files[[1L]]$version <- "999"
   for (class_name in setdiff(
     names(mismatched_source$classes),
-    "GraftMeasure"
+    "GraftDefinition"
   )) {
     mismatched_source$classes[[class_name]]$type_uri <- paste0(
       "urn:data-dict:impostor#",
