@@ -25,7 +25,7 @@ definition_catalog <- function(source, target = NULL, bounded = TRUE) {
   rows <- definition_current_rows(
     source,
     targets = target,
-    limit = if (bounded) limit else NULL
+    limit = NULL
   )
   if (nrow(rows) == 0L) {
     result <- empty_definition_catalog()

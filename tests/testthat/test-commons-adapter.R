@@ -80,6 +80,22 @@ test_that("Commons selection includes applicable normalized relations", {
   expect_identical(relation$definitions[[1L]]$name, "about_count")
 })
 
+test_that("Commons dictionary includes definitions beyond listing bounds", {
+  store <- local_definition_store()
+  expected <- graft_definitions(store, target = "Entity")$name
+  limits <- graft_retrieval_limits
+  limits$definitions <- 1L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  result <- local_captured_commons_source(store, classes = "Entity")
+
+  definitions <- result$dictionary$tables[[1L]]$definitions
+  expect_setequal(
+    vapply(definitions, `[[`, character(1), "name"),
+    expected
+  )
+})
+
 test_that("Commons preserves selected join-only data-dict relationships", {
   included <- list(
     join = "employment.person_id = person.id",
@@ -93,6 +109,7 @@ test_that("Commons preserves selected join-only data-dict relationships", {
     tables = list(
       list(name = "employment"),
       list(name = "person"),
+      list(name = "son"),
       list(name = "source")
     ),
     relationships = list(included, excluded)
@@ -104,6 +121,37 @@ test_that("Commons preserves selected join-only data-dict relationships", {
   )
 
   expect_identical(relationships, list(included))
+})
+
+test_that("Commons formal table names use connection dispatch", {
+  connection <- structure(list(id = "connection"), class = "test_connection")
+  data_source <- function(
+    ...,
+    tables = NULL,
+    exclude = NULL,
+    dictionary = NULL
+  ) {
+    list(
+      dots = list(...),
+      tables = tables,
+      dictionary = dictionary
+    )
+  }
+  local_mocked_bindings(
+    commons_data_source_function = function() data_source,
+    commons_materialized_connection = function(tables) connection,
+    commons_connection_handle = function(connection) connection
+  )
+
+  source <- commons_data_source_call(
+    list(tables = data.frame(id = 1L)),
+    "dictionary.yaml"
+  )
+
+  expect_identical(source$dots, list(connection))
+  expect_identical(source$tables, "tables")
+  expect_identical(source$dictionary, "dictionary.yaml")
+  expect_identical(source$graft_connection_handle, connection)
 })
 
 test_that("Commons selection rejects system and unknown classes", {

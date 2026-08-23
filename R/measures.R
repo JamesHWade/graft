@@ -158,11 +158,11 @@ definition_expr_analyze <- function(
     types == "identifier" &
       following == "("
   ]
-  identifiers <- names[
-    types %in%
-      c("identifier", "quoted_identifier") &
-      (types == "quoted_identifier" | following != "(")
-  ]
+  identifier_positions <- types %in%
+    c("identifier", "quoted_identifier") &
+    (types == "quoted_identifier" | following != "(")
+  identifiers <- names[identifier_positions]
+  identifier_types <- types[identifier_positions]
   reserved <- c(
     "AND",
     "OR",
@@ -172,7 +172,8 @@ definition_expr_analyze <- function(
     "DISTINCT"
   )
   dependencies <- unique(identifiers[
-    !toupper(identifiers) %in% reserved &
+    (identifier_types == "quoted_identifier" |
+      !toupper(identifiers) %in% reserved) &
       identifiers %in% definition_names &
       !identifiers %in% columns
   ])
@@ -286,7 +287,9 @@ validate_definition_candidates <- function(
       )
     }
     local_names <- as.character(definitions$name[
-      definitions$target == target
+      definitions$target == target &
+        !is.na(definitions$name) &
+        nzchar(definitions$name)
     ])
     expr <- scalar_character(data$expr[[index]])
     if (!is.na(expr)) {
@@ -301,8 +304,15 @@ validate_definition_candidates <- function(
       }
     }
   }
+  complete <- !is.na(definitions$target) &
+    nzchar(definitions$target) &
+    !is.na(definitions$name) &
+    nzchar(definitions$name) &
+    !is.na(definitions$expr) &
+    nzchar(definitions$expr)
   keys <- paste(definitions$target, definitions$name, sep = "\r")
-  duplicate_keys <- unique(keys[duplicated(keys)])
+  complete_keys <- keys[complete]
+  duplicate_keys <- unique(complete_keys[duplicated(complete_keys)])
   for (index in seq_len(nrow(data))) {
     if (
       paste(data$target[[index]], data$name[[index]], sep = "\r") %in%
@@ -316,13 +326,15 @@ validate_definition_candidates <- function(
       )
     }
   }
-  for (target in unique(as.character(definitions$target))) {
+  for (target in unique(as.character(definitions$target[complete]))) {
     contract <- definition_target_contract_or_null(manifest, target)
     if (is.null(contract)) {
       next
     }
     target_rows <- definitions[
-      definitions$target == target & !keys %in% duplicate_keys,
+      complete &
+        definitions$target == target &
+        !keys %in% duplicate_keys,
       ,
       drop = FALSE
     ]

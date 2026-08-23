@@ -66,6 +66,30 @@ test_that("graft_definitions() applies its bound after target selection", {
   expect_identical(attr(definitions, "truncated"), FALSE)
 })
 
+test_that("graft_definitions() resolves dependencies beyond its bound", {
+  store <- local_graft_ingest_store()
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("a_total", "z_base"),
+        target = "Entity",
+        expr = c("z_base + 1", "1")
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "catalog-closure")
+  )
+  limits <- graft_retrieval_limits
+  limits$definitions <- 1L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  definitions <- graft_definitions(store, target = "Entity")
+
+  expect_identical(definitions$name, "a_total")
+  expect_identical(definitions$dependencies[[1L]], "z_base")
+  expect_identical(attr(definitions, "truncated"), TRUE)
+})
+
 test_that("graft_calculate() resolves definitions beyond the listing bound", {
   schema <- graft_schema(tempest_manifest_path())
   connection <- DBI::dbConnect(
@@ -389,6 +413,26 @@ test_that("quoted definition names compose during evaluation", {
   graft_commit(store, plan)
   result <- graft_calculate(store, metrics = "total_quoted_length")
   expect_identical(result$total_quoted_length, 18)
+})
+
+test_that("quoted keyword definition names remain dependencies", {
+  store <- local_definition_store()
+  plan <- graft_plan(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("TRUE", "keyword_total"),
+        target = "Entity",
+        expr = c("1", "`TRUE` + 1")
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "quoted-keyword")
+  )
+
+  expect_identical(nrow(plan@issues), 0L)
+  graft_commit(store, plan)
+  result <- graft_calculate(store, metrics = "keyword_total")
+  expect_identical(result$keyword_total, 2L)
 })
 
 test_that("normalized public relations are valid definition targets", {

@@ -23,6 +23,7 @@ graft_commons_data_source <- function(source, classes = NULL) {
     )
   }
   materialized <- commons_materialize(read_source, classes)
+  commons_validate_table_names(names(materialized$tables))
   dictionary <- commons_dictionary(
     read_source,
     classes,
@@ -116,7 +117,17 @@ commons_relation_frame <- function(source, relation) {
 commons_dictionary <- function(source, classes, relations) {
   manifest <- source$schema$manifest
   original <- manifest$dictionary$document
-  definitions <- definition_catalog(source)
+  relation_targets <- vapply(
+    relations,
+    \(relation) scalar_character(relation$view),
+    ""
+  )
+  targets <- unique(c(classes, relation_targets))
+  definitions <- lapply(
+    targets,
+    \(target) definition_catalog(source, target, bounded = FALSE)
+  ) |>
+    dplyr::bind_rows()
   tables <- lapply(classes, function(class_name) {
     contract <- manifest$classes[[class_name]]
     original_table <- commons_original_table(original, class_name)
@@ -324,11 +335,16 @@ commons_relationship_tables <- function(document, relationship) {
     \(table) scalar_character(table$name),
     ""
   )
-  unique(table_names[vapply(
-    table_names,
-    \(table) grepl(paste0(table, "."), join, fixed = TRUE),
-    logical(1)
-  )])
+  references <- regmatches(
+    join,
+    gregexpr(
+      "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\.",
+      join,
+      perl = TRUE
+    )
+  )[[1L]]
+  references <- sub("[[:space:]]*\\.$", "", references)
+  unique(table_names[table_names %in% references])
 }
 
 commons_dictionary_prose <- function(document, field) {
@@ -349,6 +365,48 @@ commons_compact <- function(value) {
 }
 
 commons_data_source_call <- function(tables, dictionary) {
+  data_source <- commons_data_source_function()
+  formal_names <- setdiff(names(formals(data_source)), "...")
+  if (length(intersect(names(tables), formal_names)) > 0L) {
+    connection <- commons_materialized_connection(tables)
+    succeeded <- FALSE
+    on.exit({
+      if (!succeeded) {
+        DBI::dbDisconnect(connection, shutdown = TRUE)
+      }
+    })
+    source <- do.call(
+      data_source,
+      list(
+        connection,
+        tables = names(tables),
+        dictionary = dictionary
+      )
+    )
+    source$graft_connection_handle <- commons_connection_handle(connection)
+    succeeded <- TRUE
+    return(source)
+  }
+  do.call(data_source, c(tables, list(dictionary = dictionary)))
+}
+
+commons_validate_table_names <- function(table_names) {
+  if (
+    anyNA(table_names) ||
+      any(!nzchar(table_names)) ||
+      anyDuplicated(table_names)
+  ) {
+    abort_validation_error(
+      "Commons table names must be unique and non-empty.",
+      field = "classes",
+      rule = "commons_table_names",
+      observed_value = table_names
+    )
+  }
+  invisible(table_names)
+}
+
+commons_data_source_function <- function() {
   rlang::check_installed(
     "commons",
     version = "0.0.0.9002",
@@ -366,5 +424,68 @@ commons_data_source_call <- function(tables, dictionary) {
       expected_value = required
     )
   }
-  do.call(data_source, c(tables, list(dictionary = dictionary)))
+  data_source
+}
+
+commons_materialized_connection <- function(tables) {
+  directory <- file.path(tempdir(), "graft-commons-duckdb")
+  dir.create(directory, showWarnings = FALSE, recursive = TRUE)
+  connection <- DBI::dbConnect(
+    duckdb::duckdb(
+      shared_home = FALSE,
+      config = list(extension_directory = directory)
+    )
+  )
+  succeeded <- FALSE
+  on.exit({
+    if (!succeeded) {
+      DBI::dbDisconnect(connection, shutdown = TRUE)
+    }
+  })
+  DBI::dbExecute(
+    connection,
+    paste0(
+      "SET home_directory=",
+      DBI::dbQuoteString(connection, directory),
+      ";"
+    )
+  )
+  for (name in names(tables)) {
+    DBI::dbWriteTable(
+      connection,
+      name,
+      as.data.frame(tables[[name]]),
+      overwrite = TRUE
+    )
+  }
+  DBI::dbExecute(
+    connection,
+    paste(
+      "SET allow_community_extensions = false;",
+      "SET allow_unsigned_extensions = false;",
+      "SET autoinstall_known_extensions = false;",
+      "SET autoload_known_extensions = false;",
+      "SET enable_external_access = false;",
+      "SET disabled_filesystems = 'LocalFileSystem';",
+      "SET lock_configuration = true;"
+    )
+  )
+  succeeded <- TRUE
+  connection
+}
+
+commons_connection_handle <- function(connection) {
+  handle <- new.env(parent = emptyenv())
+  handle$connection <- connection
+  reg.finalizer(
+    handle,
+    function(environment) {
+      try(
+        DBI::dbDisconnect(environment$connection, shutdown = TRUE),
+        silent = TRUE
+      )
+    },
+    onexit = TRUE
+  )
+  handle
 }

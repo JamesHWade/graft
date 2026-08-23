@@ -87,6 +87,29 @@ test_that("plan-time validation rejects invalid definition graphs", {
   )
 })
 
+test_that("incomplete definitions report ordinary plan issues", {
+  store <- local_graft_ingest_store()
+
+  plan <- graft_plan(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c(NA_character_, "missing_expr"),
+        target = "Entity",
+        expr = c("ROW_COUNT()", NA_character_)
+      )
+    ),
+    graft_provenance(producer = "test")
+  )
+
+  issues <- plan@issues[plan@issues$class == "GraftDefinition", ]
+  expect_identical(issues$input_row, c(1L, 1L, 2L))
+  expect_identical(
+    issues$rule,
+    c("required", "deterministic_key_complete", "required")
+  )
+})
+
 test_that("data-dict contract definitions seed accepted definitions", {
   document <- jsonlite::fromJSON(
     system.file(
