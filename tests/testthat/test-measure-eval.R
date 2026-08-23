@@ -67,7 +67,18 @@ test_that("graft_definitions() applies its bound after target selection", {
 })
 
 test_that("graft_calculate() resolves definitions beyond the listing bound", {
-  store <- local_graft_ingest_store()
+  schema <- graft_schema(tempest_manifest_path())
+  connection <- DBI::dbConnect(
+    duckdb::duckdb(shared_home = FALSE),
+    dbdir = ":memory:",
+    config = list(
+      autoload_known_extensions = "false",
+      autoinstall_known_extensions = "false"
+    )
+  )
+  withr::defer(DBI::dbDisconnect(connection, shutdown = TRUE))
+  store <- graft_open(schema, connection = connection, okf = "disabled")
+  withr::defer(graft_close(store))
   graft_ingest(
     store,
     list(
@@ -92,11 +103,22 @@ test_that("graft_calculate() resolves definitions beyond the listing bound", {
   limits <- graft_retrieval_limits
   limits$definitions <- 1L
   local_mocked_bindings(graft_retrieval_limits = limits)
+  DBI::dbExecute(connection, "SET autoload_known_extensions = false")
+  DBI::dbExecute(connection, "SET autoinstall_known_extensions = false")
 
   result <- graft_calculate(store, metrics = "double_count")
+  settings <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      "SELECT current_setting('autoload_known_extensions') AS autoload, ",
+      "current_setting('autoinstall_known_extensions') AS autoinstall"
+    )
+  )
 
   expect_identical(result$double_count, 4)
   expect_length(attr(result, "definitions")$id, 2L)
+  expect_identical(settings$autoload, FALSE)
+  expect_identical(settings$autoinstall, FALSE)
 })
 
 test_that("graft_calculate() binds predicates and records definition closure", {

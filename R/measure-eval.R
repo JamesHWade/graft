@@ -98,28 +98,34 @@ definition_current_rows <- function(
 ) {
   where <- "class = ?"
   params <- list(graft_definition_class_name)
-  add_json_filter <- function(field, values) {
+  add_payload_filter <- function(field, values) {
     values <- unique(as.character(values))
     if (length(values) == 0L) {
       return(FALSE)
     }
+    fragments <- vapply(
+      values,
+      \(value) paste0('"', field, '":', canonical_json(value)),
+      ""
+    )
     where <<- c(
       where,
       paste0(
-        "json_extract_string(payload_json, '$.",
-        field,
-        "') IN (",
-        paste(rep("?", length(values)), collapse = ", "),
+        "(",
+        paste(
+          rep("strpos(payload_json, ?) > 0", length(values)),
+          collapse = " OR "
+        ),
         ")"
       )
     )
-    params <<- c(params, as.list(values))
+    params <<- c(params, unname(as.list(fragments)))
     TRUE
   }
-  if (!is.null(targets) && !add_json_filter("target", targets)) {
+  if (!is.null(targets) && !add_payload_filter("target", targets)) {
     return(data.frame())
   }
-  if (!is.null(names) && !add_json_filter("name", names)) {
+  if (!is.null(names) && !add_payload_filter("name", names)) {
     return(data.frame())
   }
   limit_sql <- if (is.null(limit)) {
