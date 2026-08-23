@@ -494,7 +494,7 @@ definition_resolve_one <- function(
   argument
 ) {
   parts <- strsplit(reference, "::", fixed = TRUE)[[1L]]
-  if (length(parts) > 2L || any(!nzchar(parts))) {
+  if (length(parts) > 2L || !all(nzchar(parts))) {
     abort_calculation_error(
       paste0("Invalid definition reference `", reference, "`."),
       field = argument,

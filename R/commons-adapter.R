@@ -43,7 +43,7 @@ commons_selected_classes <- function(manifest, classes) {
     !is.character(classes) ||
       length(classes) == 0L ||
       anyNA(classes) ||
-      any(!nzchar(classes)) ||
+      !all(nzchar(classes)) ||
       anyDuplicated(classes)
   ) {
     abort_validation_error(
