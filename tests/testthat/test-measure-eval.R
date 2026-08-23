@@ -32,6 +32,73 @@ test_that("graft_calculate() composes same-table definitions", {
   expect_identical(derived$lowercase_label, c("acid", "solvent"))
 })
 
+test_that("graft_definitions() applies its bound after target selection", {
+  store <- local_graft_ingest_store()
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("entity_total", "source_total", "claim_total"),
+        target = c("Entity", "Source", "Claim"),
+        expr = rep("ROW_COUNT()", 3L)
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "target-bounds")
+  )
+  rows <- graft_current_rows(
+    as_graft_store_internal(store),
+    classes = graft_definition_class_name,
+    limit = 3L
+  )
+  payloads <- lapply(
+    rows$payload_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+  expected <- payloads[[3L]]
+  limits <- graft_retrieval_limits
+  limits$definitions <- 1L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  definitions <- graft_definitions(store, target = expected$target)
+
+  expect_identical(definitions$name, expected$name)
+  expect_identical(attr(definitions, "truncated"), FALSE)
+})
+
+test_that("graft_calculate() resolves definitions beyond the listing bound", {
+  store <- local_graft_ingest_store()
+  graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        id = c(test_graft_id("bound-a"), test_graft_id("bound-b")),
+        preferred_name = c("A", "B")
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "bound-entities")
+  )
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("entity_count", "double_count"),
+        target = "Entity",
+        expr = c("ROW_COUNT()", "entity_count + entity_count")
+      )
+    ),
+    graft_provenance(producer = "test", idempotency_key = "bound-definitions")
+  )
+  limits <- graft_retrieval_limits
+  limits$definitions <- 1L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  result <- graft_calculate(store, metrics = "double_count")
+
+  expect_identical(result$double_count, 4)
+  expect_length(attr(result, "definitions")$id, 2L)
+})
+
 test_that("graft_calculate() binds predicates and records definition closure", {
   store <- local_definition_store()
 

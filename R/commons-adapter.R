@@ -298,20 +298,37 @@ commons_dictionary_relationships <- function(document, classes) {
   }
   Filter(
     function(relationship) {
-      pairs <- relationship$pairs
-      if (is.null(pairs)) {
-        return(FALSE)
-      }
-      tables <- unlist(
-        lapply(pairs, function(pair) {
-          c(pair$left$table, pair$right$table)
-        }),
-        use.names = FALSE
-      )
+      tables <- commons_relationship_tables(document, relationship)
       length(tables) > 0L && all(tables %in% classes)
     },
     document$relationships
   )
+}
+
+commons_relationship_tables <- function(document, relationship) {
+  pairs <- relationship$pairs
+  if (!is.null(pairs) && length(pairs) > 0L) {
+    return(unique(unlist(
+      lapply(pairs, function(pair) {
+        c(pair$left$table, pair$right$table)
+      }),
+      use.names = FALSE
+    )))
+  }
+  join <- scalar_character(relationship$join)
+  if (is.na(join) || is.null(document$tables)) {
+    return(character())
+  }
+  table_names <- vapply(
+    document$tables,
+    \(table) scalar_character(table$name),
+    ""
+  )
+  unique(table_names[vapply(
+    table_names,
+    \(table) grepl(paste0(table, "."), join, fixed = TRUE),
+    logical(1)
+  )])
 }
 
 commons_dictionary_prose <- function(document, field) {

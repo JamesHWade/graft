@@ -80,6 +80,32 @@ test_that("Commons selection includes applicable normalized relations", {
   expect_identical(relation$definitions[[1L]]$name, "about_count")
 })
 
+test_that("Commons preserves selected join-only data-dict relationships", {
+  included <- list(
+    join = "employment.person_id = person.id",
+    cardinality = "many-to-one"
+  )
+  excluded <- list(
+    join = "employment.source_id = source.id",
+    cardinality = "many-to-one"
+  )
+  document <- list(
+    tables = list(
+      list(name = "employment"),
+      list(name = "person"),
+      list(name = "source")
+    ),
+    relationships = list(included, excluded)
+  )
+
+  relationships <- commons_dictionary_relationships(
+    document,
+    c("employment", "person")
+  )
+
+  expect_identical(relationships, list(included))
+})
+
 test_that("Commons selection rejects system and unknown classes", {
   store <- local_definition_store()
 

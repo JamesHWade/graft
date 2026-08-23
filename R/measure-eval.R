@@ -15,20 +15,24 @@ graft_definitions <- function(source, target = NULL) {
   definition_catalog(source, target)
 }
 
-definition_catalog <- function(source, target = NULL) {
+definition_catalog <- function(source, target = NULL, bounded = TRUE) {
   validate_graft_retrieval(source)
   if (!is.null(target)) {
     target <- validate_scalar_text(target, "target")
     definition_target_contract(source$schema$manifest, target)
   }
   limit <- graft_retrieval_limits$definitions
-  rows <- graft_current_rows(
+  rows <- definition_current_rows(
     source,
-    classes = graft_definition_class_name,
-    limit = limit
+    targets = target,
+    limit = if (bounded) limit else NULL
   )
   if (nrow(rows) == 0L) {
-    return(trim_bounded_rows(empty_definition_catalog(), source, limit))
+    result <- empty_definition_catalog()
+    if (bounded) {
+      return(trim_bounded_rows(result, source, limit))
+    }
+    return(result)
   }
   payloads <- lapply(
     rows$payload_json,
@@ -74,15 +78,67 @@ definition_catalog <- function(source, target = NULL) {
       "columns"
     )
   ]
-  if (!is.null(target)) {
-    catalog <- catalog[catalog$target == target, , drop = FALSE]
-  }
   catalog <- catalog[
     order(catalog$target, catalog$name, method = "radix"),
     ,
     drop = FALSE
   ]
-  trim_bounded_rows(catalog, source, limit)
+  if (bounded) {
+    return(trim_bounded_rows(catalog, source, limit))
+  }
+  rownames(catalog) <- NULL
+  catalog
+}
+
+definition_current_rows <- function(
+  source,
+  targets = NULL,
+  names = NULL,
+  limit = NULL
+) {
+  where <- "class = ?"
+  params <- list(graft_definition_class_name)
+  add_json_filter <- function(field, values) {
+    values <- unique(as.character(values))
+    if (length(values) == 0L) {
+      return(FALSE)
+    }
+    where <<- c(
+      where,
+      paste0(
+        "json_extract_string(payload_json, '$.",
+        field,
+        "') IN (",
+        paste(rep("?", length(values)), collapse = ", "),
+        ")"
+      )
+    )
+    params <<- c(params, as.list(values))
+    TRUE
+  }
+  if (!is.null(targets) && !add_json_filter("target", targets)) {
+    return(data.frame())
+  }
+  if (!is.null(names) && !add_json_filter("name", names)) {
+    return(data.frame())
+  }
+  limit_sql <- if (is.null(limit)) {
+    ""
+  } else {
+    paste0(" LIMIT ", limit + 1L)
+  }
+  retrieval_query(
+    source$connection,
+    paste0(
+      "SELECT * FROM (",
+      graft_read_source_sql(source),
+      ") definitions WHERE ",
+      paste(where, collapse = " AND "),
+      " ORDER BY class, record_id, revision_id",
+      limit_sql
+    ),
+    params = params
+  )
 }
 
 definition_catalog_analyses <- function(source, catalog) {
@@ -263,7 +319,7 @@ graft_calculate <- function(
   metrics <- definition_name_argument(metrics, "metrics", required = TRUE)
   dimensions <- definition_name_argument(dimensions, "dimensions")
   filters <- definition_name_argument(filters, "filters")
-  catalog <- definition_catalog(read_source)
+  catalog <- definition_calculation_catalog(read_source, metrics)
   selected_metrics <- definition_resolve_many(
     catalog,
     metrics,
@@ -464,6 +520,76 @@ definition_name_argument <- function(value, argument, required = FALSE) {
   value
 }
 
+definition_calculation_catalog <- function(source, references) {
+  selectors <- lapply(
+    references,
+    definition_reference_parts,
+    argument = "metrics"
+  )
+  rows <- definition_current_rows(
+    source,
+    names = unique(vapply(selectors, `[[`, character(1), "name"))
+  )
+  if (nrow(rows) == 0L) {
+    return(empty_definition_catalog())
+  }
+  payloads <- lapply(
+    rows$payload_json,
+    jsonlite::fromJSON,
+    simplifyVector = FALSE
+  )
+  candidates <- data.frame(
+    target = vapply(payloads, \(payload) scalar_character(payload$target), ""),
+    name = vapply(payloads, \(payload) scalar_character(payload$name), ""),
+    stringsAsFactors = FALSE
+  )
+  matched <- vapply(
+    seq_len(nrow(candidates)),
+    function(index) {
+      any(vapply(
+        selectors,
+        function(selector) {
+          identical(selector$name, candidates$name[[index]]) &&
+            (is.null(selector$target) ||
+              identical(selector$target, candidates$target[[index]]))
+        },
+        logical(1)
+      ))
+    },
+    logical(1)
+  )
+  targets <- sort(unique(candidates$target[matched]), method = "radix")
+  if (length(targets) == 0L) {
+    return(empty_definition_catalog())
+  }
+  catalogs <- lapply(
+    targets,
+    \(target) definition_catalog(source, target, bounded = FALSE)
+  )
+  catalog <- dplyr::bind_rows(catalogs)
+  catalog[
+    order(catalog$target, catalog$name, method = "radix"),
+    ,
+    drop = FALSE
+  ]
+}
+
+definition_reference_parts <- function(reference, argument) {
+  parts <- strsplit(reference, "::", fixed = TRUE)[[1L]]
+  if (length(parts) > 2L || !all(nzchar(parts))) {
+    abort_calculation_error(
+      paste0("Invalid definition reference `", reference, "`."),
+      field = argument,
+      rule = "definition_reference",
+      observed_value = reference
+    )
+  }
+  list(
+    target = if (length(parts) == 2L) parts[[1L]] else NULL,
+    name = if (length(parts) == 2L) parts[[2L]] else parts[[1L]]
+  )
+}
+
 definition_resolve_many <- function(
   catalog,
   references,
@@ -493,17 +619,9 @@ definition_resolve_one <- function(
   target = NULL,
   argument
 ) {
-  parts <- strsplit(reference, "::", fixed = TRUE)[[1L]]
-  if (length(parts) > 2L || !all(nzchar(parts))) {
-    abort_calculation_error(
-      paste0("Invalid definition reference `", reference, "`."),
-      field = argument,
-      rule = "definition_reference",
-      observed_value = reference
-    )
-  }
-  qualified_target <- if (length(parts) == 2L) parts[[1L]] else NULL
-  name <- if (length(parts) == 2L) parts[[2L]] else parts[[1L]]
+  parts <- definition_reference_parts(reference, argument)
+  qualified_target <- parts$target
+  name <- parts$name
   if (
     !is.null(target) &&
       !is.null(qualified_target) &&
