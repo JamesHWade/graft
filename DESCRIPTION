@@ -35,6 +35,7 @@ Suggests:
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 Config/Needs/check: posit-dev/commons@4b2cd5a92e573506dbd9341d61072de6780eb84a
+Config/Needs/coverage: posit-dev/commons@4b2cd5a92e573506dbd9341d61072de6780eb84a
 Config/Needs/website: brand.yml
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 VignetteBuilder: knitr
