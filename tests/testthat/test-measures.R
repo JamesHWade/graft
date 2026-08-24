@@ -267,6 +267,62 @@ test_that("changing a dependency cannot invalidate an accepted definition", {
   expect_match(update@issues$message, "total_label_length", fixed = TRUE)
 })
 
+test_that("renaming or retargeting cannot strand accepted definitions", {
+  changes <- list(
+    rename = list(
+      name = "renamed_label_length",
+      target = "Entity",
+      expr = "LENGTH(label)"
+    ),
+    retarget = list(
+      name = "label_length",
+      target = "Source",
+      expr = "LENGTH(title)"
+    )
+  )
+  for (change_name in names(changes)) {
+    change <- changes[[change_name]]
+    store <- local_graft_ingest_store()
+    graft_ingest(
+      store,
+      list(
+        GraftDefinition = data.frame(
+          name = c("label_length", "total_label_length"),
+          target = "Entity",
+          expr = c("LENGTH(label)", "SUM(label_length)")
+        )
+      ),
+      graft_provenance(
+        producer = "test",
+        idempotency_key = paste0("strand-dependent-v1-", change_name)
+      )
+    )
+    definitions <- graft_definitions(store, target = "Entity")
+    dependency_id <- definitions$id[
+      match("label_length", definitions$name)
+    ]
+    update <- graft_plan(
+      store,
+      list(
+        GraftDefinition = data.frame(
+          id = dependency_id,
+          name = change$name,
+          target = change$target,
+          expr = change$expr
+        )
+      ),
+      graft_provenance(
+        producer = "test",
+        idempotency_key = paste0("strand-dependent-v2-", change_name)
+      )
+    )
+
+    expect_identical(update@issues$input_row, 1L)
+    expect_identical(update@issues$rule, "definition_expr_type")
+    expect_match(update@issues$message, "total_label_length", fixed = TRUE)
+  }
+})
+
 test_that("definition plans bind the complete accepted definition catalog", {
   store <- local_graft_ingest_store()
   graft_ingest(

@@ -238,7 +238,6 @@ validate_definition_candidates <- function(
   issues <- list()
   data <- staged$data
   accepted <- definition_current_records(current)
-  accepted <- accepted[!accepted$id %in% data$id, , drop = FALSE]
   candidates <- data.frame(
     id = as.character(data$id),
     name = as.character(data$name),
@@ -248,6 +247,8 @@ validate_definition_candidates <- function(
     candidate = TRUE,
     stringsAsFactors = FALSE
   )
+  previous_targets <- accepted$target[match(candidates$id, accepted$id)]
+  accepted <- accepted[!accepted$id %in% candidates$id, , drop = FALSE]
   definitions <- dplyr::bind_rows(accepted, candidates)
   add_issue <- function(index, field, rule, message) {
     issues[[length(issues) + 1L]] <<- new_plan_issue(
@@ -329,6 +330,13 @@ validate_definition_candidates <- function(
   for (target in unique(as.character(definitions$target[complete]))) {
     contract <- definition_target_contract_or_null(manifest, target)
     if (is.null(contract)) {
+      next
+    }
+    target_candidate_indices <- candidates$input_row[
+      (!is.na(candidates$target) & candidates$target == target) |
+        (!is.na(previous_targets) & previous_targets == target)
+    ]
+    if (length(target_candidate_indices) == 0L) {
       next
     }
     target_rows <- definitions[
@@ -428,13 +436,6 @@ validate_definition_candidates <- function(
       }
     }
     invalid_names <- c(cycle_names, invalid_selection_names)
-    candidate_rows <- which(
-      target_rows$candidate &
-        !target_rows$name %in% invalid_names
-    )
-    if (length(candidate_rows) == 0L) {
-      next
-    }
     catalog <- target_rows
     compiler <- new.env(parent = emptyenv())
     compiler$catalog <- catalog
@@ -448,7 +449,7 @@ validate_definition_candidates <- function(
       candidate_index <- if (target_rows$candidate[[position]]) {
         target_rows$input_row[[position]]
       } else {
-        target_rows$input_row[[candidate_rows[[1L]]]]
+        target_candidate_indices[[1L]]
       }
       basic <- definition_expr_analyze(
         target_rows$expr[[position]],
@@ -456,6 +457,20 @@ validate_definition_candidates <- function(
         definition_names
       )
       if (nrow(basic$issues) > 0L) {
+        if (!target_rows$candidate[[position]]) {
+          add_issue(
+            candidate_index,
+            "expr",
+            "definition_expr_type",
+            paste0(
+              "Definition `",
+              target_rows$name[[position]],
+              "` does not type-check for `",
+              target,
+              "`."
+            )
+          )
+        }
         next
       }
       error <- tryCatch(
