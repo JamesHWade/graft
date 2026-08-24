@@ -1039,8 +1039,11 @@ definition_column_values <- function(raw, duckdb_type, typed = TRUE) {
     return(scalars)
   }
   type <- toupper(duckdb_type)
-  if (type %in% c("DOUBLE", "FLOAT", "DECIMAL", "BIGINT", "INTEGER")) {
+  if (type %in% c("DOUBLE", "FLOAT", "INTEGER")) {
     return(suppressWarnings(as.numeric(scalars)))
+  }
+  if (type %in% c("DECIMAL", "BIGINT")) {
+    return(scalars)
   }
   if (identical(type, "BOOLEAN")) {
     return(as.logical(scalars))
@@ -1049,7 +1052,11 @@ definition_column_values <- function(raw, duckdb_type, typed = TRUE) {
     return(as.Date(scalars))
   }
   if (identical(type, "TIMESTAMP")) {
-    return(as.POSIXct(scalars, tz = "UTC"))
+    return(as.POSIXct(
+      scalars,
+      format = "%Y-%m-%dT%H:%M:%OSZ",
+      tz = "UTC"
+    ))
   }
   scalars
 }

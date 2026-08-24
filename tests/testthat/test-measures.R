@@ -266,3 +266,80 @@ test_that("changing a dependency cannot invalidate an accepted definition", {
   expect_identical(update@issues$rule, "definition_expr_type")
   expect_match(update@issues$message, "total_label_length", fixed = TRUE)
 })
+
+test_that("definition plans bind the complete accepted definition catalog", {
+  store <- local_graft_ingest_store()
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c("helper", "total"),
+        target = "Entity",
+        expr = c("1", "ROW_COUNT()")
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "definition-boundary-v1"
+    )
+  )
+  unrelated <- graft_plan(
+    store,
+    list(
+      Entity = data.frame(
+        id = test_graft_id("definition-boundary-entity"),
+        label = "base",
+        preferred_name = "Boundary entity"
+      )
+    ),
+    graft_provenance(
+      producer = "entity-test",
+      idempotency_key = "definition-boundary-entity"
+    )
+  )
+  stale <- graft_plan(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = "helper",
+        target = "Entity",
+        expr = "LOWER(label)"
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "definition-boundary-stale"
+    )
+  )
+  expect_identical(nrow(stale@issues), 0L)
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = "total",
+        target = "Entity",
+        expr = "SUM(helper)"
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "definition-boundary-v2"
+    )
+  )
+
+  condition <- catch_graft_ingest_condition(graft_commit(store, stale))
+  unrelated_result <- graft_commit(store, unrelated)
+
+  expect_s3_class(condition, "graft_commit_plan_stale")
+  expect_match(
+    conditionMessage(condition),
+    "definition catalog changed after planning",
+    fixed = TRUE
+  )
+  definitions <- graft_definitions(store, target = "Entity")
+  expect_identical(
+    definitions$expr[match(c("helper", "total"), definitions$name)],
+    c("1", "SUM(helper)")
+  )
+  expect_identical(unrelated_result$inserted, c(Entity = 1L))
+})

@@ -41,6 +41,10 @@ plan_candidate_records <- function(store, batch, records, metadata) {
       identifier_digest = snapshot$identifier_digest,
       origin_digest = snapshot$origin_digest
     ),
+    definition_preconditions = list(
+      required = graft_definition_class_name %in% names(planned$staged),
+      catalog_digest = snapshot$definition_digest
+    ),
     planned_at = snapshot$planned_at
   )
 }
@@ -97,7 +101,8 @@ read_planning_snapshot <- function(store, producer, metadata) {
         latest = latest
       ),
       identifier_digest = planning_snapshot_digest(identifiers),
-      origin_digest = planning_snapshot_digest(origins)
+      origin_digest = planning_snapshot_digest(origins),
+      definition_digest = planning_definition_catalog_digest(current)
     )
   })
 }
@@ -122,6 +127,30 @@ planning_origins_sql <- function(connection) {
 
 planning_snapshot_digest <- function(rows) {
   graft_sha256(canonical_json(rows))
+}
+
+planning_definition_catalog_digest <- function(current) {
+  fields <- c(
+    "record_id",
+    "class",
+    "revision_id",
+    "revision_number",
+    "operation",
+    "content_digest"
+  )
+  definitions <- current[
+    current$class == graft_definition_class_name &
+      current$operation != "delete",
+    fields,
+    drop = FALSE
+  ]
+  definitions <- definitions[
+    order(definitions$record_id, method = "radix"),
+    ,
+    drop = FALSE
+  ]
+  rownames(definitions) <- NULL
+  planning_snapshot_digest(definitions)
 }
 
 validate_planning_head_snapshot <- function(heads) {

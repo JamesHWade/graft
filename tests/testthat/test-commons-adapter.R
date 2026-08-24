@@ -1,8 +1,9 @@
 local_captured_commons_source <- function(source, classes = NULL) {
   local_mocked_bindings(
-    commons_data_source_call = function(tables, dictionary) {
+    commons_data_source_call = function(tables, dictionary, types) {
       list(
         tables = tables,
+        types = types,
         dictionary = yaml::read_yaml(dictionary)
       )
     }
@@ -139,13 +140,14 @@ test_that("Commons formal table names use connection dispatch", {
   }
   local_mocked_bindings(
     commons_data_source_function = function() data_source,
-    commons_materialized_connection = function(tables) connection,
+    commons_materialized_connection = function(tables, types) connection,
     commons_connection_handle = function(connection) connection
   )
 
   source <- commons_data_source_call(
     list(tables = data.frame(id = 1L)),
-    "dictionary.yaml"
+    "dictionary.yaml",
+    list(tables = c(id = "BIGINT"))
   )
 
   expect_identical(source$dots, list(connection))
@@ -198,7 +200,100 @@ test_that("Commons materialization includes typed empty tables", {
 
   expect_identical(nrow(table), 0L)
   expect_s3_class(table$created_at, "POSIXct")
-  expect_type(table$page_start, "double")
+  expect_type(table$page_start, "character")
+})
+
+test_that("Commons materialization preserves exact values and SQL types", {
+  schema <- modified_ingest_schema(
+    as_graft_schema_internal(graft_schema(tempest_manifest_path()))
+  )
+  schema$manifest$classes$SemanticClaim$slots$temperature$range <- "decimal"
+  schema$manifest$classes$SemanticClaim$slots$temperature$duckdb_type <-
+    "DECIMAL"
+  schema$manifest$slots$temperature$range <- "decimal"
+  schema$manifest$slots$temperature$duckdb_type <- "DECIMAL"
+  schema <- new_graft_schema(refresh_schema_structural_digest(schema))
+  fixture <- retrieval_fixture_records()
+  exact_bigint <- "9223372036854775807"
+  exact_decimal <- "12345678901234.567"
+  exact_timestamp <- as.POSIXct(
+    "2026-08-23T14:30:00Z",
+    format = "%Y-%m-%dT%H:%M:%OSZ",
+    tz = "UTC"
+  )
+  fixture$records$ClaimEvidence$page_start <- exact_bigint
+  fixture$records$ClaimEvidence$page_end <- exact_bigint
+  fixture$records$SemanticClaim$temperature <- exact_decimal
+  fixture$records$SemanticClaim$valid_from <- exact_timestamp
+  store <- local_graft_ingest_store(schema = schema)
+  graft_ingest(
+    store,
+    fixture$records,
+    graft_provenance(
+      "commons-exact-values",
+      idempotency_key = "commons-exact-values"
+    )
+  )
+
+  result <- local_captured_commons_source(
+    store,
+    classes = c("ClaimEvidence", "SemanticClaim")
+  )
+  connection <- commons_materialized_connection(
+    result$tables,
+    result$types
+  )
+  withr::defer(DBI::dbDisconnect(connection, shutdown = TRUE))
+  bigint <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      "SELECT CAST(page_start AS VARCHAR) AS value ",
+      "FROM ClaimEvidence"
+    )
+  )
+  decimal <- DBI::dbGetQuery(
+    connection,
+    paste0(
+      "SELECT CAST(temperature AS VARCHAR) AS value ",
+      ", epoch(valid_from) AS valid_from FROM SemanticClaim"
+    )
+  )
+  evidence_types <- DBI::dbGetQuery(
+    connection,
+    "DESCRIBE ClaimEvidence"
+  )
+  semantic_types <- DBI::dbGetQuery(
+    connection,
+    "DESCRIBE SemanticClaim"
+  )
+
+  expect_identical(
+    result$tables$ClaimEvidence$page_start,
+    exact_bigint
+  )
+  expect_equal(
+    result$tables$SemanticClaim$valid_from,
+    exact_timestamp
+  )
+  expect_identical(
+    result$tables$SemanticClaim$temperature,
+    exact_decimal
+  )
+  expect_identical(bigint$value, exact_bigint)
+  expect_identical(decimal$value, exact_decimal)
+  expect_equal(decimal$valid_from, as.numeric(exact_timestamp))
+  expect_identical(
+    evidence_types$column_type[evidence_types$column_name == "page_start"],
+    "BIGINT"
+  )
+  expect_match(
+    semantic_types$column_type[semantic_types$column_name == "temperature"],
+    "^DECIMAL"
+  )
+  expect_identical(
+    semantic_types$column_type[semantic_types$column_name == "valid_from"],
+    "TIMESTAMP"
+  )
 })
 
 test_that("Commons construction is atomic across selected tables", {
@@ -212,7 +307,7 @@ test_that("Commons construction is atomic across selected tables", {
       }
       original(source, contract)
     },
-    commons_data_source_call = function(tables, dictionary) {
+    commons_data_source_call = function(tables, dictionary, types) {
       called <<- TRUE
     }
   )

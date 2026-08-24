@@ -1,8 +1,8 @@
 #' Create a detached Commons data source
 #'
 #' `graft_commons_data_source()` materializes accepted public tables and
-#' definitions at one immutable boundary, then passes ordinary data frames and
-#' a generated data-dict dictionary to `commons::data_source()`. The returned
+#' definitions at one immutable boundary, then loads exact typed values and a
+#' generated data-dict dictionary into `commons::data_source()`. The returned
 #' Commons source owns its DuckDB connection and does not share Graft's backend.
 #'
 #' @param source An initialized `GraftStore` or immutable `GraftView`.
@@ -32,7 +32,7 @@ graft_commons_data_source <- function(source, classes = NULL) {
   path <- tempfile("graft-commons-", fileext = ".yaml")
   on.exit(unlink(path), add = TRUE)
   yaml::write_yaml(dictionary, path)
-  commons_data_source_call(materialized$tables, path)
+  commons_data_source_call(materialized$tables, path, materialized$types)
 }
 
 commons_selected_classes <- function(manifest, classes) {
@@ -78,6 +78,12 @@ commons_materialize <- function(source, classes) {
     }),
     classes
   )
+  types <- stats::setNames(
+    lapply(classes, function(class_name) {
+      commons_class_types(manifest$classes[[class_name]])
+    }),
+    classes
+  )
   relations <- Filter(
     function(relation) {
       owner <- scalar_character(relation$owner_class)
@@ -88,10 +94,47 @@ commons_materialize <- function(source, classes) {
     manifest$relations
   )
   for (relation in relations) {
-    tables[[scalar_character(relation$view)]] <-
-      commons_relation_frame(source, relation)
+    view <- scalar_character(relation$view)
+    tables[[view]] <- commons_relation_frame(source, relation)
+    types[[view]] <- commons_relation_types(manifest, relation)
   }
-  list(tables = tables, relations = relations)
+  list(tables = tables, types = types, relations = relations)
+}
+
+commons_class_types <- function(contract) {
+  columns <- definition_public_scalar_columns(contract)
+  stats::setNames(
+    vapply(
+      columns,
+      function(column) {
+        safe_duckdb_type(scalar_character(
+          contract$slots[[column]]$duckdb_type
+        ))
+      },
+      ""
+    ),
+    columns
+  )
+}
+
+commons_relation_types <- function(manifest, relation) {
+  owner <- scalar_character(relation$owner_class)
+  slot_name <- scalar_character(relation$slot)
+  slot <- manifest$classes[[owner]]$slots[[slot_name]]
+  if (identical(scalar_character(relation$kind), "object")) {
+    return(c(
+      id = "VARCHAR",
+      subject = "VARCHAR",
+      object = "VARCHAR",
+      position = "BIGINT",
+      created_at = "TIMESTAMP"
+    ))
+  }
+  c(
+    owner_id = "VARCHAR",
+    position = "BIGINT",
+    value = safe_duckdb_type(scalar_character(slot$duckdb_type))
+  )
 }
 
 commons_relation_frame <- function(source, relation) {
@@ -364,30 +407,26 @@ commons_compact <- function(value) {
   ]
 }
 
-commons_data_source_call <- function(tables, dictionary) {
+commons_data_source_call <- function(tables, dictionary, types) {
   data_source <- commons_data_source_function()
-  formal_names <- setdiff(names(formals(data_source)), "...")
-  if (length(intersect(names(tables), formal_names)) > 0L) {
-    connection <- commons_materialized_connection(tables)
-    succeeded <- FALSE
-    on.exit({
-      if (!succeeded) {
-        DBI::dbDisconnect(connection, shutdown = TRUE)
-      }
-    })
-    source <- do.call(
-      data_source,
-      list(
-        connection,
-        tables = names(tables),
-        dictionary = dictionary
-      )
+  connection <- commons_materialized_connection(tables, types)
+  succeeded <- FALSE
+  on.exit({
+    if (!succeeded) {
+      DBI::dbDisconnect(connection, shutdown = TRUE)
+    }
+  })
+  source <- do.call(
+    data_source,
+    list(
+      connection,
+      tables = names(tables),
+      dictionary = dictionary
     )
-    source$graft_connection_handle <- commons_connection_handle(connection)
-    succeeded <- TRUE
-    return(source)
-  }
-  do.call(data_source, c(tables, list(dictionary = dictionary)))
+  )
+  source$graft_connection_handle <- commons_connection_handle(connection)
+  succeeded <- TRUE
+  source
 }
 
 commons_validate_table_names <- function(table_names) {
@@ -427,7 +466,8 @@ commons_data_source_function <- function() {
   data_source
 }
 
-commons_materialized_connection <- function(tables) {
+commons_materialized_connection <- function(tables, types) {
+  commons_validate_materialized_types(tables, types)
   directory <- file.path(tempdir(), "graft-commons-duckdb")
   dir.create(directory, showWarnings = FALSE, recursive = TRUE)
   connection <- DBI::dbConnect(
@@ -451,12 +491,18 @@ commons_materialized_connection <- function(tables) {
     )
   )
   for (name in names(tables)) {
-    DBI::dbWriteTable(
-      connection,
-      name,
-      as.data.frame(tables[[name]]),
-      overwrite = TRUE
+    columns <- lapply(
+      names(types[[name]]),
+      \(column) ddl_column(column, types[[name]][[column]])
     )
+    create_table(connection, name, columns)
+    if (nrow(tables[[name]]) > 0L) {
+      DBI::dbAppendTable(
+        connection,
+        name,
+        as.data.frame(tables[[name]])
+      )
+    }
   }
   DBI::dbExecute(
     connection,
@@ -472,6 +518,27 @@ commons_materialized_connection <- function(tables) {
   )
   succeeded <- TRUE
   connection
+}
+
+commons_validate_materialized_types <- function(tables, types) {
+  valid <- is.list(types) &&
+    identical(names(types), names(tables)) &&
+    all(vapply(
+      names(tables),
+      function(name) {
+        table_types <- types[[name]]
+        is.character(table_types) &&
+          identical(names(table_types), names(tables[[name]]))
+      },
+      logical(1)
+    ))
+  if (!valid) {
+    abort_backend_error(
+      "The detached Commons table types do not match the materialized data.",
+      operation = "commons_materialize"
+    )
+  }
+  invisible(types)
 }
 
 commons_connection_handle <- function(connection) {

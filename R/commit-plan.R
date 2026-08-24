@@ -166,6 +166,7 @@ graft_plan_records <- function(
   ]
   preconditions <- list(
     heads = heads,
+    definitions = candidate$definition_preconditions,
     registries = candidate$registry_preconditions,
     source = source_preconditions
   )
@@ -406,6 +407,7 @@ validate_graft_commit_plan <- function(plan) {
 validate_commit_plan_preconditions <- function(store, plan) {
   validate_commit_plan_static_binding(store, plan)
   validate_commit_plan_heads(store, plan@preconditions$heads)
+  validate_commit_plan_definitions(store, plan)
   validate_commit_plan_registries(store, plan)
   validate_commit_plan_source(store, plan)
   invisible(plan)
@@ -616,6 +618,53 @@ validate_commit_plan_registries <- function(store, plan) {
       "An identity registry changed after planning.",
       expected = expected,
       observed = observed
+    )
+  }
+  invisible(plan)
+}
+
+validate_commit_plan_definitions <- function(store, plan) {
+  expected <- plan@preconditions$definitions
+  if (
+    !is.list(expected) ||
+      !identical(names(expected), c("required", "catalog_digest")) ||
+      !is_scalar_flag(expected$required) ||
+      !is_graft_digest(expected$catalog_digest)
+  ) {
+    abort_commit_plan(
+      "graft_commit_plan_tampered",
+      "The definition-catalog preconditions are invalid."
+    )
+  }
+  if (!expected$required) {
+    return(invisible(plan))
+  }
+  current <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT h.record_id, h.class, h.revision_id, h.revision_number, ",
+      "r.record_id AS ledger_record_id, r.class AS ledger_class, ",
+      "r.revision_id AS ledger_revision_id, ",
+      "r.revision_number AS ledger_revision_number, r.operation, ",
+      "r.payload_json, r.content_digest FROM ",
+      quote_identifier(store$connection, "_graft_record_heads"),
+      " AS h LEFT JOIN ",
+      quote_identifier(store$connection, "_graft_record_revisions"),
+      " AS r ON r.record_id = h.record_id AND r.class = h.class ",
+      "AND r.revision_id = h.revision_id ",
+      "AND r.revision_number = h.revision_number ",
+      "WHERE h.class = ? ORDER BY h.record_id"
+    ),
+    params = list(graft_definition_class_name)
+  )
+  validate_planning_head_snapshot(current)
+  observed <- planning_definition_catalog_digest(current)
+  if (!identical(observed, expected$catalog_digest)) {
+    abort_commit_plan(
+      "graft_commit_plan_stale",
+      "The accepted definition catalog changed after planning.",
+      expected_digest = expected$catalog_digest,
+      observed_digest = observed
     )
   }
   invisible(plan)

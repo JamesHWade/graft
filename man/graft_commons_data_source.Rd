@@ -17,7 +17,7 @@ A detached \code{commons_data_source} object.
 }
 \description{
 \code{graft_commons_data_source()} materializes accepted public tables and
-definitions at one immutable boundary, then passes ordinary data frames and
-a generated data-dict dictionary to \code{commons::data_source()}. The returned
+definitions at one immutable boundary, then loads exact typed values and a
+generated data-dict dictionary into \code{commons::data_source()}. The returned
 Commons source owns its DuckDB connection and does not share Graft's backend.
 }
