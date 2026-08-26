@@ -34,7 +34,7 @@ A \code{GraftStore} S7 object ready for use.
 exist, or verifies an existing store in one call. No pre-existing database
 is required. Graft closes connections it creates; caller-supplied
 connections remain owned by the caller. Definitions in a data-dict contract
-seed a new store. Reopening an existing store never accepts changed
-definitions; submit those changes through \code{\link[=graft_plan]{graft_plan()}} and
-\code{\link[=graft_commit]{graft_commit()}}.
+seed a new store, and a failed initial seed is retried on the next writable
+open. Reopening an initialized store never accepts changed definitions;
+submit those changes through \code{\link[=graft_plan]{graft_plan()}} and \code{\link[=graft_commit]{graft_commit()}}.
 }

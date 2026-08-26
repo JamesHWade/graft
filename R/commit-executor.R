@@ -2,12 +2,26 @@ commit_executor_head_stage <- "_graft_commit_head_stage"
 commit_executor_identifier_stage <- "_graft_commit_identifier_stage"
 commit_executor_origin_stage <- "_graft_commit_origin_stage"
 
-commit_candidate_plan <- function(store, batch, staged, plan, started) {
+commit_candidate_plan <- function(
+  store,
+  batch,
+  staged,
+  plan,
+  started,
+  finalize = NULL
+) {
   outcome <- with_duckdb_error(
     "commit_plan",
     DBI::dbWithTransaction(
       store$connection,
-      commit_candidate_transaction(store, batch, staged, plan, started)
+      commit_candidate_transaction(
+        store,
+        batch,
+        staged,
+        plan,
+        started,
+        finalize
+      )
     )
   )
   if (identical(outcome$type, "replay")) {
@@ -17,10 +31,20 @@ commit_candidate_plan <- function(store, batch, staged, plan, started) {
   outcome$result
 }
 
-commit_candidate_transaction <- function(store, batch, staged, plan, started) {
+commit_candidate_transaction <- function(
+  store,
+  batch,
+  staged,
+  plan,
+  started,
+  finalize = NULL
+) {
   replay <- find_committed_replay(store$connection, batch)
   if (!is.null(replay)) {
     validate_commit_plan_replay(plan, replay)
+    if (!is.null(finalize)) {
+      finalize(store$connection)
+    }
     return(list(type = "replay", result = replay))
   }
   verify_initialized_store(store, activate = FALSE)
@@ -88,6 +112,9 @@ commit_candidate_transaction <- function(store, batch, staged, plan, started) {
     )
   )
   commit_executor_failure_hook("batch")
+  if (!is.null(finalize)) {
+    finalize(store$connection)
+  }
   list(type = "committed", result = result)
 }
 

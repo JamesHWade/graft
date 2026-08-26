@@ -726,20 +726,34 @@ contract_definition_records <- function(manifest) {
 }
 
 seed_contract_definitions <- function(store, compiled_schema) {
+  store <- as_graft_store_internal(store, "store")
   records <- contract_definition_records(compiled_schema$manifest)
   if (is.null(records)) {
+    with_duckdb_error(
+      "seed_contract_definitions",
+      DBI::dbWithTransaction(
+        store$connection,
+        mark_contract_definitions_seeded(store$connection)
+      )
+    )
     return(invisible(store))
   }
-  graft_ingest(
-    store,
-    stats::setNames(list(records), graft_definition_class_name),
-    graft_provenance(
+  plan <- graft_plan_records(
+    store = store,
+    records = stats::setNames(list(records), graft_definition_class_name),
+    provenance = graft_provenance(
       producer = "contract",
       idempotency_key = paste0(
         "contract-definitions:",
         compiled_schema$manifest$fingerprints$source_digest
       )
-    )
+    ),
+    source = "records"
+  )
+  commit_graft_plan(
+    store,
+    plan,
+    finalize = mark_contract_definitions_seeded
   )
   invisible(store)
 }

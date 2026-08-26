@@ -1,4 +1,4 @@
-graft_store_format_version <- "3.0.0"
+graft_store_format_version <- "3.1.0"
 
 graft_authoritative_table_names <- c(
   "_graft_store",
@@ -30,6 +30,11 @@ metadata_table_definitions <- function() {
         ddl_column("manifest_json", "VARCHAR", nullable = FALSE),
         ddl_column("history_started_at", "TIMESTAMP", nullable = FALSE),
         ddl_column("history_complete", "BOOLEAN", nullable = FALSE),
+        ddl_column(
+          "contract_definitions_seeded",
+          "BOOLEAN",
+          nullable = FALSE
+        ),
         ddl_column("created_at", "TIMESTAMP", nullable = FALSE),
         ddl_column("updated_at", "TIMESTAMP", nullable = FALSE)
       )
@@ -217,12 +222,33 @@ insert_store_metadata <- function(store) {
     manifest_json = canonical_manifest_json(manifest),
     history_started_at = now,
     history_complete = TRUE,
+    contract_definitions_seeded = FALSE,
     created_at = now,
     updated_at = now,
     stringsAsFactors = FALSE
   )
   DBI::dbAppendTable(store$connection, "_graft_store", row)
   invisible(store)
+}
+
+mark_contract_definitions_seeded <- function(connection) {
+  affected <- DBI::dbExecute(
+    connection,
+    paste0(
+      "UPDATE ",
+      quote_identifier(connection, "_graft_store"),
+      " SET contract_definitions_seeded = TRUE, updated_at = ?"
+    ),
+    params = list(as.POSIXct(Sys.time(), tz = "UTC"))
+  )
+  if (!isTRUE(affected == 1L)) {
+    abort_backend_error(
+      "Could not mark contract-definition seeding complete.",
+      operation = "seed_contract_definitions",
+      affected_rows = affected
+    )
+  }
+  invisible(connection)
 }
 
 register_initial_schema <- function(store) {

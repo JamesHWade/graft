@@ -156,6 +156,62 @@ test_that("data-dict contract definitions seed accepted definitions", {
   expect_identical(nrow(history), 1L)
 })
 
+test_that("graft_open retries incomplete contract definition seeding", {
+  document <- jsonlite::fromJSON(
+    system.file(
+      "extdata",
+      "team-directory.data-dict.json",
+      package = "graft",
+      mustWork = TRUE
+    ),
+    simplifyVector = FALSE
+  )
+  table_names <- vapply(
+    document$tables,
+    \(table) table$name,
+    character(1)
+  )
+  person <- match("person", table_names)
+  document$tables[[person]]$definitions <- list(
+    list(name = "headcount", expr = "missing_column")
+  )
+  directory <- withr::local_tempdir()
+  contract <- file.path(directory, "contract.json")
+  store_path <- file.path(directory, "definitions.duckdb")
+  jsonlite::write_json(
+    document,
+    contract,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+
+  condition <- rlang::catch_cnd(graft_open(
+    graft_schema(contract),
+    store_path,
+    okf = "disabled"
+  ))
+
+  expect_s3_class(condition, "graft_commit_plan_invalid")
+
+  document$tables[[person]]$definitions[[1L]]$expr <- "ROW_COUNT()"
+  jsonlite::write_json(
+    document,
+    contract,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  reopened <- graft_open(
+    graft_schema(contract),
+    store_path,
+    okf = "disabled"
+  )
+  withr::defer(graft_close(reopened))
+
+  definitions <- graft_definitions(reopened)
+  expect_identical(definitions$name, "headcount")
+  expect_identical(definitions$expr, "ROW_COUNT()")
+})
+
 test_that("reopening does not accept changed contract definitions", {
   document <- jsonlite::fromJSON(
     system.file(

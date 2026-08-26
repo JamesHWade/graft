@@ -486,3 +486,43 @@ test_that("normalized public relations are valid definition targets", {
   expect_identical(condition$rule, "calculation_input_bound")
   expect_identical(condition$target, "claim__about")
 })
+
+test_that("normalized relation bounds count expanded rows", {
+  schema <- graft_schema(data_dict_personinfo_export_path())
+  store <- local_graft_ingest_store(schema = schema)
+  graft_ingest(
+    store,
+    list(
+      person = data.frame(
+        id = paste0("person:", letters[1:5]),
+        full_name = LETTERS[1:5],
+        aliases = I(list("A", "B", "C", character(), character()))
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "sparse-aliases"
+    )
+  )
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = "alias_count",
+        target = "person__aliases",
+        expr = "ROW_COUNT()"
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "sparse-alias-count"
+    )
+  )
+  limits <- graft_retrieval_limits
+  limits$calculation_inputs <- 3L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  result <- graft_calculate(store, metrics = "alias_count")
+
+  expect_identical(result$alias_count, 3)
+})

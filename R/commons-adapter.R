@@ -144,13 +144,11 @@ commons_relation_frame <- function(source, relation, limit = NULL) {
     paste0(
       "SELECT record_id, payload_json, recorded_at FROM (",
       graft_read_source_sql(source),
-      ") commons_source WHERE class = ? ORDER BY record_id",
-      definition_input_limit_sql(limit)
+      ") commons_source WHERE class = ? ORDER BY record_id"
     ),
     params = list(owner)
   )
   target <- scalar_character(relation$view)
-  check_definition_input_bound(rows, limit, target)
   payloads <- lapply(rows$payload_json, projection_parse_payload)
   frame <- projection_multivalue_rows(
     rows,

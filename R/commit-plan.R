@@ -206,7 +206,7 @@ graft_commit <- function(store, plan) {
   commit_graft_plan(store, plan)
 }
 
-commit_graft_plan <- function(store, plan) {
+commit_graft_plan <- function(store, plan, finalize = NULL) {
   started <- proc.time()[["elapsed"]]
   validate_initialized_store(store, write = TRUE, refresh = TRUE)
   plan <- validate_graft_commit_plan(plan)
@@ -227,7 +227,7 @@ commit_graft_plan <- function(store, plan) {
   validate_commit_plan_static_binding(store, plan)
   batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
   replay <- find_committed_replay(store$connection, batch)
-  if (!is.null(replay)) {
+  if (!is.null(replay) && is.null(finalize)) {
     validate_commit_plan_replay(plan, replay)
     replay$replay <- TRUE
     signal_batch_replay(replay)
@@ -239,7 +239,8 @@ commit_graft_plan <- function(store, plan) {
     batch = batch,
     staged = execution$staged,
     plan = plan,
-    started = started
+    started = started,
+    finalize = finalize
   )
 }
 
@@ -706,14 +707,21 @@ validate_commit_plan_source <- function(store, plan) {
   invisible(plan)
 }
 
-commit_prepared_plan <- function(store, batch, staged, plan, started) {
+commit_prepared_plan <- function(
+  store,
+  batch,
+  staged,
+  plan,
+  started,
+  finalize = NULL
+) {
   if (!identical(staged$format, candidate_stage_version)) {
     abort_commit_plan(
       "graft_commit_plan_invalid",
       "The commit plan does not use the canonical staged contract."
     )
   }
-  commit_candidate_plan(store, batch, staged, plan, started)
+  commit_candidate_plan(store, batch, staged, plan, started, finalize)
 }
 
 empty_plan_changes <- function() {
