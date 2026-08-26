@@ -139,25 +139,94 @@ commons_relation_types <- function(manifest, relation) {
 
 commons_relation_frame <- function(source, relation, limit = NULL) {
   owner <- scalar_character(relation$owner_class)
-  rows <- retrieval_query(
-    source$connection,
-    paste0(
-      "SELECT record_id, payload_json, recorded_at FROM (",
-      graft_read_source_sql(source),
-      ") commons_source WHERE class = ? ORDER BY record_id"
-    ),
-    params = list(owner)
+  result <- NULL
+  on.exit(
+    {
+      if (!is.null(result)) {
+        try(DBI::dbClearResult(result), silent = TRUE)
+      }
+    },
+    add = TRUE
   )
+  frame <- with_duckdb_error("graft_retrieval", {
+    result <- DBI::dbSendQuery(
+      source$connection,
+      paste0(
+        "SELECT record_id, payload_json, recorded_at FROM (",
+        graft_read_source_sql(source),
+        ") commons_source WHERE class = ? ORDER BY record_id"
+      )
+    )
+    DBI::dbBind(result, list(owner))
+    commons_bounded_relation_frame(
+      result,
+      source$schema,
+      relation,
+      limit
+    )
+  })
+  with_duckdb_error(
+    "graft_retrieval",
+    DBI::dbClearResult(result)
+  )
+  result <- NULL
   target <- scalar_character(relation$view)
-  payloads <- lapply(rows$payload_json, projection_parse_payload)
-  frame <- projection_multivalue_rows(
-    rows,
-    payloads,
-    source$schema,
-    relation
-  )
   check_definition_input_bound(frame, limit, target)
   frame
+}
+
+commons_bounded_relation_frame <- function(result, schema, relation, limit) {
+  slot_name <- scalar_character(relation$slot)
+  row_columns <- c("record_id", "recorded_at")
+  hard_stop <- if (is.null(limit)) Inf else limit + 1L
+  materialized <- 0L
+  selected_rows <- list()
+  payloads <- list()
+  template <- NULL
+  bounded <- FALSE
+  repeat {
+    rows <- DBI::dbFetch(result, n = 500L)
+    if (is.null(template)) {
+      template <- rows[0L, row_columns, drop = FALSE]
+    }
+    if (nrow(rows) == 0L) {
+      break
+    }
+    for (index in seq_len(nrow(rows))) {
+      payload <- projection_parse_payload(rows$payload_json[[index]])
+      items <- payload[[slot_name]]
+      if (is.null(items) || length(items) == 0L) {
+        next
+      }
+      take <- min(length(items), hard_stop - materialized)
+      if (take < length(items)) {
+        items <- items[seq_len(take)]
+      }
+      selected_rows[[length(selected_rows) + 1L]] <- rows[
+        index,
+        row_columns,
+        drop = FALSE
+      ]
+      payloads[[length(payloads) + 1L]] <- stats::setNames(
+        list(items),
+        slot_name
+      )
+      materialized <- materialized + take
+      if (materialized >= hard_stop) {
+        bounded <- TRUE
+        break
+      }
+    }
+    if (bounded) {
+      break
+    }
+  }
+  current <- if (length(selected_rows) == 0L) {
+    template
+  } else {
+    do.call(rbind, selected_rows)
+  }
+  projection_multivalue_rows(current, payloads, schema, relation)
 }
 
 commons_dictionary <- function(source, classes, relations) {

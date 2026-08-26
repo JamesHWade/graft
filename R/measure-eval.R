@@ -1057,7 +1057,8 @@ check_definition_input_bound <- function(rows, limit, target) {
     ),
     rule = "calculation_input_bound",
     target = target,
-    limit = limit
+    limit = limit,
+    materialized_rows = nrow(rows)
   )
 }
 

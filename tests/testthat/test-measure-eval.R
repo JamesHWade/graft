@@ -525,4 +525,27 @@ test_that("normalized relation bounds count expanded rows", {
   result <- graft_calculate(store, metrics = "alias_count")
 
   expect_identical(result$alias_count, 3)
+
+  graft_ingest(
+    store,
+    list(
+      person = data.frame(
+        id = "person:a",
+        full_name = "A",
+        aliases = I(list(c("A", "D", "E")))
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "aliases-over-bound"
+    )
+  )
+  condition <- rlang::catch_cnd(graft_calculate(
+    store,
+    metrics = "alias_count"
+  ))
+
+  expect_s3_class(condition, "graft_calculation_error")
+  expect_identical(condition$rule, "calculation_input_bound")
+  expect_identical(condition$materialized_rows, 4L)
 })
