@@ -61,14 +61,14 @@ define graft's runtime or documentation architecture. A public companion link
 will be added when that repository is ready; the package site does not point to
 an unpublished location.
 
-## The 18-function surface
+## The 22-function surface
 
 | Lifecycle | Functions |
 |---|---|
 | Define and open | `graft_schema()`, `graft_open()`, `graft_close()` |
 | Propose and accept | `graft_provenance()`, `graft_plan()`, `graft_commit()`, `graft_ingest()` |
-| Retrieve and inspect | `graft_snapshot()`, `graft_at()`, `graft_view_snapshot()`, `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()` |
-| Synchronize and integrate | `graft_sync()`, `graft_status()`, `graft_review()`, `graft_tools()` |
+| Retrieve and inspect | `graft_snapshot()`, `graft_at()`, `graft_view_snapshot()`, `graft_get()`, `graft_find()`, `graft_query()`, `graft_history()`, `graft_definitions()`, `graft_calculate()` |
+| Synchronize and integrate | `graft_sync()`, `graft_status()`, `graft_review()`, `graft_tools()`, `graft_verify()`, `graft_commons_data_source()` |
 
 The grouping follows user intent instead of internal subsystems. Reference
 documentation uses the same four groups.

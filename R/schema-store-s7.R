@@ -412,7 +412,10 @@ normalize_graft_schema_output <- function(output) {
 #' `graft_open()` creates a blank writable DuckDB store when `path` does not
 #' exist, or verifies an existing store in one call. No pre-existing database
 #' is required. Graft closes connections it creates; caller-supplied
-#' connections remain owned by the caller.
+#' connections remain owned by the caller. Definitions in a data-dict contract
+#' seed a new store. Reopening an existing store never accepts changed
+#' definitions; submit those changes through [graft_plan()] and
+#' [graft_commit()].
 #'
 #' @param schema A `GraftSchema` object.
 #' @param path DuckDB file path, or `":memory:"`.
@@ -449,6 +452,7 @@ graft_open <- function(
   backend <- do.call(open_store_backend, args)
   tryCatch(
     {
+      new_store <- !duckdb_table_exists(backend$connection, "_graft_store")
       initialize_store_backend(backend)
       metadata <- read_store_metadata(backend$connection)
       state <- new.env(parent = emptyenv())
@@ -457,7 +461,7 @@ graft_open <- function(
       state$id <- scalar_character(metadata$store_id)
       state$id_digest <- graft_sha256(canonical_json(state$id))
       store <- GraftStore(state)
-      if (!isTRUE(read_only)) {
+      if (!isTRUE(read_only) && new_store) {
         seed_contract_definitions(store, compiled_schema)
       }
       store

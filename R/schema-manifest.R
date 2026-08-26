@@ -1759,13 +1759,41 @@ manifest_semantic_contract_problem <- function(manifest, data_dict) {
 }
 
 manifest_shape_problem <- function(manifest, integrity = FALSE) {
-  problem <- function(message, field, rule = "manifest_shape_contract") {
-    list(message = message, field = field, rule = rule)
+  problem <- manifest_top_level_shape_problem(manifest)
+  if (!is.null(problem)) {
+    return(problem)
   }
-  if (!manifest_json_object(manifest)) {
-    return(problem("The schema manifest must be a JSON object.", "$"))
+  has_dictionary <- "dictionary" %in% names(manifest)
+  problem <- manifest_member_shape_problem(manifest, has_dictionary)
+  if (!is.null(problem)) {
+    return(problem)
   }
+  problem <- manifest_derived_contract_problem(manifest, has_dictionary)
+  if (!is.null(problem)) {
+    return(problem)
+  }
+  problem <- manifest_source_identity_problem(manifest$schema)
+  if (!is.null(problem)) {
+    return(problem)
+  }
+  problem <- manifest_compiler_contract_problem(
+    manifest$compiler,
+    has_dictionary,
+    integrity
+  )
+  if (!is.null(problem)) {
+    return(problem)
+  }
+  manifest_fingerprint_problem(manifest, has_dictionary)
+}
 
+manifest_top_level_shape_problem <- function(manifest) {
+  if (!manifest_json_object(manifest)) {
+    return(manifest_contract_problem(
+      "The schema manifest must be a JSON object.",
+      "$"
+    ))
+  }
   object_fields <- c(
     "schema",
     "classes",
@@ -1785,7 +1813,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
         fingerprints = "manifest_fingerprints",
         "manifest_shape_contract"
       )
-      return(problem(
+      return(manifest_contract_problem(
         paste0("Manifest field `", field, "` must be a JSON object."),
         field,
         rule
@@ -1794,7 +1822,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
   }
   for (field in c("relations", "validation_invariants")) {
     if (!manifest_json_array(manifest[[field]])) {
-      return(problem(
+      return(manifest_contract_problem(
         paste0("Manifest field `", field, "` must be a JSON array."),
         field
       ))
@@ -1805,7 +1833,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       names(manifest) &&
       !manifest_json_object(manifest$dictionary)
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest field `dictionary` must be a JSON object when present.",
       "dictionary",
       "dictionary_extension_contract"
@@ -1819,20 +1847,23 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
         names(manifest$compiler) ||
         identical(manifest$compiler$name, "graft-data-dict-adapter"))
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "A compiler provider requires a matching dictionary extension.",
       "dictionary",
       "dictionary_provider_contract"
     ))
   }
+  NULL
+}
 
+manifest_member_shape_problem <- function(manifest, has_dictionary) {
   for (field in c("classes", "slots", "enums")) {
     values <- manifest[[field]]
     if (
       length(values) > 0L &&
         !all(vapply(names(values), manifest_json_nonblank_string, logical(1)))
     ) {
-      return(problem(
+      return(manifest_contract_problem(
         paste0("Every `", field, "` key must be a nonblank string."),
         field
       ))
@@ -1840,7 +1871,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
     invalid <- which(!vapply(values, manifest_json_object, logical(1)))
     if (length(invalid) > 0L) {
       key <- names(values)[[invalid[[1L]]]]
-      return(problem(
+      return(manifest_contract_problem(
         paste0("Every `", field, "` value must be a JSON object."),
         paste(field, key, sep = ".")
       ))
@@ -1882,7 +1913,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
   )
   if (length(invalid_relations) > 0L) {
     index <- invalid_relations[[1L]]
-    return(problem(
+    return(manifest_contract_problem(
       "Every `relations` value must be a JSON object.",
       paste0("relations[", index, "]")
     ))
@@ -1912,7 +1943,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
   )
   if (length(invalid_invariants) > 0L) {
     index <- invalid_invariants[[1L]]
-    return(problem(
+    return(manifest_contract_problem(
       "Every `validation_invariants` value must be a JSON object.",
       paste0("validation_invariants[", index, "]")
     ))
@@ -1927,11 +1958,16 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
   )
   if (length(invalid_normalization) > 0L) {
     key <- names(normalization)[[invalid_normalization[[1L]]]]
-    return(problem(
+    return(manifest_contract_problem(
       "Identifier-normalization versions must be strings.",
       paste("identifier_normalization_versions", key, sep = ".")
     ))
   }
+  NULL
+}
+
+manifest_derived_contract_problem <- function(manifest, has_dictionary) {
+  normalization <- manifest$identifier_normalization_versions
   expected_graph <- manifest_expected_graph_projections(
     manifest$classes,
     manifest$relations
@@ -1942,7 +1978,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       canonical_schema_value(expected_graph)
     )
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest graph projections do not match classes and relations.",
       "graph_projections",
       "graph_projection_contract"
@@ -1957,7 +1993,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       canonical_schema_value(expected_normalization)
     )
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Identifier normalization metadata does not match global slots.",
       "identifier_normalization_versions",
       "identifier_normalization_contract"
@@ -1972,14 +2008,16 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
         )
       )
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest validation invariants do not match class semantics.",
       "validation_invariants",
       "validation_invariant_contract"
     ))
   }
+  NULL
+}
 
-  schema <- manifest$schema
+manifest_source_identity_problem <- function(schema) {
   schema_required <- c("id", "name", "version", "source_files")
   schema_allowed <- schema_required
   if (
@@ -1991,7 +2029,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       !manifest_json_array(schema$source_files) ||
       length(schema$source_files) == 0L
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest source identity metadata is invalid.",
       "schema",
       "schema_source_contract"
@@ -2018,7 +2056,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       manifest_json_nullable_linkml_reference(source_file$schema_id, "uri") &&
       manifest_json_nullable_nonblank_string(source_file$version)
     if (!valid) {
-      return(problem(
+      return(manifest_contract_problem(
         "Manifest source-file metadata is invalid.",
         paste0("schema.source_files[", index, "]"),
         "schema_source_contract"
@@ -2039,7 +2077,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
     character(1)
   )
   if (anyDuplicated(source_schema_ids) || anyDuplicated(source_names)) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest source-file schema IDs and names must each be unique.",
       "schema.source_files",
       "schema_source_contract"
@@ -2051,7 +2089,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
     logical(1)
   ))
   if (length(roots) != 1L) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest source files must declare exactly one root.",
       "schema.source_files",
       "schema_source_contract"
@@ -2063,14 +2101,20 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       !identical(root$name, schema$name) ||
       !identical(root$version, schema$version)
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest root source identity does not match the schema identity.",
       paste0("schema.source_files[", roots[[1L]], "]"),
       "schema_source_contract"
     ))
   }
+  NULL
+}
 
-  compiler <- manifest$compiler
+manifest_compiler_contract_problem <- function(
+  compiler,
+  has_dictionary,
+  integrity
+) {
   compiler_required <- c("name", "version", "script_digest")
   compiler_allowed <- c(
     compiler_required,
@@ -2099,7 +2143,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
         names(compiler) &&
         !manifest_json_object(compiler$provider))
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest compiler metadata is invalid.",
       "compiler",
       if (has_dictionary) {
@@ -2124,7 +2168,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
             data_dict_adapter_script_digest()
           ))
     ) {
-      return(problem(
+      return(manifest_contract_problem(
         "Manifest compiler metadata does not match the data-dict adapter.",
         "compiler",
         "dictionary_compiler_contract"
@@ -2135,7 +2179,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       names(compiler) ||
       identical(compiler$name, "graft-data-dict-adapter")
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "A compiler provider requires a matching dictionary extension.",
       "dictionary",
       "dictionary_provider_contract"
@@ -2145,13 +2189,16 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
       !identical(compiler$version, graft_linkml_compiler_version) ||
       !identical(compiler$script_digest, graft_linkml_compiler_digest())
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest compiler metadata does not match the packaged LinkML compiler.",
       "compiler",
       "compiler_contract"
     ))
   }
+  NULL
+}
 
+manifest_fingerprint_problem <- function(manifest, has_dictionary) {
   fingerprints <- manifest$fingerprints
   fingerprint_fields <- c(
     "structural_digest",
@@ -2168,7 +2215,7 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
         )
       )
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "Manifest fingerprints are invalid.",
       "fingerprints",
       "manifest_fingerprints"
@@ -2178,10 +2225,10 @@ manifest_shape_problem <- function(manifest, integrity = FALSE) {
     !has_dictionary &&
       !identical(
         fingerprints$source_digest,
-        graft_linkml_source_digest(schema$source_files)
+        graft_linkml_source_digest(manifest$schema$source_files)
       )
   ) {
-    return(problem(
+    return(manifest_contract_problem(
       "The LinkML source digest does not match the source-file closure.",
       "fingerprints.source_digest",
       "source_digest_content_mismatch"

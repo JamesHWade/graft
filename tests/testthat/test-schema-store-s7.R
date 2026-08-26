@@ -37,6 +37,28 @@ test_that("GraftSchema exposes immutable semantic contracts", {
   expect_match(conditionMessage(setter), "read-only")
 })
 
+test_that("schema and store displays stay concise", {
+  schema <- graft_schema(tempest_manifest_path())
+  schema_output <- capture.output(print(schema))
+
+  expect_length(schema_output, 3L)
+  expect_match(schema_output[[1L]], "^<GraftSchema> tempest-artifacts")
+  expect_match(schema_output[[2L]], "classes:")
+  expect_match(schema_output[[3L]], "digest:")
+  expect_length(grep("manifest|slots|relations", schema_output), 0L)
+
+  store <- graft_open(schema, okf = "disabled")
+  withr::defer(graft_close(store))
+  store_output <- capture.output(print(store))
+
+  expect_length(store_output, 4L)
+  expect_match(store_output[[1L]], "^<GraftStore>")
+  expect_match(store_output[[2L]], "schema: tempest-artifacts")
+  expect_match(store_output[[3L]], "path:")
+  expect_match(store_output[[4L]], "mode:.*writable, open")
+  expect_length(grep("connection|capabilities|environment", store_output), 0L)
+})
+
 test_that("GraftSchema rejects malformed construction and tampering", {
   compiled <- load_schema_manifest(tempest_manifest_path())
   expect_identical(is.object(compiled), FALSE)

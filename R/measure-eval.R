@@ -296,7 +296,8 @@ abort_calculation_error <- function(message, ..., call = rlang::caller_env()) {
 #'
 #' `graft_calculate()` composes accepted metrics with same-table dimensions,
 #' filters, and simple predicates over current accepted state or the immutable
-#' boundary of a `GraftView`.
+#' boundary of a `GraftView`. Evaluation fails closed when the target exceeds
+#' Graft's hard calculation-input or result-row bound.
 #'
 #' @param source An initialized `GraftStore` or immutable `GraftView`.
 #' @param metrics One or more accepted metric names.
@@ -388,7 +389,12 @@ graft_calculate <- function(
     contract,
     read_source$schema$manifest
   )
-  frame <- definition_target_frame(read_source, contract, typed = FALSE)
+  frame <- definition_target_frame(
+    read_source,
+    contract,
+    typed = FALSE,
+    limit = graft_retrieval_limits$calculation_inputs
+  )
   view_name <- "_graft_definition_target"
   duckdb::duckdb_register(read_source$connection, view_name, frame)
   on.exit(
@@ -986,10 +992,15 @@ definition_where_integer <- function(value, type) {
   value
 }
 
-definition_target_frame <- function(source, contract, typed = TRUE) {
+definition_target_frame <- function(
+  source,
+  contract,
+  typed = TRUE,
+  limit = NULL
+) {
   relation <- contract[["relation", exact = TRUE]]
   if (!is.null(relation)) {
-    frame <- commons_relation_frame(source, relation)
+    frame <- commons_relation_frame(source, relation, limit = limit)
     if (!typed) {
       frame[] <- lapply(frame, as.character)
     }
@@ -1000,10 +1011,12 @@ definition_target_frame <- function(source, contract, typed = TRUE) {
     paste0(
       "SELECT payload_json FROM (",
       graft_read_source_sql(source),
-      ") definition_source WHERE class = ?"
+      ") definition_source WHERE class = ? ORDER BY record_id",
+      definition_input_limit_sql(limit)
     ),
     params = list(scalar_character(contract$name))
   )
+  check_definition_input_bound(rows, limit, scalar_character(contract$name))
   columns <- definition_public_scalar_columns(contract)
   payloads <- lapply(
     rows$payload_json,
@@ -1021,6 +1034,31 @@ definition_target_frame <- function(source, contract, typed = TRUE) {
     )
   })
   stats::setNames(data.frame(values, stringsAsFactors = FALSE), columns)
+}
+
+definition_input_limit_sql <- function(limit) {
+  if (is.null(limit)) {
+    return("")
+  }
+  paste0(" LIMIT ", limit + 1L)
+}
+
+check_definition_input_bound <- function(rows, limit, target) {
+  if (is.null(limit) || nrow(rows) <= limit) {
+    return(invisible(rows))
+  }
+  abort_calculation_error(
+    paste0(
+      "Calculation target `",
+      target,
+      "` exceeds the hard input bound of ",
+      limit,
+      " rows."
+    ),
+    rule = "calculation_input_bound",
+    target = target,
+    limit = limit
+  )
 }
 
 definition_column_values <- function(raw, duckdb_type, typed = TRUE) {

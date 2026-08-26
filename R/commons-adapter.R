@@ -137,24 +137,29 @@ commons_relation_types <- function(manifest, relation) {
   )
 }
 
-commons_relation_frame <- function(source, relation) {
+commons_relation_frame <- function(source, relation, limit = NULL) {
   owner <- scalar_character(relation$owner_class)
   rows <- retrieval_query(
     source$connection,
     paste0(
       "SELECT record_id, payload_json, recorded_at FROM (",
       graft_read_source_sql(source),
-      ") commons_source WHERE class = ? ORDER BY record_id"
+      ") commons_source WHERE class = ? ORDER BY record_id",
+      definition_input_limit_sql(limit)
     ),
     params = list(owner)
   )
+  target <- scalar_character(relation$view)
+  check_definition_input_bound(rows, limit, target)
   payloads <- lapply(rows$payload_json, projection_parse_payload)
-  projection_multivalue_rows(
+  frame <- projection_multivalue_rows(
     rows,
     payloads,
     source$schema,
     relation
   )
+  check_definition_input_bound(frame, limit, target)
+  frame
 }
 
 commons_dictionary <- function(source, classes, relations) {

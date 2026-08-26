@@ -156,6 +156,76 @@ test_that("data-dict contract definitions seed accepted definitions", {
   expect_identical(nrow(history), 1L)
 })
 
+test_that("reopening does not accept changed contract definitions", {
+  document <- jsonlite::fromJSON(
+    system.file(
+      "extdata",
+      "team-directory.data-dict.json",
+      package = "graft",
+      mustWork = TRUE
+    ),
+    simplifyVector = FALSE
+  )
+  table_names <- vapply(document$tables, \(table) table$name, character(1))
+  person <- match("person", table_names)
+  definition <- list(
+    name = "headcount",
+    label = "Headcount",
+    expr = "ROW_COUNT()"
+  )
+  document$tables[[person]]$definitions <- list(definition)
+
+  directory <- withr::local_tempdir()
+  first_contract <- file.path(directory, "first.json")
+  second_contract <- file.path(directory, "second.json")
+  store_path <- file.path(directory, "definitions.duckdb")
+  jsonlite::write_json(
+    document,
+    first_contract,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  first_schema <- graft_schema(first_contract)
+  first <- graft_open(first_schema, store_path, okf = "disabled")
+  definition_id <- graft_definitions(first)$id
+  graft_close(first)
+
+  document$tables[[person]]$definitions[[1L]]$expr <- "ROW_COUNT() + 1"
+  jsonlite::write_json(
+    document,
+    second_contract,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  second_schema <- graft_schema(second_contract)
+  reopened <- graft_open(second_schema, store_path, okf = "disabled")
+  withr::defer(graft_close(reopened))
+
+  definitions <- graft_definitions(reopened)
+  expect_identical(definitions$expr, "ROW_COUNT()")
+  expect_identical(nrow(graft_history(reopened, definition_id)), 1L)
+
+  plan <- graft_plan(
+    reopened,
+    list(
+      GraftDefinition = data.frame(
+        name = "headcount",
+        target = "person",
+        expr = "ROW_COUNT() + 1"
+      )
+    ),
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "reviewed-contract-definition"
+    )
+  )
+  expect_identical(plan@valid, TRUE)
+  graft_commit(reopened, plan)
+
+  expect_identical(graft_definitions(reopened)$expr, "ROW_COUNT() + 1")
+  expect_identical(nrow(graft_history(reopened, definition_id)), 2L)
+})
+
 test_that("definition kinds and types follow data-dict semantics", {
   store <- local_graft_ingest_store()
   valid <- graft_plan(

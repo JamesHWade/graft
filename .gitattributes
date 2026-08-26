@@ -1,1 +1,2 @@
 * text=auto eol=lf
+tests/testthat/_snaps/*.md whitespace=-blank-at-eof

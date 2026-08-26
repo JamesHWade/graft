@@ -369,6 +369,23 @@ test_that("graft_calculate() fails instead of truncating grouped results", {
   expect_identical(condition$rule, "calculation_row_bound")
 })
 
+test_that("graft_calculate() bounds materialized target rows", {
+  store <- local_definition_store()
+  limits <- graft_retrieval_limits
+  limits$calculation_inputs <- 2L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+
+  condition <- rlang::catch_cnd(graft_calculate(
+    store,
+    metrics = "entity_count"
+  ))
+
+  expect_s3_class(condition, "graft_calculation_error")
+  expect_identical(condition$rule, "calculation_input_bound")
+  expect_identical(condition$target, "Entity")
+  expect_identical(condition$limit, 2L)
+})
+
 test_that("graft_calculate() preserves empty-table semantics", {
   store <- local_graft_ingest_store()
   graft_ingest(
@@ -456,4 +473,16 @@ test_that("normalized public relations are valid definition targets", {
 
   expect_identical(definitions$target, "claim__about")
   expect_identical(result$about_count, 3)
+
+  limits <- graft_retrieval_limits
+  limits$calculation_inputs <- 2L
+  local_mocked_bindings(graft_retrieval_limits = limits)
+  condition <- rlang::catch_cnd(graft_calculate(
+    fixture$store,
+    metrics = "about_count"
+  ))
+
+  expect_s3_class(condition, "graft_calculation_error")
+  expect_identical(condition$rule, "calculation_input_bound")
+  expect_identical(condition$target, "claim__about")
 })

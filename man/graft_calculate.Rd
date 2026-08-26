@@ -30,5 +30,6 @@ A data frame with dimensions followed by metrics in request order.
 \description{
 \code{graft_calculate()} composes accepted metrics with same-table dimensions,
 filters, and simple predicates over current accepted state or the immutable
-boundary of a \code{GraftView}.
+boundary of a \code{GraftView}. Evaluation fails closed when the target exceeds
+Graft's hard calculation-input or result-row bound.
 }

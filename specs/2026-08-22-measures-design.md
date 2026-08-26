@@ -62,11 +62,12 @@ agent proposing a record; nothing new is required of the review surface.
 
 Contract-supplied `definitions` (from data-dict resolved JSON) do not get a
 separate read-only path. At `graft_open()`, any definitions present in the
-contract are auto-committed as seed measure records with
+contract seed accepted definition records only while initializing a new store,
+with
 `producer = "contract"` and an idempotency key derived from the contract
 digest. Reopening the same store with the same contract is a no-op. A later
-contract change proposes updates through the normal plan flow rather than
-silently mutating accepted state. There is one list of measures and one
+contract change is submitted through the normal plan flow rather than being
+accepted by `graft_open()`. There is one list of measures and one
 lifecycle.
 
 ## Expression language

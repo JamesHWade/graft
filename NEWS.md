@@ -1,7 +1,9 @@
 # graft 0.0.0.9000
 
+* `GraftSchema` and `GraftStore` now print concise identity, contract, and lifecycle summaries instead of recursively dumping their internal state.
 * A new `vignette("agents")` documents how Graft is used from an agent host: bounded read-only tools, snapshot-pinned sessions, agent-authored proposals that pass through validation and review, and file-editing agents working through the OKF tree. Getting started, the README, and the site home page now show the same path.
 * `graft_calculate()` and `graft_definitions()` replace the pre-production singular measure API with composable, data-dict-compatible metrics, filters, and derived values over one accepted public table, including plan-time type checking, pinned evaluation, grouping, typed predicates, dependency closure, and canonical definition receipts (#21).
+* `graft_calculate()` now fails closed before evaluating a public table or normalized relation that exceeds the hard calculation-input bound.
 * `graft_commons_data_source()` materializes selected public tables, normalized relations, prose, and accepted definitions at one immutable boundary, then returns a detached source owned by an optional, exactly tested Commons integration (#21).
 * `graft_tools()` adds bounded definition discovery and one composite calculation tool when accepted definitions exist; every result carries one canonical receipt for its exact accepted boundary and schema, while calculation receipts identify the full accepted definition closure (#21, #23).
 * `graft_verify()` classifies every completed text-bearing assistant answer in a recorded ellmer chat from deterministic, offline Graft evidence: valid governed-calculation-only evidence is verified, while missing, non-Graft, errored, malformed, or citation-unmatched read evidence fails closed as untrusted with stable reasons (#24).
@@ -14,6 +16,7 @@
 * `graft_commit()` and `graft_ingest()` atomically accept immutable reviewed plans through set-based DuckDB operations and return ordinary summaries with insert, update, match, observation, replay, and timing details.
 * `graft_find()`, `graft_get()`, `graft_history()`, and `graft_query()` provide bounded deterministic retrieval directly from the authoritative revision ledger, including exact historical types, evidence, graph traversal, and integrity diagnosis.
 * `graft_open()` and `graft_close()` manage the only DuckDB backend through an invariant-checked S7 `GraftStore`, including ownership-aware connection cleanup and read-only reopen behavior.
+* `graft_open()` now seeds contract definitions only when initializing a new store, so reopening with edited definitions cannot bypass plan review; package-owned DuckDB connections also use isolated extension storage.
 * `graft_plan()` and `graft_review()` produce the same tamper-evident S7 `GraftCommitPlan` for ordinary records and edited OKF knowledge without persistent writes.
 * `graft_provenance()` creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.
 * `graft_schema()` compiles LinkML or the supported `graft-table-v1` data-dict profile into the same invariant-checked contract. YAML authoring uses the optional data-dict CLI, committed resolved JSON remains R-only, and unsupported provider semantics fail closed.

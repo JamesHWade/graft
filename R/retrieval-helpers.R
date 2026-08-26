@@ -1,6 +1,7 @@
 graft_retrieval_limits <- list(
   batches = 1000L,
   definitions = 1000L,
+  calculation_inputs = 100000L,
   calculation_rows = 1000L,
   changes = 5000L,
   history = 1000L,

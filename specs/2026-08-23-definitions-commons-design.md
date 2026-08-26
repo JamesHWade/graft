@@ -49,7 +49,9 @@ plan time. Graft infers one of three kinds from the expression:
 - `derived`: a row-level value available for grouping or composition.
 
 Definitions declared in the source data-dict seed accepted definition records
-with contract provenance. Reopening the same contract is idempotent.
+with contract provenance when a new store is initialized. Reopening an existing
+store does not accept changed definitions; those changes go through the normal
+plan and commit flow.
 Subsequent discovery and evaluation read accepted ledger revisions rather than
 rereading a mutable external dictionary.
 
