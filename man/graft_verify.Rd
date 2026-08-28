@@ -24,10 +24,10 @@ is deterministic and offline: it does not call a model, reopen a Graft
 store, or authenticate receipt identifiers.
 }
 \details{
-Successful governed-measure-only evidence is \code{"verified"}. Successful
+Successful governed-calculation-only evidence is \code{"verified"}. Successful
 generic Graft reads are \code{"cited"} only when every result is independently
 matched to an explicit quotation or Markdown blockquote in the answer. A
-generic read caps mixed measure and generic evidence at \code{"cited"}. Unknown,
+generic read caps mixed calculation and generic evidence at \code{"cited"}. Unknown,
 errored, malformed, unsupported, and citation-unmatched evidence paths fail
 closed as \code{"untrusted"}.
 

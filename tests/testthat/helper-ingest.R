@@ -11,6 +11,59 @@ local_graft_ingest_store <- function(
   store
 }
 
+local_definition_store <- function(env = parent.frame()) {
+  store <- local_graft_ingest_store(env = env)
+  graft_ingest(
+    store,
+    list(
+      Entity = data.frame(
+        id = c(
+          test_graft_id("definition-entity-a"),
+          test_graft_id("definition-entity-b"),
+          test_graft_id("definition-entity-c")
+        ),
+        label = c("solvent", "solvent", "acid"),
+        preferred_name = c("Acetone", "Benzene", "Citric acid")
+      )
+    ),
+    graft_provenance(producer = "fixture", idempotency_key = "entities-v1")
+  )
+  graft_ingest(
+    store,
+    list(
+      GraftDefinition = data.frame(
+        name = c(
+          "entity_count",
+          "named_count",
+          "lowercase_label",
+          "solvent_filter",
+          "has_solvent"
+        ),
+        target = "Entity",
+        expr = c(
+          "ROW_COUNT()",
+          "COUNT(preferred_name)",
+          "LOWER(label)",
+          "label = 'solvent'",
+          "ANY(solvent_filter)"
+        ),
+        label = c(
+          "Entity count",
+          "Named entity count",
+          "Lowercase label",
+          "Solvents",
+          "Has a solvent"
+        )
+      )
+    ),
+    graft_provenance(
+      producer = "fixture",
+      idempotency_key = "definitions-v1"
+    )
+  )
+  store
+}
+
 graft_test_connection <- function(store) {
   as_graft_store_internal(store)$connection
 }

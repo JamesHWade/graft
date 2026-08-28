@@ -11,3 +11,4 @@
       conditionMessage(turns_condition)
     Output
       [1] "`chat$get_turns()` failed while reading recorded turns.\nCaused by error in `chat$get_turns()`:\n! turn failure"
+

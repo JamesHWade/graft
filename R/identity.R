@@ -717,7 +717,7 @@ candidate_origin_matches <- function(candidates, stored, producer) {
       candidates$origin_key[[row]],
       sep = "\u001f"
     )
-    matches[[row]] <- unique(by_key[[key]])
+    matches[row] <- list(unique(by_key[[key]]))
   }
   matches
 }

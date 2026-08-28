@@ -318,13 +318,13 @@ graft_schema <- function(path, output = NULL) {
         schema_path = path
       )
     }
-    return(new_graft_schema(augment_manifest_with_measures(
+    return(new_graft_schema(augment_manifest_with_definitions(
       load_schema_manifest(path)
     )))
   }
   if (is_data_dict_document(path)) {
     output <- normalize_graft_schema_output(output)
-    return(new_graft_schema(augment_manifest_with_measures(
+    return(new_graft_schema(augment_manifest_with_definitions(
       compile_data_dict_source(path, output)
     )))
   }
@@ -340,7 +340,7 @@ graft_schema <- function(path, output = NULL) {
     )
   }
   output <- normalize_graft_schema_output(output)
-  new_graft_schema(augment_manifest_with_measures(
+  new_graft_schema(augment_manifest_with_definitions(
     compile_schema_manifest(path, output)
   ))
 }
@@ -412,7 +412,10 @@ normalize_graft_schema_output <- function(output) {
 #' `graft_open()` creates a blank writable DuckDB store when `path` does not
 #' exist, or verifies an existing store in one call. No pre-existing database
 #' is required. Graft closes connections it creates; caller-supplied
-#' connections remain owned by the caller.
+#' connections remain owned by the caller. Definitions in a data-dict contract
+#' seed a new store, and a failed initial seed is retried on the next writable
+#' open. Reopening an initialized store never accepts changed definitions;
+#' submit those changes through [graft_plan()] and [graft_commit()].
 #'
 #' @param schema A `GraftSchema` object.
 #' @param path DuckDB file path, or `":memory:"`.
@@ -457,8 +460,19 @@ graft_open <- function(
       state$id <- scalar_character(metadata$store_id)
       state$id_digest <- graft_sha256(canonical_json(state$id))
       store <- GraftStore(state)
-      if (!isTRUE(read_only)) {
-        seed_contract_measures(store, compiled_schema)
+      if (!isTRUE(metadata$contract_definitions_seeded)) {
+        if (isTRUE(read_only)) {
+          abort_backend_error(
+            paste0(
+              "A read-only store cannot complete pending contract-",
+              "definition seeding."
+            ),
+            operation = "seed_contract_definitions",
+            store_path = backend$path
+          )
+        }
+        seed_contract_definitions(store, compiled_schema)
+        mark_store_verified(backend)
       }
       store
     },

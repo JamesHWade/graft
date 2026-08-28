@@ -3,17 +3,18 @@
 #' `graft_tools()` returns [ellmer::tool()] definitions that delegate only
 #' to Graft's public bounded retrieval operations. The tools do not expose SQL,
 #' filesystem, network, connection, or mutation arguments.
-#' When the store has accepted measures, a fifth `graft_measure` tool
-#' evaluates them by name through [graft_measure()]; it is omitted when no
-#' measures are accepted.
+#' When the store has accepted definitions, `graft_definitions` exposes their
+#' bounded catalog and one `graft_calculate` tool composes them through
+#' [graft_calculate()]. Both are omitted when no definitions are accepted.
 #' When given a `GraftView`, all tools remain pinned to its immutable
 #' snapshot boundary and the live-store integrity diagnostic is unavailable.
 #'
 #' Every tool returns `result`, `truncated`, `limit`, and one canonical nested
 #' `receipt`. The receipt identifies the store, exact accepted boundary, and
-#' structural and build schema digests. Measure receipts also identify the
-#' accepted measure definition. Live-store tools pin a fresh boundary for each
-#' invocation; tools created from a `GraftView` retain its snapshot boundary.
+#' structural and build schema digests. Calculation receipts also identify the
+#' complete accepted definition closure. Live-store tools pin a fresh boundary
+#' for each invocation; tools created from a `GraftView` retain its snapshot
+#' boundary.
 #'
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
 #'
@@ -189,56 +190,119 @@ graft_tools <- function(store) {
       annotations = annotations
     )
   )
-  measures <- graft_measures(store)
-  if (nrow(measures) > 0L) {
-    tools$graft_measure <- graft_measure_tool(store, measures, annotations)
+  definitions <- graft_definitions(store)
+  if (nrow(definitions) > 0L) {
+    tools$graft_definitions <- graft_definitions_tool(store, annotations)
+    tools$graft_calculate <- graft_calculate_tool(store, annotations)
   }
   tools
 }
 
-graft_measure_tool <- function(store, measures, annotations) {
+graft_definitions_tool <- function(store, annotations) {
   ellmer::tool(
-    function(name, arguments = list(), by = NULL) {
+    function(target = NULL) {
       context <- graft_tool_context(store)
-      result <- graft_measure(
+      result <- graft_definitions(
         context$store,
-        name = name,
-        arguments = arguments,
-        by = by
-      )
-      context$receipt$definition <- list(
-        id = attr(result, "measure_id"),
-        revision_id = attr(result, "revision_id")
+        target = target
       )
       graft_tool_bounded_result(
         result,
-        graft_retrieval_limits$measure_rows,
+        graft_retrieval_limits$definitions,
         context$receipt
       )
     },
-    name = "graft_measure",
+    name = "graft_definitions",
     description = paste(
-      "Evaluate one accepted, governed measure over accepted state.",
-      "Arguments bind to declared parameters as equality filters and",
-      "`by` groups by declared dimensions. Results are deterministic",
-      "and bounded; no SQL is accepted."
+      "List accepted metric, filter, and derived definitions plus their",
+      "public targets, dependencies, and eligible columns."
     ),
     arguments = list(
-      name = ellmer::type_enum(
-        sort(measures$name),
-        "Name of one accepted measure."
-      ),
-      arguments = graft_tool_json_type(
-        list(type = "object", additionalProperties = TRUE),
-        required = FALSE
-      ),
-      by = ellmer::type_array(
-        ellmer::type_string("A declared dimension column."),
-        "Declared dimensions to group by.",
+      target = ellmer::type_string(
+        "Optional public-table restriction.",
         required = FALSE
       )
     ),
     annotations = annotations
+  )
+}
+
+graft_calculate_tool <- function(store, annotations) {
+  ellmer::tool(
+    function(metrics, dimensions = NULL, filters = NULL, where = NULL) {
+      context <- graft_tool_context(store)
+      result <- graft_calculate(
+        context$store,
+        metrics = metrics,
+        dimensions = dimensions,
+        filters = filters,
+        where = where
+      )
+      definitions <- attr(result, "definitions")
+      context$receipt$definitions <- lapply(
+        seq_len(nrow(definitions)),
+        function(index) {
+          list(
+            id = definitions$id[[index]],
+            revision_id = definitions$revision_id[[index]],
+            kind = definitions$kind[[index]]
+          )
+        }
+      )
+      graft_tool_result(
+        result,
+        truncated = FALSE,
+        limit = graft_retrieval_limits$calculation_rows,
+        receipt = context$receipt
+      )
+    },
+    name = "graft_calculate",
+    description = paste(
+      "Compose accepted same-table metrics, dimensions, filters, and simple",
+      "predicates over one exact accepted boundary. No SQL is accepted."
+    ),
+    arguments = list(
+      metrics = ellmer::type_array(
+        ellmer::type_string("An accepted metric name."),
+        "One or more accepted metrics."
+      ),
+      dimensions = ellmer::type_array(
+        ellmer::type_string("A public column or accepted derived definition."),
+        "Optional grouping dimensions.",
+        required = FALSE
+      ),
+      filters = ellmer::type_array(
+        ellmer::type_string("An accepted filter definition."),
+        "Optional accepted filters.",
+        required = FALSE
+      ),
+      where = graft_tool_where_type(
+        required = FALSE
+      )
+    ),
+    annotations = annotations
+  )
+}
+
+graft_tool_where_type <- function(required = FALSE) {
+  graft_tool_json_type(
+    list(
+      type = "array",
+      items = list(
+        type = "object",
+        additionalProperties = FALSE,
+        properties = list(
+          column = list(type = "string"),
+          op = list(
+            type = "string",
+            enum = c("=", "!=", "<", "<=", ">", ">=")
+          ),
+          value = list(type = "string")
+        ),
+        required = c("column", "op", "value")
+      )
+    ),
+    required = required
   )
 }
 

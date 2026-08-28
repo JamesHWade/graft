@@ -1,7 +1,7 @@
 duckdb_connect <- function(path, read_only) {
   tryCatch(
     DBI::dbConnect(
-      duckdb::duckdb(),
+      duckdb::duckdb(shared_home = FALSE),
       dbdir = path,
       read_only = read_only
     ),

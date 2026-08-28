@@ -14,7 +14,8 @@ plan_candidate_records <- function(store, batch, records, metadata) {
   validation <- validate_candidate_stages(
     store$schema$manifest,
     staged,
-    snapshot
+    snapshot,
+    store$connection
   )
   staged <- validation$staged
   issues <- c(issues, validation$issues)
@@ -39,6 +40,10 @@ plan_candidate_records <- function(store, batch, records, metadata) {
     registry_preconditions = list(
       identifier_digest = snapshot$identifier_digest,
       origin_digest = snapshot$origin_digest
+    ),
+    definition_preconditions = list(
+      required = graft_definition_class_name %in% names(planned$staged),
+      catalog_digest = snapshot$definition_digest
     ),
     planned_at = snapshot$planned_at
   )
@@ -96,7 +101,8 @@ read_planning_snapshot <- function(store, producer, metadata) {
         latest = latest
       ),
       identifier_digest = planning_snapshot_digest(identifiers),
-      origin_digest = planning_snapshot_digest(origins)
+      origin_digest = planning_snapshot_digest(origins),
+      definition_digest = planning_definition_catalog_digest(current)
     )
   })
 }
@@ -121,6 +127,30 @@ planning_origins_sql <- function(connection) {
 
 planning_snapshot_digest <- function(rows) {
   graft_sha256(canonical_json(rows))
+}
+
+planning_definition_catalog_digest <- function(current) {
+  fields <- c(
+    "record_id",
+    "class",
+    "revision_id",
+    "revision_number",
+    "operation",
+    "content_digest"
+  )
+  definitions <- current[
+    current$class == graft_definition_class_name &
+      current$operation != "delete",
+    fields,
+    drop = FALSE
+  ]
+  definitions <- definitions[
+    order(definitions$record_id, method = "radix"),
+    ,
+    drop = FALSE
+  ]
+  rownames(definitions) <- NULL
+  planning_snapshot_digest(definitions)
 }
 
 validate_planning_head_snapshot <- function(heads) {
@@ -495,10 +525,15 @@ coerce_candidate_vector <- function(x, slot) {
   )
 }
 
-validate_candidate_stages <- function(manifest, staged, snapshot) {
+validate_candidate_stages <- function(manifest, staged, snapshot, connection) {
   issues <- list()
   for (record_class in names(staged)) {
-    result <- validate_candidate_class(manifest, staged[[record_class]])
+    result <- validate_candidate_class(
+      manifest,
+      staged[[record_class]],
+      snapshot,
+      connection
+    )
     staged[[record_class]] <- result$staged
     issues <- c(issues, result$issues)
   }
@@ -510,7 +545,7 @@ validate_candidate_stages <- function(manifest, staged, snapshot) {
   )
 }
 
-validate_candidate_class <- function(manifest, staged) {
+validate_candidate_class <- function(manifest, staged, snapshot, connection) {
   issues <- list()
   for (slot_name in names(staged$contract$slots)) {
     slot <- staged$contract$slots[[slot_name]]
@@ -577,8 +612,16 @@ validate_candidate_class <- function(manifest, staged) {
     }
   }
   issues <- c(issues, validate_candidate_invariants(staged))
-  if (identical(staged$class, graft_measure_class_name)) {
-    issues <- c(issues, validate_measure_candidates(manifest, staged))
+  if (identical(staged$class, graft_definition_class_name)) {
+    issues <- c(
+      issues,
+      validate_definition_candidates(
+        manifest,
+        staged,
+        snapshot$current,
+        connection
+      )
+    )
   }
   list(staged = staged, issues = issues)
 }

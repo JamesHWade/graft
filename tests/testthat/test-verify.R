@@ -84,7 +84,7 @@ test_that("graft_verify classifies completed text answers in windows", {
   )
 })
 
-test_that("graft_verify verifies governed measure-only evidence", {
+test_that("graft_verify verifies governed calculation-only evidence", {
   digest <- paste0("sha256:", strrep("a", 64L))
   receipt <- list(
     store = list(id = "store-1"),
@@ -97,15 +97,16 @@ test_that("graft_verify verifies governed measure-only evidence", {
       structural_digest = digest,
       build_digest = digest
     ),
-    definition = list(
-      id = "measure:entity-count",
-      revision_id = "revision-1"
-    )
+    definitions = list(list(
+      id = "graft:00000000000000000000000000",
+      revision_id = "revision-1",
+      kind = "metric"
+    ))
   )
   request <- ellmer::ContentToolRequest(
-    id = "call-measure",
-    name = "graft_measure",
-    arguments = list(name = "entity-count")
+    id = "call-calculation",
+    name = "graft_calculate",
+    arguments = list(metrics = "entity_count")
   )
   result <- ellmer::ContentToolResult(
     value = list(
@@ -129,7 +130,7 @@ test_that("graft_verify verifies governed measure-only evidence", {
   expect_identical(verification$label, "verified")
   expect_identical(
     verification$reason_codes,
-    list("governed_measure_only")
+    list("governed_calculation_only")
   )
   expect_identical(verification$receipts, list(list(receipt)))
   expect_identical(verification$citations, list(list()))
@@ -143,8 +144,8 @@ test_that("graft_verify uses a result's linked request without a request turn", 
   digest <- paste0("sha256:", strrep("f", 64L))
   request <- ellmer::ContentToolRequest(
     id = "call-result-only",
-    name = "graft_measure",
-    arguments = list(name = "entity-count")
+    name = "graft_calculate",
+    arguments = list(metrics = "entity_count")
   )
   receipt <- list(
     store = list(id = "store-1"),
@@ -157,10 +158,11 @@ test_that("graft_verify uses a result's linked request without a request turn", 
       structural_digest = digest,
       build_digest = digest
     ),
-    definition = list(
-      id = "measure:entity-count",
-      revision_id = "revision-1"
-    )
+    definitions = list(list(
+      id = "definition:entity-count",
+      revision_id = "revision-1",
+      kind = "metric"
+    ))
   )
   result <- ellmer::ContentToolResult(
     value = list(
@@ -183,7 +185,7 @@ test_that("graft_verify uses a result's linked request without a request turn", 
   expect_identical(verification$label, "verified")
   expect_identical(
     verification$reason_codes,
-    list("governed_measure_only")
+    list("governed_calculation_only")
   )
   expect_identical(
     verification$tool_calls,
@@ -194,7 +196,7 @@ test_that("graft_verify uses a result's linked request without a request turn", 
 
 test_that("graft_verify fails closed for unsupported evidence paths", {
   digest <- paste0("sha256:", strrep("b", 64L))
-  receipt <- function(kind = "live", definition = FALSE) {
+  receipt <- function(kind = "live", definitions = FALSE) {
     boundary <- list(kind = kind, batch_id = "batch-1", commit_order = 1)
     if (identical(kind, "snapshot")) {
       boundary$snapshot_id <- digest
@@ -207,8 +209,12 @@ test_that("graft_verify fails closed for unsupported evidence paths", {
         build_digest = digest
       )
     )
-    if (definition) {
-      value$definition <- list(id = "measure:count", revision_id = "rev-1")
+    if (definitions) {
+      value$definitions <- list(list(
+        id = "definition:count",
+        revision_id = "rev-1",
+        kind = "metric"
+      ))
     }
     value
   }
@@ -258,9 +264,9 @@ test_that("graft_verify fails closed for unsupported evidence paths", {
     id = "weather-error"
   )
   errored <- call_result(
-    "graft_measure",
+    "graft_calculate",
     NULL,
-    error = "measure failed",
+    error = "calculation failed",
     id = "error"
   )
 
@@ -292,17 +298,18 @@ test_that("graft_verify fails closed for unsupported evidence paths", {
   invalid_values$bad_snapshot <- envelope(receipt("snapshot"))
   invalid_values$bad_snapshot$receipt$boundary$snapshot_id <- "not-a-digest"
   invalid_values$history_for_find <- envelope(receipt("history"))
-  invalid_values$definition_for_find <- envelope(receipt())
-  invalid_values$definition_for_find$receipt$definition <- list(
-    id = "measure:count",
-    revision_id = "rev-1"
-  )
-  invalid_values$measure_without_definition <- envelope(receipt())
-  invalid_values$measure_history <- envelope(receipt("history", TRUE))
+  invalid_values$definitions_for_find <- envelope(receipt())
+  invalid_values$definitions_for_find$receipt$definitions <- list(list(
+    id = "definition:count",
+    revision_id = "rev-1",
+    kind = "metric"
+  ))
+  invalid_values$calculation_without_definitions <- envelope(receipt())
+  invalid_values$calculation_history <- envelope(receipt("history", TRUE))
 
   invalid <- lapply(names(invalid_values), function(id) {
-    name <- if (startsWith(id, "measure_")) {
-      "graft_measure"
+    name <- if (startsWith(id, "calculation_")) {
+      "graft_calculate"
     } else {
       "graft_find"
     }
@@ -324,7 +331,7 @@ test_that("graft_verify contains malformed traces to their answer", {
     ))
     graft_verify(chat)
   }
-  request <- function(id = "call-1", name = "graft_measure") {
+  request <- function(id = "call-1", name = "graft_calculate") {
     ellmer::ContentToolRequest(id = id, name = name, arguments = list())
   }
   result <- function(request) {
@@ -345,10 +352,11 @@ test_that("graft_verify contains malformed traces to their answer", {
             structural_digest = digest,
             build_digest = digest
           ),
-          definition = list(
-            id = "measure:count",
-            revision_id = "rev-1"
-          )
+          definitions = list(list(
+            id = "definition:count",
+            revision_id = "rev-1",
+            kind = "metric"
+          ))
         )
       ),
       request = request
@@ -430,8 +438,8 @@ test_that("graft_verify diagnoses truncation and mixed accepted boundaries", {
   request <- function(id) {
     ellmer::ContentToolRequest(
       id = id,
-      name = "graft_measure",
-      arguments = list(name = "count")
+      name = "graft_calculate",
+      arguments = list(metrics = "count")
     )
   }
   result <- function(request, kind, batch_id, commit_order, truncated) {
@@ -455,10 +463,11 @@ test_that("graft_verify diagnoses truncation and mixed accepted boundaries", {
             structural_digest = digest,
             build_digest = digest
           ),
-          definition = list(
-            id = "measure:count",
-            revision_id = "revision-1"
-          )
+          definitions = list(list(
+            id = "definition:count",
+            revision_id = "revision-1",
+            kind = "metric"
+          ))
         )
       ),
       request = request
@@ -484,7 +493,7 @@ test_that("graft_verify diagnoses truncation and mixed accepted boundaries", {
   expect_identical(verification$label, "verified")
   expect_identical(
     verification$reason_codes,
-    list("governed_measure_only")
+    list("governed_calculation_only")
   )
   expect_identical(
     verification$diagnostics,
@@ -497,8 +506,8 @@ test_that("graft_verify pairs each answer with its recorded tool window", {
   request <- function(id, name) {
     ellmer::ContentToolRequest(
       id = id,
-      name = "graft_measure",
-      arguments = list(name = name)
+      name = "graft_calculate",
+      arguments = list(metrics = name)
     )
   }
   result <- function(request, definition_id) {
@@ -518,7 +527,11 @@ test_that("graft_verify pairs each answer with its recorded tool window", {
             structural_digest = digest,
             build_digest = digest
           ),
-          definition = list(id = definition_id, revision_id = "revision-1")
+          definitions = list(list(
+            id = definition_id,
+            revision_id = "revision-1",
+            kind = "metric"
+          ))
         )
       ),
       request = request
@@ -527,9 +540,9 @@ test_that("graft_verify pairs each answer with its recorded tool window", {
   first <- request("call-1", "first")
   second <- request("call-2", "second")
   reused_id <- request("call-1", "third")
-  first_result <- result(first, "measure:first")
-  second_result <- result(second, "measure:second")
-  reused_result <- result(reused_id, "measure:third")
+  first_result <- result(first, "definition:first")
+  second_result <- result(second, "definition:second")
+  reused_result <- result(reused_id, "definition:third")
   chat <- ellmer::chat_openai(model = "gpt-4o-mini")
   chat$set_turns(list(
     ellmer::UserTurn(list(ellmer::ContentText("First question"))),
@@ -559,9 +572,9 @@ test_that("graft_verify pairs each answer with its recorded tool window", {
   )
   expect_identical(
     lapply(verification$receipts, function(receipts) {
-      vapply(receipts, \(receipt) receipt$definition$id, character(1))
+      vapply(receipts, \(receipt) receipt$definitions[[1L]]$id, character(1))
     }),
-    list(c("measure:first", "measure:second"), "measure:third")
+    list(c("definition:first", "definition:second"), "definition:third")
   )
 })
 
@@ -860,10 +873,10 @@ test_that("graft_verify requires matched evidence from every generic result", {
   expect_identical(lengths(partial$citations), 1L)
 })
 
-test_that("graft_verify caps mixed measure and generic evidence at cited", {
+test_that("graft_verify caps mixed calculation and generic evidence at cited", {
   evidence <- "Lois Lane works at the Daily Planet."
-  measure <- verification_test_call(
-    "graft_measure",
+  calculation <- verification_test_call(
+    "graft_calculate",
     data.frame(value = 1),
     id = "count"
   )
@@ -872,7 +885,7 @@ test_that("graft_verify caps mixed measure and generic evidence at cited", {
     data.frame(summary = evidence),
     id = "history"
   )
-  calls <- list(measure, generic)
+  calls <- list(calculation, generic)
 
   matched <- graft_verify(verification_test_chat(
     calls,

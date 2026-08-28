@@ -439,24 +439,25 @@ test_that("graft_tools has no mutation surface and leaves the store unchanged", 
   expect_s3_class(arbitrary, "graft_validation_error")
 })
 
-test_that("graft_tools adds a bounded graft_measure tool when measures exist", {
+test_that("graft_tools exposes definition discovery and one calculation tool", {
   fixture <- local_retrieval_store()
   store <- fixture$store
   graft_ingest(
     store,
     list(
-      GraftMeasure = data.frame(
-        id = "measure:entity-count",
-        name = "entity-count",
-        title = "Entity count",
+      GraftDefinition = data.frame(
+        name = "entity_count",
+        target = "Entity",
+        expr = "ROW_COUNT()",
+        label = "Entity count",
         description = "Number of accepted entities.",
-        target_class = "Entity",
-        expr = "COUNT(*)",
-        parameters = "[]",
-        dimensions = "[\"preferred_name\"]"
+        details = "Counts every accepted entity."
       )
     ),
-    graft_provenance(producer = "test", idempotency_key = "measure-tool-v1")
+    graft_provenance(
+      producer = "test",
+      idempotency_key = "definition-tool-v1"
+    )
   )
 
   tools <- graft_tools(store)
@@ -467,16 +468,18 @@ test_that("graft_tools adds a bounded graft_measure tool when measures exist", {
       "graft_get",
       "graft_query",
       "graft_history",
-      "graft_measure"
+      "graft_definitions",
+      "graft_calculate"
     )
   )
   properties <- agent_tool_prop(
-    agent_tool_prop(tools$graft_measure, "arguments"),
+    agent_tool_prop(tools$graft_calculate, "arguments"),
     "properties"
   )
-  expect_identical(agent_tool_prop(properties$name, "values"), "entity-count")
+  metric_items <- agent_tool_prop(properties$metrics, "items")
+  expect_identical(agent_tool_prop(metric_items, "type"), "string")
   expect_identical(
-    agent_tool_prop(tools$graft_measure, "annotations"),
+    agent_tool_prop(tools$graft_calculate, "annotations"),
     list(
       read_only_hint = TRUE,
       open_world_hint = FALSE,
@@ -485,19 +488,25 @@ test_that("graft_tools adds a bounded graft_measure tool when measures exist", {
     )
   )
 
-  result <- tools$graft_measure(name = "entity-count")
-  revision_id <- graft_history(store, "measure:entity-count")$revision_id[[1L]]
+  catalog <- tools$graft_definitions(target = "Entity")
+  result <- tools$graft_calculate(metrics = "entity_count")
+  definition <- graft_definitions(store)
   expect_named(result, c("result", "truncated", "limit", "receipt"))
-  expect_identical(result$result$value, 2)
+  expect_identical(catalog$result$name, "entity_count")
+  expect_identical(result$result$entity_count, 2)
   expect_identical(result$truncated, FALSE)
   expect_identical(
-    result$receipt$definition,
-    list(id = "measure:entity-count", revision_id = revision_id)
+    result$receipt$definitions,
+    list(list(
+      id = definition$id[[1L]],
+      revision_id = definition$revision_id[[1L]],
+      kind = "metric"
+    ))
   )
   expect_match(result$receipt$schema$structural_digest, "^sha256:")
 })
 
-test_that("graft_tools omits graft_measure when no measures are accepted", {
+test_that("graft_tools omits definition tools when none are accepted", {
   fixture <- local_retrieval_store()
   expect_named(
     graft_tools(fixture$store),

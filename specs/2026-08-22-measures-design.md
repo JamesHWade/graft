@@ -1,7 +1,13 @@
 # Measures: governed calculations as reviewed knowledge
 
 Date: 2026-08-22
-Status: approved design, phase 1 of 3
+Status: implemented phase 1; superseded for Phase 3 by
+`2026-08-23-definitions-commons-design.md`
+
+This document records the original measure design that shipped in Phase 1.
+Phase 3 intentionally replaces its public model, API, tool, and singular
+receipt definition with composable definitions. It is retained as historical
+implementation context, not as the current product contract.
 
 ## Motivation
 
@@ -56,11 +62,12 @@ agent proposing a record; nothing new is required of the review surface.
 
 Contract-supplied `definitions` (from data-dict resolved JSON) do not get a
 separate read-only path. At `graft_open()`, any definitions present in the
-contract are auto-committed as seed measure records with
+contract seed accepted definition records only while initializing a new store,
+with
 `producer = "contract"` and an idempotency key derived from the contract
 digest. Reopening the same store with the same contract is a no-op. A later
-contract change proposes updates through the normal plan flow rather than
-silently mutating accepted state. There is one list of measures and one
+contract change is submitted through the normal plan flow rather than being
+accepted by `graft_open()`. There is one list of measures and one
 lifecycle.
 
 ## Expression language

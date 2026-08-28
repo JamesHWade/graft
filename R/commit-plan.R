@@ -166,6 +166,7 @@ graft_plan_records <- function(
   ]
   preconditions <- list(
     heads = heads,
+    definitions = candidate$definition_preconditions,
     registries = candidate$registry_preconditions,
     source = source_preconditions
   )
@@ -205,7 +206,7 @@ graft_commit <- function(store, plan) {
   commit_graft_plan(store, plan)
 }
 
-commit_graft_plan <- function(store, plan) {
+commit_graft_plan <- function(store, plan, finalize = NULL) {
   started <- proc.time()[["elapsed"]]
   validate_initialized_store(store, write = TRUE, refresh = TRUE)
   plan <- validate_graft_commit_plan(plan)
@@ -226,7 +227,7 @@ commit_graft_plan <- function(store, plan) {
   validate_commit_plan_static_binding(store, plan)
   batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
   replay <- find_committed_replay(store$connection, batch)
-  if (!is.null(replay)) {
+  if (!is.null(replay) && is.null(finalize)) {
     validate_commit_plan_replay(plan, replay)
     replay$replay <- TRUE
     signal_batch_replay(replay)
@@ -238,7 +239,8 @@ commit_graft_plan <- function(store, plan) {
     batch = batch,
     staged = execution$staged,
     plan = plan,
-    started = started
+    started = started,
+    finalize = finalize
   )
 }
 
@@ -406,6 +408,7 @@ validate_graft_commit_plan <- function(plan) {
 validate_commit_plan_preconditions <- function(store, plan) {
   validate_commit_plan_static_binding(store, plan)
   validate_commit_plan_heads(store, plan@preconditions$heads)
+  validate_commit_plan_definitions(store, plan)
   validate_commit_plan_registries(store, plan)
   validate_commit_plan_source(store, plan)
   invisible(plan)
@@ -621,6 +624,53 @@ validate_commit_plan_registries <- function(store, plan) {
   invisible(plan)
 }
 
+validate_commit_plan_definitions <- function(store, plan) {
+  expected <- plan@preconditions$definitions
+  if (
+    !is.list(expected) ||
+      !identical(names(expected), c("required", "catalog_digest")) ||
+      !is_scalar_flag(expected$required) ||
+      !is_graft_digest(expected$catalog_digest)
+  ) {
+    abort_commit_plan(
+      "graft_commit_plan_tampered",
+      "The definition-catalog preconditions are invalid."
+    )
+  }
+  if (!expected$required) {
+    return(invisible(plan))
+  }
+  current <- DBI::dbGetQuery(
+    store$connection,
+    paste0(
+      "SELECT h.record_id, h.class, h.revision_id, h.revision_number, ",
+      "r.record_id AS ledger_record_id, r.class AS ledger_class, ",
+      "r.revision_id AS ledger_revision_id, ",
+      "r.revision_number AS ledger_revision_number, r.operation, ",
+      "r.payload_json, r.content_digest FROM ",
+      quote_identifier(store$connection, "_graft_record_heads"),
+      " AS h LEFT JOIN ",
+      quote_identifier(store$connection, "_graft_record_revisions"),
+      " AS r ON r.record_id = h.record_id AND r.class = h.class ",
+      "AND r.revision_id = h.revision_id ",
+      "AND r.revision_number = h.revision_number ",
+      "WHERE h.class = ? ORDER BY h.record_id"
+    ),
+    params = list(graft_definition_class_name)
+  )
+  validate_planning_head_snapshot(current)
+  observed <- planning_definition_catalog_digest(current)
+  if (!identical(observed, expected$catalog_digest)) {
+    abort_commit_plan(
+      "graft_commit_plan_stale",
+      "The accepted definition catalog changed after planning.",
+      expected_digest = expected$catalog_digest,
+      observed_digest = observed
+    )
+  }
+  invisible(plan)
+}
+
 validate_commit_plan_source <- function(store, plan) {
   if (!identical(plan@source, "okf")) {
     return(invisible(plan))
@@ -657,14 +707,21 @@ validate_commit_plan_source <- function(store, plan) {
   invisible(plan)
 }
 
-commit_prepared_plan <- function(store, batch, staged, plan, started) {
+commit_prepared_plan <- function(
+  store,
+  batch,
+  staged,
+  plan,
+  started,
+  finalize = NULL
+) {
   if (!identical(staged$format, candidate_stage_version)) {
     abort_commit_plan(
       "graft_commit_plan_invalid",
       "The commit plan does not use the canonical staged contract."
     )
   }
-  commit_candidate_plan(store, batch, staged, plan, started)
+  commit_candidate_plan(store, batch, staged, plan, started, finalize)
 }
 
 empty_plan_changes <- function() {

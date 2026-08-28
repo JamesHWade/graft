@@ -128,9 +128,6 @@ graft_get(store, "person:lois-lane")$record
 graft_history(store, "person:lois-lane")[
   , c("revision_number", "committed_at", "producer", "changed_fields")
 ]
-
-graft_close(store)
-unlink(store_path)
 ```
 
 The current record has the new title. History retains both accepted versions,
@@ -159,6 +156,11 @@ The four tools delegate to `graft_find()`, `graft_get()`, `graft_query()`, and
 argument, and every result reports the limit it applied, whether it was
 truncated, and the contract digest it came from. Writes stay in R, behind a
 reviewable plan.
+
+```r
+graft_close(store)
+unlink(store_path)
+```
 
 ## Choose a contract provider
 

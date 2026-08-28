@@ -1,24 +1,25 @@
-# graft_measure() rejects unknown names, arguments, and dimensions
+# graft_calculate() rejects invalid requests with classed errors
 
     Code
-      graft_measure(store, "nope")
+      graft_calculate(store, metrics = "nope")
     Condition
-      Error in `graft_measure()`:
-      ! No accepted measure is named `nope`. Accepted measures: `entity-count`.
+      Error in `definition_resolve_one()`:
+      ! No accepted definition resolves `nope`.
 
 ---
 
     Code
-      graft_measure(store, "entity-count", arguments = list(nope = 1))
+      graft_calculate(store, metrics = "entity_count", dimensions = "nope")
     Condition
-      Error in `graft_measure()`:
-      ! Unknown measure argument `nope`. Declared parameters: `label`.
+      Error in `definition_resolve_one()`:
+      ! No accepted definition resolves `nope`.
 
 ---
 
     Code
-      graft_measure(store, "entity-count", by = "nope")
+      graft_calculate(store, metrics = "entity_count", where = list(list(column = "label",
+        op = "=", value = 1)))
     Condition
-      Error in `graft_measure()`:
-      ! Unknown measure dimension `nope`. Declared dimensions: `label`, `preferred_name`.
+      Error in `definition_where_predicates()`:
+      ! Every `where` predicate needs string `column`, `op`, and `value` fields.
 
