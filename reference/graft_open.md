@@ -3,7 +3,13 @@
 `graft_open()` creates a blank writable DuckDB store when `path` does
 not exist, or verifies an existing store in one call. No pre-existing
 database is required. Graft closes connections it creates;
-caller-supplied connections remain owned by the caller.
+caller-supplied connections remain owned by the caller. Definitions in a
+data-dict contract seed a new store, and a failed initial seed is
+retried on the next writable open. Reopening an initialized store never
+accepts changed definitions; submit those changes through
+[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+and
+[`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md).
 
 ## Usage
 

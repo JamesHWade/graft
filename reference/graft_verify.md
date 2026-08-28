@@ -30,11 +30,11 @@ without completed answers returns the same columns with zero rows.
 
 ## Details
 
-Successful governed-measure-only evidence is `"verified"`. Successful
-generic Graft reads are `"cited"` only when every result is
+Successful governed-calculation-only evidence is `"verified"`.
+Successful generic Graft reads are `"cited"` only when every result is
 independently matched to an explicit quotation or Markdown blockquote in
-the answer. A generic read caps mixed measure and generic evidence at
-`"cited"`. Unknown, errored, malformed, unsupported, and
+the answer. A generic read caps mixed calculation and generic evidence
+at `"cited"`. Unknown, errored, malformed, unsupported, and
 citation-unmatched evidence paths fail closed as `"untrusted"`.
 
 Verification classifies the recorded evidence path. It does not

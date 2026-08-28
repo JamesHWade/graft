@@ -94,6 +94,13 @@ no mutation argument, and each one is annotated read-only,
 non-destructive, idempotent, and closed-world for hosts that act on
 those hints.
 
+When the accepted ledger contains `GraftDefinition` records,
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+also supplies `graft_definitions` and one `graft_calculate` tool. The
+first discovers metrics, filters, derived values, dependencies, and
+eligible columns. The second combines same-table definitions and public
+dimensions at one exact boundary; it never accepts SQL.
+
 Every tool result is a named list with `result`, `truncated`, `limit`,
 and one canonical `receipt`. A model that receives a bounded prefix is
 told that it received one, rather than silently reasoning over a partial
@@ -115,8 +122,25 @@ str(tools$graft_find(query = "Lois", class = "person", limit = 5), max.level = 2
 The receipt names the store, accepted batch and commit order, and both
 schema digests. Live tools pin that state for one invocation; tools
 built from a `GraftView` also carry its immutable snapshot identifier. A
-measure result adds the accepted measure record and revision under
-`receipt$definition`.
+calculation result adds the complete accepted definition closure under
+`receipt$definitions`.
+
+## Use the same boundary with Commons
+
+[`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
+copies selected public class tables, applicable normalized relations,
+and accepted definitions into a detached source created through
+Commons’s public API:
+
+``` r
+
+commons_source <- graft_commons_data_source(view, classes = "person")
+layer <- commons::semantic_layer(commons_source)
+```
+
+Commons owns that copy, its file measures, and its fallback query paths.
+It never receives Graft’s live DuckDB connection, and later Graft
+commits do not change an existing Commons source.
 
 ## Verify recorded answers offline
 
@@ -143,11 +167,11 @@ and any diagnostics.
 The three labels classify the recorded evidence path:
 
 - **Verified** (`"verified"`) means the window contains only successful
-  `graft_measure` calls with valid governed receipts.
+  `graft_calculate` calls with valid governed receipts.
 - **Cited** (`"cited"`) means every successful generic Graft result is
   independently matched to an explicit quotation or Markdown blockquote
-  in the answer. A generic read caps mixed measure and generic evidence
-  at this label.
+  in the answer. A generic read caps mixed calculation and generic
+  evidence at this label.
 - **Untrusted** (`"untrusted"`) covers missing evidence, unmatched
   generic reads, non-Graft tools, tool errors, malformed receipts, and
   unsupported trace shapes.
@@ -164,10 +188,9 @@ cryptographic authentication.
 does not prove that every claim follows from the cited text, and it does
 not reopen a store to authenticate receipt identifiers.
 
-Diagnostics are separate from trust. For example, a truncated measure
-result or valid results from mixed accepted boundaries are reported in
-`diagnostics`, but do not downgrade an otherwise valid `"verified"`
-label.
+Diagnostics are separate from trust. For example, valid calculation
+results from mixed accepted boundaries are reported in `diagnostics`,
+but do not downgrade an otherwise valid `"verified"` label.
 
 ## Pin the boundary the agent reasons over
 

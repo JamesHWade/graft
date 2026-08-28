@@ -309,10 +309,10 @@ projections, and history.
   : Run a bounded advanced retrieval operation
 - [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
   : Retrieve accepted record history
-- [`graft_measures()`](https://jameshwade.github.io/graft/reference/graft_measures.md)
-  : List accepted measures
-- [`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md)
-  : Evaluate an accepted measure
+- [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
+  : List accepted definitions
+- [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
+  : Evaluate accepted definitions
 
 ## Synchronize and integrate
 
@@ -329,6 +329,8 @@ read-only tools to an agent host, then verify its recorded evidence.
   : Create bounded read-only tools for a Graft store or view
 - [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
   : Verify recorded Graft evidence for assistant answers
+- [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
+  : Create a detached Commons data source
 
 # Articles
 

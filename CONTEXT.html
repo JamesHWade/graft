@@ -62,11 +62,18 @@
 <p><strong>Answer</strong>: One completed, text-bearing assistant response within a chat. Trust is classified independently for each answer. <em>Avoid</em>: Chat result, conversation result</p>
 <p><strong>Citation</strong>: An explicit excerpt in an answer that can be matched deterministically to text returned by a successful Graft read. <em>Avoid</em>: Tool use, source mention</p>
 <p><strong>Accepted boundary</strong>: The exact point in the ordered history of accepted knowledge against which a read was evaluated. <em>Avoid</em>: Current state, latest data</p>
+<p><strong>Commons source</strong>: A detached query copy of public accepted knowledge from one accepted boundary, materialized atomically for Commons. It includes typed empty tables and is neither a live Graft store nor a trust bridge. <em>Avoid</em>: Live source, Commons store</p>
+<p><strong>Public table</strong>: A queryable projection of accepted knowledge defined by the contract, either a class projection or a normalized relation projection. System, sensitive, and internal tables are excluded. <em>Avoid</em>: Database table, contract class</p>
+<p><strong>Definition</strong>: An accepted, named, data-dict-compatible expression over one public table. A definition is a metric, filter, or derived value that may participate in semantic evaluation. Commons is a consumer of this compatibility contract, not its owner. <em>Avoid</em>: Governed measure, calculation record</p>
+<p><strong>Metric</strong>: An aggregate definition evaluated with same-table dimensions, filters, and simple predicates. <em>Avoid</em>: Measure, calculation</p>
+<p><strong>Semantic evaluation</strong>: A read-only composition of one or more metrics with definitions and public scalar columns over one public table at one accepted boundary. <em>Avoid</em>: Measure call, semantic query</p>
+<p><strong>File measure</strong>: A trusted, human-authored R function loaded by Commons outside Graft’s plan, review, and commit lifecycle. <em>Avoid</em>: Definition, stored measure</p>
+<p><strong>Agent interaction</strong>: The Commons-style loop in which an agent prefers governed calculations and may use separately labeled fallback paths. Graft extends this interaction with accepted definition history, exact boundaries, and receipts; it does not make prompt obedience an invariant. <em>Avoid</em>: Verified reasoning, constrained agent</p>
 <p><strong>Receipt</strong>: Data accompanying a Graft result that identifies the accepted boundary used for that result. <em>Avoid</em>: Metadata, timestamp</p>
 <p><strong>Verified answer</strong>: An answer whose evidence comes exclusively from governed calculations with valid receipts.</p>
 <p><strong>Cited answer</strong>: An answer whose weakest evidence path is a successful Graft read supported by an independently matched citation.</p>
 <p><strong>Untrusted answer</strong>: An answer that lacks sufficient governed or independently matched evidence, or whose evidence path includes a failure or unknown source.</p>
-<p><strong>Verification</strong>: Deterministic classification of an answer’s recorded evidence path and receipts. It is neither fact-checking nor authentication of stored identities. <em>Avoid</em>: Fact-check, proof</p>
+<p><strong>Verification</strong>: Deterministic classification of an answer’s recorded evidence path and receipts. It assesses neither prompt obedience nor semantic fidelity and is neither fact-checking nor authentication of stored identities. <em>Avoid</em>: Fact-check, proof</p>
 </div>
 </div>
 

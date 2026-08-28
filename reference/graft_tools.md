@@ -4,12 +4,13 @@
 [`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html)
 definitions that delegate only to Graft's public bounded retrieval
 operations. The tools do not expose SQL, filesystem, network,
-connection, or mutation arguments. When the store has accepted measures,
-a fifth `graft_measure` tool evaluates them by name through
-[`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md);
-it is omitted when no measures are accepted. When given a `GraftView`,
-all tools remain pinned to its immutable snapshot boundary and the
-live-store integrity diagnostic is unavailable.
+connection, or mutation arguments. When the store has accepted
+definitions, `graft_definitions` exposes their bounded catalog and one
+`graft_calculate` tool composes them through
+[`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md).
+Both are omitted when no definitions are accepted. When given a
+`GraftView`, all tools remain pinned to its immutable snapshot boundary
+and the live-store integrity diagnostic is unavailable.
 
 ## Usage
 
@@ -33,10 +34,10 @@ objects.
 
 Every tool returns `result`, `truncated`, `limit`, and one canonical
 nested `receipt`. The receipt identifies the store, exact accepted
-boundary, and structural and build schema digests. Measure receipts also
-identify the accepted measure definition. Live-store tools pin a fresh
-boundary for each invocation; tools created from a `GraftView` retain
-its snapshot boundary.
+boundary, and structural and build schema digests. Calculation receipts
+also identify the complete accepted definition closure. Live-store tools
+pin a fresh boundary for each invocation; tools created from a
+`GraftView` retain its snapshot boundary.
 
 ## See also
 

@@ -2,6 +2,9 @@
 
 ## graft 0.0.0.9000
 
+- `GraftSchema` and `GraftStore` now print concise identity, contract,
+  and lifecycle summaries instead of recursively dumping their internal
+  state.
 - A new
   [`vignette("agents")`](https://jameshwade.github.io/graft/articles/agents.md)
   documents how Graft is used from an agent host: bounded read-only
@@ -9,40 +12,46 @@
   through validation and review, and file-editing agents working through
   the OKF tree. Getting started, the README, and the site home page now
   show the same path.
-- [`graft_measure()`](https://jameshwade.github.io/graft/reference/graft_measure.md)
+- [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
   and
-  [`graft_measures()`](https://jameshwade.github.io/graft/reference/graft_measures.md)
-  add governed measures inspired by the semantic layer in
-  [posit-dev/commons](https://github.com/posit-dev/commons):
-  declarative, reviewed calculations stored as `GraftMeasure` records
-  with full plan/review/commit history, validated at plan time,
-  evaluated over accepted state or a pinned `GraftView`, and seeded from
-  data-dict contract `definitions` at
-  [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
-  ([\#19](https://github.com/JamesHWade/graft/issues/19)).
+  [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
+  replace the pre-production singular measure API with composable,
+  data-dict-compatible metrics, filters, and derived values over one
+  accepted public table, including plan-time type checking, pinned
+  evaluation, grouping, typed predicates, dependency closure, and
+  canonical definition receipts
+  ([\#21](https://github.com/JamesHWade/graft/issues/21)).
+- [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
+  now fails closed before evaluating a public table or normalized
+  relation that exceeds the hard calculation-input bound.
+- [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
+  materializes selected public tables, normalized relations, prose, and
+  accepted definitions at one immutable boundary, then returns a
+  detached source owned by an optional, exactly tested Commons
+  integration ([\#21](https://github.com/JamesHWade/graft/issues/21)).
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-  adds a fifth bounded `graft_measure` tool when the store has accepted
-  measures and gives every tool result one canonical nested receipt
-  identifying its exact accepted boundary and schema; measure receipts
-  also identify the accepted definition
-  ([\#19](https://github.com/JamesHWade/graft/issues/19),
+  adds bounded definition discovery and one composite calculation tool
+  when accepted definitions exist; every result carries one canonical
+  receipt for its exact accepted boundary and schema, while calculation
+  receipts identify the full accepted definition closure
+  ([\#21](https://github.com/JamesHWade/graft/issues/21),
   [\#23](https://github.com/JamesHWade/graft/issues/23)).
 - [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
   classifies every completed text-bearing assistant answer in a recorded
   ellmer chat from deterministic, offline Graft evidence: valid
-  governed-measure-only evidence is verified, while missing, non-Graft,
-  errored, malformed, or citation-unmatched read evidence fails closed
-  as untrusted with stable reasons
+  governed-calculation-only evidence is verified, while missing,
+  non-Graft, errored, malformed, or citation-unmatched read evidence
+  fails closed as untrusted with stable reasons
   ([\#24](https://github.com/JamesHWade/graft/issues/24)).
 - [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
   now labels successful generic Graft reads as cited only when every
   contributing result is independently matched to an explicit quotation
-  or Markdown blockquote; mixed measure and generic evidence is capped
-  at cited, while unmatched or failed paths remain untrusted
+  or Markdown blockquote; mixed calculation and generic evidence is
+  capped at cited, while unmatched or failed paths remain untrusted
   ([\#25](https://github.com/JamesHWade/graft/issues/25)).
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
-  authoritative record tables with an 18-function revision-first package
+  authoritative record tables with a focused revision-first package
   boundary.
 - The pkgdown site now starts with ordinary tables and a shipped
   data-dict example, creates a blank store explicitly, demonstrates
@@ -81,6 +90,10 @@
   manage the only DuckDB backend through an invariant-checked S7
   `GraftStore`, including ownership-aware connection cleanup and
   read-only reopen behavior.
+- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
+  now seeds contract definitions only when initializing a new store, so
+  reopening with edited definitions cannot bypass plan review;
+  package-owned DuckDB connections also use isolated extension storage.
 - [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
   and
   [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)

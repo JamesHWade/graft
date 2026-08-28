@@ -48,7 +48,7 @@ schema@name
 schema@version
 #> [1] "0.1.0"
 names(schema@classes)
-#> [1] "organization" "person"       "employment"   "GraftMeasure"
+#> [1] "organization"    "person"          "employment"      "GraftDefinition"
 ```
 
 When compiling this resolved source without `output`,
