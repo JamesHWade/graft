@@ -60,7 +60,8 @@ commit_candidate_transaction <- function(
     batch,
     plan,
     recorded_at,
-    commit_order
+    commit_order,
+    manifest = store$schema$manifest
   )
 
   commit_executor_append(
@@ -123,10 +124,11 @@ assemble_candidate_authority <- function(
   batch,
   plan,
   recorded_at,
-  commit_order
+  commit_order,
+  manifest
 ) {
   rows <- staged$rows
-  validate_candidate_execution_rows(rows, plan)
+  validate_candidate_execution_rows(rows, plan, staged, manifest)
   changed <- rows$action %in% c("insert", "update")
   revisions <- assemble_candidate_revisions(
     rows[changed, , drop = FALSE],
@@ -186,7 +188,7 @@ assemble_candidate_authority <- function(
   )
 }
 
-validate_candidate_execution_rows <- function(rows, plan) {
+validate_candidate_execution_rows <- function(rows, plan, staged, manifest) {
   required <- c(
     "class",
     "input_row",
@@ -220,6 +222,7 @@ validate_candidate_execution_rows <- function(rows, plan) {
     "input_row",
     "record_id",
     "action",
+    "disposition",
     "changed_fields",
     "expected_revision_id",
     "expected_revision_number",
@@ -263,7 +266,17 @@ validate_candidate_execution_rows <- function(rows, plan) {
   heads <- heads[match(row_head_key, head_key), , drop = FALSE]
   row_fields <- candidate_changed_fields(rows$changed_fields_json)
   payload_digests <- candidate_payload_digests(rows$payload_json)
+  # The review-facing disposition is re-derived from the staged rows so a
+  # modified plan cannot advertise a milder relation than it commits.
+  expected_dispositions <- plan_change_dispositions(
+    candidate_disposition_inputs(staged, manifest),
+    changes$class,
+    changes$input_row,
+    changes$record_id,
+    changes$action
+  )
   correlated <- identical(rows$action, changes$action) &&
+    identical(expected_dispositions, changes$disposition) &&
     identical(rows$content_digest, changes$proposed_content_digest) &&
     identical(rows$expected_revision_id, changes$expected_revision_id) &&
     identical(
@@ -786,4 +799,20 @@ commit_executor_failure_hook <- function(stage) {
     )
   }
   invisible(stage)
+}
+
+candidate_disposition_inputs <- function(staged, manifest) {
+  records <- staged$records
+  if (!is.list(records)) {
+    abort_candidate_execution_rows()
+  }
+  stats::setNames(
+    lapply(names(records), function(record_class) {
+      list(
+        data = records[[record_class]],
+        contract = manifest$classes[[record_class]]
+      )
+    }),
+    names(records)
+  )
 }

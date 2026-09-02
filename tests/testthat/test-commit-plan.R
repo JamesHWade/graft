@@ -1169,3 +1169,29 @@ test_that("plans from an earlier format version are rejected at commit", {
   )
   expect_no_error(graft_commit(fixture$store, plan))
 })
+
+test_that("a plan whose dispositions disagree with its staged rows is rejected", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  ids <- retrieval_fixture_records()$ids
+  records$Claim$status[[1L]] <- "superseded"
+  records$Claim$superseded_by[[1L]] <- ids$competing_claim
+  plan <- graft_plan(
+    fixture$store,
+    records,
+    graft_provenance("dispositions", idempotency_key = "d-2")
+  )
+  expect_identical(
+    plan@changes$disposition[plan@changes$record_id == ids$active_claim],
+    "superseded"
+  )
+  softened <- plan@changes
+  softened$disposition[softened$record_id == ids$active_claim] <- "revision"
+  tampered <- resign_test_commit_plan(plan, changes = softened)
+
+  expect_error(
+    graft_commit(fixture$store, tampered),
+    class = "graft_commit_plan_error"
+  )
+  expect_no_error(graft_commit(fixture$store, plan))
+})
