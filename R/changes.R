@@ -22,14 +22,17 @@
 #'   limit.
 #'
 #' @return A bounded data frame ordered by class and record ID with columns
-#'   `class`, `record_id`, `action` (`"insert"` when the record first appeared
-#'   inside the window, otherwise `"update"`), `revisions` (accepted revisions
-#'   inside the window), `changed_fields` (a list-column with the union of
-#'   public fields changed inside the window), and the `revision_id`,
+#'   `class`, `record_id`, `action` (`"insert"` when the record had no
+#'   accepted revision at `since`, otherwise `"update"`), `revisions`
+#'   (accepted revisions inside the window), `changed_fields` (a list-column
+#'   with the public fields whose values differ between the record's accepted
+#'   revision at `since` and at `until`), and the `revision_id`,
 #'   `revision_number`, `batch_id`, `commit_order`, `committed_at`, and public
-#'   `record` list-column of the latest revision at `until`. Attributes
-#'   `since_commit_order`, `since_batch_id`, `until_commit_order`, and
-#'   `until_batch_id` identify the compared boundaries.
+#'   `record` list-column of the latest revision at `until`. Only the two
+#'   boundary revisions of each changed record are read, so a long revision
+#'   history does not grow the result. Attributes `since_commit_order`,
+#'   `since_batch_id`, `until_commit_order`, and `until_batch_id` identify the
+#'   compared boundaries.
 #' @export
 graft_changes <- function(
   store,
@@ -179,124 +182,129 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
     )
     class_params <- as.list(classes)
   }
-  window_sql <- paste0(
+  committed <- paste0(
     " INNER JOIN ",
     batches,
-    " b ON r.batch_id = b.batch_id WHERE b.status = 'committed' ",
-    "AND r.commit_order > ? AND r.commit_order <= ?",
+    " b ON r.batch_id = b.batch_id WHERE b.status = 'committed'"
+  )
+  window_sql <- paste0(
+    committed,
+    " AND r.commit_order > ? AND r.commit_order <= ?",
     class_sql
   )
   window_params <- c(list(lower, upper), class_params)
+  order_sql <- "ORDER BY r.commit_order DESC, r.revision_number DESC, r.revision_id DESC"
+  # Changed keys are bounded first; only the aggregate, the latest revision at
+  # `until`, and the latest revision at `since` are then read for those keys.
   sql <- paste0(
-    "SELECT r.revision_id, r.record_id, r.class, r.batch_id, ",
-    "r.schema_build_digest, r.revision_number, r.operation, ",
-    "r.payload_json, r.content_digest, r.changed_fields_json, ",
-    "r.commit_order, b.committed_at FROM ",
-    revisions,
-    " r INNER JOIN (SELECT r.class, r.record_id FROM ",
+    "WITH changed AS (SELECT r.class, r.record_id, COUNT(*) AS revisions FROM ",
     revisions,
     " r",
     window_sql,
     " GROUP BY r.class, r.record_id ORDER BY r.class, r.record_id LIMIT ",
     limit + 1L,
-    ") k ON k.class = r.class AND k.record_id = r.record_id",
+    "), latest AS (SELECT * FROM (SELECT r.revision_id, r.record_id, r.class, ",
+    "r.batch_id, r.schema_build_digest, r.revision_number, r.payload_json, ",
+    "r.content_digest, r.commit_order, b.committed_at, ",
+    "ROW_NUMBER() OVER (PARTITION BY r.class, r.record_id ",
+    order_sql,
+    ") AS rn FROM ",
+    revisions,
+    " r INNER JOIN changed k ON k.class = r.class AND k.record_id = r.record_id",
     window_sql,
-    " ORDER BY r.class, r.record_id, r.commit_order, r.revision_number, ",
-    "r.revision_id"
+    ") WHERE rn = 1), prior AS (SELECT * FROM (SELECT r.record_id, r.class, ",
+    "r.schema_build_digest AS prior_schema_build_digest, ",
+    "r.payload_json AS prior_payload_json, r.operation AS prior_operation, ",
+    "ROW_NUMBER() OVER (PARTITION BY r.class, r.record_id ",
+    order_sql,
+    ") AS rn FROM ",
+    revisions,
+    " r INNER JOIN changed k ON k.class = r.class AND k.record_id = r.record_id",
+    committed,
+    " AND r.commit_order <= ?) WHERE rn = 1) ",
+    "SELECT latest.*, changed.revisions, prior.prior_schema_build_digest, ",
+    "prior.prior_payload_json, prior.prior_operation FROM latest ",
+    "INNER JOIN changed ON changed.class = latest.class ",
+    "AND changed.record_id = latest.record_id ",
+    "LEFT JOIN prior ON prior.class = latest.class ",
+    "AND prior.record_id = latest.record_id ",
+    "ORDER BY latest.class, latest.record_id"
   )
   with_duckdb_error(
     "graft_changes",
     DBI::dbGetQuery(
       connection,
       sql,
-      params = c(window_params, window_params)
+      params = c(window_params, window_params, list(lower))
     )
   )
 }
 
 summarize_changed_revisions <- function(rows, store, limit) {
-  keys <- paste(rows$class, rows$record_id, sep = "")
-  groups <- unique(keys)
-  truncated <- length(groups) > limit
+  truncated <- nrow(rows) > limit
   if (truncated) {
-    groups <- groups[seq_len(limit)]
-    keep <- keys %in% groups
-    rows <- rows[keep, , drop = FALSE]
-    keys <- keys[keep]
+    rows <- rows[seq_len(limit), , drop = FALSE]
   }
-  schemas <- historical_schemas(store, unique(rows$schema_build_digest))
-  n <- length(groups)
-  out_class <- character(n)
-  out_record_id <- character(n)
-  out_action <- character(n)
-  out_revisions <- integer(n)
-  out_changed <- vector("list", n)
-  out_revision_id <- character(n)
-  out_revision_number <- numeric(n)
-  out_batch_id <- character(n)
-  out_commit_order <- numeric(n)
-  out_committed_at <- rows$committed_at[rep(NA_integer_, n)]
-  out_record <- vector("list", n)
-  for (index in seq_len(n)) {
-    group <- rows[keys == groups[[index]], , drop = FALSE]
-    latest <- group[nrow(group), , drop = FALSE]
-    contract_for <- function(digest) {
-      contract <- schemas[[digest]]$manifest$classes[[latest$class[[1L]]]]
-      if (is.null(contract)) {
-        abort_backend_error(
-          "A revision class is absent from its historical manifest.",
-          operation = "graft_changes",
-          record_id = latest$record_id[[1L]],
-          record_class = latest$class[[1L]],
-          build_digest = digest
-        )
-      }
-      contract
-    }
-    changed <- character()
-    for (row in seq_len(nrow(group))) {
-      changed <- union(
-        changed,
-        public_changed_fields(
-          group$changed_fields_json[[row]],
-          contract_for(group$schema_build_digest[[row]])
-        )
+  digests <- unique(c(
+    rows$schema_build_digest,
+    rows$prior_schema_build_digest[!is.na(rows$prior_schema_build_digest)]
+  ))
+  schemas <- historical_schemas(store, digests)
+  n <- nrow(rows)
+  contract_for <- function(digest, record_class, record_id) {
+    contract <- schemas[[digest]]$manifest$classes[[record_class]]
+    if (is.null(contract)) {
+      abort_backend_error(
+        "A revision class is absent from its historical manifest.",
+        operation = "graft_changes",
+        record_id = record_id,
+        record_class = record_class,
+        build_digest = digest
       )
     }
-    out_class[[index]] <- latest$class[[1L]]
-    out_record_id[[index]] <- latest$record_id[[1L]]
-    out_action[[index]] <- if (any(group$revision_number == 1)) {
-      "insert"
-    } else {
-      "update"
-    }
-    out_revisions[[index]] <- nrow(group)
-    out_changed[[index]] <- sort(changed, method = "radix")
-    out_revision_id[[index]] <- latest$revision_id[[1L]]
-    out_revision_number[[index]] <- as.numeric(latest$revision_number[[1L]])
-    out_batch_id[[index]] <- latest$batch_id[[1L]]
-    out_commit_order[[index]] <- as.numeric(latest$commit_order[[1L]])
-    out_committed_at[[index]] <- latest$committed_at[[1L]]
+    contract
+  }
+  out_action <- character(n)
+  out_changed <- vector("list", n)
+  out_record <- vector("list", n)
+  for (index in seq_len(n)) {
+    record_class <- rows$class[[index]]
+    record_id <- rows$record_id[[index]]
+    contract <- contract_for(
+      rows$schema_build_digest[[index]],
+      record_class,
+      record_id
+    )
+    payload <- parse_revision_payload(rows$payload_json[[index]])
+    prior_json <- rows$prior_payload_json[[index]]
+    has_prior <- !is.na(prior_json) &&
+      !identical(rows$prior_operation[[index]], "delete")
+    prior <- if (has_prior) parse_revision_payload(prior_json) else NULL
+    out_action[[index]] <- if (has_prior) "update" else "insert"
+    out_changed[[index]] <- public_changed_fields(
+      changed_fields_json(logical_record_changed_fields(payload, prior)),
+      contract
+    )
     out_record[[index]] <- validated_public_revision_record(
-      latest$payload_json[[1L]],
-      latest$content_digest[[1L]],
-      contract_for(latest$schema_build_digest[[1L]]),
-      record_id = latest$record_id[[1L]],
-      revision_id = latest$revision_id[[1L]]
+      rows$payload_json[[index]],
+      rows$content_digest[[index]],
+      contract,
+      record_id = record_id,
+      revision_id = rows$revision_id[[index]]
     )
   }
   result <- data.frame(
-    class = out_class,
-    record_id = out_record_id,
+    class = as.character(rows$class),
+    record_id = as.character(rows$record_id),
     action = out_action,
-    revisions = out_revisions,
-    revision_id = out_revision_id,
-    revision_number = out_revision_number,
-    batch_id = out_batch_id,
-    commit_order = out_commit_order,
+    revisions = as.integer(rows$revisions),
+    revision_id = as.character(rows$revision_id),
+    revision_number = as.numeric(rows$revision_number),
+    batch_id = as.character(rows$batch_id),
+    commit_order = as.numeric(rows$commit_order),
     stringsAsFactors = FALSE
   )
-  result$committed_at <- out_committed_at
+  result$committed_at <- rows$committed_at
   result$changed_fields <- I(out_changed)
   result$record <- I(out_record)
   result <- result[

@@ -1121,7 +1121,7 @@ test_that("plans carry structural dispositions for statement relations", {
   expect_identical(disposition_of(ids$competing_claim), "contradicted")
   expect_identical(
     disposition_of(test_graft_id("dispositions-contradiction")),
-    "new"
+    "contradicts"
   )
   expect_identical(disposition_of(ids$superseded_claim), "duplicate")
   expect_identical(
@@ -1130,6 +1130,21 @@ test_that("plans carry structural dispositions for statement relations", {
   )
   expect_identical(
     sort(unique(changes$disposition), method = "radix"),
-    c("contradicted", "duplicate", "new", "superseded", "supersedes")
+    c(
+      "contradicted",
+      "contradicts",
+      "duplicate",
+      "new",
+      "superseded",
+      "supersedes"
+    )
   )
+
+  only_evidence <- graft_plan(
+    fixture$store,
+    list(ClaimEvidence = revised$ClaimEvidence[2L, , drop = FALSE]),
+    provenance
+  )
+  expect_identical(only_evidence@changes$disposition, "contradicts")
+  expect_identical(only_evidence@changes$class, "ClaimEvidence")
 })

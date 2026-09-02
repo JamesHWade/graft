@@ -1301,8 +1301,12 @@ empty_candidate_references <- function() {
 # ledger will do; the disposition says what the change means for the
 # statements already accepted: a duplicate proposes nothing new, a new record
 # extends accepted knowledge, a revision edits an accepted record, and the
-# supersedes, superseded, and contradicted values surface statement-level
-# relations declared by the staged records themselves.
+# supersedes, superseded, contradicts, and contradicted values surface
+# statement-level relations declared by the staged records themselves. The
+# relation is always attached to the staged row that declares it (the
+# superseded statement, the contradicting evidence), so it is visible even
+# when the accepted target statement is not restaged; a restaged target
+# additionally reads supersedes or contradicted.
 plan_change_dispositions <- function(
   staged,
   classes,
@@ -1313,6 +1317,7 @@ plan_change_dispositions <- function(
   base <- c(insert = "new", update = "revision", match = "duplicate")
   disposition <- unname(base[actions])
   own_superseded <- rep(FALSE, length(actions))
+  own_contradicts <- rep(FALSE, length(actions))
   superseded_targets <- character()
   contradicted_targets <- character()
   for (record_class in names(staged)) {
@@ -1338,11 +1343,13 @@ plan_change_dispositions <- function(
       contradicts <- !is.na(support) &
         support == "contradicts" &
         !is.na(statements)
+      own_contradicts[rows[contradicts]] <- TRUE
       contradicted_targets <- c(contradicted_targets, statements[contradicts])
     }
   }
   disposition[record_ids %in% contradicted_targets] <- "contradicted"
   disposition[record_ids %in% superseded_targets] <- "supersedes"
+  disposition[own_contradicts] <- "contradicts"
   disposition[own_superseded] <- "superseded"
   disposition
 }
