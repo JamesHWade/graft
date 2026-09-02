@@ -21,12 +21,14 @@ limit.}
 \value{
 A bounded data frame ordered by class and record ID with columns
 \code{class}, \code{record_id}, \code{action} (\code{"insert"} when the record had no
-accepted revision at \code{since}, otherwise \code{"update"}), \code{revisions}
+accepted revision at \code{since}, \code{"delete"} when its latest revision at
+\code{until} is a deletion, otherwise \code{"update"}), \code{revisions}
 (accepted revisions inside the window), \code{changed_fields} (a list-column
 with the public fields whose values differ between the record's accepted
 revision at \code{since} and at \code{until}), and the \code{revision_id},
 \code{revision_number}, \code{batch_id}, \code{commit_order}, \code{committed_at}, and public
-\code{record} list-column of the latest revision at \code{until}. Only the two
+\code{record} list-column of the latest revision at \code{until} (\code{NULL} for a
+deletion, whose \code{changed_fields} are empty). Only the two
 boundary revisions of each changed record are read, so a long revision
 history does not grow the result. Attributes \code{since_commit_order},
 \code{since_batch_id}, \code{until_commit_order}, and \code{until_batch_id} identify the

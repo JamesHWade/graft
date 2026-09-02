@@ -23,12 +23,14 @@
 #'
 #' @return A bounded data frame ordered by class and record ID with columns
 #'   `class`, `record_id`, `action` (`"insert"` when the record had no
-#'   accepted revision at `since`, otherwise `"update"`), `revisions`
+#'   accepted revision at `since`, `"delete"` when its latest revision at
+#'   `until` is a deletion, otherwise `"update"`), `revisions`
 #'   (accepted revisions inside the window), `changed_fields` (a list-column
 #'   with the public fields whose values differ between the record's accepted
 #'   revision at `since` and at `until`), and the `revision_id`,
 #'   `revision_number`, `batch_id`, `commit_order`, `committed_at`, and public
-#'   `record` list-column of the latest revision at `until`. Only the two
+#'   `record` list-column of the latest revision at `until` (`NULL` for a
+#'   deletion, whose `changed_fields` are empty). Only the two
 #'   boundary revisions of each changed record are read, so a long revision
 #'   history does not grow the result. Attributes `since_commit_order`,
 #'   `since_batch_id`, `until_commit_order`, and `until_batch_id` identify the
@@ -203,8 +205,8 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
     " GROUP BY r.class, r.record_id ORDER BY r.class, r.record_id LIMIT ",
     limit + 1L,
     "), latest AS (SELECT * FROM (SELECT r.revision_id, r.record_id, r.class, ",
-    "r.batch_id, r.schema_build_digest, r.revision_number, r.payload_json, ",
-    "r.content_digest, r.commit_order, b.committed_at, ",
+    "r.batch_id, r.schema_build_digest, r.revision_number, r.operation, ",
+    "r.payload_json, r.content_digest, r.commit_order, b.committed_at, ",
     "ROW_NUMBER() OVER (PARTITION BY r.class, r.record_id ",
     order_sql,
     ") AS rn FROM ",
@@ -274,10 +276,18 @@ summarize_changed_revisions <- function(rows, store, limit) {
       record_class,
       record_id
     )
-    payload <- parse_revision_payload(rows$payload_json[[index]])
     prior_json <- rows$prior_payload_json[[index]]
     has_prior <- !is.na(prior_json) &&
       !identical(rows$prior_operation[[index]], "delete")
+    if (identical(rows$operation[[index]], "delete")) {
+      # A removal is reported explicitly; the retained payload of a deleted
+      # revision is never exposed as current knowledge.
+      out_action[[index]] <- "delete"
+      out_changed[[index]] <- character()
+      out_record[index] <- list(NULL)
+      next
+    }
+    payload <- parse_revision_payload(rows$payload_json[[index]])
     prior <- if (has_prior) parse_revision_payload(prior_json) else NULL
     out_action[[index]] <- if (has_prior) "update" else "insert"
     out_changed[[index]] <- public_changed_fields(
