@@ -189,6 +189,23 @@ test_that("graft_changes reports a deleted head as a deletion", {
       latest$revision_id[[1L]]
     )
   )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO _graft_record_observations (record_id, class, batch_id,",
+      "disposition, revision_id, origin_key, matched_by,",
+      "identity_evidence_json, observed_at)",
+      "SELECT record_id, class, ?, 'deleted', ?, origin_key, matched_by,",
+      "identity_evidence_json, observed_at FROM _graft_record_observations",
+      "WHERE record_id = ? AND batch_id = ?"
+    ),
+    params = list(
+      delete_batch,
+      test_graft_id("changes-delete-revision"),
+      fixture$ids$active_claim,
+      latest$batch_id[[1L]]
+    )
+  )
   view <- graft_at(fixture$store, graft_snapshot(fixture$store))
 
   changes <- graft_changes(view, since = fixture$third)
@@ -198,4 +215,45 @@ test_that("graft_changes reports a deleted head as a deletion", {
   expect_identical(changes$changed_fields[[1L]], character())
   expect_null(changes$record[[1L]])
   expect_identical(changes$revisions, 1L)
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE _graft_record_heads SET revision_id = ?, revision_number = ?",
+      "WHERE record_id = ?"
+    ),
+    params = list(
+      test_graft_id("changes-delete-revision"),
+      latest$revision_number[[1L]] + 1,
+      fixture$ids$active_claim
+    )
+  )
+  live <- graft_changes(fixture$store, since = fixture$third)
+  expect_identical(live$action, "delete")
+})
+
+test_that("graft_changes validates the prior boundary payload", {
+  fixture <- changes_fixture_store()
+  connection <- graft_test_connection(fixture$store)
+  first_revision <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT revision_id FROM _graft_record_revisions WHERE record_id = ?",
+      "ORDER BY commit_order ASC LIMIT 1"
+    ),
+    params = list(fixture$ids$active_claim)
+  )$revision_id[[1L]]
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE _graft_record_revisions SET payload_json = ",
+      "replace(payload_json, 'Polyethylene remains durable.', 'corrupted')",
+      "WHERE revision_id = ?"
+    ),
+    params = list(first_revision)
+  )
+
+  expect_error(
+    graft_changes(fixture$store, since = fixture$first, until = fixture$second),
+    class = "graft_error"
+  )
 })

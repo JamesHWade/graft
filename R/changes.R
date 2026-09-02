@@ -215,6 +215,8 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
     window_sql,
     ") WHERE rn = 1), prior AS (SELECT * FROM (SELECT r.record_id, r.class, ",
     "r.schema_build_digest AS prior_schema_build_digest, ",
+    "r.revision_id AS prior_revision_id, ",
+    "r.content_digest AS prior_content_digest, ",
     "r.payload_json AS prior_payload_json, r.operation AS prior_operation, ",
     "ROW_NUMBER() OVER (PARTITION BY r.class, r.record_id ",
     order_sql,
@@ -224,6 +226,7 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
     committed,
     " AND r.commit_order <= ?) WHERE rn = 1) ",
     "SELECT latest.*, changed.revisions, prior.prior_schema_build_digest, ",
+    "prior.prior_revision_id, prior.prior_content_digest, ",
     "prior.prior_payload_json, prior.prior_operation FROM latest ",
     "INNER JOIN changed ON changed.class = latest.class ",
     "AND changed.record_id = latest.record_id ",
@@ -288,7 +291,23 @@ summarize_changed_revisions <- function(rows, store, limit) {
       next
     }
     payload <- parse_revision_payload(rows$payload_json[[index]])
-    prior <- if (has_prior) parse_revision_payload(prior_json) else NULL
+    prior <- NULL
+    if (has_prior) {
+      # The prior boundary payload is validated against its own historical
+      # contract and stored digest before it can shape the field diff.
+      validated_public_revision_record(
+        prior_json,
+        rows$prior_content_digest[[index]],
+        contract_for(
+          rows$prior_schema_build_digest[[index]],
+          record_class,
+          record_id
+        ),
+        record_id = record_id,
+        revision_id = rows$prior_revision_id[[index]]
+      )
+      prior <- parse_revision_payload(prior_json)
+    }
     out_action[[index]] <- if (has_prior) "update" else "insert"
     out_changed[[index]] <- public_changed_fields(
       changed_fields_json(logical_record_changed_fields(payload, prior)),
