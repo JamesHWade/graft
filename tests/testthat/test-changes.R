@@ -257,3 +257,54 @@ test_that("graft_changes validates the prior boundary payload", {
     class = "graft_error"
   )
 })
+
+test_that("graft_changes validates a deleted revision before hiding it", {
+  fixture <- changes_fixture_store()
+  connection <- graft_test_connection(fixture$store)
+  latest <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT revision_id, batch_id, revision_number FROM",
+      "_graft_record_revisions WHERE record_id = ?",
+      "ORDER BY commit_order DESC LIMIT 1"
+    ),
+    params = list(fixture$ids$active_claim)
+  )
+  delete_batch <- test_graft_id("changes-corrupt-delete-batch")
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO _graft_batches (batch_id, schema_build_digest, commit_order,",
+      "producer, producer_version, source_run_id, idempotency_key,",
+      "metadata_json, started_at, committed_at, status)",
+      "SELECT ?, schema_build_digest, commit_order + 1, producer,",
+      "producer_version, source_run_id, 'changes-corrupt-delete', metadata_json,",
+      "started_at, committed_at, status FROM _graft_batches WHERE batch_id = ?"
+    ),
+    params = list(delete_batch, latest$batch_id[[1L]])
+  )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO _graft_record_revisions (revision_id, record_id, class,",
+      "batch_id, schema_build_digest, revision_number, operation, payload_json,",
+      "content_digest, changed_fields_json, prior_revision_id, recorded_at,",
+      "commit_order)",
+      "SELECT ?, record_id, class, ?, schema_build_digest, revision_number + 1,",
+      "'delete', replace(payload_json, 'durable', 'corrupted'), content_digest,",
+      "'[]', revision_id, recorded_at, commit_order + 1",
+      "FROM _graft_record_revisions WHERE revision_id = ?"
+    ),
+    params = list(
+      test_graft_id("changes-corrupt-delete-revision"),
+      delete_batch,
+      latest$revision_id[[1L]]
+    )
+  )
+  view <- graft_at(fixture$store, graft_snapshot(fixture$store))
+
+  expect_error(
+    graft_changes(view, since = fixture$third),
+    class = "graft_error"
+  )
+})

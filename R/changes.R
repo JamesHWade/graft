@@ -284,7 +284,15 @@ summarize_changed_revisions <- function(rows, store, limit) {
       !identical(rows$prior_operation[[index]], "delete")
     if (identical(rows$operation[[index]], "delete")) {
       # A removal is reported explicitly; the retained payload of a deleted
-      # revision is never exposed as current knowledge.
+      # revision is validated like any other but never exposed as current
+      # knowledge.
+      validated_public_revision_record(
+        rows$payload_json[[index]],
+        rows$content_digest[[index]],
+        contract,
+        record_id = record_id,
+        revision_id = rows$revision_id[[index]]
+      )
       out_action[[index]] <- "delete"
       out_changed[[index]] <- character()
       out_record[index] <- list(NULL)
