@@ -1134,7 +1134,6 @@ test_that("plans carry structural dispositions for statement relations", {
       "contradicted",
       "contradicts",
       "duplicate",
-      "new",
       "superseded",
       "supersedes"
     )
