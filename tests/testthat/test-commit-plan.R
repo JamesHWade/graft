@@ -1147,3 +1147,25 @@ test_that("plans carry structural dispositions for statement relations", {
   expect_identical(only_evidence@changes$disposition, "contradicts")
   expect_identical(only_evidence@changes$class, "ClaimEvidence")
 })
+
+test_that("plans from an earlier format version are rejected at commit", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  plan <- graft_plan(
+    fixture$store,
+    records,
+    graft_provenance("format", idempotency_key = "format-1")
+  )
+  stale <- plan
+  data <- attr(stale, ".data", exact = TRUE)
+  data$plan_version <- "0.1.0"
+  data$changes$disposition <- NULL
+  attr(stale, ".data") <- data
+  stale <- resign_test_commit_plan(stale)
+
+  expect_error(
+    graft_commit(fixture$store, stale),
+    class = "graft_commit_plan_invalid"
+  )
+  expect_no_error(graft_commit(fixture$store, plan))
+})
