@@ -1,4 +1,4 @@
-graft_plan_version <- "0.1.0"
+graft_plan_version <- "0.2.0"
 
 graft_sha256 <- function(x, serialize = FALSE) {
   paste0(
