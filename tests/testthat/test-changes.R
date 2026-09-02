@@ -301,10 +301,50 @@ test_that("graft_changes validates a deleted revision before hiding it", {
       latest$revision_id[[1L]]
     )
   )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "INSERT INTO _graft_record_observations (record_id, class, batch_id,",
+      "disposition, revision_id, origin_key, matched_by,",
+      "identity_evidence_json, observed_at)",
+      "SELECT record_id, class, ?, 'deleted', ?, origin_key, matched_by,",
+      "identity_evidence_json, observed_at FROM _graft_record_observations",
+      "WHERE record_id = ? AND batch_id = ?"
+    ),
+    params = list(
+      delete_batch,
+      test_graft_id("changes-corrupt-delete-revision"),
+      fixture$ids$active_claim,
+      latest$batch_id[[1L]]
+    )
+  )
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE _graft_record_heads SET revision_id = ?, revision_number = ?",
+      "WHERE record_id = ?"
+    ),
+    params = list(
+      test_graft_id("changes-corrupt-delete-revision"),
+      latest$revision_number[[1L]] + 1,
+      fixture$ids$active_claim
+    )
+  )
   view <- graft_at(fixture$store, graft_snapshot(fixture$store))
 
   expect_error(
     graft_changes(view, since = fixture$third),
+    class = "graft_error"
+  )
+  after_delete <- graft_view_snapshot(view)
+  resurrected <- retrieval_fixture_records()$records
+  graft_ingest(
+    fixture$store,
+    resurrected,
+    graft_provenance("changes-fixture", idempotency_key = "changes-4")
+  )
+  expect_error(
+    graft_changes(fixture$store, since = after_delete),
     class = "graft_error"
   )
 })

@@ -280,6 +280,22 @@ summarize_changed_revisions <- function(rows, store, limit) {
       record_id
     )
     prior_json <- rows$prior_payload_json[[index]]
+    if (!is.na(prior_json)) {
+      # Every selected lower-boundary revision is validated against its own
+      # historical contract and stored digest, deletions included; only a
+      # live prior takes part in the field diff.
+      validated_public_revision_record(
+        prior_json,
+        rows$prior_content_digest[[index]],
+        contract_for(
+          rows$prior_schema_build_digest[[index]],
+          record_class,
+          record_id
+        ),
+        record_id = record_id,
+        revision_id = rows$prior_revision_id[[index]]
+      )
+    }
     has_prior <- !is.na(prior_json) &&
       !identical(rows$prior_operation[[index]], "delete")
     if (identical(rows$operation[[index]], "delete")) {
@@ -299,23 +315,7 @@ summarize_changed_revisions <- function(rows, store, limit) {
       next
     }
     payload <- parse_revision_payload(rows$payload_json[[index]])
-    prior <- NULL
-    if (has_prior) {
-      # The prior boundary payload is validated against its own historical
-      # contract and stored digest before it can shape the field diff.
-      validated_public_revision_record(
-        prior_json,
-        rows$prior_content_digest[[index]],
-        contract_for(
-          rows$prior_schema_build_digest[[index]],
-          record_class,
-          record_id
-        ),
-        record_id = record_id,
-        revision_id = rows$prior_revision_id[[index]]
-      )
-      prior <- parse_revision_payload(prior_json)
-    }
+    prior <- if (has_prior) parse_revision_payload(prior_json) else NULL
     out_action[[index]] <- if (has_prior) "update" else "insert"
     out_changed[[index]] <- public_changed_fields(
       changed_fields_json(logical_record_changed_fields(payload, prior)),
