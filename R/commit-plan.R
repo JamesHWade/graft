@@ -730,6 +730,7 @@ empty_plan_changes <- function() {
     input_row = integer(),
     record_id = character(),
     action = character(),
+    disposition = character(),
     changed_fields = character(),
     expected_revision_id = character(),
     expected_revision_number = numeric(),

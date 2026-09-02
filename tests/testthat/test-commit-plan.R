@@ -1067,3 +1067,69 @@ test_that("OKF review produces the ordinary commit-plan type", {
     "Reviewed polyethylene"
   )
 })
+
+test_that("plans carry structural dispositions for statement relations", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  ids <- retrieval_fixture_records()$ids
+  provenance <- graft_provenance("dispositions", idempotency_key = "d-1")
+
+  unchanged <- graft_plan(fixture$store, records, provenance)
+  expect_identical(unique(unchanged@changes$disposition), "duplicate")
+
+  revised <- records
+  revised$Claim$statement_text[[2L]] <- "Polyethylene durability is contested."
+  new_id <- test_graft_id("dispositions-new-claim")
+  revised$Claim <- rbind(
+    revised$Claim,
+    data.frame(
+      id = new_id,
+      statement_text = "Polyethylene degrades under ultraviolet light.",
+      primary_subject = ids$entity,
+      claim_type = "finding",
+      importance = "high",
+      polarity = "negative",
+      status = "active",
+      superseded_by = NA_character_,
+      about = I(list(ids$entity))
+    )
+  )
+  revised$Claim$status[[1L]] <- "superseded"
+  revised$Claim$superseded_by[[1L]] <- new_id
+  revised$ClaimEvidence <- rbind(
+    revised$ClaimEvidence,
+    data.frame(
+      id = test_graft_id("dispositions-contradiction"),
+      statement_id = ids$competing_claim,
+      source_id = ids$source,
+      support_type = "contradicts",
+      locator_type = "page",
+      locator_value = "p. 9",
+      page_start = 9,
+      page_end = 9,
+      excerpt = "Later tests disagreed."
+    )
+  )
+
+  plan <- graft_plan(fixture$store, revised, provenance)
+  changes <- plan@changes
+  disposition_of <- function(id) changes$disposition[changes$record_id == id]
+
+  expect_identical(plan@valid, TRUE)
+  expect_identical(disposition_of(new_id), "supersedes")
+  expect_identical(disposition_of(ids$active_claim), "superseded")
+  expect_identical(disposition_of(ids$competing_claim), "contradicted")
+  expect_identical(
+    disposition_of(test_graft_id("dispositions-contradiction")),
+    "new"
+  )
+  expect_identical(disposition_of(ids$superseded_claim), "duplicate")
+  expect_identical(
+    changes$action[changes$record_id == ids$competing_claim],
+    "update"
+  )
+  expect_identical(
+    sort(unique(changes$disposition), method = "radix"),
+    c("contradicted", "duplicate", "new", "superseded", "supersedes")
+  )
+})

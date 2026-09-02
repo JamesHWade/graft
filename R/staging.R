@@ -1131,6 +1131,13 @@ plan_candidate_changes <- function(staged, current, planned_at) {
     input_row = row_input[used],
     record_id = row_record_id[used],
     action = row_action[used],
+    disposition = plan_change_dispositions(
+      staged,
+      row_class[used],
+      row_input[used],
+      row_record_id[used],
+      row_action[used]
+    ),
     changed_fields = change_fields[used],
     expected_revision_id = row_expected_revision_id[used],
     expected_revision_number = row_expected_revision_number[used],
@@ -1288,4 +1295,54 @@ empty_candidate_references <- function() {
     position = integer(),
     stringsAsFactors = FALSE
   )
+}
+
+# Structural disposition of each planned change. The action says what the
+# ledger will do; the disposition says what the change means for the
+# statements already accepted: a duplicate proposes nothing new, a new record
+# extends accepted knowledge, a revision edits an accepted record, and the
+# supersedes, superseded, and contradicted values surface statement-level
+# relations declared by the staged records themselves.
+plan_change_dispositions <- function(
+  staged,
+  classes,
+  input_rows,
+  record_ids,
+  actions
+) {
+  base <- c(insert = "new", update = "revision", match = "duplicate")
+  disposition <- unname(base[actions])
+  own_superseded <- rep(FALSE, length(actions))
+  superseded_targets <- character()
+  contradicted_targets <- character()
+  for (record_class in names(staged)) {
+    class_staged <- staged[[record_class]]
+    data <- class_staged$data
+    role <- scalar_character(class_staged$contract$role, NA_character_)
+    rows <- which(classes == record_class & actions != "match")
+    if (length(rows) == 0L || nrow(data) == 0L) {
+      next
+    }
+    if (identical(role, "statement") && "superseded_by" %in% names(data)) {
+      targets <- as.character(data$superseded_by[input_rows[rows]])
+      declared <- !is.na(targets) & nzchar(targets)
+      own_superseded[rows[declared]] <- TRUE
+      superseded_targets <- c(superseded_targets, targets[declared])
+    }
+    if (
+      identical(role, "evidence") &&
+        all(c("statement_id", "support_type") %in% names(data))
+    ) {
+      support <- as.character(data$support_type[input_rows[rows]])
+      statements <- as.character(data$statement_id[input_rows[rows]])
+      contradicts <- !is.na(support) &
+        support == "contradicts" &
+        !is.na(statements)
+      contradicted_targets <- c(contradicted_targets, statements[contradicts])
+    }
+  }
+  disposition[record_ids %in% contradicted_targets] <- "contradicted"
+  disposition[record_ids %in% superseded_targets] <- "supersedes"
+  disposition[own_superseded] <- "superseded"
+  disposition
 }

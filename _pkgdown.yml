@@ -135,6 +135,7 @@ reference:
       - graft_find
       - graft_query
       - graft_history
+      - graft_changes
       - graft_definitions
       - graft_calculate
   - title: Synchronize and integrate
@@ -148,3 +149,4 @@ reference:
       - graft_tools
       - graft_verify
       - graft_commons_data_source
+      - graft_contract_version
