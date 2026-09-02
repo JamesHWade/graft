@@ -136,16 +136,15 @@ resolve_changes_boundary <- function(store, value, argument, origin) {
   }
   if (S7::S7_inherits(value, GraftSnapshot)) {
     value <- as_graft_snapshot(value, argument)
-    metadata <- read_store_metadata(store$connection)
-    if (!identical(value@store_id, scalar_character(metadata$store_id))) {
-      abort_snapshot_error(
-        "graft_snapshot_store_error",
-        paste0("`", argument, "` was captured from a different store."),
-        argument = argument,
-        snapshot_store_id = value@store_id,
-        store_id = scalar_character(metadata$store_id)
-      )
+    # The same validation graft_at() applies: store identity, format, and the
+    # exact commit-order to batch and timestamp mapping, so a snapshot from a
+    # divergent copy of the database cannot select the wrong boundary.
+    source <- if (is_graft_snapshot_backend(store)) {
+      store$source_backend
+    } else {
+      store
     }
+    validate_graft_snapshot_mapping(source, value)
     if (value@commit_order > readable$commit_order) {
       abort_snapshot_error(
         c("graft_snapshot_boundary_error", "graft_history_boundary_error"),

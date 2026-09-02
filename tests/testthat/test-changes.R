@@ -130,6 +130,19 @@ test_that("graft_changes rejects inverted, foreign, and late boundaries", {
   other <- local_graft_ingest_store()
   expect_error(
     graft_changes(fixture$store, since = graft_snapshot(other)),
-    class = "graft_snapshot_store_error"
+    class = "graft_snapshot_error"
+  )
+  divergent <- graft:::new_graft_snapshot(
+    store_id = fixture$first@store_id,
+    store_format_version = fixture$first@store_format_version,
+    schema_build_digest = fixture$first@schema_build_digest,
+    commit_order = fixture$first@commit_order,
+    batch_id = fixture$second@batch_id,
+    committed_at = fixture$first@committed_at,
+    history_complete = TRUE
+  )
+  expect_error(
+    graft_changes(fixture$store, since = divergent),
+    class = "graft_snapshot_error"
   )
 })
