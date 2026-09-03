@@ -2,9 +2,11 @@
 
 export(graft_at)
 export(graft_calculate)
+export(graft_changes)
 export(graft_close)
 export(graft_commit)
 export(graft_commons_data_source)
+export(graft_contract_version)
 export(graft_definitions)
 export(graft_find)
 export(graft_get)

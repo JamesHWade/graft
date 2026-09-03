@@ -373,6 +373,24 @@ validate_graft_commit_plan <- function(plan) {
       "The commit plan structure is invalid; create and review a new plan."
     )
   }
+  # A plan serialized under an earlier format lacks columns reviewers now
+  # rely on, so it must be re-planned rather than committed as reviewed.
+  if (
+    !identical(data$plan_version, graft_plan_version) ||
+      !identical(names(data$changes), names(empty_plan_changes()))
+  ) {
+    abort_commit_plan(
+      "graft_commit_plan_invalid",
+      paste0(
+        "The commit plan uses plan format `",
+        scalar_character(data$plan_version, "unknown"),
+        "`, but this Graft commits format `",
+        graft_plan_version,
+        "`; create and review a new plan."
+      ),
+      plan_version = data$plan_version
+    )
+  }
   as_graft_provenance(data$provenance, "plan@provenance")
   execution_digest <- tryCatch(
     graft_sha256(canonical_json(commit_plan_execution(plan))),
@@ -730,6 +748,7 @@ empty_plan_changes <- function() {
     input_row = integer(),
     record_id = character(),
     action = character(),
+    disposition = character(),
     changed_fields = character(),
     expected_revision_id = character(),
     expected_revision_number = numeric(),

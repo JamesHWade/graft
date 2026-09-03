@@ -1067,3 +1067,131 @@ test_that("OKF review produces the ordinary commit-plan type", {
     "Reviewed polyethylene"
   )
 })
+
+test_that("plans carry structural dispositions for statement relations", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  ids <- retrieval_fixture_records()$ids
+  provenance <- graft_provenance("dispositions", idempotency_key = "d-1")
+
+  unchanged <- graft_plan(fixture$store, records, provenance)
+  expect_identical(unique(unchanged@changes$disposition), "duplicate")
+
+  revised <- records
+  revised$Claim$statement_text[[2L]] <- "Polyethylene durability is contested."
+  new_id <- test_graft_id("dispositions-new-claim")
+  revised$Claim <- rbind(
+    revised$Claim,
+    data.frame(
+      id = new_id,
+      statement_text = "Polyethylene degrades under ultraviolet light.",
+      primary_subject = ids$entity,
+      claim_type = "finding",
+      importance = "high",
+      polarity = "negative",
+      status = "active",
+      superseded_by = NA_character_,
+      about = I(list(ids$entity))
+    )
+  )
+  revised$Claim$status[[1L]] <- "superseded"
+  revised$Claim$superseded_by[[1L]] <- new_id
+  revised$ClaimEvidence <- rbind(
+    revised$ClaimEvidence,
+    data.frame(
+      id = test_graft_id("dispositions-contradiction"),
+      statement_id = ids$competing_claim,
+      source_id = ids$source,
+      support_type = "contradicts",
+      locator_type = "page",
+      locator_value = "p. 9",
+      page_start = 9,
+      page_end = 9,
+      excerpt = "Later tests disagreed."
+    )
+  )
+
+  plan <- graft_plan(fixture$store, revised, provenance)
+  changes <- plan@changes
+  disposition_of <- function(id) changes$disposition[changes$record_id == id]
+
+  expect_identical(plan@valid, TRUE)
+  expect_identical(disposition_of(new_id), "supersedes")
+  expect_identical(disposition_of(ids$active_claim), "superseded")
+  expect_identical(disposition_of(ids$competing_claim), "contradicted")
+  expect_identical(
+    disposition_of(test_graft_id("dispositions-contradiction")),
+    "contradicts"
+  )
+  expect_identical(disposition_of(ids$superseded_claim), "duplicate")
+  expect_identical(
+    changes$action[changes$record_id == ids$competing_claim],
+    "update"
+  )
+  expect_identical(
+    sort(unique(changes$disposition), method = "radix"),
+    c(
+      "contradicted",
+      "contradicts",
+      "duplicate",
+      "superseded",
+      "supersedes"
+    )
+  )
+
+  only_evidence <- graft_plan(
+    fixture$store,
+    list(ClaimEvidence = revised$ClaimEvidence[2L, , drop = FALSE]),
+    provenance
+  )
+  expect_identical(only_evidence@changes$disposition, "contradicts")
+  expect_identical(only_evidence@changes$class, "ClaimEvidence")
+})
+
+test_that("plans from an earlier format version are rejected at commit", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  plan <- graft_plan(
+    fixture$store,
+    records,
+    graft_provenance("format", idempotency_key = "format-1")
+  )
+  stale <- plan
+  data <- attr(stale, ".data", exact = TRUE)
+  data$plan_version <- "0.1.0"
+  data$changes$disposition <- NULL
+  attr(stale, ".data") <- data
+  stale <- resign_test_commit_plan(stale)
+
+  expect_error(
+    graft_commit(fixture$store, stale),
+    class = "graft_commit_plan_invalid"
+  )
+  expect_no_error(graft_commit(fixture$store, plan))
+})
+
+test_that("a plan whose dispositions disagree with its staged rows is rejected", {
+  fixture <- local_retrieval_store()
+  records <- retrieval_fixture_records()$records
+  ids <- retrieval_fixture_records()$ids
+  records$Claim$status[[1L]] <- "superseded"
+  records$Claim$superseded_by[[1L]] <- ids$competing_claim
+  plan <- graft_plan(
+    fixture$store,
+    records,
+    graft_provenance("dispositions", idempotency_key = "d-2")
+  )
+  expect_identical(
+    plan@changes$disposition[plan@changes$record_id == ids$active_claim],
+    "superseded"
+  )
+  softened <- plan@changes
+  softened$disposition[softened$record_id == ids$active_claim] <- "revision"
+  tampered <- resign_test_commit_plan(plan, changes = softened)
+
+  expect_error(
+    graft_commit(fixture$store, tampered),
+    class = "graft_commit_plan_error"
+  )
+  expect_no_error(graft_commit(fixture$store, plan))
+})

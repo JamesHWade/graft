@@ -698,7 +698,7 @@ shallow_integrity_issues <- function(store, limit) {
       "'Revision operation is inconsistent with its number.' AS detail FROM ",
       revision,
       " r WHERE (r.revision_number = 1 AND r.operation <> 'insert') OR ",
-      "(r.revision_number > 1 AND r.operation <> 'update')"
+      "(r.revision_number > 1 AND r.operation NOT IN ('update', 'delete'))"
     ),
     paste0(
       "SELECT 'orphan_revision_schema' AS issue, r.record_id, r.class, ",
@@ -773,10 +773,12 @@ shallow_integrity_issues <- function(store, limit) {
       " r ON o.revision_id = r.revision_id INNER JOIN ",
       batch,
       " b ON o.batch_id = b.batch_id WHERE ",
-      "o.disposition NOT IN ('inserted', 'updated', 'matched') OR ",
+      "o.disposition NOT IN ('inserted', 'updated', 'deleted', 'matched') OR ",
       "(o.disposition = 'inserted' AND (r.operation <> 'insert' OR ",
       "r.batch_id <> o.batch_id)) OR ",
       "(o.disposition = 'updated' AND (r.operation <> 'update' OR ",
+      "r.batch_id <> o.batch_id)) OR ",
+      "(o.disposition = 'deleted' AND (r.operation <> 'delete' OR ",
       "r.batch_id <> o.batch_id)) OR ",
       "(o.disposition = 'matched' AND r.commit_order >= b.commit_order)"
     ),
