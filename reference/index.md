@@ -43,6 +43,8 @@ projections, and history.
   : Run a bounded advanced retrieval operation
 - [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
   : Retrieve accepted record history
+- [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
+  : List accepted changes between two boundaries
 - [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
   : List accepted definitions
 - [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
@@ -65,3 +67,5 @@ read-only tools to an agent host, then verify its recorded evidence.
   : Verify recorded Graft evidence for assistant answers
 - [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
   : Create a detached Commons data source
+- [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
+  : Report the Graft consumer contract version

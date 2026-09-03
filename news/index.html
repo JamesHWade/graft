@@ -64,7 +64,11 @@
 <li>
 <code><a href="../reference/graft_calculate.html">graft_calculate()</a></code> now fails closed before evaluating a public table or normalized relation that exceeds the hard calculation-input bound.</li>
 <li>
+<code><a href="../reference/graft_changes.html">graft_changes()</a></code> lists every record whose accepted revision differs between two committed boundaries (snapshots, batch IDs, or times) as one bounded store-wide table with the action, revision count, the public fields whose values differ between the two boundary revisions, and the latest public record, so a host can ask “what was accepted since this snapshot” without looping over <code><a href="../reference/graft_history.html">graft_history()</a></code> (<a href="https://github.com/JamesHWade/graft/issues/32" class="external-link">#32</a>).</li>
+<li>
 <code><a href="../reference/graft_commons_data_source.html">graft_commons_data_source()</a></code> materializes selected public tables, normalized relations, prose, and accepted definitions at one immutable boundary, then returns a detached source owned by an optional, exactly tested Commons integration (<a href="https://github.com/JamesHWade/graft/issues/21" class="external-link">#21</a>).</li>
+<li>
+<code><a href="../reference/graft_contract_version.html">graft_contract_version()</a></code> reports the semantic consumer contract version together with the persisted store, plan, snapshot, manifest, and OKF format versions, giving downstream packages a stable value to pin against instead of a git commit or a namespace digest (<a href="https://github.com/JamesHWade/graft/issues/32" class="external-link">#32</a>).</li>
 <li>
 <code><a href="../reference/graft_tools.html">graft_tools()</a></code> adds bounded definition discovery and one composite calculation tool when accepted definitions exist; every result carries one canonical receipt for its exact accepted boundary and schema, while calculation receipts identify the full accepted definition closure (<a href="https://github.com/JamesHWade/graft/issues/21" class="external-link">#21</a>, <a href="https://github.com/JamesHWade/graft/issues/23" class="external-link">#23</a>).</li>
 <li>
@@ -87,6 +91,8 @@
 <code><a href="../reference/graft_open.html">graft_open()</a></code> now seeds contract definitions only when initializing a new store, so reopening with edited definitions cannot bypass plan review; package-owned DuckDB connections also use isolated extension storage.</li>
 <li>
 <code><a href="../reference/graft_plan.html">graft_plan()</a></code> and <code><a href="../reference/graft_review.html">graft_review()</a></code> produce the same tamper-evident S7 <code>GraftCommitPlan</code> for ordinary records and edited OKF knowledge without persistent writes.</li>
+<li>
+<code><a href="../reference/graft_plan.html">graft_plan()</a></code> and <code><a href="../reference/graft_review.html">graft_review()</a></code> now carry a <code>disposition</code> column on <code>@changes</code>: <code>duplicate</code>, <code>new</code>, or <code>revision</code> restate the ledger action for accepted statements, while <code>supersedes</code>, <code>superseded</code>, <code>contradicts</code>, and <code>contradicted</code> surface statement-level relations declared by the staged records through <code>superseded_by</code> and <code>contradicts</code> evidence, attached to the declaring row so they remain visible when the accepted target is not restaged; the plan format version is now <code>0.2.0</code> (<a href="https://github.com/JamesHWade/graft/issues/32" class="external-link">#32</a>).</li>
 <li>
 <code><a href="../reference/graft_provenance.html">graft_provenance()</a></code> creates immutable S7 provenance carrying producer, run, replay, and JSON metadata identity.</li>
 <li>

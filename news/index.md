@@ -24,11 +24,26 @@
 - [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
   now fails closed before evaluating a public table or normalized
   relation that exceeds the hard calculation-input bound.
+- [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
+  lists every record whose accepted revision differs between two
+  committed boundaries (snapshots, batch IDs, or times) as one bounded
+  store-wide table with the action, revision count, the public fields
+  whose values differ between the two boundary revisions, and the latest
+  public record, so a host can ask “what was accepted since this
+  snapshot” without looping over
+  [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
 - [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
   materializes selected public tables, normalized relations, prose, and
   accepted definitions at one immutable boundary, then returns a
   detached source owned by an optional, exactly tested Commons
   integration ([\#21](https://github.com/JamesHWade/graft/issues/21)).
+- [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
+  reports the semantic consumer contract version together with the
+  persisted store, plan, snapshot, manifest, and OKF format versions,
+  giving downstream packages a stable value to pin against instead of a
+  git commit or a namespace digest
+  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
   adds bounded definition discovery and one composite calculation tool
   when accepted definitions exist; every result carries one canonical
@@ -99,6 +114,17 @@
   [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
   produce the same tamper-evident S7 `GraftCommitPlan` for ordinary
   records and edited OKF knowledge without persistent writes.
+- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+  and
+  [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
+  now carry a `disposition` column on `@changes`: `duplicate`, `new`, or
+  `revision` restate the ledger action for accepted statements, while
+  `supersedes`, `superseded`, `contradicts`, and `contradicted` surface
+  statement-level relations declared by the staged records through
+  `superseded_by` and `contradicts` evidence, attached to the declaring
+  row so they remain visible when the accepted target is not restaged;
+  the plan format version is now `0.2.0`
+  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
 - [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
   creates immutable S7 provenance carrying producer, run, replay, and
   JSON metadata identity.
