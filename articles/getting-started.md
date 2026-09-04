@@ -290,8 +290,8 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-09-03 02:35:04        hr-review review-2026-08-08
-#> 2        1 2026-09-03 02:35:03 directory-import import-2026-08-01
+#> 1        2 2026-09-04 21:27:32        hr-review review-2026-08-08
+#> 2        1 2026-09-04 21:27:31 directory-import import-2026-08-01
 #>              contract            job_title
 #> 1 sha256:fc4d0cbd2d95 Investigative editor
 #> 2 sha256:fc4d0cbd2d95             Reporter
