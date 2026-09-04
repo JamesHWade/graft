@@ -1,4 +1,4 @@
-# graft
+# graft <img src="man/figures/logo.png" align="right" height="139" alt="Graft hex sticker: a tree frog tending a grafted branch." />
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml)
