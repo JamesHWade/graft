@@ -133,6 +133,9 @@ the canonical Graft envelope, so `graft_verify()` reports that evidence path as
 untrusted. Disabling offloading in the recipe above is an explicit choice for a
 bounded example, not a general recommendation for large documents.
 
+For complete selection, dependency review and current consultation policy, see
+[Retain an exact reuse basis](reuse-basis.html).
+
 ## Reconnect in the process that reads
 
 A live DuckDB connection belongs to its process. Keep serializable, host-trusted

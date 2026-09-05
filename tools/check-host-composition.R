@@ -11,6 +11,6 @@ for (package in c("ellmer", "deputy", "dsprrr", "callr", "httpuv")) {
   )])
 }
 devtools::test(
-  filter = "^(host-composition|narrative-knowledge)$",
+  filter = "^(host-composition|narrative-knowledge|reuse-basis|reuse-eligibility)$",
   stop_on_failure = TRUE
 )

@@ -4,7 +4,14 @@
 \alias{graft_changes}
 \title{List accepted changes between two boundaries}
 \usage{
-graft_changes(store, since = NULL, until = NULL, class = NULL, limit = 1000L)
+graft_changes(
+  store,
+  since = NULL,
+  until = NULL,
+  class = NULL,
+  limit = 1000L,
+  record_ids = NULL
+)
 }
 \arguments{
 \item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
@@ -17,6 +24,14 @@ graft_changes(store, since = NULL, until = NULL, class = NULL, limit = 1000L)
 
 \item{limit}{Maximum changed records to return, up to the package hard
 limit.}
+
+\item{record_ids}{Optional character vector of at most 5,000 record IDs.
+Restricts changes before applying \code{limit}, intersecting any \code{class}
+restriction. \code{NULL} selects all IDs; \code{character()} selects none.
+Duplicate IDs are ignored. Unknown IDs return no rows. This selects
+identities, including delete tombstones, without following references
+or granting access. An empty change result does not prove that the
+selected records exist or that a saved reuse basis is complete.}
 }
 \value{
 A bounded data frame ordered by class and record ID with columns

@@ -20,6 +20,18 @@ The exact point in the ordered history of accepted knowledge against which a
 read was evaluated.
 _Avoid_: Current state, latest data
 
+**Reuse basis**:
+A host-selected, bounded set of exact accepted record revisions and its
+declared evidence dependencies, retained with the snapshot that resolves them.
+A change receipt does not replace this complete selection.
+_Avoid_: Latest receipt, current memory
+
+**Consultation eligibility**:
+The application's current decision that selected knowledge may be used for a
+task. Eligibility is separate from acceptance, historical inspection, access,
+and factual truth; a snapshot does not freeze it.
+_Avoid_: Trusted status, snapshot permission
+
 **Commons source**:
 A detached query copy of public accepted knowledge from one accepted boundary,
 materialized atomically for Commons. It includes typed empty tables and is
