@@ -87,7 +87,9 @@ test_that("trusted checkpoints rebind complete selections in a fresh process", {
   graft_close(store)
   result <- callr::r(
     function(checkout, path, checkpoint) {
-      pkgload::load_all(checkout, quiet = TRUE)
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
       example <- new.env()
       sys.source(
         system.file("examples/reuse-basis.R", package = "graft"),
@@ -118,7 +120,11 @@ test_that("trusted checkpoints rebind complete selections in a fresh process", {
       )
     },
     args = list(
-      checkout = normalizePath(test_path("../..")),
+      checkout = if (pkgload::is_dev_package("graft")) {
+        normalizePath(test_path("../.."))
+      } else {
+        NULL
+      },
       path = path,
       checkpoint = checkpoint
     )
