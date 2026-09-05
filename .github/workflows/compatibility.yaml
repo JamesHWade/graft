@@ -83,3 +83,44 @@ jobs:
           needs: check
       - name: Check the public proposal signature offline
         run: Rscript tools/check-proposal-dsprrr.R
+
+  hosts:
+    runs-on: ubuntu-latest
+    name: ellmer Deputy dsprrr tool loops
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools
+          needs: check
+      - name: Check actual public hosts with local HTTP fixtures
+        run: Rscript tools/check-host-composition.R
+
+  released-producer:
+    runs-on: ubuntu-latest
+    name: data-dict 0.0.3 narrative contract
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools
+          needs: check
+      - name: Build the released data-dict producer
+        run: |
+          cargo install --locked \
+            --git https://github.com/tidyverse/data-dict \
+            --rev 9b48e97a61c4d12600cbb9dff3b1bb2aa14f6f71 \
+            --root "$RUNNER_TEMP/data-dict" \
+            data-dict-cli
+      - name: Check narrative representation and assertion enforcement
+        env:
+          GRAFT_TEST_DATA_DICT_CLI: ${{ runner.temp }}/data-dict/bin/data-dict
+        shell: Rscript {0}
+        run: |
+          devtools::test(filter = "^data-dict-narrative$", stop_on_failure = TRUE)

@@ -1068,3 +1068,79 @@ test_that("graft_verify preserves diagnostics for cited evidence", {
     list(c("truncated_result", "mixed_boundaries"))
   )
 })
+
+test_that("serialized tool envelopes preserve verification and reject ambiguous JSON", {
+  call <- verification_test_call(
+    "graft_find",
+    data.frame(text = "A precise accepted narrative statement.")
+  )
+  envelope <- call$result@value
+  for (value in list(
+    jsonlite::toJSON(envelope, auto_unbox = TRUE, null = "null"),
+    as.character(jsonlite::toJSON(envelope, auto_unbox = TRUE, null = "null"))
+  )) {
+    call$result <- ellmer::ContentToolResult(
+      value = value,
+      request = call$request
+    )
+    result <- graft_verify(verification_test_chat(
+      list(call),
+      "> A precise accepted narrative statement."
+    ))
+    expect_identical(result$label, "cited")
+    expect_equal(result$receipts[[1]][[1]], envelope$receipt)
+  }
+  valid <- as.character(jsonlite::toJSON(
+    envelope,
+    auto_unbox = TRUE,
+    null = "null"
+  ))
+  for (value in list(
+    "{broken",
+    "[]",
+    "null",
+    '"not an envelope"',
+    sub(
+      '"truncated":false',
+      '"truncated":false,"truncated":true',
+      valid,
+      fixed = TRUE
+    ),
+    sub('"id":"store-1"', '"id":"store-1","id":"other"', valid, fixed = TRUE)
+  )) {
+    call$result <- ellmer::ContentToolResult(
+      value = value,
+      request = call$request
+    )
+    result <- graft_verify(verification_test_chat(
+      list(call),
+      "> A precise accepted narrative statement."
+    ))
+    expect_identical(result$label, "untrusted")
+    expect_contains(result$reason_codes[[1]], "invalid_receipt")
+  }
+})
+
+test_that("verification never resolves a string as a file or URL", {
+  call <- verification_test_call(
+    "graft_find",
+    data.frame(text = "A precise accepted narrative statement.")
+  )
+  path <- withr::local_tempfile(fileext = ".json")
+  writeLines(
+    as.character(jsonlite::toJSON(call$result@value, auto_unbox = TRUE)),
+    path
+  )
+  for (value in c(path, "https://graft.invalid/receipt.json")) {
+    call$result <- ellmer::ContentToolResult(
+      value = value,
+      request = call$request
+    )
+    result <- graft_verify(verification_test_chat(
+      list(call),
+      "> A precise accepted narrative statement."
+    ))
+    expect_identical(result$label, "untrusted")
+    expect_contains(result$reason_codes[[1]], "invalid_receipt")
+  }
+})

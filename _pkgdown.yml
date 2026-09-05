@@ -51,6 +51,8 @@ navbar:
           href: articles/retrieval.html
         - text: Work with agents
           href: articles/agents.html
+        - text: Reuse narrative knowledge
+          href: articles/ecosystem.html
         - text: Supported integrations
           href: articles/compatibility.html
         - text: Add graph semantics with LinkML
@@ -94,6 +96,7 @@ articles:
       - retrieval
       - agents
       - compatibility
+      - ecosystem
   - title: Add richer representations
     desc: >
       Add semantic graph relationships with LinkML or synchronize a readable

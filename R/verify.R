@@ -14,6 +14,9 @@
 #'
 #' Verification classifies the recorded evidence path. It does not fact-check
 #' the answer or cryptographically authenticate receipt identifiers.
+#' Tool results may contain ordinary R envelopes or JSON-encoded envelopes,
+#' as recorded by ellmer 0.5. Malformed JSON and duplicate object keys fail
+#' closed. Host offload references and lossy event summaries are not envelopes.
 #'
 #' @param chat An [ellmer::Chat] whose recorded turns should be verified.
 #'
@@ -188,7 +191,11 @@ graft_verification_window <- function(turns) {
   list(
     tool_calls = calls,
     receipts = lapply(calls, function(call) {
-      value <- if (is.null(call$result)) NULL else call$result@value
+      value <- if (is.null(call$result)) {
+        NULL
+      } else {
+        graft_verification_result_value(call$result@value)
+      }
       if (is.list(value)) value[["receipt", exact = TRUE]] else NULL
     }),
     unsupported = unsupported
@@ -252,12 +259,13 @@ graft_verification_classify <- function(window, answer_text) {
     if (!is.null(result@error)) {
       next
     }
-    if (!graft_verification_receipt_valid(name, result@value)) {
+    value <- graft_verification_result_value(result@value)
+    if (!graft_verification_receipt_valid(name, value)) {
       reasons[["invalid_receipt"]] <- TRUE
       next
     }
-    truncated <- truncated || result@value$truncated
-    receipt <- result@value$receipt
+    truncated <- truncated || value$truncated
+    receipt <- value$receipt
     boundary_keys <- c(
       boundary_keys,
       canonical_json(list(
@@ -272,7 +280,7 @@ graft_verification_classify <- function(window, answer_text) {
       generic_count <- generic_count + 1L
       matches <- graft_verification_match_citations(
         answer_text,
-        result@value$result,
+        value$result,
         call_index
       )
       if (length(matches) == 0L) {
@@ -671,6 +679,22 @@ graft_verification_text_values <- function(value, path = "result") {
     }
     list(path = item_path, text = value[[index]])
   })
+}
+
+graft_verification_result_value <- function(value) {
+  if (is.character(value) && length(value) == 1L && !is.na(value)) {
+    if (!startsWith(trimws(value), "{")) {
+      return(NULL)
+    }
+    value <- tryCatch(
+      jsonlite::fromJSON(value, simplifyVector = FALSE),
+      error = function(error) NULL
+    )
+  }
+  if (!is.null(duplicate_json_object_key(value))) {
+    return(NULL)
+  }
+  value
 }
 
 graft_verification_receipt_valid <- function(tool_name, value) {
