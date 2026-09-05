@@ -228,6 +228,7 @@ graft_verification_classify <- function(window, answer_text) {
     "graft_query",
     "graft_history",
     "graft_definitions",
+    "graft_dictionary",
     "graft_calculate"
   )
   for (call_index in seq_along(window$tool_calls)) {

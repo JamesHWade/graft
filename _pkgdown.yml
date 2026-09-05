@@ -139,6 +139,7 @@ reference:
       - graft_query
       - graft_history
       - graft_changes
+      - graft_dictionary
       - graft_definitions
       - graft_calculate
   - title: Synchronize and integrate

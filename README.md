@@ -144,14 +144,15 @@ view <- graft_at(store, snapshot)
 
 tools <- graft_tools(view)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"
+#> [4] "graft_history"    "graft_dictionary"
 
 chat <- ellmer::chat_anthropic()
 chat$set_tools(tools)
 chat$chat("Who works at the Daily Planet, and has that person's title changed?")
 ```
 
-The four tools delegate to `graft_find()`, `graft_get()`, `graft_query()`, and
+The record tools delegate to `graft_find()`, `graft_get()`, `graft_query()`, and
 `graft_history()`. They expose no SQL, filesystem, network, or mutation
 argument, and every result reports the limit it applied, whether it was
 truncated, and the contract digest it came from. Writes stay in R, behind a

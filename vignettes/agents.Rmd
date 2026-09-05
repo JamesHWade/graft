@@ -74,7 +74,7 @@ graft_ingest(
 )
 ```
 
-## Hand the agent four bounded tools
+## Hand the agent bounded tools
 
 Install ellmer 0.5.0 or later for `graft_tools()` and `graft_verify()`. The
 [compatibility guide](compatibility.html) records the tested versions and the
@@ -82,12 +82,13 @@ unpinned Commons setup.
 
 `graft_tools()` returns [ellmer](https://ellmer.tidyverse.org/) tool
 definitions for `graft_find()`, `graft_get()`, `graft_query()`, and
-`graft_history()`:
+`graft_history()`, plus `graft_dictionary()` for data-dict contracts:
 
 ```{r tools}
 tools <- graft_tools(store)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"
+#> [4] "graft_history"    "graft_dictionary"
 ```
 
 Register them with a chat and the model can search, retrieve, traverse, and
@@ -131,6 +132,53 @@ The receipt names the store, accepted batch and commit order, and both schema
 digests. Live tools pin that state for one invocation; tools built from a
 `GraftView` also carry its immutable snapshot identifier. A calculation result
 adds the complete accepted definition closure under `receipt$definitions`.
+
+## Discover meaning before reading records
+
+Data-dict-backed stores expose `graft_dictionary()` to R callers and as an
+ellmer tool. LinkML stores retain their existing tools and report that a
+data-dict contract is required if dictionary discovery is called directly.
+
+These calls need no model or API key:
+
+```{r dictionary-discovery}
+view <- graft_at(store, graft_snapshot(store))
+context <- graft_dictionary(view, table = "person", field = "full_name")
+context$result$entries
+
+tools <- graft_tools(view)
+metadata <- tools$graft_dictionary(table = "person", field = "full_name")
+people <- tools$graft_find(query = "Lois", class = "person", limit = 5)
+identical(metadata$receipt, people$receipt)
+#> [1] TRUE
+```
+
+The entries distinguish supported contract properties such as requiredness
+from descriptive labels, units, relationships, glossary terms, and assertions.
+Unsupported profile semantics are identified explicitly. Assertion prose is
+never executed. Accepted definitions remain available through
+`graft_definitions()` rather than being copied from dictionary source text.
+
+Use `limit` and the returned `result$next_offset` for subsequent pages. Each
+page contains at most 100 entries, and each string cell is capped at 2,000
+characters. `text_truncated` identifies clipped entries; the outer `truncated`
+flag reports clipping or another page. A selected field still includes dataset,
+table, glossary, and adapter semantics needed to interpret it.
+
+Restricted columns and relationships with restricted endpoints are omitted.
+Examples, observed ranges, source locators, and arbitrary extension metadata
+are excluded. Public prose is not content-scrubbed: authors must keep private
+information out of public descriptions, assertions, and glossary entries.
+Relationships report resolved public endpoint pairs and cardinality. Pairs do
+not encode operators or aliases, so discovery does not reconstruct joins.
+Assertions likewise require resolved public column references;
+dataset assertions and assertions without resolved references are omitted.
+
+Dictionary discovery follows the generic-read verification rule. Quoting its
+returned prose can support a `cited` answer; an uncited discovery call fails
+closed. Combining it with a calculation cannot produce `verified` evidence.
+A pinned view retains the same dictionary and boundary receipt after later
+commits.
 
 ## Use the same boundary with Commons
 
