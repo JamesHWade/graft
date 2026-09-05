@@ -126,9 +126,12 @@ materialize_test_schema_import <- function(path) {
   if (!any(grepl("graft-core.linkml", source, fixed = TRUE))) {
     return(path)
   }
-  source <- stage_test_schema_core(source, dirname(path))
-  writeLines(source, path)
-  path
+  directory <- tempfile("graft-test-schema-")
+  dir.create(directory)
+  source <- stage_test_schema_core(source, directory)
+  staged_path <- file.path(directory, basename(path))
+  writeLines(source, staged_path)
+  staged_path
 }
 
 stage_test_schema_core <- function(source, directory) {
