@@ -142,6 +142,12 @@ test_that("snapshot paths are stable in covr's installed test layout", {
       "invalid-qualifier.linkml.yaml"
     )
   )
+  expect_identical(
+    redact_repo_path(
+      "Error in `/tmp/worker/graft-test-schema-123/invalid-records/example.yaml`"
+    ),
+    "Error in `<repo>/tests/testthat/fixtures/invalid-records/example.yaml`"
+  )
 })
 
 test_that("installed core imports are staged beside test schemas", {
