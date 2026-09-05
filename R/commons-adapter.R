@@ -496,7 +496,9 @@ commons_data_source_call <- function(tables, dictionary, types) {
       dictionary = dictionary
     )
   )
-  source$graft_connection_handle <- commons_connection_handle(connection)
+  attr(source, "graft_connection_handle") <- commons_connection_handle(
+    connection
+  )
   succeeded <- TRUE
   source
 }
@@ -520,13 +522,26 @@ commons_validate_table_names <- function(table_names) {
 commons_data_source_function <- function() {
   rlang::check_installed(
     "commons",
-    version = "0.0.0.9002",
     reason = "to create a detached Commons data source"
   )
+  required_exports <- "data_source"
+  missing_exports <- setdiff(required_exports, commons_exports())
+  if (length(missing_exports) > 0L) {
+    abort_validation_error(
+      paste(
+        "The installed Commons public contract is not supported.",
+        "Commons must export `data_source()`."
+      ),
+      field = "commons",
+      rule = "commons_public_contract",
+      observed_value = missing_exports,
+      expected_value = required_exports
+    )
+  }
   data_source <- getExportedValue("commons", "data_source")
   arguments <- names(formals(data_source))
-  required <- c("...", "tables", "exclude", "dictionary")
-  if (!identical(arguments, required)) {
+  required <- c("...", "tables", "dictionary")
+  if (!all(required %in% arguments)) {
     abort_validation_error(
       "The installed Commons `data_source()` contract is not supported.",
       field = "commons",
@@ -536,6 +551,10 @@ commons_data_source_function <- function() {
     )
   }
   data_source
+}
+
+commons_exports <- function() {
+  getNamespaceExports("commons")
 }
 
 commons_materialized_connection <- function(tables, types) {

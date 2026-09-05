@@ -31,6 +31,11 @@ graft_verify <- function(chat) {
       argument = "chat"
     )
   }
+  rlang::check_installed(
+    "ellmer",
+    version = "0.5.0",
+    reason = "to verify recorded answers with `graft_verify()`"
+  )
   turns <- tryCatch(
     chat$get_turns(),
     error = function(error) {

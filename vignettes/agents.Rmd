@@ -76,6 +76,10 @@ graft_ingest(
 
 ## Hand the agent four bounded tools
 
+Install ellmer 0.5.0 or later for `graft_tools()` and `graft_verify()`. The
+[compatibility guide](compatibility.html) records the tested versions and the
+unpinned Commons setup.
+
 `graft_tools()` returns [ellmer](https://ellmer.tidyverse.org/) tool
 definitions for `graft_find()`, `graft_get()`, `graft_query()`, and
 `graft_history()`:

@@ -1,0 +1,70 @@
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+name: compatibility.yaml
+
+permissions: read-all
+
+jobs:
+  ellmer:
+    runs-on: ubuntu-latest
+    name: ellmer ${{ matrix.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['0.4.0', '0.5.0']
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      ELLMER_VERSION: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools, any::remotes
+          needs: check
+      - name: Install the selected ellmer release
+        shell: Rscript {0}
+        run: |
+          remotes::install_version(
+            "ellmer",
+            version = Sys.getenv("ELLMER_VERSION"),
+            dependencies = FALSE,
+            upgrade = "never"
+          )
+      - name: Check public tools and recorded answers offline
+        run: Rscript tools/check-ellmer-compatibility.R "$ELLMER_VERSION"
+
+  contracts:
+    runs-on: ubuntu-latest
+    name: data-dict and Commons contracts
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools
+          needs: check
+      - name: Build the pinned data-dict producer
+        run: |
+          cargo install --locked \
+            --git https://github.com/tidyverse/data-dict \
+            --rev d794c9616f7803199432e9b31b519216aa78d1b0 \
+            --root "$RUNNER_TEMP/data-dict" \
+            data-dict-cli
+      - name: Check producer exports and detached Commons sources offline
+        env:
+          GRAFT_TEST_DATA_DICT_CLI: ${{ runner.temp }}/data-dict/bin/data-dict
+        shell: Rscript {0}
+        run: |
+          stopifnot(requireNamespace("commons", quietly = TRUE))
+          print(utils::packageDescription("commons")[c("Version", "RemoteSha")])
+          devtools::test(
+            filter = "^(data-dict|commons-adapter)",
+            stop_on_failure = TRUE
+          )

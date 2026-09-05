@@ -309,6 +309,7 @@ graft_tool_where_type <- function(required = FALSE) {
 check_graft_tools_dependency <- function() {
   rlang::check_installed(
     "ellmer",
+    version = "0.5.0",
     reason = "to create bounded tools with `graft_tools()`"
   )
 }

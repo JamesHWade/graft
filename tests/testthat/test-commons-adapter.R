@@ -153,7 +153,7 @@ test_that("Commons formal table names use connection dispatch", {
   expect_identical(source$dots, list(connection))
   expect_identical(source$tables, "tables")
   expect_identical(source$dictionary, "dictionary.yaml")
-  expect_identical(source$graft_connection_handle, connection)
+  expect_identical(attr(source, "graft_connection_handle"), connection)
 })
 
 test_that("Commons selection rejects system and unknown classes", {
@@ -321,11 +321,96 @@ test_that("Commons construction is atomic across selected tables", {
 })
 
 test_that("Commons accepts the detached source through its public API", {
-  skip_if_not_installed("commons", minimum_version = "0.0.0.9002")
+  skip_if_not_installed("commons")
   store <- local_definition_store()
 
   source <- graft_commons_data_source(store, classes = "Entity")
 
   expect_s3_class(source, "commons_data_source")
-  expect_identical(commons::list_tables(source), "Entity")
+  # Construction only: no model or worker code runs in this test.
+  withr::local_options(commons.allow_unsafe_fallback = TRUE)
+  agent <- commons::commons(
+    ellmer::chat_openai(model = "gpt-4o-mini"),
+    data_sources = list(accepted = source)
+  )
+  expect_s3_class(agent, "Chat")
+  expect_match(agent$get_system_prompt(), "Entity", fixed = TRUE)
+})
+
+test_that("Commons public contract changes fail before source construction", {
+  skip_if_not_installed("commons")
+  local_mocked_bindings(commons_exports = \() character())
+
+  condition <- rlang::catch_cnd(commons_data_source_function())
+
+  expect_s3_class(condition, "graft_validation_error")
+  expect_identical(condition$rule, "commons_public_contract")
+  expect_identical(condition$observed_value, "data_source")
+  expect_snapshot(conditionMessage(condition))
+})
+
+test_that("the real Commons source retains public pinned and typed empty tables", {
+  skip_if_not_installed("commons")
+  document <- jsonlite::fromJSON(
+    data_dict_personinfo_export_path(),
+    simplifyVector = FALSE
+  )
+  document$tables[[1L]]$columns[[5L]] <- list(
+    name = "private_notes",
+    display = "restricted",
+    type = "string",
+    examples = list("Synthetic private note")
+  )
+  path <- withr::local_tempfile(fileext = ".json")
+  writeLines(canonical_json(document), path)
+  store <- graft_open(graft_schema(path), okf = "disabled")
+  withr::defer(graft_close(store))
+  graft_ingest(
+    store,
+    list(
+      person = data.frame(
+        id = "person:lois",
+        full_name = "Lois Lane",
+        private_notes = "Synthetic private note"
+      )
+    ),
+    graft_provenance("test", idempotency_key = "commons-person-v1")
+  )
+  view <- graft_at(store, graft_snapshot(store))
+  connection <- NULL
+  materialize <- commons_materialized_connection
+  local_mocked_bindings(
+    commons_materialized_connection = function(tables, types) {
+      connection <<- materialize(tables, types)
+      connection
+    }
+  )
+  source <- graft_commons_data_source(
+    view,
+    classes = c("person", "organization")
+  )
+  graft_ingest(
+    store,
+    list(person = data.frame(id = "person:lois", full_name = "Updated name")),
+    graft_provenance("test", idempotency_key = "commons-person-v2")
+  )
+
+  expect_s3_class(source, "commons_data_source")
+  gc()
+  expect_identical(DBI::dbIsValid(connection), TRUE)
+  expect_setequal(
+    DBI::dbListTables(connection),
+    c("person", "organization", "person__aliases")
+  )
+  person <- DBI::dbReadTable(connection, "person")
+  organization <- DBI::dbReadTable(connection, "organization")
+  expect_identical(person$full_name, "Lois Lane")
+  expect_length(intersect("private_notes", names(person)), 0L)
+  expect_identical(nrow(organization), 0L)
+  expect_type(organization$id, "character")
+  expect_type(organization$name, "character")
+
+  rm(source)
+  gc()
+  expect_identical(DBI::dbIsValid(connection), FALSE)
 })

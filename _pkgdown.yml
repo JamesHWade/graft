@@ -51,6 +51,8 @@ navbar:
           href: articles/retrieval.html
         - text: Work with agents
           href: articles/agents.html
+        - text: Supported integrations
+          href: articles/compatibility.html
         - text: Add graph semantics with LinkML
           href: articles/linkml-schema.html
         - text: Open knowledge
@@ -91,6 +93,7 @@ articles:
       - knowledge-change-control
       - retrieval
       - agents
+      - compatibility
   - title: Add richer representations
     desc: >
       Add semantic graph relationships with LinkML or synchronize a readable
