@@ -5,22 +5,20 @@
 [![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
 <!-- badges: end -->
 
-R workflows often produce several related tables. When each run replaces the
-last one, it becomes difficult to recover an earlier value, trace a correction
-to its source, or review a relationship before it is used downstream.
+graft gives R workflows and agents durable, reviewed knowledge. Preserve research
+conclusions, interpretations, definitions and related records so a later task
+can reuse an exact accepted version and inspect what changed.
 
-graft turns those tables into reviewed, versioned knowledge. Start with a
-[data-dict](https://data-dict.tidyverse.org/) contract, create a new local
-store, inspect each proposed change before writing it, and retrieve current
-records alongside their accepted history. LinkML is available when the domain
-needs richer graph semantics.
+Start with a [data-dict](https://data-dict.tidyverse.org/) contract. Graft adds
+validated acceptance, stable identity, revision history, snapshots and bounded
+reads. Applications own the meaning of accepted content, permission to consult
+it and authority to execute code. Acceptance is not factual truth.
 
-That accepted knowledge is also meant to be read by agents. `graft_tools()`
-turns a store, or a pinned snapshot of one, into bounded read-only
-[ellmer](https://ellmer.tidyverse.org/) tools — no SQL, no connection, no write
-path — and an agent that proposes records goes through the same validation,
-provenance, and review as any other producer. See [Work with
-agents](https://jameshwade.github.io/graft/articles/agents.html).
+Follow the [offline quickstart](https://jameshwade.github.io/graft/articles/getting-started.html),
+try [narrative reuse](https://jameshwade.github.io/graft/articles/ecosystem.html),
+or retain an [exact reuse basis](https://jameshwade.github.io/graft/articles/reuse-basis.html).
+The tested agent recipes use ellmer, Deputy and dsprrr. Commons receives a
+detached public source; LinkML supports richer graph domains.
 
 ## Installation
 

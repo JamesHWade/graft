@@ -25,10 +25,14 @@ relationship before writing anything, accepts corrected records, preserves a
 later update as a second revision, and then hands that accepted knowledge to an
 agent as read-only tools.
 
-That last step is the point of the earlier ones. An agent is only as
-trustworthy as the knowledge it reads: validated on the way in, attributed to a
-producer, and stable while the agent is reasoning about it. Graft is built to
-give a model exactly that, and nothing more.
+A pinned view lets a later task read the same accepted versions even after a
+correction. Validation checks the declared contract; it does not establish
+factual truth or application permission. For text-rich records, continue with
+[narrative reuse](ecosystem.html) after this table example.
+
+Install with `pak::pak("JamesHWade/graft")` before running the guide. All evaluated
+chunks below use local synthetic records. The optional live-chat call is shown
+but not evaluated and requires model credentials. The store closes at the end.
 
 ## Load a table contract
 
