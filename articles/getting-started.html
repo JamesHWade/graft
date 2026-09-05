@@ -49,6 +49,7 @@
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
     <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -367,11 +368,11 @@ returns newest first.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;   revision        committed_at         producer             event</span></span>
-<span><span class="co">#&gt; 1        2 2026-09-04 21:27:32        hr-review review-2026-08-08</span></span>
-<span><span class="co">#&gt; 2        1 2026-09-04 21:27:31 directory-import import-2026-08-01</span></span>
+<span><span class="co">#&gt; 1        2 2026-09-05 10:05:29        hr-review review-2026-08-08</span></span>
+<span><span class="co">#&gt; 2        1 2026-09-05 10:05:28 directory-import import-2026-08-01</span></span>
 <span><span class="co">#&gt;              contract            job_title</span></span>
-<span><span class="co">#&gt; 1 sha256:fc4d0cbd2d95 Investigative editor</span></span>
-<span><span class="co">#&gt; 2 sha256:fc4d0cbd2d95             Reporter</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 sha256:a8c8a98f4778 Investigative editor</span></span>
+<span><span class="co">#&gt; 2 sha256:a8c8a98f4778             Reporter</span></span></code></pre></div>
 <p>The current record is convenient for applications. The revision
 history is the audit trail: it retains what was accepted, when, under
 which contract, and from which producer event. The displayed contract
@@ -396,7 +397,8 @@ by graft’s public read functions:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "graft_find"       "graft_get"        "graft_query"      "graft_history"   </span></span>
+<span><span class="co">#&gt; [5] "graft_dictionary"</span></span></code></pre></div>
 <p>The tools are <code><a href="../reference/graft_find.html">graft_find()</a></code>, <code><a href="../reference/graft_get.html">graft_get()</a></code>,
 <code><a href="../reference/graft_query.html">graft_query()</a></code>, and <code><a href="../reference/graft_history.html">graft_history()</a></code> — search,
 retrieval, bounded advanced operations, and revision history. They

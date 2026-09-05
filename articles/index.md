@@ -40,6 +40,12 @@ give agents bounded access to both.
   proposal path that still passes through validation, provenance, and
   review.
 
+- [Supported
+  integrations](https://jameshwade.github.io/graft/articles/compatibility.md):
+
+  Choose supported ellmer, data-dict, and Commons versions and reproduce
+  the checks behind Graft’s integration contracts.
+
 ### Add richer representations
 
 Add semantic graph relationships with LinkML or synchronize a readable

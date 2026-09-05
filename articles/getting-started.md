@@ -290,11 +290,11 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-09-04 21:27:32        hr-review review-2026-08-08
-#> 2        1 2026-09-04 21:27:31 directory-import import-2026-08-01
+#> 1        2 2026-09-05 10:05:29        hr-review review-2026-08-08
+#> 2        1 2026-09-05 10:05:28 directory-import import-2026-08-01
 #>              contract            job_title
-#> 1 sha256:fc4d0cbd2d95 Investigative editor
-#> 2 sha256:fc4d0cbd2d95             Reporter
+#> 1 sha256:a8c8a98f4778 Investigative editor
+#> 2 sha256:a8c8a98f4778             Reporter
 ```
 
 The current record is convenient for applications. The revision history
@@ -330,7 +330,8 @@ tool definitions backed by graft’s public read functions:
 
 tools <- graft_tools(view)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"      "graft_history"   
+#> [5] "graft_dictionary"
 ```
 
 The tools are

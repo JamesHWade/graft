@@ -4,8 +4,10 @@
 [`ellmer::tool()`](https://ellmer.tidyverse.org/reference/tool.html)
 definitions that delegate only to Graft's public bounded retrieval
 operations. The tools do not expose SQL, filesystem, network,
-connection, or mutation arguments. When the store has accepted
-definitions, `graft_definitions` exposes their bounded catalog and one
+connection, or mutation arguments. Data-dict stores also expose
+[`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
+for public metadata. When the store has accepted definitions,
+`graft_definitions` exposes their bounded catalog and one
 `graft_calculate` tool composes them through
 [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md).
 Both are omitted when no definitions are accepted. When given a
@@ -27,7 +29,7 @@ graft_tools(store)
 ## Value
 
 A named list of
-[`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/tool.html)
+[`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/ToolDef.html)
 objects.
 
 ## Details

@@ -280,3 +280,14 @@ traversal relationships. The [LinkML
 guide](https://jameshwade.github.io/graft/articles/linkml-schema.md)
 continues from the same plan and commit model; only the contract
 provider changes.
+
+## Discover the accepted dictionary
+
+Use `graft_dictionary(store, table = "person", field = "full_name")` to
+inspect public meaning and enforced contract properties with
+deterministic bounds and an accepted-boundary receipt. The same
+operation is available to ellmer through
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md).
+See [Discover meaning before reading
+records](https://jameshwade.github.io/graft/articles/agents.html#discover-meaning-before-reading-records)
+for selection, pagination, privacy, and verification behavior.

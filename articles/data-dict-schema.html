@@ -49,6 +49,7 @@
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
     <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -338,6 +339,18 @@ statements, custom identity policies, qualifier fields, or graph
 traversal relationships. The <a href="linkml-schema.html">LinkML
 guide</a> continues from the same plan and commit model; only the
 contract provider changes.</p>
+</div>
+<div class="section level2">
+<h2 id="discover-the-accepted-dictionary">Discover the accepted dictionary<a class="anchor" aria-label="anchor" href="#discover-the-accepted-dictionary"></a>
+</h2>
+<p>Use
+<code>graft_dictionary(store, table = "person", field = "full_name")</code>
+to inspect public meaning and enforced contract properties with
+deterministic bounds and an accepted-boundary receipt. The same
+operation is available to ellmer through <code><a href="../reference/graft_tools.html">graft_tools()</a></code>. See
+<a href="agents.html#discover-meaning-before-reading-records">Discover
+meaning before reading records</a> for selection, pagination, privacy,
+and verification behavior.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -4,6 +4,7 @@
 <url><loc>https://jameshwade.github.io/graft/LICENSE-text.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/agents.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/architecture.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/articles/compatibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/contract-compilers.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/data-dict-schema.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/getting-started.html</loc></url>
@@ -24,12 +25,15 @@
 <url><loc>https://jameshwade.github.io/graft/reference/graft_commons_data_source.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_contract_version.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_definitions.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/graft_dictionary.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_find.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_get.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_history.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_ingest.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_open.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_plan.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/graft_proposal_plan.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/graft_proposal_type.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_provenance.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_query.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_review.html</loc></url>

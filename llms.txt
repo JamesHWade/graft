@@ -192,7 +192,8 @@ captures the accepted boundary as a serializable, path-free value,
 [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
 binds it to a read-only view, and
 [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-turns that view into four [ellmer](https://ellmer.tidyverse.org/) tools:
+turns that view into bounded [ellmer](https://ellmer.tidyverse.org/)
+tools:
 
 ``` r
 
@@ -201,7 +202,8 @@ view <- graft_at(store, snapshot)
 
 tools <- graft_tools(view)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"
+#> [4] "graft_history"    "graft_dictionary"
 
 chat <- ellmer::chat_anthropic()
 chat$set_tools(tools)
@@ -285,6 +287,10 @@ Record where candidates came from, inspect a plan, and commit it.
   : Describe the provenance of a candidate knowledge change
 - [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
   : Plan a candidate knowledge change without writing it
+- [`graft_proposal_type()`](https://jameshwade.github.io/graft/reference/graft_proposal_type.md)
+  : Derive a structured proposal type from the accepted dictionary
+- [`graft_proposal_plan()`](https://jameshwade.github.io/graft/reference/graft_proposal_plan.md)
+  : Turn raw structured proposals into a reviewable plan
 - [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
   : Commit a reviewed knowledge-change plan
 - [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
@@ -311,6 +317,8 @@ projections, and history.
   : Retrieve accepted record history
 - [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
   : List accepted changes between two boundaries
+- [`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
+  : Discover the public data dictionary at an accepted boundary
 - [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
   : List accepted definitions
 - [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
@@ -377,6 +385,12 @@ give agents bounded access to both.
   Give an agent bounded reads, a pinned accepted boundary, and a
   proposal path that still passes through validation, provenance, and
   review.
+
+- [Supported
+  integrations](https://jameshwade.github.io/graft/articles/compatibility.md):
+
+  Choose supported ellmer, data-dict, and Commons versions and reproduce
+  the checks behind Graft’s integration contracts.
 
 ### Add richer representations
 

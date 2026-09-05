@@ -49,6 +49,7 @@
     <li><a class="dropdown-item" href="articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="articles/retrieval.html">Retrieve records and history</a></li>
     <li><a class="dropdown-item" href="articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="articles/compatibility.html">Supported integrations</a></li>
     <li><a class="dropdown-item" href="articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
@@ -261,14 +262,15 @@ Start with data frames and a data-dict contract. graft creates a new local store
 <h2 id="give-an-agent-bounded-reads">Give an agent bounded reads<a class="anchor" aria-label="anchor" href="#give-an-agent-bounded-reads"></a>
 </h2>
 <p>An agent is only as trustworthy as the knowledge it reads. graft gives a model records that were validated on the way in, attributed to a producer, and pinned so they cannot move mid-session.</p>
-<p><code><a href="reference/graft_snapshot.html">graft_snapshot()</a></code> captures the accepted boundary as a serializable, path-free value, <code><a href="reference/graft_at.html">graft_at()</a></code> binds it to a read-only view, and <code><a href="reference/graft_tools.html">graft_tools()</a></code> turns that view into four <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a> tools:</p>
+<p><code><a href="reference/graft_snapshot.html">graft_snapshot()</a></code> captures the accepted boundary as a serializable, path-free value, <code><a href="reference/graft_at.html">graft_at()</a></code> binds it to a read-only view, and <code><a href="reference/graft_tools.html">graft_tools()</a></code> turns that view into bounded <a href="https://ellmer.tidyverse.org/" class="external-link">ellmer</a> tools:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">snapshot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">snapshot</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"</span></span>
+<span><span class="co">#&gt; [1] "graft_find"       "graft_get"        "graft_query"</span></span>
+<span><span class="co">#&gt; [4] "graft_history"    "graft_dictionary"</span></span>
 <span></span>
 <span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">set_tools</span><span class="op">(</span><span class="va">tools</span><span class="op">)</span></span>

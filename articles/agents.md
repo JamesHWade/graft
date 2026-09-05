@@ -60,7 +60,15 @@ graft_ingest(
 )
 ```
 
-## Hand the agent four bounded tools
+## Hand the agent bounded tools
+
+Install ellmer 0.5.0 or later for
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+and
+[`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md).
+The [compatibility
+guide](https://jameshwade.github.io/graft/articles/compatibility.md)
+records the tested versions and the unpinned Commons setup.
 
 [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
 returns [ellmer](https://ellmer.tidyverse.org/) tool definitions for
@@ -68,13 +76,17 @@ returns [ellmer](https://ellmer.tidyverse.org/) tool definitions for
 [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
 [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md),
 and
-[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md):
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md),
+plus
+[`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
+for data-dict contracts:
 
 ``` r
 
 tools <- graft_tools(store)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"
+#> [4] "graft_history"    "graft_dictionary"
 ```
 
 Register them with a chat and the model can search, retrieve, traverse,
@@ -124,6 +136,60 @@ schema digests. Live tools pin that state for one invocation; tools
 built from a `GraftView` also carry its immutable snapshot identifier. A
 calculation result adds the complete accepted definition closure under
 `receipt$definitions`.
+
+## Discover meaning before reading records
+
+Data-dict-backed stores expose
+[`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
+to R callers and as an ellmer tool. LinkML stores retain their existing
+tools and report that a data-dict contract is required if dictionary
+discovery is called directly.
+
+These calls need no model or API key:
+
+``` r
+
+view <- graft_at(store, graft_snapshot(store))
+context <- graft_dictionary(view, table = "person", field = "full_name")
+context$result$entries
+
+tools <- graft_tools(view)
+metadata <- tools$graft_dictionary(table = "person", field = "full_name")
+people <- tools$graft_find(query = "Lois", class = "person", limit = 5)
+identical(metadata$receipt, people$receipt)
+#> [1] TRUE
+```
+
+The entries distinguish supported contract properties such as
+requiredness from descriptive labels, units, relationships, glossary
+terms, and assertions. Unsupported profile semantics are identified
+explicitly. Assertion prose is never executed. Accepted definitions
+remain available through
+[`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
+rather than being copied from dictionary source text.
+
+Use `limit` and the returned `result$next_offset` for subsequent pages.
+Each page contains at most 100 entries, and each string cell is capped
+at 2,000 characters. `text_truncated` identifies clipped entries; the
+outer `truncated` flag reports clipping or another page. A selected
+field still includes dataset, table, glossary, and adapter semantics
+needed to interpret it.
+
+Restricted columns and relationships with restricted endpoints are
+omitted. Examples, observed ranges, source locators, and arbitrary
+extension metadata are excluded. Public prose is not content-scrubbed:
+authors must keep private information out of public descriptions,
+assertions, and glossary entries. Relationships report resolved public
+endpoint pairs and cardinality. Pairs do not encode operators or
+aliases, so discovery does not reconstruct joins. Assertions likewise
+require resolved public column references; dataset assertions and
+assertions without resolved references are omitted.
+
+Dictionary discovery follows the generic-read verification rule. Quoting
+its returned prose can support a `cited` answer; an uncited discovery
+call fails closed. Combining it with a calculation cannot produce
+`verified` evidence. A pinned view retains the same dictionary and
+boundary receipt after later commits.
 
 ## Use the same boundary with Commons
 
@@ -245,6 +311,101 @@ The live-store `integrity` operation is unavailable through a view,
 since a diagnostic of the current store would contradict the pinned
 boundary.
 
+## Generate proposals from the accepted contract
+
+[`graft_proposal_type()`](https://jameshwade.github.io/graft/reference/graft_proposal_type.md)
+builds an ellmer structured-output type from the same accepted data-dict
+contract that planning validates. Select tables and, if needed, a subset
+of their public columns:
+
+``` r
+
+type <- graft_proposal_type(
+  view,
+  tables = "person",
+  fields = list(person = c("id", "full_name", "job_title")),
+  max_rows = 20
+)
+
+raw <- chat$chat_structured(
+  "Propose records from the supplied source text; do not invent identifiers.",
+  type = type,
+  convert = FALSE
+)
+```
+
+Keep `convert = FALSE` so the raw object reaches Graft without field
+dropping or coercion by an upstream converter. Selected tables are
+arrays of records. All selected properties are explicit in the schema;
+optional values can be JSON null. Lists are flat and their elements
+cannot be null. Foreign keys are string IDs whose existence is checked
+during planning, including references to other records in the same
+proposal.
+
+The schema excludes restricted columns, source locations, examples, and
+free-form metadata. Selections must contain every required column. A
+table with a required restricted column needs the host’s ordinary
+[`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
+path instead. Provider-specific structured-output restrictions can still
+apply; Graft validates returned data independently of provider
+guarantees.
+
+This offline example starts with a malformed candidate and corrects it
+before review. It uses the store from the setup above and makes no model
+call:
+
+``` r
+
+raw <- list(person = list(list(
+  id = "person:jimmy-olsen", full_name = NULL, job_title = "Photographer"
+)))
+provenance <- graft_provenance(
+  "directory-agent", run_id = "proposal-demo",
+  idempotency_key = "proposal-demo-1"
+)
+invalid <- graft_proposal_plan(store, raw, provenance, max_rows = 20)
+invalid@issues
+
+raw$person[[1]]$full_name <- "Jimmy Olsen"
+plan <- graft_proposal_plan(store, raw, provenance, max_rows = 20)
+plan@valid
+plan@changes
+plan@issues
+
+host_approved <- FALSE # Set only after the host's review decision.
+if (host_approved && plan@valid) {
+  graft_commit(store, plan)
+}
+```
+
+Malformed objects, unknown or restricted fields, and incompatible JSON
+value types raise `graft_validation_error`. Validly shaped but invalid
+candidates return plan issues, including missing required values,
+invalid enums, and unknown references. No malformed row is silently
+dropped. Optional missing values follow complete-record planning
+semantics; these proposals are not patches.
+
+Keep the reviewed `plan` to retry `graft_commit(store, plan)` safely.
+Creating a new plan after acceptance changes its preconditions, and
+reusing the committed idempotency key for that different plan fails
+rather than duplicating data.
+
+The same type can be used by a dsprrr signature:
+
+``` r
+
+sig <- dsprrr::signature(
+  inputs = list(text = dsprrr::input("text", description = "Source text")),
+  output_type = type
+)
+```
+
+This composes the public type boundary; it does not certify all dsprrr
+modules or introduce a Graft chat/session wrapper. The host still owns
+generation, credentials, retries, and acceptance. Run
+`Rscript tools/check-proposal-dsprrr.R` from the checkout to check the
+installed dsprrr signature interface offline.
+
 ## Let the agent propose, not write
 
 Nothing about agent-supplied records is special: they are ordinary data
@@ -298,9 +459,8 @@ Two habits make this durable in practice:
   accepted revision then answers “which agent, in which run, proposed
   this” through
   [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md).
-- Set an `idempotency_key` per proposed batch. A retried run — the
-  common failure mode for agents — replays instead of writing a
-  duplicate revision.
+- Set an `idempotency_key` per proposed batch. Retry the retained
+  reviewed plan so commit replay does not create duplicate revisions.
 
 [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
 collapses plan and commit into one call. Use it for a trusted pipeline;

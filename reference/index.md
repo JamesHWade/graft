@@ -19,6 +19,10 @@ Record where candidates came from, inspect a plan, and commit it.
   : Describe the provenance of a candidate knowledge change
 - [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
   : Plan a candidate knowledge change without writing it
+- [`graft_proposal_type()`](https://jameshwade.github.io/graft/reference/graft_proposal_type.md)
+  : Derive a structured proposal type from the accepted dictionary
+- [`graft_proposal_plan()`](https://jameshwade.github.io/graft/reference/graft_proposal_plan.md)
+  : Turn raw structured proposals into a reviewable plan
 - [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
   : Commit a reviewed knowledge-change plan
 - [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
@@ -45,6 +49,8 @@ projections, and history.
   : Retrieve accepted record history
 - [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
   : List accepted changes between two boundaries
+- [`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
+  : Discover the public data dictionary at an accepted boundary
 - [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
   : List accepted definitions
 - [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
