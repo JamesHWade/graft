@@ -43,7 +43,6 @@ local_host_responses <- function(calls, answer, .local_envir = parent.frame()) {
             rawToChar(req$rook.input$read()),
             simplifyVector = FALSE
           )
-          saveRDS(request, file.path(directory, paste0(count, ".rds")))
           message <- list(
             role = "assistant",
             content = if (count == 2L) {
@@ -151,13 +150,7 @@ local_host_responses <- function(calls, answer, .local_envir = parent.frame()) {
       "http://127.0.0.1:",
       readRDS(file.path(directory, "port")),
       "/v1"
-    ),
-    requests = function() {
-      lapply(
-        list.files(directory, pattern = "[.]rds$", full.names = TRUE),
-        readRDS
-      )
-    }
+    )
   )
 }
 

@@ -43,8 +43,9 @@ Release 0.0.3 additionally renders descriptions as HTML and supplies expression
 translations; separate frozen exports retain that build distinction.
 
 The baseline exporter rejects table `definitions` in YAML, although current
-upstream documentation describes them. The example therefore accepts a named
-Definition through the existing public `graft_plan()`/`graft_ingest()` path.
+upstream documentation describes them. Named Definitions use the existing
+public `graft_plan()`/`graft_ingest()` path, covered separately in
+`test-measures.R`.
 Do not conflate a producer release, a Graft adapter profile, and current upstream
 capabilities. The assertion probe uses scalar Parquet fields; the baseline
 producer misclassified a DuckDB-written list column as struct, so that probe is
@@ -91,8 +92,8 @@ selected record IDs, their exact revision IDs, and explicitly selected evidence
 closure. Record schema/build and store identity through the snapshot; retain
 application-specific source version and anchor meaning in domain records.
 
-The worker regression serializes a complete three-record selection (conclusion,
-support and source), closes the connection, opens a fresh read-only store in a
+The worker regression serializes a complete four-record selection (interpretation,
+preference, support and source), closes the connection, opens a fresh read-only store in a
 separate R process, rebinds the snapshot, and checks every selected revision and
 payload. This proves a bounded reconstruction recipe, not an exported basis
 validator. It does not send a live DuckDB connection across processes.
@@ -123,7 +124,8 @@ or saved code cannot register itself as an executable tool.
 
 - Shipped YAML and resolved JSON: `inst/extdata/narrative-knowledge.*`.
 - Offline example and fixture: `inst/examples/narrative-knowledge.R`.
-- Runtime storage/policy and worker checks: `test-narrative-knowledge.R`.
+- Runtime storage checks: `test-narrative-knowledge.R`.
+- Complete selection and worker checks: `test-reuse-basis.R`.
 - Real producer export/nesting/extension/assertion checks:
   `test-data-dict-narrative.R` (optional CLI; no downloads in tests).
 - Actual Chat, Deputy Agent and dsprrr ReAct loops: `test-host-composition.R`.

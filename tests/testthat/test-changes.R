@@ -149,63 +149,7 @@ test_that("graft_changes rejects inverted, foreign, and late boundaries", {
 
 test_that("graft_changes reports a deleted head as a deletion", {
   fixture <- changes_fixture_store()
-  connection <- graft_test_connection(fixture$store)
-  latest <- DBI::dbGetQuery(
-    connection,
-    paste(
-      "SELECT revision_id, batch_id, revision_number, commit_order",
-      "FROM _graft_record_revisions WHERE record_id = ?",
-      "ORDER BY commit_order DESC LIMIT 1"
-    ),
-    params = list(fixture$ids$active_claim)
-  )
-  delete_batch <- test_graft_id("changes-delete-batch")
-  DBI::dbExecute(
-    connection,
-    paste(
-      "INSERT INTO _graft_batches (batch_id, schema_build_digest, commit_order,",
-      "producer, producer_version, source_run_id, idempotency_key,",
-      "metadata_json, started_at, committed_at, status)",
-      "SELECT ?, schema_build_digest, commit_order + 1, producer,",
-      "producer_version, source_run_id, 'changes-delete', metadata_json,",
-      "started_at, committed_at, status FROM _graft_batches WHERE batch_id = ?"
-    ),
-    params = list(delete_batch, latest$batch_id[[1L]])
-  )
-  DBI::dbExecute(
-    connection,
-    paste(
-      "INSERT INTO _graft_record_revisions (revision_id, record_id, class,",
-      "batch_id, schema_build_digest, revision_number, operation, payload_json,",
-      "content_digest, changed_fields_json, prior_revision_id, recorded_at,",
-      "commit_order)",
-      "SELECT ?, record_id, class, ?, schema_build_digest, revision_number + 1,",
-      "'delete', payload_json, content_digest, '[]', revision_id, recorded_at,",
-      "commit_order + 1 FROM _graft_record_revisions WHERE revision_id = ?"
-    ),
-    params = list(
-      test_graft_id("changes-delete-revision"),
-      delete_batch,
-      latest$revision_id[[1L]]
-    )
-  )
-  DBI::dbExecute(
-    connection,
-    paste(
-      "INSERT INTO _graft_record_observations (record_id, class, batch_id,",
-      "disposition, revision_id, origin_key, matched_by,",
-      "identity_evidence_json, observed_at)",
-      "SELECT record_id, class, ?, 'deleted', ?, origin_key, matched_by,",
-      "identity_evidence_json, observed_at FROM _graft_record_observations",
-      "WHERE record_id = ? AND batch_id = ?"
-    ),
-    params = list(
-      delete_batch,
-      test_graft_id("changes-delete-revision"),
-      fixture$ids$active_claim,
-      latest$batch_id[[1L]]
-    )
-  )
+  append_test_tombstone(fixture$store, fixture$ids$active_claim)
   view <- graft_at(fixture$store, graft_snapshot(fixture$store))
 
   changes <- graft_changes(view, since = fixture$third)
@@ -215,20 +159,12 @@ test_that("graft_changes reports a deleted head as a deletion", {
   expect_identical(changes$changed_fields[[1L]], character())
   expect_null(changes$record[[1L]])
   expect_identical(changes$revisions, 1L)
-  DBI::dbExecute(
-    connection,
-    paste(
-      "UPDATE _graft_record_heads SET revision_id = ?, revision_number = ?",
-      "WHERE record_id = ?"
-    ),
-    params = list(
-      test_graft_id("changes-delete-revision"),
-      latest$revision_number[[1L]] + 1,
-      fixture$ids$active_claim
-    )
-  )
   live <- graft_changes(fixture$store, since = fixture$third)
-  expect_identical(live$action, "delete")
+  expect_identical(live, changes)
+  expect_error(
+    graft_get(fixture$store, fixture$ids$active_claim),
+    class = "graft_reference_error"
+  )
 })
 
 test_that("graft_changes validates the prior boundary payload", {

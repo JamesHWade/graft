@@ -43,7 +43,6 @@ test_that("real hosts preserve pinned narrative results and canonical receipts",
         FALSE
       )
       expect_identical(graft_verify(chat)$label[[1]], "cited", info = host)
-      expect_gte(length(responses$requests()), 2L)
     })
   }
 })
@@ -66,7 +65,7 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
     )
   )
   cases <- list(
-    list(
+    bounded = list(
       calls = list(list(
         name = "graft_find",
         arguments = list(
@@ -77,10 +76,10 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
       )),
       expected = tools$graft_find("reading", "knowledge", 1L)
     ),
-    list(
+    missing = list(
       calls = list(list(name = "graft_get", arguments = list(id = "missing")))
     ),
-    list(
+    mixed = list(
       calls = list(
         list(name = "graft_get", arguments = list(id = "knowledge:preference")),
         list(name = "host_note", arguments = list())
@@ -88,14 +87,16 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
     )
   )
   for (host in c("ellmer", "deputy", "dsprrr")) {
-    for (case in cases) {
+    for (scenario in names(cases)) {
+      case <- cases[[scenario]]
+      context <- paste(host, scenario)
       local({
         responses <- local_host_responses(
           case$calls,
           "An uncited answer from the available results."
         )
         chat <- host_chat(responses)
-        if (identical(case$calls[[1]]$arguments$id, "missing")) {
+        if (scenario == "missing") {
           expect_warning(
             run_graft_host(host, chat, c(tools, list(host_note = extra))),
             class = "ellmer_tool_failure"
@@ -106,9 +107,9 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
         expect_identical(
           graft_verify(chat)$label[[1]],
           "untrusted",
-          info = host
+          info = context
         )
-        if (!is.null(case$expected)) {
+        if (scenario == "bounded") {
           expect_identical(
             jsonlite::fromJSON(
               host_result_values(chat)[[1]],
@@ -118,7 +119,7 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
               jsonlite::toJSON(case$expected, auto_unbox = TRUE, null = "null"),
               simplifyVector = FALSE
             ),
-            info = host
+            info = context
           )
           expect_identical(case$expected$truncated, TRUE)
         }

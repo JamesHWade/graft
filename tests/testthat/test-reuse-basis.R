@@ -1,96 +1,80 @@
-test_that("both consumers retain complete exact selections across acceptance cycles", {
+test_that("dependency changes flag affected roots and retain complete selections", {
   example <- reuse_example()
-  for (consumer in c("research", "reading")) {
-    local({
-      store <- local_narrative_store()
-      basis <- capture_consumer_basis(store, consumer)
-      values <- example$read_reuse_basis(store, basis, \(ids) TRUE)
-      expect_length(values, if (consumer == "research") 3L else 4L)
-      unchanged <- example$review_reuse_basis(store, basis)
-      expect_equal(nrow(unchanged$changes), 0L)
-      expect_identical(unchanged$needs_review, character())
-      for (cycle in seq_len(2L)) {
-        source <- narrative_fixture()$narrative_records()$source
-        source$quote <- paste("Accepted evidence correction", cycle)
-        graft_ingest(
-          store,
-          list(source = source),
-          graft_provenance(
-            "research",
-            idempotency_key = paste0("cycle-", cycle)
-          )
-        )
-        expect_identical(
-          example$read_reuse_basis(store, basis, \(ids) TRUE),
-          values
-        )
-        assessment <- example$review_reuse_basis(store, basis)
-        expect_identical(assessment$changes$record_id, "source:trial-v1")
-        expect_identical(
-          assessment$needs_review,
-          if (consumer == "research") {
-            "knowledge:conclusion"
-          } else {
-            "knowledge:interpretation"
-          }
-        )
-        # Explicit host refresh preserves the complete set, not only changed IDs.
-        refreshed <- capture_consumer_basis(store, consumer)
-        expect_identical(refreshed$records$record_id, basis$records$record_id)
-        expect_equal(
-          nrow(example$review_reuse_basis(store, refreshed)$changes),
-          0L
-        )
-      }
-      expect_identical(
-        graft_get(store, basis$roots[[1L]])$record,
-        values[[basis$roots[[1L]]]]
-      )
-    })
+  store <- local_narrative_store()
+  roots <- c(
+    "knowledge:conclusion",
+    "knowledge:interpretation",
+    "knowledge:preference"
+  )
+  dependencies <- rbind(
+    reuse_consumer_selection("research")$dependencies,
+    reuse_consumer_selection("reading")$dependencies
+  )
+  basis <- example$capture_reuse_basis(store, roots, dependencies)
+  values <- example$read_reuse_basis(store, basis, \(ids) TRUE)
+  expect_length(values, 6L)
+  expect_identical(
+    example$review_reuse_basis(store, basis)$needs_review,
+    character()
+  )
+  for (cycle in seq_len(2L)) {
+    source <- narrative_fixture()$narrative_records()$source
+    source$quote <- paste("Accepted evidence correction", cycle)
+    graft_ingest(
+      store,
+      list(source = source),
+      graft_provenance("research", idempotency_key = paste0("cycle-", cycle))
+    )
+    expect_identical(
+      example$read_reuse_basis(store, basis, \(ids) TRUE),
+      values
+    )
+    assessment <- example$review_reuse_basis(store, basis)
+    expect_identical(assessment$changes$record_id, "source:trial-v1")
+    expect_identical(assessment$needs_review, roots[1:2])
+    refreshed <- example$capture_reuse_basis(store, roots, dependencies)
+    expect_identical(refreshed$records$record_id, basis$records$record_id)
+    expect_equal(nrow(example$review_reuse_basis(store, refreshed)$changes), 0L)
   }
 })
 
-test_that("a selected deleted support remains visible without its parent payload", {
+test_that("a selected deleted support is visible in both live and pinned changes", {
   example <- reuse_example()
-  for (consumer in c("research", "reading")) {
-    local({
-      store <- local_narrative_store()
-      basis <- capture_consumer_basis(store, consumer)
-      original <- example$read_reuse_basis(store, basis, \(ids) TRUE)
-      support <- if (consumer == "research") {
-        "support:conclusion"
-      } else {
-        "support:interpretation"
-      }
-      append_reuse_tombstone(store, support)
-      view <- graft_at(store, graft_snapshot(store))
-      changes <- graft_changes(
-        view,
-        since = basis$snapshot,
-        record_ids = support,
-        limit = 1L
-      )
-      expect_identical(changes$action, "delete")
-      expect_null(changes$record[[1L]])
-      expect_identical(attr(changes, "truncated"), FALSE)
-      assessment <- example$review_reuse_basis(view, basis)
-      expect_identical(assessment$needs_review, basis$roots[[1L]])
-      expect_identical(
-        example$read_reuse_basis(store, basis, \(ids) TRUE),
-        original
-      )
-      expect_error(graft_get(view, support), class = "graft_reference_error")
-      selection <- reuse_consumer_selection(consumer)
-      expect_error(
-        example$capture_reuse_basis(
-          store,
-          selection$roots,
-          selection$dependencies
-        ),
-        class = "graft_reference_error"
-      )
-    })
-  }
+  store <- local_narrative_store()
+  basis <- capture_consumer_basis(store)
+  original <- example$read_reuse_basis(store, basis, \(ids) TRUE)
+  support <- "support:interpretation"
+  append_test_tombstone(store, support)
+  view <- graft_at(store, graft_snapshot(store))
+  changes <- graft_changes(
+    store,
+    since = basis$snapshot,
+    record_ids = support,
+    limit = 1L
+  )
+  expect_identical(
+    changes,
+    graft_changes(
+      view,
+      since = basis$snapshot,
+      record_ids = support,
+      limit = 1L
+    )
+  )
+  expect_identical(changes$action, "delete")
+  expect_null(changes$record[[1L]])
+  expect_identical(attr(changes, "truncated"), FALSE)
+  expect_identical(
+    example$review_reuse_basis(store, basis)$needs_review,
+    "knowledge:interpretation"
+  )
+  expect_identical(
+    example$read_reuse_basis(store, basis, \(ids) TRUE),
+    original
+  )
+  expect_error(graft_get(store, support), class = "graft_reference_error")
+  expect_error(graft_get(view, support), class = "graft_reference_error")
+  expect_error(capture_consumer_basis(store), class = "graft_reference_error")
 })
 
 test_that("trusted checkpoints rebind complete selections in a fresh process", {
@@ -119,7 +103,19 @@ test_that("trusted checkpoints rebind complete selections in a fresh process", {
         okf = "disabled"
       )
       on.exit(graft::graft_close(store))
-      example$read_reuse_basis(store, readRDS(checkpoint), \(ids) TRUE)
+      basis <- readRDS(checkpoint)
+      view <- graft::graft_at(store, basis$snapshot)
+      list(
+        values = example$read_reuse_basis(store, basis, \(ids) TRUE),
+        revisions = vapply(
+          basis$records$record_id,
+          function(id) {
+            graft::graft_history(view, id, limit = 1L)$revision_id[[1L]]
+          },
+          character(1),
+          USE.NAMES = FALSE
+        )
+      )
     },
     args = list(
       checkout = normalizePath(test_path("../..")),
@@ -127,7 +123,8 @@ test_that("trusted checkpoints rebind complete selections in a fresh process", {
       checkpoint = checkpoint
     )
   )
-  expect_identical(result, expected)
+  expect_identical(result$values, expected)
+  expect_identical(result$revisions, basis$records$revision_id)
 })
 
 test_that("incomplete, incompatible and inaccessible checkpoints fail as a whole", {
@@ -164,10 +161,6 @@ test_that("incomplete, incompatible and inaccessible checkpoints fail as a whole
     example$read_reuse_basis(store, invalid_snapshot, \(ids) TRUE),
     class = "graft_snapshot_error"
   )
-  expect_snapshot(
-    error = TRUE,
-    example$reuse_ids(paste0("id-", seq_len(1001L)))
-  )
   selection <- reuse_consumer_selection("reading")
   expect_error(
     example$capture_reuse_basis(store, "missing", selection$dependencies),
@@ -185,4 +178,19 @@ test_that("empty selections are explicit and never materialize ambient knowledge
   )
   expect_length(example$read_reuse_basis(store, basis, \(ids) TRUE), 0L)
   expect_equal(nrow(example$review_reuse_basis(store, basis)$changes), 0L)
+})
+
+test_that("dependency traversal enforces its bound before reading a store", {
+  example <- reuse_example()
+  dependencies <- data.frame(
+    outcome = "root",
+    dependency = paste0("id-", seq_len(1000L))
+  )
+  expect_length(example$reuse_closure("root", dependencies[-1L, ]), 1000L)
+  expect_snapshot(
+    error = TRUE,
+    example$capture_reuse_basis(NULL, "root", dependencies)
+  )
+  cyclic <- data.frame(outcome = c("a", "b"), dependency = c("b", "a"))
+  expect_snapshot(error = TRUE, example$capture_reuse_basis(NULL, "a", cyclic))
 })

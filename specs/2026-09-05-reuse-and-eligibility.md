@@ -51,11 +51,10 @@ closure; it does not infer every semantic dependency from a dictionary FK.
   immutable Document anchors, Archive/restore, host acceptance and Reader
   boundaries. #51 owns runtime integration; #47/#48 remain access/erasure gates.
 
-The two fixtures use actual Graft stores and the shipped data-dict narrative
-contract. The research selection includes a conclusion, support and source;
-the reading selection includes an interpretation, its support and source,
-plus a preference with no fabricated citation. They are consumer-shaped
-examples, not replacements for Tempest's richer schema or Rill's implementation.
+The narrative fixture uses an actual Graft store and the shipped data-dict
+contract. One graph combines a conclusion and interpretation, their support
+records and shared source, plus an independent preference. This tests affected
+and unaffected roots together; it is not proof of two application integrations.
 
 ## Exact basis and references
 
@@ -112,7 +111,8 @@ can advance the accepted boundary while retaining every selected ID/revision.
 Revise the same ID when correcting the same accepted outcome. A replacement
 with a different purpose has its own ID and a host-owned supersession link;
 require an existing accepted target, reject self-links and cycles, and retain
-both histories. The proof does not introduce a universal supersession field.
+both histories. These are host requirements; the recipe tests dependency-cycle
+rejection, not an application supersession workflow.
 Rill's completed/cancelled follow-up states are not general Graft lifecycle
 states. A hypothesis can be accepted without becoming a fact; a preference
 remains a preference without a fabricated source.
@@ -146,10 +146,10 @@ Archive, supersession, dependency review and access changes invalidate affected
 active runs and cached consultation resources. Restore permits a newly
 authorized run; it does not resume an old epoch. A tool refusal cannot erase
 knowledge already in an active chat: cancel or rebuild that context before the
-next model request. The teaching test checks refusal in an actual local ellmer
-tool loop, plus epoch invalidation, direct history, Archive/restore, correction,
-supersession and authorization revocation. Concurrent production revocation and
-multi-Reader enforcement remain #47/#51 work.
+next model request. The teaching tests check refusal in an actual local ellmer
+tool loop, correction conflicts and revocation between the pre-read and
+post-read checks. Archive/restore, supersession, production revocation and
+multi-Reader enforcement remain application work in #47/#50/#51.
 
 ## Delivery evidence and remaining owners
 
