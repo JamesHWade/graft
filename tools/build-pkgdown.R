@@ -34,7 +34,7 @@ staged_source <- tempfile("graft-pkgdown-source-")
 dir.create(staged_source)
 on.exit(unlink(staged_source, recursive = TRUE, force = TRUE), add = TRUE)
 
-excluded_entries <- c(".git", "AGENTS.md", "docs")
+excluded_entries <- c(".git", "AGENTS.md", "CONTEXT.md", "docs")
 source_entries <- list.files(
   source_dir,
   all.files = TRUE,
@@ -83,7 +83,10 @@ if (
   )
 }
 
-forbidden_outputs <- file.path(destination_dir, c("AGENTS.html", "AGENTS.md"))
+forbidden_outputs <- file.path(
+  destination_dir,
+  c("AGENTS.html", "AGENTS.md", "CONTEXT.html", "CONTEXT.md")
+)
 forbidden_outputs <- forbidden_outputs[file.exists(forbidden_outputs)]
 if (length(forbidden_outputs) > 0L) {
   stop(
@@ -100,14 +103,14 @@ indexable_files <- list.files(
   full.names = TRUE,
   ignore.case = TRUE
 )
-# Match the instruction file by its exact uppercase name. A case-insensitive
+# Match the internal files by their exact uppercase names. A case-insensitive
 # pattern would also match the lowercase `agents` article, which is ordinary
 # site content.
 mentions_instructions <- vapply(
   indexable_files,
   \(path) {
     content <- readLines(path, warn = FALSE, encoding = "UTF-8")
-    any(grepl("\\bAGENTS[.](md|html)\\b", content))
+    any(grepl("\\b(AGENTS|CONTEXT)[.](md|html)\\b", content))
   },
   logical(1)
 )
@@ -118,12 +121,12 @@ if (any(mentions_instructions)) {
     nchar(destination_dir) + 2L
   )
   stop(
-    "The site still refers to AGENTS.md: ",
+    "The site still refers to an internal instruction file: ",
     paste(offenders, collapse = ", "),
     call. = FALSE
   )
 }
 
 message(
-  "Verified that AGENTS.md is absent from the published site and indexes."
+  "Verified that AGENTS.md and CONTEXT.md are absent from the site and indexes."
 )

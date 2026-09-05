@@ -24,17 +24,16 @@ template:
     navbar-dark-bg: "#12362D"
 
 home:
-  title: "graft: Connected knowledge from R tables"
+  title: "graft: Durable knowledge for R workflows and agents"
   description: >
-    Start with related R tables and a data-dict contract, create a new local
-    store, review changes before writing, keep current records with their
-    accepted history, and give agents bounded read-only access to it.
+    Review and retain research conclusions, interpretations and related records
+    with data-dict contracts, accepted history and exact reuse for later tasks.
   sidebar:
     structure: [links, license, authors, dev]
 
 navbar:
   structure:
-    left: [intro, learn, design, reference, news]
+    left: [intro, learn, integrate, design, reference, news]
     right: [search, github, lightswitch]
   components:
     intro:
@@ -49,21 +48,26 @@ navbar:
           href: articles/knowledge-change-control.html
         - text: Retrieve records and history
           href: articles/retrieval.html
+        - text: Retain an exact reuse basis
+          href: articles/reuse-basis.html
+        - text: Calculate with accepted Definitions
+          href: reference/graft_calculate.html
+    integrate:
+      text: Integrate
+      menu:
         - text: Work with agents
           href: articles/agents.html
         - text: Reuse narrative knowledge
           href: articles/ecosystem.html
-        - text: Retain an exact reuse basis
-          href: articles/reuse-basis.html
         - text: Supported integrations
           href: articles/compatibility.html
+    design:
+      text: Design
+      menu:
         - text: Add graph semantics with LinkML
           href: articles/linkml-schema.html
         - text: Open knowledge
           href: articles/open-knowledge-format.html
-    design:
-      text: Design
-      menu:
         - text: Architecture
           href: articles/architecture.html
         - text: Contract compilers

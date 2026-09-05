@@ -1,239 +1,111 @@
 # graft
 
 <div class="graft-hero">
-<p class="graft-eyebrow">Knowledge from ordinary R tables</p>
-<h2 data-toc-skip>Turn related tables into knowledge you can update without losing history.</h2>
+<p class="graft-eyebrow">Durable knowledge for R workflows and agents</p>
+<h2 data-toc-skip>Keep what you learn.<br>Review what changes.</h2>
 <p class="graft-hero-copy">
-Start with data frames and a data-dict contract. graft creates a new local
-store, checks related records before it writes, records where each accepted
-change came from, and keeps earlier versions available &mdash; then hands that
-accepted knowledge to an agent as bounded, read-only tools.
+Give research conclusions, interpretations, definitions and related records an
+accepted history. Start with <code>data-dict.yaml</code>, review proposed changes,
+and let a later task return to the exact knowledge an earlier task used.
 </p>
 <div class="graft-actions">
 <a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a>
-<a class="btn btn-outline-secondary" href="articles/agents.html">Work with agents</a>
+<a class="btn btn-outline-secondary" href="articles/ecosystem.html">Try narrative reuse</a>
 </div>
 </div>
 
-## Start with the data you already have
+## From a result to a reusable record
 
-Suppose an R workflow produces three tables:
+An R workflow produces a conclusion. A person corrects it. A later agent needs
+the earlier answer and the evidence behind it. Replacing yesterday's file
+loses that distinction; Graft retains each accepted revision and the producer
+recorded for the change.
 
-| Table | What one row represents | Important fields |
-|---|---|---|
-| `organization` | An organization | `id`, `name` |
-| `person` | A person | `id`, `full_name`, `job_title` |
-| `employment` | A person's employment | `person_id`, `organization_id` |
+<table class="table graft-workflow">
+<thead><tr><th>Describe</th><th>Review</th><th>Reuse</th></tr></thead>
+<tbody><tr>
+<td>Use data-dict to describe fields, meaning and relationships.</td>
+<td>Inspect a proposed plan, correct invalid references, then accept it.</td>
+<td>Read current history or pin an exact boundary for a later task.</td>
+</tr></tbody>
+</table>
 
-Those tables can answer who works where today. They do not, by themselves,
-tell you whether an employment row points to a known organization, who supplied
-a correction, what a reviewer accepted, or what the previous job title was.
+data-dict supplies the contract. Graft adds validated acceptance, stable
+identity, revisions, snapshots and bounded retrieval. Ordinary tables are a
+useful starting point; their values can include Markdown, interpretations,
+preferences and normalized evidence links.
 
-graft adds stable record identity, relationship checks, source provenance, a
-review step, and revision history. These are the foundations of useful
-knowledge: facts that remain connected and explainable as they change. They are
-also what makes accepted knowledge safe to put in front of a model.
+Acceptance records a decision for a purpose. It does not make a claim true,
+authorize access, or permit execution of stored code. Applications retain those
+responsibilities.
 
-## Install graft
+## Start in R
 
-graft is currently installed from GitHub:
+Install the development package:
 
 ```r
 pak::pak("JamesHWade/graft")
 ```
 
-Using a resolved data-dict contract and an existing `.graft.json` contract is
-R-only. The data-dict CLI is needed only to resolve authored YAML, and Python
-with `linkml-runtime` is needed only to compile LinkML source.
+The [quickstart](articles/getting-started.html) runs entirely offline. It uses a
+shipped resolved data-dict contract to create a store, reject a broken
+reference, accept a correction, inspect history and pin a snapshot. No model
+credentials or Python installation are required.
 
-## Describe the tables with a contract
+Author your own `data-dict.yaml` with the optional data-dict CLI, then compile
+its resolved export in R. Existing compiled contracts also run in R alone.
+[LinkML](articles/linkml-schema.html) remains available for domains needing
+richer graph semantics.
 
-[data-dict](https://data-dict.tidyverse.org/) gives the tables and their
-relationships a readable contract. The package includes this example as
-`team-directory.data-dict.yaml`; an abridged excerpt of its relationships is:
+## Choose your next workflow
 
-```yaml
-tables:
-  - name: person
-  - name: organization
-  - name: employment
+<div class="graft-paths">
+<section>
+<h3>Review changing knowledge</h3>
+<p>Keep proposals separate from accepted records. Inspect changes, handle stale
+plans and retry without manufacturing another revision.</p>
+<p><a href="articles/knowledge-change-control.html">Review and accept changes</a></p>
+</section>
+<section>
+<h3>Return to an exact answer</h3>
+<p>Retain the full selected evidence across restarts and unchanged days. Flag
+changed dependencies for review while preserving the earlier interpretation.</p>
+<p><a href="articles/reuse-basis.html">Retain an exact reuse basis</a></p>
+</section>
+<section>
+<h3>Give an agent bounded reads</h3>
+<p>Use ordinary ellmer tools with ellmer, Deputy or dsprrr. Keep connections in
+the process that owns them and reconnect workers from serializable references.</p>
+<p><a href="articles/ecosystem.html">Explore tested host recipes</a></p>
+</section>
+<section>
+<h3>Calculate and inspect receipts</h3>
+<p>Evaluate accepted Definitions against a pinned boundary. Inspect the recorded
+evidence path without treating a receipt as a fact-check.</p>
+<p><a href="reference/graft_calculate.html">Calculate with accepted Definitions</a></p>
+</section>
+</div>
 
-relationships:
-  - join: employment.person_id = person.id
-  - join: employment.organization_id = organization.id
-```
+## What works together today
 
-The data-dict CLI resolves authoring YAML with `export-spec` once. graft
-compiles the resolved JSON using R alone, then creates the store — no existing
-database required:
+Graft's tested host loops cover ellmer, Deputy and dsprrr; Commons consumes a
+detached public copy and retains its own file measures. Tempest owns research
+products and promotion, with accepted-evidence restart checks. Rill's Reader
+integration, isolation and permanent Forget gates remain separate work.
 
-```r
-library(graft)
+The [integration guide](articles/compatibility.html) records supported versions
+and limitations. The [ecosystem guide](articles/ecosystem.html) separates tested
+composition from planned application behavior. Generic read tools alone do not
+enforce Reader permissions or decide what an agent may consult automatically.
 
-schema <- graft_schema(system.file(
-  "extdata",
-  "team-directory.data-dict.json",
-  package = "graft",
-  mustWork = TRUE
-))
+## Read a result's evidence path
 
-store <- graft_open(schema, tempfile(fileext = ".duckdb"), okf = "disabled")
-```
+Graft classifies recorded answer evidence as **Verified**, **Cited** or
+**Untrusted**. Verified paths use governed calculations with matching receipts;
+Cited paths use independently matched Graft reads. Failures, unknown sources or
+mixed unsupported evidence keep a result Untrusted.
 
-## Review each change before it is written
-
-Candidate records are ordinary data frames. This batch has a valid person and
-organization, but its employment row points to an organization that does not
-exist:
-
-```r
-records <- list(
-  organization = data.frame(
-    id = "org:daily-planet",
-    name = "Daily Planet"
-  ),
-  person = data.frame(
-    id = "person:lois-lane",
-    full_name = "Lois Lane",
-    job_title = "Reporter"
-  ),
-  employment = data.frame(
-    id = "employment:lois-lane:daily-planet",
-    person_id = "person:lois-lane",
-    organization_id = "org:missing"
-  )
-)
-
-origin <- graft_provenance(
-  producer = "directory-import",
-  idempotency_key = "directory-2026-08-09"
-)
-
-plan <- graft_plan(store, records, origin)
-plan@valid
-#> [1] FALSE
-
-plan@issues[, c("class", "record_id", "field", "message")]
-#>        class                         record_id           field                                        message
-#> 1 employment employment:lois-lane:daily-planet organization_id Reference target `org:missing` does not exist.
-```
-
-Planning writes nothing, so a rejected batch can be corrected and reviewed
-again. `graft_commit()` rechecks the reviewed plan and accepts all three
-records in one transaction, or none of them:
-
-```r
-records$employment$organization_id <- "org:daily-planet"
-plan <- graft_plan(store, records, origin)
-
-plan@changes[, c("class", "record_id", "action")]
-#>          class                         record_id action
-#> 1 organization                  org:daily-planet insert
-#> 2       person                  person:lois-lane insert
-#> 3   employment employment:lois-lane:daily-planet insert
-
-graft_commit(store, plan)
-```
-
-## Keep the old version when a fact changes
-
-A later review changes Lois's role. The update is another reviewable plan, not
-an overwrite:
-
-```r
-update_plan <- graft_plan(
-  store,
-  list(person = data.frame(
-    id = "person:lois-lane",
-    full_name = "Lois Lane",
-    job_title = "Investigative editor"
-  )),
-  graft_provenance(
-    producer = "hr-review",
-    idempotency_key = "hr-review-2026-08-10"
-  )
-)
-
-update_plan@changes[, c("record_id", "action", "changed_fields")]
-#>          record_id action changed_fields
-#> 1 person:lois-lane update      job_title
-
-graft_commit(store, update_plan)
-
-graft_history(store, "person:lois-lane")[
-  , c("revision_number", "producer", "changed_fields")
-]
-#>   revision_number         producer changed_fields
-#> 1               2        hr-review      job_title
-#> 2               1 directory-import   full_nam....
-```
-
-Current retrieval returns the new title. History retains both accepted
-versions and the producer behind each change.
-
-## Give an agent bounded reads
-
-An agent is only as trustworthy as the knowledge it reads. graft gives a model
-records that were validated on the way in, attributed to a producer, and pinned
-so they cannot move mid-session.
-
-`graft_snapshot()` captures the accepted boundary as a serializable, path-free
-value, `graft_at()` binds it to a read-only view, and `graft_tools()` turns that
-view into bounded [ellmer](https://ellmer.tidyverse.org/) tools:
-
-```r
-snapshot <- graft_snapshot(store)
-view <- graft_at(store, snapshot)
-
-tools <- graft_tools(view)
-names(tools)
-#> [1] "graft_find"       "graft_get"        "graft_query"
-#> [4] "graft_history"    "graft_dictionary"
-
-chat <- ellmer::chat_anthropic()
-chat$set_tools(tools)
-chat$chat("Who works at the Daily Planet, and has that person's title changed?")
-
-graft_close(store)
-```
-
-The tools search, retrieve, run bounded advanced operations, and read revision
-history. They accept no SQL, connection, path, or write argument, and every
-result reports the limit it applied, whether it was truncated, and the digest of
-the contract it came from. Fields the contract marks restricted never reach
-them.
-
-Writes stay on the reviewed path. An agent that proposes records becomes a
-named producer whose plan is validated and inspected like any other, and a
-file-editing agent works through a readable Open Knowledge Format tree whose
-edits remain proposals until they are reviewed. [Work with
-agents](articles/agents.html) covers all three.
-
-## Choose a contract provider
-
-data-dict is the simpler starting point when the domain is naturally tabular.
-Its foreign keys let graft reject missing targets, but they are not graph
-traversal edges. Move to [LinkML](articles/linkml-schema.html) when you need
-relationships that support graph traversal, inheritance, ontology identifiers,
-or polymorphic references.
-
-Both providers compile to the same Graft contract and use the same plan,
-commit, retrieval, and history functions. The provider changes how the domain
-is described; it does not create another way to write accepted knowledge.
-
-## Continue learning
-
-- [Get started](articles/getting-started.html) works through this example with
-  its results, then hands the store to an agent.
-- [Use a data-dict contract](articles/data-dict-schema.html) covers table-first
-  authoring, compilation, and what the table profile enforces.
-- [Review knowledge changes](articles/knowledge-change-control.html) explains
-  plans, commit preconditions, and retries.
-- [Retrieve current records and history](articles/retrieval.html) maps each read
-  function to its job.
-- [Work with agents](articles/agents.html) covers bounded tools, pinned
-  snapshots, agent-authored proposals, and file-editing agents.
-- [Add graph semantics with LinkML](articles/linkml-schema.html) continues from
-  governed tables to typed traversal relationships.
-- [Understand the architecture](articles/architecture.html) explains storage,
-  projections, and selective use of S7.
+These labels describe the recorded path. They do not measure factual accuracy,
+authenticate producer identities or guarantee that prose faithfully represents
+a source. [Work with agents](articles/agents.html) explains the checks and their
+limits.
