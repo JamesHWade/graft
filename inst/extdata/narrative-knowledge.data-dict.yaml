@@ -1,0 +1,79 @@
+$version: 0.1.0
+$learn_more: https://data-dict.tidyverse.org/
+name: narrative_knowledge
+label: Narrative knowledge
+description: Synthetic teaching records, not a replacement for application schemas.
+
+tables:
+  - name: knowledge
+    description: One accepted narrative identity; kind and purpose are application data.
+    columns:
+      - name: id
+        type: string
+        examples: [synthetic]
+        constraints: [primary_key]
+      - name: kind
+        type: enum
+        values: [conclusion, interpretation, preference, question]
+        constraints: [required]
+      - name: purpose
+        type: string
+        examples: [synthetic]
+        constraints: [required]
+      - name: body
+        type: string
+        examples: [synthetic]
+        constraints:
+          - required
+          - assert: body != 'short'
+            description: The placeholder short is not a narrative.
+      - name: lifecycle
+        type: enum
+        values: [active, archived]
+        constraints: [required]
+      - name: tags
+        type: list(string)
+        examples: [research, synthetic]
+      - name: owner_binding
+        type: string
+        examples: [synthetic]
+        display: restricted
+  - name: source
+    description: A synthetic immutable document version, not a mutable URL.
+    columns:
+      - name: id
+        type: string
+        examples: [synthetic]
+        constraints: [primary_key]
+      - name: document_revision
+        type: string
+        examples: [synthetic]
+        constraints: [required]
+      - name: quote
+        type: string
+        examples: [synthetic]
+        constraints: [required]
+  - name: support
+    description: One normalized evidence anchor; link existence does not prove support.
+    columns:
+      - name: id
+        type: string
+        examples: [synthetic]
+        constraints: [primary_key]
+      - name: knowledge_id
+        type: string
+        examples: [synthetic]
+        constraints: [required, foreign_key]
+      - name: source_id
+        type: string
+        examples: [synthetic]
+        constraints: [required, foreign_key]
+      - name: anchor
+        type: string
+        examples: [synthetic]
+        constraints: [required]
+relationships:
+  - join: support.knowledge_id = knowledge.id
+    cardinality: many-to-one
+  - join: support.source_id = source.id
+    cardinality: many-to-one

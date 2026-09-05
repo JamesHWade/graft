@@ -33,4 +33,7 @@ closed as \code{"untrusted"}.
 
 Verification classifies the recorded evidence path. It does not fact-check
 the answer or cryptographically authenticate receipt identifiers.
+Tool results may contain ordinary R envelopes or JSON-encoded envelopes,
+as recorded by ellmer 0.5. Malformed JSON and duplicate object keys fail
+closed. Host offload references and lossy event summaries are not envelopes.
 }

@@ -20,6 +20,13 @@
 #' @param class Optional concrete class restriction.
 #' @param limit Maximum changed records to return, up to the package hard
 #'   limit.
+#' @param record_ids Optional character vector of at most 5,000 record IDs.
+#'   Restricts changes before applying `limit`, intersecting any `class`
+#'   restriction. `NULL` selects all IDs; `character()` selects none.
+#'   Duplicate IDs are ignored. Unknown IDs return no rows. This selects
+#'   identities, including delete tombstones, without following references
+#'   or granting access. An empty change result does not prove that the
+#'   selected records exist or that a saved reuse basis is complete.
 #'
 #' @return A bounded data frame ordered by class and record ID with columns
 #'   `class`, `record_id`, `action` (`"insert"` when the record had no
@@ -41,7 +48,8 @@ graft_changes <- function(
   since = NULL,
   until = NULL,
   class = NULL,
-  limit = 1000L
+  limit = 1000L,
+  record_ids = NULL
 ) {
   store <- as_graft_read_store_internal(store, "store")
   validate_graft_retrieval(store)
@@ -50,6 +58,7 @@ graft_changes <- function(
     hard_limit = graft_retrieval_limits$changes
   )
   classes <- validate_changes_classes(store, class)
+  record_ids <- validate_changes_record_ids(record_ids)
   lower <- resolve_changes_boundary(store, since, "since", origin = TRUE)
   upper <- resolve_changes_boundary(store, until, "until", origin = FALSE)
   if (lower$commit_order > upper$commit_order) {
@@ -68,7 +77,8 @@ graft_changes <- function(
     lower$commit_order,
     upper$commit_order,
     classes,
-    limit
+    limit,
+    record_ids
   )
   result <- summarize_changed_revisions(rows, store, limit)
   attr(result, "since_commit_order") <- lower$commit_order
@@ -76,6 +86,33 @@ graft_changes <- function(
   attr(result, "until_commit_order") <- upper$commit_order
   attr(result, "until_batch_id") <- upper$batch_id
   result
+}
+
+validate_changes_record_ids <- function(record_ids) {
+  if (is.null(record_ids)) {
+    return(NULL)
+  }
+  if (
+    !is.character(record_ids) ||
+      !is.null(dim(record_ids)) ||
+      anyNA(record_ids) ||
+      !all(nzchar(record_ids))
+  ) {
+    abort_validation_error(
+      "`record_ids` must be a character vector of non-empty, non-missing IDs.",
+      field = "record_ids",
+      rule = "record_ids"
+    )
+  }
+  if (length(record_ids) > graft_retrieval_limits$changes) {
+    abort_limit_error(
+      "`record_ids` must contain at most 5,000 IDs.",
+      field = "record_ids",
+      requested_limit = length(record_ids),
+      hard_limit = graft_retrieval_limits$changes
+    )
+  }
+  unique(unname(record_ids))
 }
 
 validate_changes_classes <- function(store, class) {
@@ -169,7 +206,14 @@ resolve_changes_boundary <- function(store, value, argument, origin) {
   )
 }
 
-query_changed_revisions <- function(store, lower, upper, classes, limit) {
+query_changed_revisions <- function(
+  store,
+  lower,
+  upper,
+  classes,
+  limit,
+  record_ids
+) {
   connection <- store$connection
   revisions <- quote_identifier(connection, "_graft_record_revisions")
   batches <- quote_identifier(connection, "_graft_batches")
@@ -183,6 +227,20 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
     )
     class_params <- as.list(classes)
   }
+  id_sql <- ""
+  id_params <- list()
+  if (!is.null(record_ids)) {
+    id_sql <- if (length(record_ids) == 0L) {
+      " AND FALSE"
+    } else {
+      paste0(
+        " AND r.record_id IN (",
+        paste(rep("?", length(record_ids)), collapse = ", "),
+        ")"
+      )
+    }
+    id_params <- as.list(record_ids)
+  }
   committed <- paste0(
     " INNER JOIN ",
     batches,
@@ -191,9 +249,10 @@ query_changed_revisions <- function(store, lower, upper, classes, limit) {
   window_sql <- paste0(
     committed,
     " AND r.commit_order > ? AND r.commit_order <= ?",
-    class_sql
+    class_sql,
+    id_sql
   )
-  window_params <- c(list(lower, upper), class_params)
+  window_params <- c(list(lower, upper), class_params, id_params)
   order_sql <- "ORDER BY r.commit_order DESC, r.revision_number DESC, r.revision_id DESC"
   # Changed keys are bounded first; only the aggregate, the latest revision at
   # `until`, and the latest revision at `since` are then read for those keys.

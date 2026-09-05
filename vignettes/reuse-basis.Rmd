@@ -1,0 +1,164 @@
+---
+title: "Retain an exact reuse basis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Retain an exact reuse basis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(graft)
+```
+
+A snapshot records an accepted boundary. A reuse basis additionally records the
+exact records a task selected and the evidence it needs. Keep that complete
+selection on an unchanged day; an empty change receipt is not an empty basis.
+
+This example uses the [narrative teaching data](ecosystem.html). The functions
+sourced below are application-owned recipes, not exported Graft interfaces or a
+supported checkpoint format. Tempest and Rill retain their own selection,
+authorization, evidence, and lifecycle semantics.
+
+## Capture the complete selection
+
+```{r capture}
+example <- new.env()
+sys.source(system.file(
+  "examples/narrative-knowledge.R", package = "graft"
+), example)
+sys.source(system.file(
+  "examples/reuse-basis.R", package = "graft"
+), example)
+store <- graft_open(graft_schema(system.file(
+  "extdata/narrative-knowledge.data-dict.json", package = "graft"
+)), okf = "disabled")
+accepted <- graft_ingest(store, example$narrative_records(),
+  graft_provenance("teaching-host", idempotency_key = "seed"))
+
+dependencies <- data.frame(
+  outcome = c("knowledge:interpretation", "support:interpretation"),
+  dependency = c("support:interpretation", "source:trial-v1")
+)
+basis <- example$capture_reuse_basis(
+  store,
+  roots = c("knowledge:interpretation", "knowledge:preference"),
+  dependencies = dependencies
+)
+basis$records[, c("record_id", "class")]
+```
+
+The basis contains both root outcomes and their required support/source records.
+The preference has no fabricated citation. The application declares this closure;
+it must validate its own source versions and anchors. The recipe caps the whole
+selection at 1,000 records, preserving Tempest's current ceiling. It stops if the
+closure is too large instead of quietly dropping evidence.
+
+The checkpoint stores a snapshot and exact revision references, with no connection
+or access grant. Restore trusted host checkpoints in a fresh process by opening
+the intended store, establishing current permission, and then calling
+`read_reuse_basis()`. Never import untrusted RDS or persist policy functions in a
+model-authored checkpoint.
+
+```{r exact}
+# Synthetic local host authorization. Real applications decide from current identity.
+allow_read <- \(ids) all(ids %in% basis$records$record_id)
+before <- example$read_reuse_basis(store, basis, allow_read)
+length(before)
+example$review_reuse_basis(store, basis)$needs_review
+```
+
+## Review changes without losing the old meaning
+
+```{r changed}
+source <- example$narrative_records()$source
+source$quote <- "The larger synthetic trial supports only a preliminary conclusion."
+correction <- graft_ingest(store, list(source = source),
+  graft_provenance("teaching-host", idempotency_key = "source-correction"))
+assessment <- example$review_reuse_basis(store, basis)
+assessment$changes[, c("record_id", "action")]
+assessment$needs_review
+identical(example$read_reuse_basis(store, basis, allow_read), before)
+```
+
+The interpretation needs review because its declared evidence changed. The
+preference does not. The old interpretation and exact evidence remain available
+for authorized inspection; the review signal neither proves the interpretation
+false nor rewrites its content.
+
+`graft_changes()` now filters IDs **before** its result limit:
+
+```{r scoped-changes}
+changes <- graft_changes(
+  store, since = basis$snapshot,
+  record_ids = basis$records$record_id, limit = 1000L
+)
+stopifnot(!isTRUE(attr(changes, "truncated")))
+```
+
+Unrelated changes cannot crowd this selection out. A selected deletion still
+appears by ID even when its returned record is `NULL`. `NULL` IDs select the
+whole store; `character()` selects none. Unknown IDs return no changes, so this
+query is not a completeness check. Read the entire exact basis separately and
+fail if any selected revision is unavailable. Discovery of new relevant records
+is a separate operation whose completeness the host must check.
+
+## Enforce eligibility at the host boundary
+
+Acceptance, historical access, current eligibility, task relevance and factual
+truth are separate decisions. The teaching host exposes one no-argument tool
+that can only consult its selected bundle. Current policy is checked before and
+after reading; a denied dependency prevents the entire result from being emitted.
+
+```{r consultation, eval=FALSE}
+run_epoch <- host$current_policy_epoch()
+tool <- example$reuse_consultation_tool(
+  store, basis,
+  allow_read = \(ids) host$can_read_all(ids),
+  eligible = function(basis) {
+    identical(run_epoch, host$current_policy_epoch()) &&
+      host$may_consult(basis$roots)
+  }
+)
+chat$set_tools(list(consult_selected_knowledge = tool))
+```
+
+Here `host` is illustrative application code, not a Graft object. The host owns
+Reader identity, Archive/restore, supersession, review decisions and policy
+invalidation. A revision can remain historically readable while being ineligible
+for automatic consultation. A direct request or established host policy can
+also authorize acceptance without a new click for every operation.
+
+Expose no unrestricted store tools, history, SQL, Commons copy, or general R
+executor alongside this restricted tool. If an application exposes any of those
+paths, it must enforce the same policy there. This custom tool returns selected
+data; it does not manufacture a canonical Graft receipt or verification label.
+
+Archive, permission changes, supersession and relevant dependency changes must
+also invalidate affected active runs and stale context. Restore permits a fresh
+authorized run. A refusal on the next tool call cannot remove data already sent
+to a model; cancel or rebuild the affected conversation before continuing.
+
+Permanent Forget is stronger: old snapshots, checkpoints, caches and backups
+must not restore erased content. The teaching callback proves host refusal, not
+physical erasure. Graft's permanent purge and restore contract remains
+[#48](https://github.com/JamesHWade/graft/issues/48), and Reader access remains
+[#47](https://github.com/JamesHWade/graft/issues/47).
+
+## Consumer status
+
+The offline tests cover research and reading selections with real Graft stores,
+a separate worker, and a real ellmer loop served by local fixtures. They do not
+claim completed Tempest or Rill integration. Tempest's current public schema
+loader requires Graft contract 0.2.x; this slice reports 0.5.0. The contract update
+and actual product proof belong to [#50](https://github.com/JamesHWade/graft/issues/50).
+Rill's runtime proof remains [#51](https://github.com/JamesHWade/graft/issues/51).
+
+The detailed revision, supersession and exact-reference contract is recorded in
+[#45](https://github.com/JamesHWade/graft/issues/45) and
+[#46](https://github.com/JamesHWade/graft/issues/46).
+
+```{r close, include=FALSE}
+graft_close(store)
+```

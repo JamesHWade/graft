@@ -1,0 +1,205 @@
+---
+title: "Reuse narrative knowledge with R agents"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Reuse narrative knowledge with R agents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(graft)
+```
+
+A research conclusion, reading interpretation, preference, or unresolved question
+can be ordinary record content. data-dict describes its fields and relationships;
+Graft adds reviewed acceptance, history and pinned reads. The application decides
+what the content means and who may use it.
+
+## Try the narrative workflow offline
+
+This teaching example uses synthetic records and the shipped resolved dictionary.
+It requires neither a model nor the data-dict CLI. Source the example into a local
+environment, then run it:
+
+```{r narrative-example}
+example <- new.env()
+sys.source(system.file("examples/narrative-knowledge.R", package = "graft"), example)
+result <- example$narrative_example()
+result$rejected[, c("field", "message")]
+result$pinned$body
+result$current$body
+result$history[, c("revision_number", "producer")]
+```
+
+The example rejects a missing evidence target, accepts corrected records, pins a
+reading, and accepts a later correction. The earlier reading retains its original
+meaning. A preference has no fabricated evidence link; its purpose is reading
+selection. Multiple evidence anchors are normalized support records.
+
+The fixture is not Tempest's promotion schema or a Rill integration. Applications
+keep their richer contracts. A stored `archived` value remains readable through
+ordinary Graft APIs; it does not enforce automatic-consultation eligibility.
+Likewise, restricted fields are omitted from public reads, but an `owner_binding`
+column does not establish Reader authorization.
+
+## Compose public tools with a host
+
+Create one pinned tool set after the host has authorized the store and selection:
+
+```{r composition-store}
+store <- graft_open(graft_schema(system.file(
+  "extdata/narrative-knowledge.data-dict.json", package = "graft"
+)), okf = "disabled")
+graft_ingest(store, example$narrative_records(),
+  graft_provenance("example-host", idempotency_key = "example-1"))
+view <- graft_at(store, graft_snapshot(store))
+tools <- graft_tools(view)
+tools$graft_get("knowledge:preference")$result$record
+```
+
+A host supplies its own configured Chat, credentials, permissions, context policy
+and execution lifetime. These are alternative recipes for that same `tools` list;
+the model calls are optional and are not run when building this guide:
+
+```{r host-recipes, eval=FALSE}
+# ellmer
+chat$set_tools(tools)
+chat$chat("Read the accepted interpretation and quote its basis.")
+graft_verify(chat)
+
+# Deputy: retain canonical results in the transcript for this bounded recipe.
+agent <- deputy::Agent$new(chat = chat, tools = tools,
+  context_policy = deputy::ContextPolicy(
+    max_tokens = NULL, max_tool_result_bytes = NULL
+  ))
+agent$run_sync("Read the accepted interpretation and quote its basis.")
+graft_verify(chat)
+
+# Current dsprrr uses the dedicated react() constructor.
+module <- dsprrr::react(dsprrr::signature("question -> answer"),
+  tools = tools, chat = chat)
+answer <- dsprrr::run(module, question = "What does the interpretation say?")
+graft_verify(chat)
+```
+
+Use a fresh Chat for each host. The tests execute these public paths with actual
+objects and a loopback-only HTTP/SSE server: pinned reads after later acceptance,
+Unicode/Markdown, row truncation, missing IDs, and mixed non-Graft evidence.
+Verification consumes the actual ellmer Chat. Deputy run events or dsprrr's
+summary metadata are not a substitute transcript. dsprrr's final structured
+answer is not a completed text-bearing answer classified by `graft_verify()`;
+inspect the recorded text answers it actually contains.
+
+A tool name collision must be checked before combining host and Graft tools:
+
+```{r collision-recipe, eval=FALSE}
+combined <- c(tools, host_tools)
+tool_names <- vapply(combined, function(tool) tool@name, character(1))
+stopifnot(!anyDuplicated(tool_names))
+chat$set_tools(combined)
+```
+
+Check the ToolDef name, not just its outer list name. ellmer replaces an existing
+name with a message, dsprrr retains the supplied tools and registers them with
+ellmer, and Deputy rejects duplicate registration. This host-side check avoids
+relying on different collision behavior. It does not require a Graft adapter.
+
+## Preserve results without overstating verification
+
+ellmer 0.5 stores ordinary list tool results as JSON. Graft's verifier decodes
+that envelope and applies the same receipt and citation checks; malformed JSON
+and duplicate object keys fail closed. A cited narrative requires an explicit
+matching quotation. Mixed non-Graft evidence or a failed tool cannot become
+verified just because another tool returned a Graft receipt.
+
+Graft currently returns ordinary R lists from its tools. ellmer 0.5 accepts them
+but emits a deprecation warning for implicit JSON conversion. The host tests
+record this compatibility limitation; [#53](https://github.com/JamesHWade/graft/issues/53)
+owns the public return representation decision. Do not suppress all tool warnings
+in application code.
+
+Bounds have distinct meanings. Search/history and related-record limits bound
+rows. Dictionary discovery additionally bounds text. `graft_get()` retains the
+full public narrative field and does not offer text pagination or a character
+ceiling. Size the authorized records and context budget accordingly.
+
+Deputy's default context policy may offload a large result to a durable reference.
+The host can retrieve the exact R value with `agent$resolve_tool_result(reference)`;
+the model has a bounded `deputy_read_tool_result` path. Tests recover a long
+Unicode result and its identical receipt. The offloaded reference/preview is not
+the canonical Graft envelope, so `graft_verify()` reports that evidence path as
+untrusted. Disabling offloading in the recipe above is an explicit choice for a
+bounded example, not a general recommendation for large documents.
+
+For complete selection, dependency review and current consultation policy, see
+[Retain an exact reuse basis](reuse-basis.html).
+
+## Reconnect in the process that reads
+
+A live DuckDB connection belongs to its process. Keep serializable, host-trusted
+references and reconstruct a view in a worker. The regression test closes the
+store before a fresh R process opens it read-only and verifies a complete selected
+record/evidence set. Do not deserialize arbitrary untrusted RDS content.
+
+```{r worker-recipe, eval=FALSE}
+# Host-owned checkpoint: retain the full selection on unchanged days.
+basis <- list(snapshot = graft_snapshot(store), ids = selected_ids,
+  revisions = selected_revision_ids)
+saveRDS(basis, checkpoint_path)
+graft_close(store)
+
+# In the worker: schema_path and store_path come from the authorized host.
+basis <- readRDS(checkpoint_path)
+store <- graft_open(graft_schema(schema_path), store_path,
+  read_only = TRUE, okf = "disabled")
+view <- graft_at(store, basis$snapshot)
+records <- lapply(basis$ids, function(id) graft_get(view, id))
+graft_close(store)
+```
+
+A snapshot identifies a boundary, not which records a task selected or permission
+to access them. A full selected basis includes evidence and exact revisions;
+new change receipts do not replace it. Eligibility, Reader scope, permanent
+Forget and backup/restore remain explicit design/integration work.
+
+## Ecosystem ownership and delivery status
+
+| Package | Owns | Evidence in this slice |
+|---|---|---|
+| data-dict | Types, dictionary meaning, expressions | Real producer export and profile probes |
+| Graft | Acceptance, identity, revisions, bounded reads, Definitions, Receipts | Offline narrative/correction/worker tests |
+| ellmer | Chat, ToolDef, model transport | Real Chat/tool loop with synthetic HTTP responses |
+| Deputy | Permissions, execution, offloading, host lifecycle | Real Agent loop and exact offloaded-result recovery |
+| dsprrr | Modules, signatures, execution | Real `react()` loop and proposal signature |
+| Commons | Detached public source, file measures, fallback labels | Existing detached-source compatibility suite; unpinned |
+| Tempest | Scientific evidence, research products, promotion | Existing public contracts inventoried; full reuse proof in #50 |
+| Rill | Readers, Documents, accepted reading outcomes, Archive/Forget | ADR-defined ownership; runtime proof and privacy gates in #47/#48/#51 |
+| scans/vitals | Evaluation | Task-quality evaluation remains in #41 |
+
+Acceptance is not factual truth, access permission or authority to execute saved
+code. Graft Definitions retain their reviewed expression contract; Commons file
+measures remain separate trusted functions. No companion schema is needed for
+this teaching workflow. The [backlog](https://github.com/JamesHWade/graft/issues/34)
+tracks the remaining application and lifecycle proofs separately.
+
+## Reproduce compatibility evidence
+
+From a checkout with the optional hosts installed:
+
+```bash
+Rscript tools/check-host-composition.R
+GRAFT_TEST_DATA_DICT_CLI=/path/to/data-dict \
+  Rscript -e 'devtools::test(filter = "^data-dict-narrative$", stop_on_failure = TRUE)'
+```
+
+The host runner prints installed package versions and available source revisions.
+Tests do not install dependencies or contact model providers. See the
+[compatibility guide](compatibility.html) for installation and the exact tested
+producer versions, and [data-dict contracts](data-dict-schema.html) for the narrower
+Graft adapter profile.
+
+```{r close-store, include=FALSE}
+graft_close(store)
+```
