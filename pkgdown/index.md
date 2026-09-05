@@ -90,7 +90,8 @@ evidence path without treating a receipt as a fact-check.</p>
 
 Graft's tested host loops cover ellmer, Deputy and dsprrr; Commons consumes a
 detached public copy and retains its own file measures. Tempest owns research
-products and promotion, with accepted-evidence restart checks. Rill's Reader
+products and promotion; accepted-evidence restart integration is tracked in
+[#50](https://github.com/JamesHWade/graft/issues/50). Rill's Reader
 integration, isolation and permanent Forget gates remain separate work.
 
 The [integration guide](articles/compatibility.html) records supported versions
