@@ -31,8 +31,8 @@ factual truth or application permission. For text-rich records, continue with
 [narrative reuse](ecosystem.html) after this table example.
 
 Install with `pak::pak("JamesHWade/graft")` before running the guide. All evaluated
-chunks below use local synthetic records; the optional live-chat example is
-marked separately. The store closes at the end.
+chunks below use local synthetic records. The optional live-chat call is shown
+but not evaluated and requires model credentials. The store closes at the end.
 
 ## Load a table contract
 

@@ -83,15 +83,15 @@ if (
   )
 }
 
-forbidden_outputs <- file.path(
+forbidden_outputs <- list.files(
   destination_dir,
-  c("AGENTS.html", "AGENTS.md", "CONTEXT.html", "CONTEXT.md")
+  pattern = "^(AGENTS|CONTEXT)[.](html|md)$",
+  recursive = TRUE
 )
-forbidden_outputs <- forbidden_outputs[file.exists(forbidden_outputs)]
 if (length(forbidden_outputs) > 0L) {
   stop(
     "The site contains forbidden instruction artifacts: ",
-    paste(basename(forbidden_outputs), collapse = ", "),
+    paste(forbidden_outputs, collapse = ", "),
     call. = FALSE
   )
 }
