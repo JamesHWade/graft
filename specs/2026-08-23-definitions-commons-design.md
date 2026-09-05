@@ -1,5 +1,6 @@
 # Composable definitions and Commons interoperability
 
+> Update for #36: Commons now follows upstream without a version or revision pin. The current policy is recorded in [ADR-0001](../adr/0001-keep-commons-interop-detached.md); pinned references below describe the original implementation baseline.
 Date: 2026-08-23
 Status: approved design, Phase 3 of 3
 

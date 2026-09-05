@@ -3,6 +3,7 @@
 #' `graft_tools()` returns [ellmer::tool()] definitions that delegate only
 #' to Graft's public bounded retrieval operations. The tools do not expose SQL,
 #' filesystem, network, connection, or mutation arguments.
+#' Data-dict stores also expose [graft_dictionary()] for public metadata.
 #' When the store has accepted definitions, `graft_definitions` exposes their
 #' bounded catalog and one `graft_calculate` tool composes them through
 #' [graft_calculate()]. Both are omitted when no definitions are accepted.
@@ -190,6 +191,9 @@ graft_tools <- function(store) {
       annotations = annotations
     )
   )
+  if (!is.null(read_store$schema$manifest$dictionary)) {
+    tools$graft_dictionary <- graft_dictionary_tool(store, annotations)
+  }
   definitions <- graft_definitions(store)
   if (nrow(definitions) > 0L) {
     tools$graft_definitions <- graft_definitions_tool(store, annotations)
@@ -309,6 +313,7 @@ graft_tool_where_type <- function(required = FALSE) {
 check_graft_tools_dependency <- function() {
   rlang::check_installed(
     "ellmer",
+    version = "0.5.0",
     reason = "to create bounded tools with `graft_tools()`"
   )
 }
@@ -608,5 +613,42 @@ graft_tool_schema <- function(schema, build_digest) {
       schema$manifest$fingerprints$structural_digest
     ),
     build_digest = build_digest
+  )
+}
+
+graft_dictionary_tool <- function(store, annotations) {
+  ellmer::tool(
+    function(table = NULL, field = NULL, limit = 100, offset = 0) {
+      graft_dictionary(store, table, field, limit, offset)
+    },
+    name = "graft_dictionary",
+    description = paste(
+      "Discover public table and column meaning before reading records.",
+      "Entries distinguish enforced contracts from descriptive metadata.",
+      "This is a generic read, not calculation evidence."
+    ),
+    arguments = list(
+      table = ellmer::type_string(
+        "Optional dictionary table name.",
+        required = FALSE
+      ),
+      field = ellmer::type_string(
+        "Optional public column; requires table.",
+        required = FALSE
+      ),
+      limit = graft_tool_integer(
+        "Maximum metadata entries.",
+        1L,
+        100L,
+        required = FALSE
+      ),
+      offset = graft_tool_integer(
+        "Entries to skip for the next page.",
+        0L,
+        1000000L,
+        required = FALSE
+      )
+    ),
+    annotations = annotations
   )
 }

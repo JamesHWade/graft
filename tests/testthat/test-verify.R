@@ -40,11 +40,6 @@ test_that("graft_verify validates chats and returns a stable empty result", {
 })
 
 test_that("graft_verify classifies completed text answers in windows", {
-  partial_turn <- tryCatch(
-    getExportedValue("ellmer", "AssistantPartialTurn"),
-    error = \(error) NULL
-  )
-  skip_if(is.null(partial_turn), "ellmer does not export partial turns")
   request <- ellmer::ContentToolRequest(
     id = "call-weather",
     name = "weather",
@@ -60,7 +55,9 @@ test_that("graft_verify classifies completed text answers in windows", {
     ellmer::AssistantTurn(list(ellmer::ContentText("First answer"))),
     ellmer::AssistantTurn(list(request)),
     ellmer::UserTurn(list(result)),
-    partial_turn(list(ellmer::ContentText("Interrupted answer"))),
+    ellmer::AssistantPartialTurn(list(ellmer::ContentText(
+      "Interrupted answer"
+    ))),
     ellmer::AssistantTurn(list(ellmer::ContentText("Second answer")))
   ))
 
@@ -82,6 +79,38 @@ test_that("graft_verify classifies completed text answers in windows", {
     verification$tool_calls[[2L]][[1L]],
     list(request = request, result = result)
   )
+})
+
+test_that("ellmer retains a real pinned calculation receipt for verification", {
+  store <- local_definition_store()
+  snapshot <- graft_snapshot(store)
+  tool <- graft_tools(graft_at(store, snapshot))$graft_calculate
+  chat <- ellmer::chat_openai(model = "gpt-4o-mini")
+  chat$set_tools(list(tool))
+  request <- ellmer::ContentToolRequest(
+    id = "call-count",
+    name = "graft_calculate",
+    arguments = list(metrics = "entity_count"),
+    tool = tool
+  )
+  value <- tool(metrics = "entity_count")
+  result <- ellmer::ContentToolResult(value = value, request = request)
+  chat$set_turns(list(
+    ellmer::UserTurn(list(ellmer::ContentText("How many entities?"))),
+    ellmer::AssistantTurn(list(request)),
+    ellmer::UserTurn(list(result)),
+    ellmer::AssistantTurn(list(ellmer::ContentText(
+      "There are three entities."
+    )))
+  ))
+
+  verification <- graft_verify(chat)
+
+  expect_identical(verification$label, "verified")
+  expect_equal(value$result$entity_count, 3)
+  expect_identical(value$receipt$boundary$snapshot_id, snapshot@snapshot_id)
+  expect_identical(verification$receipts[[1L]][[1L]], value$receipt)
+  expect_identical(verification$tool_calls[[1L]][[1L]]$result@value, value)
 })
 
 test_that("graft_verify verifies governed calculation-only evidence", {

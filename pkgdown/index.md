@@ -179,7 +179,7 @@ so they cannot move mid-session.
 
 `graft_snapshot()` captures the accepted boundary as a serializable, path-free
 value, `graft_at()` binds it to a read-only view, and `graft_tools()` turns that
-view into four [ellmer](https://ellmer.tidyverse.org/) tools:
+view into bounded [ellmer](https://ellmer.tidyverse.org/) tools:
 
 ```r
 snapshot <- graft_snapshot(store)
@@ -187,7 +187,8 @@ view <- graft_at(store, snapshot)
 
 tools <- graft_tools(view)
 names(tools)
-#> [1] "graft_find"    "graft_get"     "graft_query"   "graft_history"
+#> [1] "graft_find"       "graft_get"        "graft_query"
+#> [4] "graft_history"    "graft_dictionary"
 
 chat <- ellmer::chat_anthropic()
 chat$set_tools(tools)

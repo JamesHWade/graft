@@ -1,6 +1,6 @@
 # Consumer-facing contract version
 
-graft_contract_version_value <- "0.2.0"
+graft_contract_version_value <- "0.4.0"
 
 #' Report the Graft consumer contract version
 #'

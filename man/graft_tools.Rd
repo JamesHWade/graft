@@ -16,6 +16,7 @@ A named list of \code{ellmer::ToolDef} objects.
 \code{graft_tools()} returns \code{\link[ellmer:tool]{ellmer::tool()}} definitions that delegate only
 to Graft's public bounded retrieval operations. The tools do not expose SQL,
 filesystem, network, connection, or mutation arguments.
+Data-dict stores also expose \code{\link[=graft_dictionary]{graft_dictionary()}} for public metadata.
 When the store has accepted definitions, \code{graft_definitions} exposes their
 bounded catalog and one \code{graft_calculate} tool composes them through
 \code{\link[=graft_calculate]{graft_calculate()}}. Both are omitted when no definitions are accepted.

@@ -1,3 +1,45 @@
+test_that("the pinned CLI reproduces the committed data-dict exports", {
+  cli <- Sys.getenv("GRAFT_TEST_DATA_DICT_CLI")
+  skip_if(
+    !nzchar(cli),
+    "Set GRAFT_TEST_DATA_DICT_CLI for producer parity checks"
+  )
+  expect_identical(file.exists(cli), TRUE)
+  withr::local_options(
+    graft.data_dict_cli = cli,
+    graft.data_dict_revision = "d794c9616f7803199432e9b31b519216aa78d1b0"
+  )
+  sources <- list(
+    c(
+      system.file(
+        "extdata",
+        "team-directory.data-dict.yaml",
+        package = "graft"
+      ),
+      system.file("extdata", "team-directory.data-dict.json", package = "graft")
+    ),
+    c(
+      test_path("fixtures", "data-dict", "personinfo", "data-dict.yaml"),
+      data_dict_personinfo_export_path()
+    ),
+    c(
+      test_path("fixtures", "data-dict", "tempest", "data-dict.yaml"),
+      data_dict_tempest_export_path()
+    )
+  )
+  for (paths in sources) {
+    authored <- read_data_dict_contract(paths[[1L]])
+    resolved <- read_data_dict_contract(paths[[2L]])
+    expect_equal(authored$document, resolved$document, info = paths[[1L]])
+    expect_identical(authored$provider$cli_version, "0.0.1")
+    expect_identical(authored$provider$export_format_version, "0.1.0")
+    expect_identical(
+      graft_schema(paths[[1L]])@structural_digest,
+      graft_schema(paths[[2L]])@structural_digest
+    )
+  }
+})
+
 test_that("data-dict documents are detected without false JSON positives", {
   directory <- withr::local_tempdir()
   yaml_path <- file.path(directory, "custom.yaml")

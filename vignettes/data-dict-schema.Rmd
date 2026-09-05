@@ -261,3 +261,11 @@ polymorphic references, Graft record roles, narrative or semantic statements,
 custom identity policies, qualifier fields, or graph traversal relationships.
 The [LinkML guide](linkml-schema.html) continues from the same plan and commit
 model; only the contract provider changes.
+
+## Discover the accepted dictionary
+
+Use `graft_dictionary(store, table = "person", field = "full_name")` to inspect
+public meaning and enforced contract properties with deterministic bounds and
+an accepted-boundary receipt. The same operation is available to ellmer through
+`graft_tools()`. See [Discover meaning before reading records](agents.html#discover-meaning-before-reading-records)
+for selection, pagination, privacy, and verification behavior.
