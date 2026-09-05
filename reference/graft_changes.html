@@ -30,6 +30,8 @@ one record.'><meta property="og:image" content="https://jameshwade.github.io/gra
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
     <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
+    <li><a class="dropdown-item" href="../articles/reuse-basis.html">Retain an exact reuse basis</a></li>
     <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
@@ -73,7 +75,14 @@ one record.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">graft_changes</span><span class="op">(</span><span class="va">store</span>, since <span class="op">=</span> <span class="cn">NULL</span>, until <span class="op">=</span> <span class="cn">NULL</span>, class <span class="op">=</span> <span class="cn">NULL</span>, limit <span class="op">=</span> <span class="fl">1000L</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">graft_changes</span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  since <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  until <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  class <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  limit <span class="op">=</span> <span class="fl">1000L</span>,</span>
+<span>  record_ids <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -99,6 +108,16 @@ one record.</p>
 <dt id="arg-limit">limit<a class="anchor" aria-label="anchor" href="#arg-limit"></a></dt>
 <dd><p>Maximum changed records to return, up to the package hard
 limit.</p></dd>
+
+
+<dt id="arg-record-ids">record_ids<a class="anchor" aria-label="anchor" href="#arg-record-ids"></a></dt>
+<dd><p>Optional character vector of at most 5,000 record IDs.
+Restricts changes before applying <code>limit</code>, intersecting any <code>class</code>
+restriction. <code>NULL</code> selects all IDs; <code><a href="https://rdrr.io/r/base/character.html" class="external-link">character()</a></code> selects none.
+Duplicate IDs are ignored. Unknown IDs return no rows. This selects
+identities, including delete tombstones, without following references
+or granting access. An empty change result does not prove that the
+selected records exist or that a saved reuse basis is complete.</p></dd>
 
 </dl></div>
     <div class="section level2">

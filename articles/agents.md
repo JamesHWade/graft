@@ -60,6 +60,11 @@ graft_ingest(
 )
 ```
 
+See [Reuse narrative
+knowledge](https://jameshwade.github.io/graft/articles/ecosystem.md) for
+an offline narrative example, real ellmer/Deputy/dsprrr recipes,
+long-result behavior and worker ownership.
+
 ## Hand the agent bounded tools
 
 Install ellmer 0.5.0 or later for

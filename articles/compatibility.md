@@ -24,13 +24,33 @@ arguments it needs; additional arguments are allowed. These checks
 diagnose incompatible constructor changes, while integration tests check
 behavior.
 
-The broader Deputy, dsprrr, Tempest, and scans/vitals workflow is
-tracked in the [integration
-backlog](https://github.com/JamesHWade/graft/issues/34). These checks
-establish the Graft interfaces on which those recipes can build; they do
-not certify every host or model provider. A separate offline dsprrr
-check confirms that its current public signature accepts the proposal
-type.
+[Reuse narrative
+knowledge](https://jameshwade.github.io/graft/articles/ecosystem.md)
+gives executable recipes for current ellmer, Deputy and dsprrr public
+interfaces. The host compatibility suite covers real sync/streaming tool
+loops with a loopback-only synthetic server. Full Tempest/Rill
+application reuse and scans/vitals evaluation remain in the [integration
+backlog](https://github.com/JamesHWade/graft/issues/34).
+
+The 2026-09-05 proof used ellmer 0.5.0, Deputy
+`14e378951bb0f36a2a76fad0eff69b3cf8acab38`, and dsprrr
+`76a014f74e8d4a236aa0a0c5dda87de388310cf6`. These record test evidence;
+Graft’s optional host dependencies are not revision-pinned. Run
+`Rscript tools/check-host-composition.R` to check installed versions;
+missing hosts fail that runner rather than silently skipping integration
+coverage.
+
+Two real data-dict producers are compared separately: baseline 0.0.1 at
+`d794c9616f7803199432e9b31b519216aa78d1b0`, and release 0.0.3 at
+`9b48e97a61c4d12600cbb9dff3b1bb2aa14f6f71`. Both export the narrative
+fixture and reject unknown root extensions. Both can export nested types
+that Graft’s narrow profile rejects. Release 0.0.3 reports the
+deliberately violated assertion; the baseline does not. Graft itself
+treats those assertions as metadata. Release 0.0.3 also renders
+descriptions as HTML and adds expression translations, so it has its own
+frozen resolved fixture rather than an assumed byte-identical export.
+Current upstream documentation is not evidence that the baseline CLI
+implements every described feature.
 
 ## Use ellmer 0.5.0 or later
 

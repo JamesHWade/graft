@@ -46,6 +46,12 @@ give agents bounded access to both.
   Choose supported ellmer, data-dict, and Commons versions and reproduce
   the checks behind Graft’s integration contracts.
 
+- [Reuse narrative knowledge with R
+  agents](https://jameshwade.github.io/graft/articles/ecosystem.md):
+
+- [Retain an exact reuse
+  basis](https://jameshwade.github.io/graft/articles/reuse-basis.md):
+
 ### Add richer representations
 
 Add semantic graph relationships with LinkML or synchronize a readable

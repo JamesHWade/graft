@@ -28,6 +28,8 @@ store, or authenticate receipt identifiers."><meta property="og:image" content="
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
     <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
+    <li><a class="dropdown-item" href="../articles/reuse-basis.html">Retain an exact reuse basis</a></li>
     <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
     <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
     <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
@@ -99,7 +101,10 @@ generic read caps mixed calculation and generic evidence at <code>"cited"</code>
 errored, malformed, unsupported, and citation-unmatched evidence paths fail
 closed as <code>"untrusted"</code>.</p>
 <p>Verification classifies the recorded evidence path. It does not fact-check
-the answer or cryptographically authenticate receipt identifiers.</p>
+the answer or cryptographically authenticate receipt identifiers.
+Tool results may contain ordinary R envelopes or JSON-encoded envelopes,
+as recorded by ellmer 0.5. Malformed JSON and duplicate object keys fail
+closed. Host offload references and lossy event summaries are not envelopes.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -43,6 +43,12 @@
   relation that exceeds the hard calculation-input bound.
 
 - [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
+  can restrict changes to `record_ids` before applying the result limit,
+  preserving selected changes and delete tombstones even in a busy
+  shared store; the compatible addition advances the consumer contract
+  to 0.5.0 ([\#45](https://github.com/JamesHWade/graft/issues/45)).
+
+- [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
   lists every record whose accepted revision differs between two
   committed boundaries (snapshots, batch IDs, or times) as one bounded
   store-wide table with the action, revision count, the public fields
@@ -87,6 +93,12 @@
   receipts identify the full accepted definition closure
   ([\#21](https://github.com/JamesHWade/graft/issues/21),
   [\#23](https://github.com/JamesHWade/graft/issues/23)).
+
+- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
+  now validates JSON-encoded tool envelopes from real ellmer 0.5 host
+  loops, preserving cited-read classification across Deputy and dsprrr
+  while rejecting malformed or duplicate-key envelopes
+  ([\#40](https://github.com/JamesHWade/graft/issues/40)).
 
 - [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
   classifies every completed text-bearing assistant answer in a recorded
