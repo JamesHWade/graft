@@ -124,6 +124,8 @@ reference:
     contents:
       - graft_provenance
       - graft_plan
+      - graft_proposal_type
+      - graft_proposal_plan
       - graft_commit
       - graft_ingest
   - title: Retrieve and inspect

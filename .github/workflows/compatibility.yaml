@@ -68,3 +68,18 @@ jobs:
             filter = "^(data-dict|commons-adapter)",
             stop_on_failure = TRUE
           )
+
+  dsprrr:
+    runs-on: ubuntu-latest
+    name: dsprrr proposal signature
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools, JamesHWade/dsprrr
+          needs: check
+      - name: Check the public proposal signature offline
+        run: Rscript tools/check-proposal-dsprrr.R

@@ -39,7 +39,8 @@ while integration tests check behavior.
 The broader Deputy, dsprrr, Tempest, and scans/vitals workflow is tracked in the
 [integration backlog](https://github.com/JamesHWade/graft/issues/34). These
 checks establish the Graft interfaces on which those recipes can build; they
-do not certify every host or model provider.
+do not certify every host or model provider. A separate offline dsprrr check
+confirms that its current public signature accepts the proposal type.
 
 ## Use ellmer 0.5.0 or later
 
@@ -140,6 +141,8 @@ The `compatibility.yaml` workflow installs dependencies before its offline check
   an actual recorded assistant answer.
 - ellmer 0.5.0 exercises bounded tools and verification through public ellmer
   objects, including a real Graft calculation receipt and interrupted turns.
+  It also exercises dictionary discovery and structured proposals through a
+  real `chat_structured()` call with local fake HTTP responses.
 - The pinned data-dict CLI reproduces the exports; current upstream Commons constructs
   real detached sources with historical, restricted-field, and typed-empty cases.
 

@@ -27,16 +27,18 @@ Imports:
     yaml
 Suggests:
     commons,
+    dsprrr,
     ellmer (>= 0.5.0),
+    httr2,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
-Config/Needs/check: posit-dev/commons/pkg-r
-Config/Needs/coverage: posit-dev/commons/pkg-r
-Config/Needs/website: brand.yml
+Config/Needs/check: posit-dev/commons/pkg-r, JamesHWade/dsprrr
+Config/Needs/coverage: posit-dev/commons/pkg-r, JamesHWade/dsprrr
+Config/Needs/website: brand.yml, posit-dev/commons/pkg-r, JamesHWade/dsprrr
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 VignetteBuilder: knitr
 BugReports: https://github.com/JamesHWade/graft/issues

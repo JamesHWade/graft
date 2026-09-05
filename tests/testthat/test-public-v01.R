@@ -1,4 +1,4 @@
-test_that("v0.1 public API exposes exactly 25 functions", {
+test_that("v0.1 public API exposes exactly 27 functions", {
   expected <- c(
     "graft_at",
     "graft_calculate",
@@ -15,6 +15,8 @@ test_that("v0.1 public API exposes exactly 25 functions", {
     "graft_ingest",
     "graft_open",
     "graft_plan",
+    "graft_proposal_plan",
+    "graft_proposal_type",
     "graft_provenance",
     "graft_query",
     "graft_review",

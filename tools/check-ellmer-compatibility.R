@@ -30,7 +30,8 @@ if (utils::packageVersion("ellmer") < "0.5.0") {
   )))
   for (condition in list(
     rlang::catch_cnd(graft_tools(NULL)),
-    rlang::catch_cnd(graft_verify(chat))
+    rlang::catch_cnd(graft_verify(chat)),
+    rlang::catch_cnd(graft_proposal_type(NULL))
   )) {
     testthat::expect_s3_class(condition, "rlib_error_package_not_found")
     testthat::expect_identical(condition$pkg, "ellmer")
@@ -39,7 +40,7 @@ if (utils::packageVersion("ellmer") < "0.5.0") {
   message("Unsupported ellmer is rejected before tool or answer processing.")
 } else {
   devtools::test(
-    filter = "^(agent-tools|verify)$",
+    filter = "^(agent-tools|verify|dictionary|proposals)$",
     stop_on_failure = TRUE
   )
 }

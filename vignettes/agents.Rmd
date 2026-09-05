@@ -286,6 +286,90 @@ transcript when you need to explain an answer.
 The live-store `integrity` operation is unavailable through a view, since a
 diagnostic of the current store would contradict the pinned boundary.
 
+## Generate proposals from the accepted contract
+
+`graft_proposal_type()` builds an ellmer structured-output type from the same
+accepted data-dict contract that planning validates. Select tables and, if
+needed, a subset of their public columns:
+
+```{r proposal-type}
+type <- graft_proposal_type(
+  view,
+  tables = "person",
+  fields = list(person = c("id", "full_name", "job_title")),
+  max_rows = 20
+)
+
+raw <- chat$chat_structured(
+  "Propose records from the supplied source text; do not invent identifiers.",
+  type = type,
+  convert = FALSE
+)
+```
+
+Keep `convert = FALSE` so the raw object reaches Graft without field dropping
+or coercion by an upstream converter. Selected tables are arrays of records.
+All selected properties are explicit in the schema; optional values can be
+JSON null. Lists are flat and their elements cannot be null. Foreign keys are
+string IDs whose existence is checked during planning, including references to
+other records in the same proposal.
+
+The schema excludes restricted columns, source locations, examples, and free-form
+metadata. Selections must contain every required column. A table with a required
+restricted column needs the host's ordinary `graft_plan()` path instead.
+Provider-specific structured-output restrictions can still apply; Graft validates
+returned data independently of provider guarantees.
+
+This offline example starts with a malformed candidate and corrects it before
+review. It uses the store from the setup above and makes no model call:
+
+```{r proposal-review}
+raw <- list(person = list(list(
+  id = "person:jimmy-olsen", full_name = NULL, job_title = "Photographer"
+)))
+provenance <- graft_provenance(
+  "directory-agent", run_id = "proposal-demo",
+  idempotency_key = "proposal-demo-1"
+)
+invalid <- graft_proposal_plan(store, raw, provenance, max_rows = 20)
+invalid@issues
+
+raw$person[[1]]$full_name <- "Jimmy Olsen"
+plan <- graft_proposal_plan(store, raw, provenance, max_rows = 20)
+plan@valid
+plan@changes
+plan@issues
+
+host_approved <- FALSE # Set only after the host's review decision.
+if (host_approved && plan@valid) {
+  graft_commit(store, plan)
+}
+```
+
+Malformed objects, unknown or restricted fields, and incompatible JSON value
+types raise `graft_validation_error`. Validly shaped but invalid candidates
+return plan issues, including missing required values, invalid enums, and
+unknown references. No malformed row is silently dropped. Optional missing
+values follow complete-record planning semantics; these proposals are not patches.
+
+Keep the reviewed `plan` to retry `graft_commit(store, plan)` safely. Creating a
+new plan after acceptance changes its preconditions, and reusing the committed
+idempotency key for that different plan fails rather than duplicating data.
+
+The same type can be used by a dsprrr signature:
+
+```{r proposal-dsprrr}
+sig <- dsprrr::signature(
+  inputs = list(text = dsprrr::input("text", description = "Source text")),
+  output_type = type
+)
+```
+
+This composes the public type boundary; it does not certify all dsprrr modules
+or introduce a Graft chat/session wrapper. The host still owns generation,
+credentials, retries, and acceptance. Run `Rscript tools/check-proposal-dsprrr.R`
+from the checkout to check the installed dsprrr signature interface offline.
+
 ## Let the agent propose, not write
 
 Nothing about agent-supplied records is special: they are ordinary data frames
@@ -334,8 +418,8 @@ Two habits make this durable in practice:
 - Give each agent a distinct `producer` and a per-run `run_id`. Every accepted
   revision then answers "which agent, in which run, proposed this" through
   `graft_history()`.
-- Set an `idempotency_key` per proposed batch. A retried run — the common
-  failure mode for agents — replays instead of writing a duplicate revision.
+- Set an `idempotency_key` per proposed batch. Retry the retained reviewed
+  plan so commit replay does not create duplicate revisions.
 
 `graft_ingest()` collapses plan and commit into one call. Use it for a trusted
 pipeline; keep the two-step form when an agent is the producer and something,
