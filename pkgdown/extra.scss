@@ -105,8 +105,9 @@ samp {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  margin: 0.5rem 0 3.5rem;
-  padding: clamp(2rem, 6vw, 4.75rem);
+  clear: both;
+  margin: 0.5rem 0 2rem;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
   border: 1px solid var(--graft-border);
   border-radius: 1.35rem;
   background:
@@ -164,12 +165,12 @@ samp {
 }
 
 .graft-hero h2 {
-  max-width: 18ch;
+  max-width: 24ch;
   margin-bottom: 1.1rem;
   color: var(--graft-forest-deep);
-  font-size: clamp(2.2rem, 6vw, 4.4rem);
+  font-size: clamp(2rem, 4vw, 3.3rem);
   letter-spacing: -0.045em;
-  line-height: 0.98;
+  line-height: 1.08;
 }
 
 [data-bs-theme="dark"] .graft-hero h2 {
@@ -306,4 +307,53 @@ footer {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.page-header {
+  display: flow-root;
+}
+
+h1, h2, h3 {
+  hyphens: none;
+}
+
+.graft-paths {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.graft-paths section {
+  padding: 1.25rem;
+  background: var(--graft-surface-soft);
+  border: 1px solid var(--graft-border);
+  border-radius: 0.75rem;
+}
+
+.graft-paths h3 {
+  margin-top: 0;
+  font-size: 1.3rem;
+}
+
+.graft-paths p:last-child {
+  margin-bottom: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--bs-link-color);
+  outline-offset: 3px;
+}
+
+@media (max-width: 575.98px) {
+  .page-header .logo {
+    width: 72px;
+    max-width: 72px;
+    height: auto;
+    margin-left: 0.75rem;
+  }
+  .graft-paths { grid-template-columns: 1fr; }
+  .graft-hero { padding: 1.25rem; }
+  .graft-eyebrow { letter-spacing: 0.07em; }
+  .graft-workflow th, .graft-workflow td { padding: 0.4rem; }
 }

@@ -126,9 +126,15 @@ materialize_test_schema_import <- function(path) {
   if (!any(grepl("graft-core.linkml", source, fixed = TRUE))) {
     return(path)
   }
-  source <- stage_test_schema_core(source, dirname(path))
-  writeLines(source, path)
-  path
+  directory <- file.path(
+    tempfile("graft-test-schema-"),
+    basename(dirname(path))
+  )
+  dir.create(directory, recursive = TRUE)
+  source <- stage_test_schema_core(source, directory)
+  staged_path <- file.path(directory, basename(path))
+  writeLines(source, staged_path)
+  staged_path
 }
 
 stage_test_schema_core <- function(source, directory) {
@@ -165,6 +171,12 @@ skip_if_no_linkml_runtime <- function() {
 }
 
 redact_repo_path <- function(x) {
+  x <- gsub(
+    "(^|`)[^`\n]+/graft-test-schema-[^/]+/",
+    "\\1<repo>/tests/testthat/fixtures/",
+    x,
+    perl = TRUE
+  )
   redacted <- gsub(
     normalizePath(test_path("..", ".."), winslash = "/"),
     "<repo>",

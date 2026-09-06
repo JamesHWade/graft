@@ -39,6 +39,9 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
+Config/testthat/parallel: true
+Config/testthat/start-first: measure-eval, snapshot, commit-plan, agent-tools,
+    reuse-basis, changes
 Config/roxygen2/version: 8.0.0
 Config/Needs/check: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy
 Config/Needs/coverage: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy
