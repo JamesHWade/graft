@@ -297,11 +297,11 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-09-06 02:23:13        hr-review review-2026-08-08
-#> 2        1 2026-09-06 02:23:12 directory-import import-2026-08-01
+#> 1        2 2026-09-06 13:31:13        hr-review review-2026-08-08
+#> 2        1 2026-09-06 13:31:12 directory-import import-2026-08-01
 #>              contract            job_title
-#> 1 sha256:1bd57b774b46 Investigative editor
-#> 2 sha256:1bd57b774b46             Reporter
+#> 1 sha256:37cb6041e136 Investigative editor
+#> 2 sha256:37cb6041e136             Reporter
 ```
 
 The current record is convenient for applications. The revision history
@@ -372,12 +372,14 @@ reasoning over a silent prefix. Because these tools are bound to `view`,
 later commits do not move the ground underneath a running session; a
 second run against the same snapshot reads the same knowledge.
 
-Registering them with a chat is one line:
+Use explicit JSON results when registering tools with a chat. The
+default list format above preserves direct R calls; ellmer 0.5
+deprecates its implicit conversion of those lists:
 
 ``` r
 
 chat <- ellmer::chat_anthropic()
-chat$set_tools(tools)
+chat$set_tools(graft_tools(view, result_format = "json"))
 
 chat$chat("Who works at the Daily Planet, and has that person's title changed?")
 ```

@@ -88,7 +88,7 @@ for data-dict contracts:
 
 ``` r
 
-tools <- graft_tools(store)
+tools <- graft_tools(store, result_format = "json")
 names(tools)
 #> [1] "graft_find"       "graft_get"        "graft_query"
 #> [4] "graft_history"    "graft_dictionary"
@@ -118,14 +118,16 @@ first discovers metrics, filters, derived values, dependencies, and
 eligible columns. The second combines same-table definitions and public
 dimensions at one exact boundary; it never accepts SQL.
 
-Every tool result is a named list with `result`, `truncated`, `limit`,
-and one canonical `receipt`. A model that receives a bounded prefix is
-told that it received one, rather than silently reasoning over a partial
-answer:
+Every tool result contains `result`, `truncated`, `limit`, and one
+canonical `receipt`. JSON mode returns that envelope as a `json`-class
+string. The default list mode retains ordinary R access, including data
+frames. The `truncated` field tells a model when it has received a
+bounded prefix:
 
 ``` r
 
-str(tools$graft_find(query = "Lois", class = "person", limit = 5), max.level = 2)
+r_tools <- graft_tools(store, result_format = "list")
+str(r_tools$graft_find(query = "Lois", class = "person", limit = 5), max.level = 2)
 #> List of 4
 #>  $ result   :'data.frame': 1 obs. of 5 variables:
 #>  $ truncated: logi FALSE
@@ -277,7 +279,7 @@ pinned:
 
 snapshot <- graft_snapshot(store)
 view <- graft_at(store, snapshot)
-pinned_tools <- graft_tools(view)
+pinned_tools <- graft_tools(view, result_format = "json")
 ```
 
 Accept a change after pinning:

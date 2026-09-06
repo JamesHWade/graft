@@ -86,6 +86,13 @@
   the consumer contract advances to 0.4.0
   ([\#38](https://github.com/JamesHWade/graft/issues/38)).
 
+- `graft_tools(result_format = "json")` returns complete explicit JSON
+  envelopes for supported ellmer, Deputy, and dsprrr invocation. The
+  default list mode preserves direct R results; chat registrations
+  should select JSON mode to avoid ellmer’s implicit-conversion
+  deprecation. This compatible addition advances the consumer contract
+  to 0.6.0 ([\#53](https://github.com/JamesHWade/graft/issues/53)).
+
 - [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
   adds bounded definition discovery and one composite calculation tool
   when accepted definitions exist; every result carries one canonical

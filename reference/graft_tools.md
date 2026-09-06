@@ -17,7 +17,7 @@ and the live-store integrity diagnostic is unavailable.
 ## Usage
 
 ``` r
-graft_tools(store)
+graft_tools(store, result_format = c("list", "json"))
 ```
 
 ## Arguments
@@ -25,6 +25,11 @@ graft_tools(store)
 - store:
 
   An initialized `GraftStore` or immutable `GraftView`.
+
+- result_format:
+
+  Return ordinary R envelopes (`"list"`, the default), or explicitly
+  serialized envelopes (`"json"`) for ellmer and agent hosts.
 
 ## Value
 
@@ -40,6 +45,14 @@ boundary, and structural and build schema digests. Calculation receipts
 also identify the complete accepted definition closure. Live-store tools
 pin a fresh boundary for each invocation; tools created from a
 `GraftView` retain its snapshot boundary.
+
+Use `result_format = "json"` when registering tools with a chat. Each
+tool then returns a `json`-class string containing the complete
+envelope, using ellmer's supported explicit JSON return type. The
+default `"list"` preserves direct R calls, including data frames and
+their attributes. It relies on deprecated implicit conversion if
+registered with ellmer 0.5. The format is fixed when tools are
+constructed and is the same inside and outside a chat.
 
 ## See also
 

@@ -152,7 +152,7 @@ and selection:</p>
 <span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">example</span><span class="op">$</span><span class="fu">narrative_records</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span><span class="st">"example-host"</span>, idempotency_key <span class="op">=</span> <span class="st">"example-1"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $batch_id</span></span>
-<span><span class="co">#&gt; [1] "graft:4YQTQFGS66W8X73P3AV3WR0PAM"</span></span>
+<span><span class="co">#&gt; [1] "graft:0AH26JNGMESNWC113AN9GWMKN0"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $inserted</span></span>
 <span><span class="co">#&gt; knowledge    source   support </span></span>
@@ -174,13 +174,14 @@ and selection:</p>
 <span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $duration</span></span>
-<span><span class="co">#&gt; [1] 0.63</span></span>
+<span><span class="co">#&gt; [1] 0.651</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $replay</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
 <span><span class="va">view</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_at.html">graft_at</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span><span class="op">)</span></span>
-<span><span class="va">tools</span><span class="op">$</span><span class="fu">graft_get</span><span class="op">(</span><span class="st">"knowledge:preference"</span><span class="op">)</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">record</span></span>
+<span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span>, result_format <span class="op">=</span> <span class="st">"json"</span><span class="op">)</span></span>
+<span><span class="va">value</span> <span class="op">&lt;-</span> <span class="va">tools</span><span class="op">$</span><span class="fu">graft_get</span><span class="op">(</span><span class="st">"knowledge:preference"</span><span class="op">)</span></span>
+<span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">fromJSON</a></span><span class="op">(</span><span class="va">value</span>, simplifyVector <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">$</span><span class="va">result</span><span class="op">$</span><span class="va">record</span></span>
 <span><span class="co">#&gt; $id</span></span>
 <span><span class="co">#&gt; [1] "knowledge:preference"</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -245,17 +246,39 @@ does not require a Graft adapter.</p>
 <div class="section level2">
 <h2 id="preserve-results-without-overstating-verification">Preserve results without overstating verification<a class="anchor" aria-label="anchor" href="#preserve-results-without-overstating-verification"></a>
 </h2>
-<p>ellmer 0.5 stores ordinary list tool results as JSON. Graft’s
-verifier decodes that envelope and applies the same receipt and citation
-checks; malformed JSON and duplicate object keys fail closed. A cited
-narrative requires an explicit matching quotation. Mixed non-Graft
-evidence or a failed tool cannot become verified just because another
-tool returned a Graft receipt.</p>
-<p>Graft currently returns ordinary R lists from its tools. ellmer 0.5
-accepts them but emits a deprecation warning for implicit JSON
-conversion. The host tests record this compatibility limitation; <a href="https://github.com/JamesHWade/graft/issues/53" class="external-link">#53</a> owns the
-public return representation decision. Do not suppress all tool warnings
-in application code.</p>
+<p>Use <code>graft_tools(view, result_format = "json")</code> for
+ellmer, Deputy, and dsprrr. Each tool returns the complete envelope as
+an explicit <code>json</code>-class string, a <a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">supported ellmer
+return type</a>. Graft uses the same JSON encoding as its accepted
+records. Its verifier decodes the envelope and applies the same receipt
+and citation checks; malformed JSON and duplicate object keys fail
+closed. A cited narrative requires an explicit matching quotation. Mixed
+non-Graft evidence or a failed tool cannot become verified because
+another tool returned a Graft receipt.</p>
+<p>The default <code>graft_tools(view)</code> still returns ordinary R
+list envelopes. Existing <code>$result</code> and <code>$receipt</code>
+access, data frames, and attributes are preserved. Choose
+<code>result_format = "list"</code> explicitly when that R
+representation is required. Registering list-mode tools with ellmer 0.5
+still uses its deprecated implicit conversion; switch registration to
+JSON mode instead of suppressing warnings. The return format is fixed at
+construction and never depends on call context.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">r_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span>, result_format <span class="op">=</span> <span class="st">"list"</span><span class="op">)</span></span>
+<span><span class="va">envelope</span> <span class="op">&lt;-</span> <span class="va">r_tools</span><span class="op">$</span><span class="fu">graft_get</span><span class="op">(</span><span class="st">"knowledge:interpretation"</span><span class="op">)</span></span>
+<span><span class="va">envelope</span><span class="op">$</span><span class="va">receipt</span><span class="op">$</span><span class="va">boundary</span><span class="op">$</span><span class="va">kind</span></span>
+<span><span class="co">#&gt; [1] "snapshot"</span></span>
+<span></span>
+<span><span class="va">json_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span><span class="va">view</span>, result_format <span class="op">=</span> <span class="st">"json"</span><span class="op">)</span></span>
+<span><span class="va">value</span> <span class="op">&lt;-</span> <span class="va">json_tools</span><span class="op">$</span><span class="fu">graft_get</span><span class="op">(</span><span class="st">"knowledge:interpretation"</span><span class="op">)</span></span>
+<span><span class="va">decoded</span> <span class="op">&lt;-</span> <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">fromJSON</a></span><span class="op">(</span><span class="va">value</span>, simplifyVector <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">decoded</span><span class="op">$</span><span class="va">receipt</span>, <span class="va">envelope</span><span class="op">$</span><span class="va">receipt</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>Decoded JSON has JSON’s types and arrays; it does not restore R
+data-frame classes or attributes. Use list mode when those R details
+matter. Both modes preserve the public content and accepted-boundary
+receipt. Direct public reads, including <code><a href="../reference/graft_dictionary.html">graft_dictionary()</a></code>,
+keep their existing return types.</p>
 <p>Bounds have distinct meanings. Search/history and related-record
 limits bound rows. Dictionary discovery additionally bounds text.
 <code><a href="../reference/graft_get.html">graft_get()</a></code> retains the full public narrative field and
@@ -265,11 +288,12 @@ authorized records and context budget accordingly.</p>
 durable reference. The host can retrieve the exact R value with
 <code>agent$resolve_tool_result(reference)</code>; the model has a
 bounded <code>deputy_read_tool_result</code> path. Tests recover a long
-Unicode result and its identical receipt. The offloaded
-reference/preview is not the canonical Graft envelope, so
-<code><a href="../reference/graft_verify.html">graft_verify()</a></code> reports that evidence path as untrusted.
-Disabling offloading in the recipe above is an explicit choice for a
-bounded example, not a general recommendation for large documents.</p>
+Unicode/Markdown JSON result byte for byte and a list-mode R envelope
+exactly. The offloaded reference/preview is not the canonical Graft
+envelope, so <code><a href="../reference/graft_verify.html">graft_verify()</a></code> reports that evidence path as
+untrusted. Disabling offloading in the recipe above is an explicit
+choice for a bounded example, not a general recommendation for large
+documents.</p>
 <p>For complete selection, dependency review and current consultation
 policy, see <a href="reuse-basis.html">Retain an exact reuse
 basis</a>.</p>
@@ -282,7 +306,7 @@ host-trusted references and reconstruct a view in a worker. The
 regression test closes the store before a fresh R process opens it
 read-only and verifies a complete selected record/evidence set. Do not
 deserialize arbitrary untrusted RDS content.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Host-owned checkpoint: retain the full selection on unchanged days.</span></span>
 <span><span class="va">basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>snapshot <span class="op">=</span> <span class="fu"><a href="../reference/graft_snapshot.html">graft_snapshot</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span>, ids <span class="op">=</span> <span class="va">selected_ids</span>,</span>
 <span>  revisions <span class="op">=</span> <span class="va">selected_revision_ids</span><span class="op">)</span></span>
@@ -376,9 +400,9 @@ the remaining application and lifecycle proofs separately.</p>
 <h2 id="reproduce-compatibility-evidence">Reproduce compatibility evidence<a class="anchor" aria-label="anchor" href="#reproduce-compatibility-evidence"></a>
 </h2>
 <p>From a checkout with the optional hosts installed:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="ex">Rscript</span> tools/check-host-composition.R</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="va">GRAFT_TEST_DATA_DICT_CLI</span><span class="op">=</span>/path/to/data-dict <span class="dt">\</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "^data-dict-narrative$", stop_on_failure = TRUE)'</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="ex">Rscript</span> tools/check-host-composition.R</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="va">GRAFT_TEST_DATA_DICT_CLI</span><span class="op">=</span>/path/to/data-dict <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "^data-dict-narrative$", stop_on_failure = TRUE)'</span></span></code></pre></div>
 <p>The host runner prints installed package versions and available
 source revisions. Tests do not install dependencies or contact model
 providers. See the <a href="compatibility.html">compatibility guide</a>

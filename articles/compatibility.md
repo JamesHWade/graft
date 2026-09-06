@@ -28,8 +28,12 @@ behavior.
 knowledge](https://jameshwade.github.io/graft/articles/ecosystem.md)
 gives executable recipes for current ellmer, Deputy and dsprrr public
 interfaces. The host compatibility suite covers real sync/streaming tool
-loops with a loopback-only synthetic server. Full Tempest/Rill
-application reuse and scans/vitals evaluation remain in the [integration
+loops with a loopback-only synthetic server. Use
+`graft_tools(view, result_format = "json")` for the supported ellmer
+return path; list mode remains available for direct R envelopes. This
+optional argument advances the consumer contract to 0.6.0 without
+changing persisted formats. Full Tempest/Rill application reuse and
+scans/vitals evaluation remain in the [integration
 backlog](https://github.com/JamesHWade/graft/issues/34).
 
 The 2026-09-05 proof used ellmer 0.5.0, Deputy

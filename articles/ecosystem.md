@@ -56,7 +56,7 @@ store <- graft_open(graft_schema(system.file(
 graft_ingest(store, example$narrative_records(),
   graft_provenance("example-host", idempotency_key = "example-1"))
 #> $batch_id
-#> [1] "graft:4YQTQFGS66W8X73P3AV3WR0PAM"
+#> [1] "graft:0AH26JNGMESNWC113AN9GWMKN0"
 #> 
 #> $inserted
 #> knowledge    source   support 
@@ -78,13 +78,14 @@ graft_ingest(store, example$narrative_records(),
 #> character(0)
 #> 
 #> $duration
-#> [1] 0.63
+#> [1] 0.651
 #> 
 #> $replay
 #> [1] FALSE
 view <- graft_at(store, graft_snapshot(store))
-tools <- graft_tools(view)
-tools$graft_get("knowledge:preference")$result$record
+tools <- graft_tools(view, result_format = "json")
+value <- tools$graft_get("knowledge:preference")
+jsonlite::fromJSON(value, simplifyVector = FALSE)$result$record
 #> $id
 #> [1] "knowledge:preference"
 #> 
@@ -160,19 +161,45 @@ does not require a Graft adapter.
 
 ## Preserve results without overstating verification
 
-ellmer 0.5 stores ordinary list tool results as JSON. Graft’s verifier
-decodes that envelope and applies the same receipt and citation checks;
-malformed JSON and duplicate object keys fail closed. A cited narrative
-requires an explicit matching quotation. Mixed non-Graft evidence or a
-failed tool cannot become verified just because another tool returned a
-Graft receipt.
+Use `graft_tools(view, result_format = "json")` for ellmer, Deputy, and
+dsprrr. Each tool returns the complete envelope as an explicit
+`json`-class string, a [supported ellmer return
+type](https://ellmer.tidyverse.org/reference/tool.html). Graft uses the
+same JSON encoding as its accepted records. Its verifier decodes the
+envelope and applies the same receipt and citation checks; malformed
+JSON and duplicate object keys fail closed. A cited narrative requires
+an explicit matching quotation. Mixed non-Graft evidence or a failed
+tool cannot become verified because another tool returned a Graft
+receipt.
 
-Graft currently returns ordinary R lists from its tools. ellmer 0.5
-accepts them but emits a deprecation warning for implicit JSON
-conversion. The host tests record this compatibility limitation;
-[\#53](https://github.com/JamesHWade/graft/issues/53) owns the public
-return representation decision. Do not suppress all tool warnings in
-application code.
+The default `graft_tools(view)` still returns ordinary R list envelopes.
+Existing `$result` and `$receipt` access, data frames, and attributes
+are preserved. Choose `result_format = "list"` explicitly when that R
+representation is required. Registering list-mode tools with ellmer 0.5
+still uses its deprecated implicit conversion; switch registration to
+JSON mode instead of suppressing warnings. The return format is fixed at
+construction and never depends on call context.
+
+``` r
+
+r_tools <- graft_tools(view, result_format = "list")
+envelope <- r_tools$graft_get("knowledge:interpretation")
+envelope$receipt$boundary$kind
+#> [1] "snapshot"
+
+json_tools <- graft_tools(view, result_format = "json")
+value <- json_tools$graft_get("knowledge:interpretation")
+decoded <- jsonlite::fromJSON(value, simplifyVector = FALSE)
+all.equal(decoded$receipt, envelope$receipt)
+#> [1] TRUE
+```
+
+Decoded JSON has JSON’s types and arrays; it does not restore R
+data-frame classes or attributes. Use list mode when those R details
+matter. Both modes preserve the public content and accepted-boundary
+receipt. Direct public reads, including
+[`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md),
+keep their existing return types.
 
 Bounds have distinct meanings. Search/history and related-record limits
 bound rows. Dictionary discovery additionally bounds text.
@@ -184,9 +211,9 @@ context budget accordingly.
 Deputy’s default context policy may offload a large result to a durable
 reference. The host can retrieve the exact R value with
 `agent$resolve_tool_result(reference)`; the model has a bounded
-`deputy_read_tool_result` path. Tests recover a long Unicode result and
-its identical receipt. The offloaded reference/preview is not the
-canonical Graft envelope, so
+`deputy_read_tool_result` path. Tests recover a long Unicode/Markdown
+JSON result byte for byte and a list-mode R envelope exactly. The
+offloaded reference/preview is not the canonical Graft envelope, so
 [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
 reports that evidence path as untrusted. Disabling offloading in the
 recipe above is an explicit choice for a bounded example, not a general
