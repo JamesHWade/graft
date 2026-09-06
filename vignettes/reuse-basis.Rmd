@@ -149,11 +149,16 @@ physical erasure. Graft's permanent purge and restore contract remains
 ## Consumer status
 
 The offline tests cover research and reading selections with real Graft stores,
-a separate worker, and a real ellmer loop served by local fixtures. They do not
-claim completed Tempest or Rill integration. Tempest's current public schema
-loader requires Graft contract 0.2.x; this slice reports 0.5.0. The contract update
-and actual product proof belong to [#50](https://github.com/JamesHWade/graft/issues/50).
-Rill's runtime proof remains [#51](https://github.com/JamesHWade/graft/issues/51).
+a separate worker, and a real ellmer loop served by local fixtures. This build
+reports Graft contract `r graft_contract_version()$contract`. Tempest's public
+schema loader accepts contracts >= 0.2.0 and < 0.7.0 following
+[Tempest #67](https://github.com/JamesHWade/tempest/pull/67).
+
+Tempest's accepted-research reuse across restarts is implemented in
+[Tempest #66](https://github.com/JamesHWade/tempest/pull/66). The remaining
+deletion and Forget scope is tracked in
+[#50](https://github.com/JamesHWade/graft/issues/50). Rill's runtime proof remains
+[#51](https://github.com/JamesHWade/graft/issues/51).
 
 The detailed revision, supersession and exact-reference contract is recorded in
 [#45](https://github.com/JamesHWade/graft/issues/45) and

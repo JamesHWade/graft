@@ -513,3 +513,65 @@ test_that("graft_tools omits definition tools when none are accepted", {
     c("graft_find", "graft_get", "graft_query", "graft_history")
   )
 })
+
+test_that("explicit JSON tools retain the direct envelope and tool contract", {
+  store <- local_definition_store()
+  view <- graft_at(store, graft_snapshot(store))
+  lists <- graft_tools(view)
+  json <- graft_tools(view, result_format = "json")
+  calls <- list(
+    graft_find = list(query = "Acetone", limit = 1L),
+    graft_get = list(id = test_graft_id("definition-entity-a")),
+    graft_query = list(operation = "unresolved", limit = 1L),
+    graft_history = list(id = test_graft_id("definition-entity-a")),
+    graft_definitions = list(),
+    graft_calculate = list(metrics = "entity_count")
+  )
+  for (name in names(calls)) {
+    envelope <- do.call(lists[[name]], calls[[name]])
+    value <- do.call(json[[name]], calls[[name]])
+    expect_type(envelope, "list")
+    expect_s3_class(value, "json")
+    expect_identical(
+      jsonlite::fromJSON(value, simplifyVector = FALSE),
+      jsonlite::fromJSON(
+        canonical_json(envelope),
+        simplifyVector = FALSE
+      ),
+      info = name
+    )
+    for (property in c(
+      "name",
+      "description",
+      "arguments",
+      "convert",
+      "annotations"
+    )) {
+      expect_identical(
+        S7::prop(json[[name]], property),
+        S7::prop(lists[[name]], property)
+      )
+    }
+  }
+  expect_snapshot(error = TRUE, graft_tools(view, result_format = "js"))
+})
+
+test_that("JSON dictionary and live integrity tools preserve public envelopes", {
+  store <- local_dictionary_store()
+  lists <- graft_tools(store)
+  json <- graft_tools(store, result_format = "json")
+  for (call in list(
+    list(name = "graft_dictionary", args = list(limit = 1L)),
+    list(name = "graft_query", args = list(operation = "integrity"))
+  )) {
+    envelope <- do.call(lists[[call$name]], call$args)
+    value <- do.call(json[[call$name]], call$args)
+    expect_identical(
+      jsonlite::fromJSON(value, simplifyVector = FALSE),
+      jsonlite::fromJSON(
+        canonical_json(envelope),
+        simplifyVector = FALSE
+      )
+    )
+  }
+})

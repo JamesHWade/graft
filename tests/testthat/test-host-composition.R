@@ -1,11 +1,11 @@
 test_that("real hosts preserve pinned narrative results and canonical receipts", {
   skip_if_not_installed("deputy")
   skip_if_not_installed("dsprrr")
-  withr::local_options(lifecycle_verbosity = "quiet")
+  withr::local_options(lifecycle_verbosity = "error")
   store <- local_narrative_store()
   view <- graft_at(store, graft_snapshot(store))
-  tools <- graft_tools(view)
-  expected <- tools$graft_get(id = "knowledge:interpretation")
+  tools <- graft_tools(view, result_format = "json")
+  expected <- graft_tools(view)$graft_get(id = "knowledge:interpretation")
   corrected <- narrative_fixture()$narrative_records()$knowledge[
     2L,
     ,
@@ -50,9 +50,12 @@ test_that("real hosts preserve pinned narrative results and canonical receipts",
 test_that("real hosts retain row bounds and fail closed on errors and mixed tools", {
   skip_if_not_installed("deputy")
   skip_if_not_installed("dsprrr")
-  withr::local_options(lifecycle_verbosity = "quiet")
+  withr::local_options(lifecycle_verbosity = "error")
   store <- local_narrative_store()
-  tools <- graft_tools(graft_at(store, graft_snapshot(store)))
+  tools <- graft_tools(
+    graft_at(store, graft_snapshot(store)),
+    result_format = "json"
+  )
   extra <- ellmer::tool(
     function() "Unreviewed host evidence",
     name = "host_note",
@@ -74,7 +77,11 @@ test_that("real hosts retain row bounds and fail closed on errors and mixed tool
           limit = 1L
         )
       )),
-      expected = tools$graft_find("reading", "knowledge", 1L)
+      expected = graft_tools(graft_at(store, graft_snapshot(store)))$graft_find(
+        "reading",
+        "knowledge",
+        1L
+      )
     ),
     missing = list(
       calls = list(list(name = "graft_get", arguments = list(id = "missing")))
@@ -168,7 +175,7 @@ test_that("host collisions are explicit and must be checked before tool composit
 
 test_that("long Unicode content survives host offloading without gaining verification", {
   skip_if_not_installed("deputy")
-  withr::local_options(lifecycle_verbosity = "quiet")
+  withr::local_options(lifecycle_verbosity = "error")
   store <- local_narrative_store()
   record <- narrative_fixture()$narrative_records()$knowledge[
     2L,
@@ -187,10 +194,16 @@ test_that("long Unicode content survives host offloading without gaining verific
     list(knowledge = record),
     graft_provenance("host", idempotency_key = "long")
   )
-  tools <- graft_tools(graft_at(store, graft_snapshot(store)))
+  tools <- graft_tools(
+    graft_at(store, graft_snapshot(store)),
+    result_format = "json"
+  )
   expected <- tools$graft_get(record$id)
-  expect_identical(expected$result$record$body, record$body)
-  expect_identical(expected$truncated, FALSE)
+  envelope <- graft_tools(graft_at(store, graft_snapshot(store)))$graft_get(
+    record$id
+  )
+  expect_identical(envelope$result$record$body, record$body)
+  expect_identical(envelope$truncated, FALSE)
   server <- local_host_responses(
     list(list(name = "graft_get", arguments = list(id = record$id))),
     "> A synthetic narrative paragraph — with uncertainty."
@@ -211,12 +224,15 @@ test_that("long Unicode content survives host offloading without gaining verific
   reference <- regmatches(value, regexpr("deputy://tool-result/[^\n ]+", value))
   resolved <- agent$resolve_tool_result(reference)
   expect_identical(resolved, expected)
+  decoded <- jsonlite::fromJSON(resolved, simplifyVector = FALSE)
+  expect_identical(decoded$result$record$body, record$body)
+  expect_equal(decoded$receipt, envelope$receipt)
   expect_lt(nchar(value), nchar(record$body))
   expect_identical(graft_verify(chat)$label[[1]], "untrusted")
 })
 
-test_that("the ellmer list-result deprecation remains an explicit compatibility limitation", {
-  withr::local_options(lifecycle_verbosity = "warning")
+test_that("explicit JSON results use the supported ellmer invocation path", {
+  withr::local_options(lifecycle_verbosity = "error")
   store <- local_narrative_store()
   server <- local_host_responses(
     list(list(
@@ -226,9 +242,66 @@ test_that("the ellmer list-result deprecation remains an explicit compatibility 
     "An uncited response."
   )
   chat <- host_chat(server)
-  expect_warning(
-    run_graft_host("ellmer", chat, graft_tools(store)),
-    class = "lifecycle_warning_deprecated"
+  expect_no_warning(
+    run_graft_host("ellmer", chat, graft_tools(store, result_format = "json"))
   )
   expect_identical(graft_verify(chat)$label[[1]], "untrusted")
+})
+
+test_that("real hosts verify explicit JSON calculation receipts", {
+  skip_if_not_installed("deputy")
+  skip_if_not_installed("dsprrr")
+  withr::local_options(lifecycle_verbosity = "error")
+  store <- local_definition_store()
+  view <- graft_at(store, graft_snapshot(store))
+  tools <- graft_tools(view, result_format = "json")
+  expected <- graft_tools(view)$graft_calculate(metrics = "entity_count")
+  for (host in c("ellmer", "deputy", "dsprrr")) {
+    local({
+      server <- local_host_responses(
+        list(list(
+          name = "graft_calculate",
+          arguments = list(metrics = "entity_count")
+        )),
+        "There are three entities."
+      )
+      chat <- host_chat(server)
+      expect_no_warning(run_graft_host(host, chat, tools))
+      verification <- graft_verify(chat)
+      expect_identical(verification$label, "verified", info = host)
+      expect_equal(verification$receipts[[1L]][[1L]], expected$receipt)
+    })
+  }
+})
+
+test_that("Deputy still recovers exact direct R envelopes", {
+  skip_if_not_installed("deputy")
+  store <- local_narrative_store()
+  tools <- graft_tools(
+    graft_at(store, graft_snapshot(store)),
+    result_format = "list"
+  )
+  expected <- tools$graft_get("knowledge:interpretation")
+  server <- local_host_responses(
+    list(list(
+      name = "graft_get",
+      arguments = list(id = "knowledge:interpretation")
+    )),
+    "An uncited response."
+  )
+  chat <- host_chat(server)
+  agent <- deputy::Agent$new(
+    chat = chat,
+    tools = tools,
+    context_policy = deputy::ContextPolicy(
+      max_tokens = NULL,
+      max_tool_result_bytes = 1L,
+      offload_dir = withr::local_tempdir()
+    )
+  )
+  expect_no_warning(agent$run_sync("Read the narrative."))
+  value <- host_result_values(chat)[[1L]]
+  reference <- regmatches(value, regexpr("deputy://tool-result/[^\n ]+", value))
+  expect_identical(agent$resolve_tool_result(reference), expected)
+  expect_identical(graft_verify(chat)$label, "untrusted")
 })

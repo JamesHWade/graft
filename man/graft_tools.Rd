@@ -4,10 +4,13 @@
 \alias{graft_tools}
 \title{Create bounded read-only tools for a Graft store or view}
 \usage{
-graft_tools(store)
+graft_tools(store, result_format = c("list", "json"))
 }
 \arguments{
 \item{store}{An initialized \code{GraftStore} or immutable \code{GraftView}.}
+
+\item{result_format}{Return ordinary R envelopes (\code{"list"}, the default), or
+explicitly serialized envelopes (\code{"json"}) for ellmer and agent hosts.}
 }
 \value{
 A named list of \code{ellmer::ToolDef} objects.
@@ -30,6 +33,13 @@ structural and build schema digests. Calculation receipts also identify the
 complete accepted definition closure. Live-store tools pin a fresh boundary
 for each invocation; tools created from a \code{GraftView} retain its snapshot
 boundary.
+
+Use \code{result_format = "json"} when registering tools with a chat. Each tool
+then returns a \code{json}-class string containing the complete envelope, using
+ellmer's supported explicit JSON return type. The default \code{"list"} preserves
+direct R calls, including data frames and their attributes. It relies on
+deprecated implicit conversion if registered with ellmer 0.5. The format is
+fixed when tools are constructed and is the same inside and outside a chat.
 }
 \seealso{
 \code{vignette("agents", package = "graft")} for pinning an accepted
