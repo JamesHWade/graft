@@ -59,6 +59,8 @@ navbar:
           href: articles/agents.html
         - text: Reuse narrative knowledge
           href: articles/ecosystem.html
+        - text: Keep Readers' knowledge separate
+          href: articles/reader-access.html
         - text: Supported integrations
           href: articles/compatibility.html
     design:
@@ -104,6 +106,7 @@ articles:
       - compatibility
       - ecosystem
       - reuse-basis
+      - reader-access
   - title: Add richer representations
     desc: >
       Add semantic graph relationships with LinkML or synchronize a readable
