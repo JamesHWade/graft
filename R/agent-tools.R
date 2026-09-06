@@ -17,17 +17,32 @@
 #' for each invocation; tools created from a `GraftView` retain its snapshot
 #' boundary.
 #'
+#' Use `result_format = "json"` when registering tools with a chat. Each tool
+#' then returns a `json`-class string containing the complete envelope, using
+#' ellmer's supported explicit JSON return type. The default `"list"` preserves
+#' direct R calls, including data frames and their attributes. It relies on
+#' deprecated implicit conversion if registered with ellmer 0.5. The format is
+#' fixed when tools are constructed and is the same inside and outside a chat.
+#'
 #' @param store An initialized `GraftStore` or immutable `GraftView`.
+#' @param result_format Return ordinary R envelopes (`"list"`, the default), or
+#'   explicitly serialized envelopes (`"json"`) for ellmer and agent hosts.
 #'
 #' @return A named list of `ellmer::ToolDef` objects.
 #' @seealso `vignette("agents", package = "graft")` for pinning an accepted
 #'   boundary, registering the tools with a chat, and accepting
 #'   agent-authored proposals.
 #' @export
-graft_tools <- function(store) {
+graft_tools <- function(store, result_format = c("list", "json")) {
+  result_format <- rlang::arg_match(result_format)
   check_graft_tools_dependency()
   read_store <- as_graft_read_store_internal(store, "store")
   annotations <- graft_tool_annotations()
+  format_result <- if (result_format == "json") {
+    graft_tool_json_result
+  } else {
+    identity
+  }
 
   tools <- list(
     graft_find = ellmer::tool(
@@ -39,7 +54,7 @@ graft_tools <- function(store) {
           class = class,
           limit = limit
         )
-        graft_tool_bounded_result(result, limit, context$receipt)
+        format_result(graft_tool_bounded_result(result, limit, context$receipt))
       },
       name = "graft_find",
       description = paste(
@@ -78,12 +93,12 @@ graft_tools <- function(store) {
           include = include,
           limits = limits
         )
-        graft_tool_result(
+        format_result(graft_tool_result(
           result,
           truncated = any(unlist(result$truncated, use.names = FALSE)),
           limit = result$limits,
           receipt = context$receipt
-        )
+        ))
       },
       name = "graft_get",
       description = paste(
@@ -125,7 +140,11 @@ graft_tools <- function(store) {
     graft_query = ellmer::tool(
       function(operation, request = list(), limit = 100) {
         if (identical(operation, "integrity") && !is_graft_view(store)) {
-          return(graft_tool_integrity_result(store, request, limit))
+          return(format_result(graft_tool_integrity_result(
+            store,
+            request,
+            limit
+          )))
         }
         context <- graft_tool_context(store)
         result <- graft_query(
@@ -134,7 +153,7 @@ graft_tools <- function(store) {
           request = request,
           limit = limit
         )
-        graft_tool_bounded_result(result, limit, context$receipt)
+        format_result(graft_tool_bounded_result(result, limit, context$receipt))
       },
       name = "graft_query",
       description = paste(
@@ -168,7 +187,7 @@ graft_tools <- function(store) {
           as_of,
           context$store
         )
-        graft_tool_bounded_result(result, limit, receipt)
+        format_result(graft_tool_bounded_result(result, limit, receipt))
       },
       name = "graft_history",
       description = paste(
@@ -192,17 +211,33 @@ graft_tools <- function(store) {
     )
   )
   if (!is.null(read_store$schema$manifest$dictionary)) {
-    tools$graft_dictionary <- graft_dictionary_tool(store, annotations)
+    tools$graft_dictionary <- graft_dictionary_tool(
+      store,
+      annotations,
+      format_result
+    )
   }
   definitions <- graft_definitions(store)
   if (nrow(definitions) > 0L) {
-    tools$graft_definitions <- graft_definitions_tool(store, annotations)
-    tools$graft_calculate <- graft_calculate_tool(store, annotations)
+    tools$graft_definitions <- graft_definitions_tool(
+      store,
+      annotations,
+      format_result
+    )
+    tools$graft_calculate <- graft_calculate_tool(
+      store,
+      annotations,
+      format_result
+    )
   }
   tools
 }
 
-graft_definitions_tool <- function(store, annotations) {
+graft_tool_json_result <- function(result) {
+  structure(canonical_json(result), class = "json")
+}
+
+graft_definitions_tool <- function(store, annotations, format_result) {
   ellmer::tool(
     function(target = NULL) {
       context <- graft_tool_context(store)
@@ -210,11 +245,11 @@ graft_definitions_tool <- function(store, annotations) {
         context$store,
         target = target
       )
-      graft_tool_bounded_result(
+      format_result(graft_tool_bounded_result(
         result,
         graft_retrieval_limits$definitions,
         context$receipt
-      )
+      ))
     },
     name = "graft_definitions",
     description = paste(
@@ -231,7 +266,7 @@ graft_definitions_tool <- function(store, annotations) {
   )
 }
 
-graft_calculate_tool <- function(store, annotations) {
+graft_calculate_tool <- function(store, annotations, format_result) {
   ellmer::tool(
     function(metrics, dimensions = NULL, filters = NULL, where = NULL) {
       context <- graft_tool_context(store)
@@ -253,12 +288,12 @@ graft_calculate_tool <- function(store, annotations) {
           )
         }
       )
-      graft_tool_result(
+      format_result(graft_tool_result(
         result,
         truncated = FALSE,
         limit = graft_retrieval_limits$calculation_rows,
         receipt = context$receipt
-      )
+      ))
     },
     name = "graft_calculate",
     description = paste(
@@ -616,10 +651,10 @@ graft_tool_schema <- function(schema, build_digest) {
   )
 }
 
-graft_dictionary_tool <- function(store, annotations) {
+graft_dictionary_tool <- function(store, annotations, format_result) {
   ellmer::tool(
     function(table = NULL, field = NULL, limit = 100, offset = 0) {
-      graft_dictionary(store, table, field, limit, offset)
+      format_result(graft_dictionary(store, table, field, limit, offset))
     },
     name = "graft_dictionary",
     description = paste(

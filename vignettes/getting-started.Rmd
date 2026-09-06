@@ -315,11 +315,13 @@ over a silent prefix. Because these tools are bound to `view`, later commits do
 not move the ground underneath a running session; a second run against the same
 snapshot reads the same knowledge.
 
-Registering them with a chat is one line:
+Use explicit JSON results when registering tools with a chat. The default
+list format above preserves direct R calls; ellmer 0.5 deprecates its implicit
+conversion of those lists:
 
 ```r
 chat <- ellmer::chat_anthropic()
-chat$set_tools(tools)
+chat$set_tools(graft_tools(view, result_format = "json"))
 
 chat$chat("Who works at the Daily Planet, and has that person's title changed?")
 ```

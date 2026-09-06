@@ -140,7 +140,7 @@ cannot change what that session reads:
 snapshot <- graft_snapshot(store)
 view <- graft_at(store, snapshot)
 
-tools <- graft_tools(view)
+tools <- graft_tools(view, result_format = "json")
 names(tools)
 #> [1] "graft_find"       "graft_get"        "graft_query"
 #> [4] "graft_history"    "graft_dictionary"
