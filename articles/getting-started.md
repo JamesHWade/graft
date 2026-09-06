@@ -7,10 +7,17 @@ store, rejects a broken relationship before writing anything, accepts
 corrected records, preserves a later update as a second revision, and
 then hands that accepted knowledge to an agent as read-only tools.
 
-That last step is the point of the earlier ones. An agent is only as
-trustworthy as the knowledge it reads: validated on the way in,
-attributed to a producer, and stable while the agent is reasoning about
-it. Graft is built to give a model exactly that, and nothing more.
+A pinned view lets a later task read the same accepted versions even
+after a correction. Validation checks the declared contract; it does not
+establish factual truth or application permission. For text-rich
+records, continue with [narrative
+reuse](https://jameshwade.github.io/graft/articles/ecosystem.md) after
+this table example.
+
+Install with `pak::pak("JamesHWade/graft")` before running the guide.
+All evaluated chunks below use local synthetic records. The optional
+live-chat call is shown but not evaluated and requires model
+credentials. The store closes at the end.
 
 ## Load a table contract
 
@@ -290,8 +297,8 @@ data.frame(
   )
 )
 #>   revision        committed_at         producer             event
-#> 1        2 2026-09-05 14:27:04        hr-review review-2026-08-08
-#> 2        1 2026-09-05 14:27:04 directory-import import-2026-08-01
+#> 1        2 2026-09-06 02:23:13        hr-review review-2026-08-08
+#> 2        1 2026-09-06 02:23:12 directory-import import-2026-08-01
 #>              contract            job_title
 #> 1 sha256:1bd57b774b46 Investigative editor
 #> 2 sha256:1bd57b774b46             Reporter

@@ -48,18 +48,24 @@
 <li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
     <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
     <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
-    <li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
-    <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
     <li><a class="dropdown-item" href="../articles/reuse-basis.html">Retain an exact reuse basis</a></li>
+    <li><a class="dropdown-item" href="../reference/graft_calculate.html">Calculate with accepted Definitions</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-integrate" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Integrate</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-integrate">
+<li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
+    <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
     <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
-    <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
-    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-design">
-<li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
+<li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
+    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
     <li><a class="dropdown-item" href="../articles/contract-compilers.html">Contract compilers</a></li>
     <li><a class="dropdown-item" href="../articles/v01-design.html">v0.1 design notes</a></li>
   </ul>
@@ -107,10 +113,15 @@ connects them. This guide starts there. It creates an empty in-memory
 store, rejects a broken relationship before writing anything, accepts
 corrected records, preserves a later update as a second revision, and
 then hands that accepted knowledge to an agent as read-only tools.</p>
-<p>That last step is the point of the earlier ones. An agent is only as
-trustworthy as the knowledge it reads: validated on the way in,
-attributed to a producer, and stable while the agent is reasoning about
-it. Graft is built to give a model exactly that, and nothing more.</p>
+<p>A pinned view lets a later task read the same accepted versions even
+after a correction. Validation checks the declared contract; it does not
+establish factual truth or application permission. For text-rich
+records, continue with <a href="ecosystem.html">narrative reuse</a>
+after this table example.</p>
+<p>Install with <code>pak::pak("JamesHWade/graft")</code> before running
+the guide. All evaluated chunks below use local synthetic records. The
+optional live-chat call is shown but not evaluated and requires model
+credentials. The store closes at the end.</p>
 <div class="section level2">
 <h2 id="load-a-table-contract">Load a table contract<a class="anchor" aria-label="anchor" href="#load-a-table-contract"></a>
 </h2>
@@ -370,8 +381,8 @@ returns newest first.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;   revision        committed_at         producer             event</span></span>
-<span><span class="co">#&gt; 1        2 2026-09-05 14:27:04        hr-review review-2026-08-08</span></span>
-<span><span class="co">#&gt; 2        1 2026-09-05 14:27:04 directory-import import-2026-08-01</span></span>
+<span><span class="co">#&gt; 1        2 2026-09-06 02:23:13        hr-review review-2026-08-08</span></span>
+<span><span class="co">#&gt; 2        1 2026-09-06 02:23:12 directory-import import-2026-08-01</span></span>
 <span><span class="co">#&gt;              contract            job_title</span></span>
 <span><span class="co">#&gt; 1 sha256:1bd57b774b46 Investigative editor</span></span>
 <span><span class="co">#&gt; 2 sha256:1bd57b774b46             Reporter</span></span></code></pre></div>
