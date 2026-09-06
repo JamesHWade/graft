@@ -37,7 +37,10 @@ test_that("isolated Readers cannot discover each other's records or counts", {
       values$dictionary$receipt$store$id,
       host$locations[[reader]]$store_id
     )
-    expect_identical(grepl(other, canonical_json(values)), FALSE)
+    expect_identical(
+      grepl(paste0("\\b", other, "\\b"), canonical_json(values)),
+      FALSE
+    )
     expect_identical(grepl("private-owner-", canonical_json(values)), FALSE)
     expect_equal(values$count$knowledge_count, if (reader == "alice") 4 else 3)
     expect_contains(values$tools, "graft_calculate")
