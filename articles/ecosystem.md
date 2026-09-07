@@ -56,7 +56,7 @@ store <- graft_open(graft_schema(system.file(
 graft_ingest(store, example$narrative_records(),
   graft_provenance("example-host", idempotency_key = "example-1"))
 #> $batch_id
-#> [1] "graft:2FWR7RV44A6N7CVACMJK7FGNB8"
+#> [1] "graft:5SDV225TB4XWB6TMHHPN7PW2RC"
 #> 
 #> $inserted
 #> knowledge    source   support 
@@ -78,7 +78,7 @@ graft_ingest(store, example$narrative_records(),
 #> character(0)
 #> 
 #> $duration
-#> [1] 0.493
+#> [1] 0.624
 #> 
 #> $replay
 #> [1] FALSE

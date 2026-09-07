@@ -2,6 +2,11 @@
 
 ## graft 0.0.0.9000
 
+- A proposed Forget and recovery protocol has offline tests for retired
+  store generations, backup admission, interrupted cleanup, and Reader
+  isolation; permanent purge and production recovery remain
+  unimplemented ([\#48](https://github.com/JamesHWade/graft/issues/48)).
+
 - A new Reader access guide and offline two-Reader contract demonstrate
   isolated stores, host authorization, pinned tool results, revocation,
   and safe worker rebinds; Rill runtime integration and permanent Forget

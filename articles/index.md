@@ -78,6 +78,9 @@ working tree.
 Understand storage and projection boundaries, contract compilation, and
 the choices behind the v0.1 package design.
 
+- [Design Forget and backup
+  recovery](https://jameshwade.github.io/graft/articles/forget-restore.md):
+
 - [How graft stores and retrieves
   knowledge](https://jameshwade.github.io/graft/articles/architecture.md):
 
