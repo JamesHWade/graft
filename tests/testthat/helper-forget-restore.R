@@ -167,6 +167,21 @@ forget_finish <- function(
   if (identical(state$status, "active")) {
     return(invisible(state))
   }
+  if (candidate %in% purge_paths) {
+    forget_error()
+  }
+  backup <- paste0(candidate, ".backup")
+  state$candidates <- union(
+    state$candidates,
+    c(candidate, backup, paste0(candidate, ".wal"))
+  )
+  forget_journal_write(journal, state)
+  accepted <- FALSE
+  on.exit({
+    if (!accepted) {
+      unlink(c(candidate, backup, paste0(candidate, ".wal")), recursive = TRUE)
+    }
+  })
   manifest <- forget_manifest(candidate, state$preview$reader, state$epoch)
   if (
     identical(manifest$snapshot$store_id, state$preview$prior$snapshot$store_id)
@@ -176,15 +191,18 @@ forget_finish <- function(
   if (!isTRUE(certify(candidate, state$preview))) {
     forget_error()
   }
-  backup <- paste0(candidate, ".backup")
   if (!file.exists(backup) && !file.copy(candidate, backup)) {
     forget_error()
   }
   if (!identical(forget_fingerprint(backup), manifest$checksum)) {
     forget_error()
   }
+  accepted <- TRUE
   interrupt("candidate_validated")
-  for (path in purge_paths) {
+  for (path in union(
+    purge_paths,
+    setdiff(state$candidates, c(candidate, backup))
+  )) {
     unlink(path, recursive = TRUE)
     if (file.exists(path)) {
       forget_error()
@@ -197,6 +215,24 @@ forget_finish <- function(
   forget_journal_write(journal, state)
   interrupt("published")
   invisible(state)
+}
+
+forget_revisions <- function(path) {
+  connection <- DBI::dbConnect(duckdb::duckdb(), path, read_only = TRUE)
+  on.exit(DBI::dbDisconnect(connection, shutdown = TRUE))
+  revisions <- DBI::dbGetQuery(
+    connection,
+    paste(
+      "SELECT record_id, class, revision_number, operation, payload_json",
+      "FROM _graft_record_revisions ORDER BY record_id, revision_number"
+    )
+  )
+  revisions$payload_json <- lapply(revisions$payload_json, function(payload) {
+    value <- jsonlite::fromJSON(payload, simplifyVector = FALSE)
+    value[c("created_at", "updated_at")] <- NULL
+    value
+  })
+  revisions
 }
 
 forget_fixture <- function(.local_envir = parent.frame()) {
@@ -270,9 +306,12 @@ forget_fixture <- function(.local_envir = parent.frame()) {
     ) {
       return(FALSE)
     }
-    TRUE
+    retained <- authority[!authority$record_id %in% preview$ids, , drop = FALSE]
+    rownames(retained) <- NULL
+    identical(forget_revisions(path), retained)
   }
   alice <- build("alice")
+  authority <- forget_revisions(alice$path)
   bob <- build("bob")
   journal <- file.path(directory, "independent-journal")
   dir.create(journal)

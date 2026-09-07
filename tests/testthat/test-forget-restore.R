@@ -328,7 +328,10 @@ test_that("a fresh worker and an in-flight read honor the current Forget decisio
   expect_identical(result, "not released")
   helper <- normalizePath(test_path("helper-forget-restore.R"))
   outcome <- callr::r(
-    function(helper, journal, backup, manifest) {
+    function(helper, journal, backup, manifest, checkout) {
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
       library(graft)
       source(helper, local = TRUE)
       tryCatch(
@@ -336,7 +339,17 @@ test_that("a fresh worker and an in-flight read honor the current Forget decisio
         error = \(error) class(error)[1L]
       )
     },
-    args = list(helper, fixture$journal, fixture$backup, fixture$manifest)
+    args = list(
+      helper,
+      fixture$journal,
+      fixture$backup,
+      fixture$manifest,
+      checkout = if (pkgload::is_dev_package("graft")) {
+        normalizePath(test_path("../.."))
+      } else {
+        NULL
+      }
+    )
   )
   expect_identical(outcome, "forget_unavailable")
 })
@@ -382,4 +395,120 @@ test_that("uncertified replacements and corrupt replacement backups keep access 
     ),
     class = "forget_unavailable"
   )
+})
+
+test_that("rejected and abandoned candidates are disposed before successful retry", {
+  fixture <- forget_fixture()
+  preview <- forget_preview(
+    fixture$journal,
+    fixture$records,
+    "knowledge:interpretation",
+    "request-1"
+  )
+  forget_accept(fixture$journal, preview, \(plan) identical(plan, preview))
+  rejected <- fixture$build("rejected")
+  expect_identical(
+    file.copy(rejected$path, paste0(rejected$path, ".backup")),
+    TRUE
+  )
+  expect_error(
+    forget_finish(
+      fixture$journal,
+      rejected$path,
+      fixture$purge_paths,
+      fixture$certify
+    ),
+    class = "forget_unavailable"
+  )
+  expect_identical(
+    file.exists(c(rejected$path, paste0(rejected$path, ".backup"))),
+    c(FALSE, FALSE)
+  )
+  abandoned <- fixture$build("abandoned", preview$ids)
+  expect_error(
+    forget_finish(
+      fixture$journal,
+      abandoned$path,
+      fixture$purge_paths,
+      fixture$certify,
+      \(point) forget_error("synthetic_crash")
+    ),
+    class = "synthetic_crash"
+  )
+  candidate <- fixture$build("replacement", preview$ids)
+  forget_finish(
+    fixture$journal,
+    candidate$path,
+    fixture$purge_paths,
+    fixture$certify
+  )
+  expect_identical(
+    file.exists(c(
+      rejected$path,
+      abandoned$path,
+      paste0(abandoned$path, ".backup")
+    )),
+    rep(FALSE, 3L)
+  )
+  expect_identical(forget_journal_read(fixture$journal)$status, "active")
+})
+
+test_that("same-head candidates cannot lose or alter retained revisions", {
+  fixture <- forget_fixture()
+  preview <- forget_preview(
+    fixture$journal,
+    fixture$records,
+    "knowledge:interpretation",
+    "request-1"
+  )
+  forget_accept(fixture$journal, preview, \(plan) identical(plan, preview))
+  for (mutation in c("missing", "changed", "private")) {
+    candidate <- fixture$build(mutation, preview$ids)
+    connection <- DBI::dbConnect(duckdb::duckdb(), candidate$path)
+    if (mutation == "missing") {
+      DBI::dbExecute(
+        connection,
+        "DELETE FROM _graft_record_revisions WHERE record_id = 'knowledge:conclusion' AND revision_number = 1"
+      )
+    } else {
+      old <- DBI::dbGetQuery(
+        connection,
+        "SELECT payload_json FROM _graft_record_revisions WHERE record_id = 'knowledge:conclusion' AND revision_number = 1"
+      )$payload_json
+      payload <- jsonlite::fromJSON(old, simplifyVector = FALSE)
+      payload[[
+        if (mutation == "private") "owner_binding" else "body"
+      ]] <- "corrupted survivor"
+      DBI::dbExecute(
+        connection,
+        "UPDATE _graft_record_revisions SET payload_json = ? WHERE record_id = 'knowledge:conclusion' AND revision_number = 1",
+        params = list(as.character(jsonlite::toJSON(
+          payload,
+          auto_unbox = TRUE,
+          null = "null"
+        )))
+      )
+    }
+    DBI::dbDisconnect(connection, shutdown = TRUE)
+    expect_identical(fixture$certify(candidate$path, preview), FALSE)
+    expect_error(
+      forget_finish(
+        fixture$journal,
+        candidate$path,
+        fixture$purge_paths,
+        fixture$certify
+      ),
+      class = "forget_unavailable"
+    )
+    expect_identical(forget_journal_read(fixture$journal)$status, "blocked")
+  }
+  candidate <- fixture$build("replacement", preview$ids)
+  expect_identical(fixture$certify(candidate$path, preview), TRUE)
+  forget_finish(
+    fixture$journal,
+    candidate$path,
+    fixture$purge_paths,
+    fixture$certify
+  )
+  expect_identical(forget_journal_read(fixture$journal)$status, "active")
 })

@@ -169,8 +169,11 @@ The test copies only closed databases and checks logical absence/file removal.
 
 `tests/testthat/test-forget-restore.R` runs against real synthetic Graft files,
 snapshots, receipts, histories and public reads. Its test-only helper supplies a
-single-writer journal and a known-data replacement builder. Fault hooks exercise
-accepted, validated, partially removed, and published states; a fresh R process
+single-writer journal and a known-data replacement builder. Its certifier compares retained logical revisions against the original synthetic
+authority, including private fields, while excluding replay timestamps. Candidate
+paths are registered in the synthetic operational journal before validation so
+rejected or abandoned files and backup sidecars remain cleanup obligations.
+Fault hooks exercise accepted, validated, partially removed, and published states; a fresh R process
 checks the persisted denial decision. Placeholder files stand in for OKF,
 cache, checkpoint and Conversation disposal obligations. They do **not** prove
 actual OKF/export, Rill, provider, or filesystem erasure behavior. The original
