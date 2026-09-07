@@ -12,10 +12,11 @@ articles:
   knowledge-change-control: knowledge-change-control.html
   linkml-schema: linkml-schema.html
   open-knowledge-format: open-knowledge-format.html
+  reader-access: reader-access.html
   retrieval: retrieval.html
   reuse-basis: reuse-basis.html
   v01-design: v01-design.html
-last_built: 2026-09-06T13:30Z
+last_built: 2026-09-07T11:09Z
 urls:
   reference: https://jameshwade.github.io/graft/reference
   article: https://jameshwade.github.io/graft/articles

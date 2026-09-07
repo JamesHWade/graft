@@ -160,7 +160,11 @@ backups must not restore erased content. The teaching callback proves
 host refusal, not physical erasure. Graft’s permanent purge and restore
 contract remains [\#48](https://github.com/JamesHWade/graft/issues/48),
 and Reader access remains
-[\#47](https://github.com/JamesHWade/graft/issues/47).
+[\#47](https://github.com/JamesHWade/graft/issues/47). The [two-Reader
+access
+example](https://jameshwade.github.io/graft/articles/reader-access.md)
+demonstrates isolated stores and current authorization checks before a
+saved basis is read.
 
 ## Consumer status
 

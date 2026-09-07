@@ -2,6 +2,12 @@
 
 ## graft 0.0.0.9000
 
+- A new Reader access guide and offline two-Reader contract demonstrate
+  isolated stores, host authorization, pinned tool results, revocation,
+  and safe worker rebinds; Rill runtime integration and permanent Forget
+  remain separate gates
+  ([\#47](https://github.com/JamesHWade/graft/issues/47)).
+
 - Agent integrations now require ellmer 0.5.0 or later;
   [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
   and

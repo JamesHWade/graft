@@ -28,6 +28,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-integrate" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Integrate</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-integrate"><li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
     <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
+    <li><a class="dropdown-item" href="../articles/reader-access.html">Keep Readers' knowledge separate</a></li>
     <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
   </ul></li>
 <li class="nav-item dropdown">
@@ -62,7 +63,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="graft-0009000">graft 0.0.0.9000<a class="anchor" aria-label="anchor" href="#graft-0009000"></a></h2>
-<ul><li><p>Agent integrations now require ellmer 0.5.0 or later; <code><a href="../reference/graft_tools.html">graft_tools()</a></code> and <code><a href="../reference/graft_verify.html">graft_verify()</a></code> reject older installations explicitly instead of risking omitted answers from incompatible transcript classes (<a href="https://github.com/JamesHWade/graft/issues/36" class="external-link">#36</a>).</p></li>
+<ul><li><p>A new Reader access guide and offline two-Reader contract demonstrate isolated stores, host authorization, pinned tool results, revocation, and safe worker rebinds; Rill runtime integration and permanent Forget remain separate gates (<a href="https://github.com/JamesHWade/graft/issues/47" class="external-link">#47</a>).</p></li>
+<li><p>Agent integrations now require ellmer 0.5.0 or later; <code><a href="../reference/graft_tools.html">graft_tools()</a></code> and <code><a href="../reference/graft_verify.html">graft_verify()</a></code> reject older installations explicitly instead of risking omitted answers from incompatible transcript classes (<a href="https://github.com/JamesHWade/graft/issues/36" class="external-link">#36</a>).</p></li>
 <li><p><code><a href="../reference/graft_commons_data_source.html">graft_commons_data_source()</a></code> now supports current Commons sources without a version or revision pin, retains its detached connection without modifying Commons fields, and checks the public constructor interface (<a href="https://github.com/JamesHWade/graft/issues/36" class="external-link">#36</a>).</p></li>
 <li><p><code>GraftSchema</code> and <code>GraftStore</code> now print concise identity, contract, and lifecycle summaries instead of recursively dumping their internal state.</p></li>
 <li><p>A new <code><a href="../articles/agents.html">vignette("agents")</a></code> documents how Graft is used from an agent host: bounded read-only tools, snapshot-pinned sessions, agent-authored proposals that pass through validation and review, and file-editing agents working through the OKF tree. Getting started, the README, and the site home page now show the same path.</p></li>

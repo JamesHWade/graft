@@ -52,6 +52,9 @@ give agents bounded access to both.
 - [Retain an exact reuse
   basis](https://jameshwade.github.io/graft/articles/reuse-basis.md):
 
+- [Keep Readers' accepted knowledge
+  separate](https://jameshwade.github.io/graft/articles/reader-access.md):
+
 ### Add richer representations
 
 Add semantic graph relationships with LinkML or synchronize a readable
