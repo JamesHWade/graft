@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* A proposed Forget and recovery protocol has offline tests for retired store generations, backup admission, interrupted cleanup, and Reader isolation; permanent purge and production recovery remain unimplemented (#48).
 * A new Reader access guide and offline two-Reader contract demonstrate isolated stores, host authorization, pinned tool results, revocation, and safe worker rebinds; Rill runtime integration and permanent Forget remain separate gates (#47).
 * Agent integrations now require ellmer 0.5.0 or later; `graft_tools()` and `graft_verify()` reject older installations explicitly instead of risking omitted answers from incompatible transcript classes (#36).
 * `graft_commons_data_source()` now supports current Commons sources without a version or revision pin, retains its detached connection without modifying Commons fields, and checks the public constructor interface (#36).
