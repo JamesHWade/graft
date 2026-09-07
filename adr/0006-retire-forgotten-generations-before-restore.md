@@ -170,7 +170,11 @@ The test copies only closed databases and checks logical absence/file removal.
 `tests/testthat/test-forget-restore.R` runs against real synthetic Graft files,
 snapshots, receipts, histories and public reads. Its test-only helper supplies a
 single-writer journal and a known-data replacement builder. Its certifier compares retained logical revisions against the original synthetic
-authority, including private fields, while excluding replay timestamps. Candidate
+authority, including private fields, while excluding replay timestamps. It also
+checks each retained head against the latest logical revision and compares every
+logical table, including metadata, with the image captured by its trusted
+fixed-data builder. Unknown images or later modifications are refused. This
+fixture-specific image comparison is not a general migration sanitizer. Candidate
 paths are registered in the synthetic operational journal before validation so
 rejected or abandoned files and backup sidecars remain cleanup obligations.
 Fault hooks exercise accepted, validated, partially removed, and published states; a fresh R process

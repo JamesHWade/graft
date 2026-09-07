@@ -217,6 +217,31 @@ forget_finish <- function(
   invisible(state)
 }
 
+forget_tables <- function(path) {
+  connection <- DBI::dbConnect(duckdb::duckdb(), path, read_only = TRUE)
+  on.exit(DBI::dbDisconnect(connection, shutdown = TRUE))
+  tables <- sort(DBI::dbListTables(connection))
+  stats::setNames(
+    lapply(tables, function(table) {
+      rows <- DBI::dbReadTable(connection, table)
+      keys <- vapply(
+        seq_len(nrow(rows)),
+        function(row) {
+          as.character(jsonlite::toJSON(
+            rows[row, , drop = FALSE],
+            dataframe = "rows"
+          ))
+        },
+        character(1)
+      )
+      rows <- rows[order(keys), , drop = FALSE]
+      rownames(rows) <- NULL
+      rows
+    }),
+    tables
+  )
+}
+
 forget_revisions <- function(path) {
   connection <- DBI::dbConnect(duckdb::duckdb(), path, read_only = TRUE)
   on.exit(DBI::dbDisconnect(connection, shutdown = TRUE))
@@ -243,7 +268,8 @@ forget_fixture <- function(.local_envir = parent.frame()) {
   correction$body <- "PRIVATE-FORGET-CORRECTED"
   survivor <- records$knowledge[1L, , drop = FALSE]
   survivor$body <- "Retained accepted correction."
-  build <- function(name, remove = character()) {
+  images <- new.env(parent = emptyenv())
+  create <- function(name, remove) {
     path <- file.path(directory, paste0(name, ".duckdb"))
     store <- graft_open(
       graft_schema(system.file(
@@ -275,6 +301,13 @@ forget_fixture <- function(.local_envir = parent.frame()) {
     }
     list(path = path, original = original)
   }
+  build <- function(name, remove = character()) {
+    candidate <- create(name, remove)
+    # Only this trusted, fixed-data builder establishes allowed logical images.
+    # This is not a validator for arbitrary externally supplied migrations.
+    images[[candidate$path]] <- forget_tables(candidate$path)
+    candidate
+  }
   certify <- function(path, preview) {
     expected <- lapply(records, function(table) {
       table[!table$id %in% preview$ids, , drop = FALSE]
@@ -285,6 +318,27 @@ forget_fixture <- function(.local_envir = parent.frame()) {
     ))
     connection <- DBI::dbConnect(duckdb::duckdb(), path, read_only = TRUE)
     on.exit(DBI::dbDisconnect(connection, shutdown = TRUE))
+    retained <- authority[!authority$record_id %in% preview$ids, , drop = FALSE]
+    rownames(retained) <- NULL
+    latest <- retained[
+      !duplicated(retained$record_id, fromLast = TRUE),
+      c("record_id", "class", "revision_number"),
+      drop = FALSE
+    ]
+    rownames(latest) <- NULL
+    heads <- DBI::dbGetQuery(
+      connection,
+      paste(
+        "SELECT h.record_id, r.class, r.revision_number",
+        "FROM _graft_record_heads h LEFT JOIN _graft_record_revisions r",
+        "ON h.revision_id = r.revision_id AND h.record_id = r.record_id",
+        "AND h.class = r.class AND h.revision_number = r.revision_number",
+        "ORDER BY h.record_id"
+      )
+    )
+    if (!identical(heads, latest)) {
+      return(FALSE)
+    }
     # Test-only raw inspection includes fields omitted by public reads.
     ids <- DBI::dbGetQuery(
       connection,
@@ -306,9 +360,9 @@ forget_fixture <- function(.local_envir = parent.frame()) {
     ) {
       return(FALSE)
     }
-    retained <- authority[!authority$record_id %in% preview$ids, , drop = FALSE]
-    rownames(retained) <- NULL
-    identical(forget_revisions(path), retained)
+    identical(forget_revisions(path), retained) &&
+      !is.null(images[[path]]) &&
+      identical(forget_tables(path), images[[path]])
   }
   alice <- build("alice")
   authority <- forget_revisions(alice$path)

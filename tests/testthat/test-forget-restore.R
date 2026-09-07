@@ -238,6 +238,7 @@ test_that("crashes and cleanup retries cannot reopen a retired generation", {
       grepl("PRIVATE-FORGET", canonical_json(tables), fixed = TRUE),
       FALSE
     )
+    unlink(fixture$directory, recursive = TRUE)
   }
 })
 
@@ -511,4 +512,89 @@ test_that("same-head candidates cannot lose or alter retained revisions", {
     fixture$certify
   )
   expect_identical(forget_journal_read(fixture$journal)$status, "active")
+})
+
+test_that("forgotten payloads in metadata cannot enter a certified image", {
+  fixture <- forget_fixture()
+  preview <- forget_preview(
+    fixture$journal,
+    fixture$records,
+    "knowledge:interpretation",
+    "request-1"
+  )
+  forget_accept(fixture$journal, preview, \(plan) identical(plan, preview))
+  for (field in c("metadata_json", "producer")) {
+    candidate <- fixture$build(field, preview$ids)
+    connection <- DBI::dbConnect(duckdb::duckdb(), candidate$path)
+    DBI::dbExecute(
+      connection,
+      paste0("UPDATE _graft_batches SET ", field, " = ?"),
+      params = list(
+        if (field == "metadata_json") {
+          '{"copy":"PRIVATE-FORGET-CORRECTED"}'
+        } else {
+          "PRIVATE-FORGET-CORRECTED"
+        }
+      )
+    )
+    DBI::dbDisconnect(connection, shutdown = TRUE)
+    expect_identical(fixture$certify(candidate$path, preview), FALSE)
+    expect_error(
+      forget_finish(
+        fixture$journal,
+        candidate$path,
+        fixture$purge_paths,
+        fixture$certify
+      ),
+      class = "forget_unavailable"
+    )
+    expect_identical(forget_journal_read(fixture$journal)$status, "blocked")
+  }
+})
+
+test_that("a stale head with rebuilt projections is refused before publication", {
+  fixture <- forget_fixture()
+  preview <- forget_preview(
+    fixture$journal,
+    fixture$records,
+    "knowledge:interpretation",
+    "request-1"
+  )
+  forget_accept(fixture$journal, preview, \(plan) identical(plan, preview))
+  candidate <- fixture$build("stale-head", preview$ids)
+  connection <- DBI::dbConnect(duckdb::duckdb(), candidate$path)
+  DBI::dbExecute(
+    connection,
+    paste(
+      "UPDATE _graft_record_heads SET revision_id =",
+      "(SELECT revision_id FROM _graft_record_revisions WHERE record_id = 'knowledge:conclusion' AND revision_number = 1),",
+      "revision_number = 1 WHERE record_id = 'knowledge:conclusion'"
+    )
+  )
+  schema <- as_graft_schema_internal(
+    graft_schema(system.file(
+      "extdata/narrative-knowledge.data-dict.json",
+      package = "graft"
+    )),
+    "schema"
+  )
+  rebuild_projection_views(connection, schema)
+  DBI::dbDisconnect(connection, shutdown = TRUE)
+  expect_error(
+    forget_open(candidate$path, \(store) {
+      graft_get(store, "knowledge:conclusion")
+    }),
+    class = "graft_backend_error"
+  )
+  expect_identical(fixture$certify(candidate$path, preview), FALSE)
+  expect_error(
+    forget_finish(
+      fixture$journal,
+      candidate$path,
+      fixture$purge_paths,
+      fixture$certify
+    ),
+    class = "forget_unavailable"
+  )
+  expect_identical(forget_journal_read(fixture$journal)$status, "blocked")
 })
