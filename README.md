@@ -19,6 +19,8 @@ try [narrative reuse](https://jameshwade.github.io/graft/articles/ecosystem.html
 or retain an [exact reuse basis](https://jameshwade.github.io/graft/articles/reuse-basis.html).
 The [Reader access example](https://jameshwade.github.io/graft/articles/reader-access.html)
 shows separate stores and host authorization with two synthetic Readers.
+The [Forget and recovery proposal](https://jameshwade.github.io/graft/articles/forget-restore.html)
+uses a synthetic backup proof to define the remaining erasure and recovery gates.
 The tested agent recipes use ellmer, Deputy and dsprrr. Commons receives a
 detached public source; LinkML supports richer graph domains.
 

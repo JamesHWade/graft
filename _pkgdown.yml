@@ -70,6 +70,8 @@ navbar:
           href: articles/linkml-schema.html
         - text: Open knowledge
           href: articles/open-knowledge-format.html
+        - text: Design Forget and recovery
+          href: articles/forget-restore.html
         - text: Architecture
           href: articles/architecture.html
         - text: Contract compilers
@@ -119,6 +121,7 @@ articles:
       Understand storage and projection boundaries, contract compilation, and
       the choices behind the v0.1 package design.
     contents:
+      - forget-restore
       - architecture
       - contract-compilers
       - v01-design
