@@ -17,6 +17,8 @@ it and authority to execute code. Acceptance is not factual truth.
 Follow the [offline quickstart](https://jameshwade.github.io/graft/articles/getting-started.html),
 try [narrative reuse](https://jameshwade.github.io/graft/articles/ecosystem.html),
 or retain an [exact reuse basis](https://jameshwade.github.io/graft/articles/reuse-basis.html).
+The [Reader access example](https://jameshwade.github.io/graft/articles/reader-access.html)
+shows separate stores and host authorization with two synthetic Readers.
 The tested agent recipes use ellmer, Deputy and dsprrr. Commons receives a
 detached public source; LinkML supports richer graph domains.
 
