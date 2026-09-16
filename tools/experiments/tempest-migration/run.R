@@ -55,10 +55,11 @@ tests <- testthat::test_dir(
 )
 rollback <- native("rollback")
 stopifnot(identical(experiment_tree_digest(source_path), source_digest))
-for (name in names(rollback)) {
+stopifnot(identical(rollback$receipts, produced$export$receipts))
+for (name in names(rollback$checkpoints)) {
   expected <- produced$export$checkpoints[[name]]
   stopifnot(identical(
-    rollback[[name]],
+    rollback$checkpoints[[name]],
     expected[c("snapshot", "resources", "report_md")]
   ))
 }
@@ -78,6 +79,7 @@ result <- list(
   }),
   source_unchanged = TRUE,
   rollback_verified = TRUE,
+  rollback_receipts_verified = length(rollback$receipts),
   source_export_sha256 = export_digest,
   packages = jsonlite::read_json("tools/experiments/pins.json")$packages,
   unsupported = produced$export$unsupported

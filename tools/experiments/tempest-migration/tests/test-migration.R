@@ -202,6 +202,95 @@ test_that("selection and evidence dependencies cannot be dropped together", {
   )
 })
 
+test_that("native operations, classes and revision-number keys remain consistent", {
+  first <- which(vapply(
+    migration_fixture$history,
+    \(row) row$revision_number == 1L,
+    logical(1)
+  ))[[1L]]
+  later <- which(vapply(
+    migration_fixture$history,
+    \(row) row$revision_number > 1L,
+    logical(1)
+  ))[[1L]]
+  for (index in c(first, later)) {
+    altered <- migration_fixture
+    altered$history[[index]]$operation <- if (index == first) {
+      "update"
+    } else {
+      "insert"
+    }
+    expect_error(
+      migration_validate(altered),
+      "operation does not match",
+      class = "artifact_experiment_error"
+    )
+  }
+  altered <- migration_fixture
+  altered$history[[later]]$class <- "Source"
+  expect_error(
+    migration_validate(altered),
+    "predecessor chain",
+    class = "artifact_experiment_error"
+  )
+  duplicate <- migration_fixture$history[[first]]
+  duplicate$revision_id <- "different-revision-id"
+  altered <- migration_fixture
+  altered$history <- c(altered$history, list(duplicate))
+  expect_error(
+    migration_validate(altered),
+    "Duplicate native revision-number key",
+    class = "artifact_experiment_error"
+  )
+})
+
+test_that("required receipts, checkpoints and bundles cannot be omitted", {
+  target <- withr::local_tempdir()
+  path <- withr::local_tempfile(fileext = ".json")
+  for (field in c("receipts", "checkpoints", "promotion_bundles")) {
+    altered <- migration_fixture
+    altered[[field]] <- list()
+    writeBin(charToRaw(artifact_json(altered)), path)
+    expect_error(
+      migration_import(path, artifact_hash(artifact_read_bytes(path)), target),
+      "Missing or ambiguous required",
+      class = "artifact_experiment_error"
+    )
+    expect_length(list.files(target), 0L)
+  }
+  altered <- migration_fixture
+  altered$receipts$unchanged <- NULL
+  expect_error(
+    migration_validate(altered),
+    "required receipts",
+    class = "artifact_experiment_error"
+  )
+})
+
+test_that("rollback revalidates the original receipts against native history", {
+  directory <- dirname(migration_fixture_path)
+  restored <- migration_rollback(directory)
+  expect_length(restored$receipts, 3L)
+  expect_identical(restored$receipts, migration_fixture$receipts)
+  accepted <- readRDS(file.path(directory, "native-receipts.rds"))
+  store <- graft::graft_open(
+    tempest::tempest_graft_schema(),
+    file.path(directory, "source.duckdb"),
+    read_only = TRUE,
+    okf = "disabled"
+  )
+  withr::defer(graft::graft_close(store))
+  expect_error(
+    migration_check_receipt(
+      store,
+      accepted$receipts$initial,
+      accepted$snapshots$correction
+    ),
+    "receipt does not match its reopened native snapshot",
+    class = "artifact_experiment_error"
+  )
+})
+
 test_that("the handoff digest and retained content detect changed bytes", {
   target <- withr::local_tempdir()
   expect_error(

@@ -48,10 +48,11 @@ their dependencies. An unchanged day retains the full selection even when there
 is no new acceptance receipt.
 
 Saving a draft and approving its reuse are separate actions. The application
-checks current eligibility when it starts a new workflow. A withdrawn selection
-stays withdrawn through a correction, including when the original input revisions
-later become current again. Historical access does not imply permission to use
-that evidence in a new task.
+checks current eligibility when it starts a new workflow. Corrections and returning
+to an earlier input revision do not automatically reapprove a withdrawn selection.
+The prototype permits the application to explicitly approve it again; the
+application owns who may do that and for what purpose. Historical access does not
+imply permission to use that evidence in a new task.
 
 The application also owns cancellation of active work, Reader identity, and
 permanent Forget. A stored selection cannot erase copies already given to a model.
@@ -84,7 +85,7 @@ objects validate, or retain an explicit mapping to them. Exporting only the late
 records loses accepted history and does not meet that requirement.
 
 The [Tempest migration experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md)
-uses current public promotion APIs and shipped synthetic research. Its 43
+uses current public promotion APIs and shipped synthetic research. Its 57
 assertions establish that:
 
 - 11 native revisions and three promotion receipts survive transfer;

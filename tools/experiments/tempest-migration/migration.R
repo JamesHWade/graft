@@ -37,9 +37,31 @@ migration_validate <- function(export) {
   if (length(export$history) > 40L || !length(export$history)) {
     artifact_error("Native history exceeds the bounded migration profile.")
   }
+  required <- list(
+    receipts = c("initial", "unchanged", "correction"),
+    checkpoints = c("initial", "correction"),
+    promotion_bundles = c("initial", "correction")
+  )
+  for (field in names(required)) {
+    values <- export[[field]]
+    if (
+      !is.list(values) ||
+        anyDuplicated(names(values)) ||
+        !setequal(names(values), required[[field]]) ||
+        any(vapply(values, \(value) !length(value), logical(1)))
+    ) {
+      artifact_error(paste("Missing or ambiguous required", field))
+    }
+  }
   ids <- vapply(export$history, \(row) row$revision_id, character(1))
   if (anyDuplicated(ids)) {
     artifact_error("Duplicate native revision identity.")
+  }
+  keys <- lapply(export$history, \(row) {
+    row[c("record_id", "class", "revision_number")]
+  })
+  if (anyDuplicated(keys)) {
+    artifact_error("Duplicate native revision-number key.")
   }
   final <- export$final_snapshot
   if (
@@ -86,6 +108,17 @@ migration_validate <- function(export) {
         "Tombstone or other native operation is unsupported by this migration profile."
       )
     }
+    expected <- if (isTRUE(row$revision_number == 1L)) "insert" else "update"
+    if (
+      !is.numeric(row$revision_number) ||
+        length(row$revision_number) != 1L ||
+        !is.finite(row$revision_number) ||
+        row$revision_number < 1L ||
+        row$revision_number != floor(row$revision_number) ||
+        !identical(row$operation, expected)
+    ) {
+      artifact_error("Native operation does not match its revision number.")
+    }
     if (
       !identical(row$schema_build_digest, final$schema_build_digest) ||
         row$commit_order > final$commit_order
@@ -100,6 +133,7 @@ migration_validate <- function(export) {
       prior <- migration_revision(export, row$prior_revision_id)
       if (
         !identical(prior$record_id, row$record_id) ||
+          !identical(prior$class, row$class) ||
           prior$revision_number != row$revision_number - 1L ||
           prior$commit_order >= row$commit_order
       ) {

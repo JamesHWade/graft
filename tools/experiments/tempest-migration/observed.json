@@ -1,7 +1,7 @@
 {
   "outcome": "Historical export/read parity; native Tempest admission requires a new public seam",
   "recommendation": "reduce; retain Graft for the existing Tempest contract",
-  "assertions": 43,
+  "assertions": 57,
   "native_history_revisions": 11,
   "retained_receipts": 3,
   "retained_target_artifacts": 12,
@@ -11,7 +11,8 @@
   },
   "source_unchanged": true,
   "rollback_verified": true,
-  "source_export_sha256": "6de4074d61f282f2a5185f11f80ff0f273cd9f3168813998ed51808a99b18eb9",
+  "rollback_receipts_verified": 3,
+  "source_export_sha256": "9189aec5f7982934888fd55551c0f656fdfff0a403c06c08a33429217f448286",
   "packages": [
     {
       "package": "commons",

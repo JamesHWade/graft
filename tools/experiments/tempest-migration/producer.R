@@ -73,6 +73,7 @@ migration_produce <- function(directory) {
     commit <- graft::graft_commit(store, plan)
     list(
       plan = plan,
+      snapshot = graft::graft_snapshot(store),
       receipt = tempest::tempest_promotion_receipt(store, bundle, plan, commit)
     )
   }
@@ -115,13 +116,19 @@ migration_produce <- function(directory) {
     list(recipe$briefing_selection(correction$receipt)),
     report("correction")
   )
-  receipts <- lapply(
+  accepted <- list(
+    initial = initial,
+    unchanged = unchanged,
+    correction = correction
+  )
+  native_receipts <- lapply(accepted, \(value) value$receipt)
+  receipts <- lapply(native_receipts, migration_properties)
+  saveRDS(
     list(
-      initial = initial$receipt,
-      unchanged = unchanged$receipt,
-      correction = correction$receipt
+      receipts = native_receipts,
+      snapshots = lapply(accepted, \(value) value$snapshot)
     ),
-    migration_properties
+    file.path(directory, "native-receipts.rds")
   )
   ids <- unique(unlist(lapply(receipts, function(receipt) {
     vapply(
@@ -210,6 +217,40 @@ migration_produce <- function(directory) {
   list(pid = Sys.getpid(), export = export)
 }
 
+migration_check_receipt <- function(store, receipt, snapshot) {
+  S7::validate(receipt)
+  view <- graft::graft_at(store, snapshot)
+  actual <- migration_properties(graft::graft_view_snapshot(view))
+  if (
+    !identical(
+      actual[names(receipt@snapshot)],
+      migration_plain(receipt@snapshot)
+    )
+  ) {
+    artifact_error(
+      "Original receipt does not match its reopened native snapshot."
+    )
+  }
+  for (ref in receipt@record_revisions) {
+    history <- graft::graft_history(view, ref$record_id, limit = 1L)
+    fields <- c(
+      "record_id",
+      "class",
+      "revision_id",
+      "revision_number",
+      "batch_id",
+      "schema_build_digest"
+    )
+    actual <- lapply(history[fields], \(column) column[[1L]])
+    if (!identical(migration_plain(actual), migration_plain(ref[fields]))) {
+      artifact_error(
+        "Original receipt does not match its reopened native revision."
+      )
+    }
+  }
+  migration_properties(receipt)
+}
+
 migration_rollback <- function(directory) {
   store <- graft::graft_open(
     tempest::tempest_graft_schema(),
@@ -220,12 +261,26 @@ migration_rollback <- function(directory) {
   on.exit(graft::graft_close(store), add = TRUE)
   # This is the trusted checkpoint created above, never an importer input.
   native <- readRDS(file.path(directory, "native-checkpoints.rds"))
+  accepted <- readRDS(file.path(directory, "native-receipts.rds"))
+  receipts <- Map(
+    \(receipt, snapshot) migration_check_receipt(store, receipt, snapshot),
+    accepted$receipts,
+    accepted$snapshots
+  )
   recipe <- migration_recipe()
-  lapply(native, function(basis) {
+  checkpoints <- lapply(names(native), function(name) {
+    basis <- native[[name]]
+    basis$selections <- list(recipe$briefing_selection(accepted$receipts[[
+      name
+    ]]))
     list(
       snapshot = migration_properties(basis$snapshot),
       resources = migration_resources(recipe$read_briefing_basis(store, basis)),
       report_md = basis$report_md
     )
   })
+  list(
+    receipts = receipts,
+    checkpoints = stats::setNames(checkpoints, names(native))
+  )
 }

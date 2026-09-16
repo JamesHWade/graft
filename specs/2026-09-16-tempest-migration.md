@@ -19,7 +19,7 @@ or relabel an artifact digest as a native snapshot.
 ## Executed evidence
 
 The [recorded local run](../tools/experiments/tempest-migration/observed.json)
-passes **43 assertions**, plus source-integrity and rollback guards.
+passes **57 assertions**, plus source-integrity and rollback guards.
 The complete experiment is also part of the Linux CI suite.
 
 | Evidence | Result |
@@ -33,7 +33,7 @@ The complete experiment is also part of the Linux CI suite.
 | Independent reader | Fresh process with jsonlite, digest, and rlang; neither Graft nor Tempest available |
 | Native admission | Explicitly rejected by Tempest's public constructor |
 | Withdrawal | Revoked selection stays ineligible; importing into a nonempty target cannot rewrite its policy |
-| Rollback | Both native checkpoints reopen read-only; reports, resources, snapshots, and the source directory digest match |
+| Rollback | All three original receipts validate against native snapshots and revisions; both report selections are rebuilt from their receipts; reports, resources, snapshots, and the source directory digest match |
 
 The first report says the synthetic pilot recovered 82%; the correction says
 62%. Both reports and exact evidence selections survive. The old Claim remains
@@ -62,8 +62,8 @@ metadata without requiring two reads to have the same timestamp.
 
 ## Implementation cost and missing machinery
 
-The producer/rollback fixture, migration adapter, and runner contain 231, 337,
-and 91 physical lines respectively, including comments and blank lines. Shared
+The producer/rollback fixture, migration adapter, and runner contain 286, 371,
+and 93 physical lines respectively, including comments and blank lines. Shared
 content and metadata-driver modules add 425 lines. Tests, provisioning, and
 upstream packages are additional. This is an inventory, not a latency, storage,
 maintenance, or production-cost benchmark.
