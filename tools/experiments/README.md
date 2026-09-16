@@ -29,6 +29,13 @@ Updating the snapshot is a deliberate change requiring a new full run.
 CLI digest. Every runner requires it and verifies the selected CLI's exact bytes
 against that digest and its declared source pins against `pins.json`. An
 unattested manual library/binary combination is rejected even if versions match.
+Setup always reinstalls Graft from the current checkout and records digests of
+its runtime/build inputs and installed package payload. Runners reject changed
+Graft sources or installed bytes even without a version bump. Experiment reports
+and other documentation edits do not require reinstalling unchanged runtime code.
+The CLI is built from a newly downloaded and extracted pinned archive each time;
+existing source directories are neither trusted nor overwritten. CI seeds an
+invalid legacy cache to verify this behavior.
 System libraries and OS images are not locked; this is a package snapshot, not a
 bit-for-bit environment image.
 

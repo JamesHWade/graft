@@ -17,11 +17,11 @@
   "checks": ["Current Commons installed", "Compatible ellmer installed", "Valid data report is preserved", "Valid Parquet data passes value validation", "Five typed definitions exported", "Filter kind and type", "Aggregate versus row grain", "Direct definition dependency exported", "DuckDB translation exported", "Real Commons dispatched all five model requests", "Calculation 1 succeeded", "Calculation 2 succeeded", "Calculation 3 succeeded", "Calculation 4 succeeded", "Calculation 5 succeeded", "SUM ignores the nullable row and returns 35", "Governed filter returns 15", "Derived aggregate returns 70", "Constant metric returns 42", "Derived row preserves missing value", "Governed calculations emit Commons A provenance", "Calculation names its translation target", "Filtered calculation records executed predicate", "Calculation preserves overflow translation caveat", "Upstream SQL translation executes: total", "Upstream SQL translation executes: doubled", "Upstream SQL translation executes: constant", "Derived row result matches all four expected cells", "Validated data bytes unchanged after calculation", "Invalid values return nonzero validation report status", "Profiling succeeds despite invalid values", "Commons construction does not enforce data-value constraints", "Unrelated Commons errors cannot satisfy unresolved-reference cases", "invalid_definition rejected for unresolved reference by both constructors", "related_reference rejected for unresolved reference by both constructors", "Mixed-grain definition validates in both constructors", "Mixed grain refused at Commons invocation", "R-language definition exposes compiler divergence"],
   "cases": {
     "invalid_definition": {
-      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-attested-evidence/semantics/invalid_definition.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: missing_column + 1\n   |           ^^^^^^^^^^^^^^ column `missing_column` not found",
+      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-build-identity-evidence/semantics/invalid_definition.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: missing_column + 1\n   |           ^^^^^^^^^^^^^^ column `missing_column` not found",
       "commons_error": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `data_dictionary()`:\n! Column \"missing_column\" not found."
     },
     "related_reference": {
-      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-attested-evidence/semantics/related_reference.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: other.revenue + 1\n   |           ^^^^^^^^^^^^^ column `other` not found",
+      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-build-identity-evidence/semantics/related_reference.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: other.revenue + 1\n   |           ^^^^^^^^^^^^^ column `other` not found",
       "commons_error": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `data_dictionary()`:\n! Column \"other\" not found."
     },
     "mixed_grain": {
@@ -237,5 +237,5 @@
       ]
     }
   },
-  "output_directory": "/private/tmp/graft-pr67-attested-evidence/semantics"
+  "output_directory": "/private/tmp/graft-pr67-build-identity-evidence/semantics"
 }

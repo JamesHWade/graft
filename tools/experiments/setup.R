@@ -74,13 +74,29 @@ for (pin in pins$packages) {
     stop("Pinned source/version mismatch for ", pin$package, call. = FALSE)
   }
 }
-if (!file.exists(file.path(experiment_library, "graft", "DESCRIPTION"))) {
-  stop(
-    "The current graft checkout must be installed in the isolated library.",
-    call. = FALSE
-  )
-}
 source("tools/experiments/runtime.R")
+graft_source_digest <- experiment_graft_sources()
+# Always rebuild the local package, even when dependency installation is skipped.
+install_status <- system2(
+  file.path(R.home("bin"), "R"),
+  c(
+    "CMD",
+    "INSTALL",
+    shQuote(paste0("--library=", experiment_library)),
+    shQuote(normalizePath("."))
+  )
+)
+if (!identical(install_status, 0L)) {
+  stop("Could not install the current Graft checkout.", call. = FALSE)
+}
+graft_attestation <- list(
+  source_sha256 = graft_source_digest,
+  installed_sha256 = experiment_tree_digest(file.path(
+    experiment_library,
+    "graft"
+  ))
+)
+experiment_check_graft(list(graft = graft_attestation))
 invisible(experiment_snapshot())
 
 # Commons context search uses ragnar's FTS index. Provision its extension during
@@ -109,35 +125,38 @@ cli_pin <- Filter(
   \(pin) identical(pin$package, pins$data_dict_cli_package),
   pins$packages
 )[[1]]
-source_dir <- file.path(experiment_home, paste0("data-dict-", cli_pin$sha))
-if (!dir.exists(source_dir)) {
-  archive <- tempfile(fileext = ".tar.gz")
-  utils::download.file(
-    paste0(
-      "https://api.github.com/repos/",
-      cli_pin$repository,
-      "/tarball/",
-      cli_pin$sha
-    ),
-    archive,
-    mode = "wb",
-    quiet = TRUE
+source_dir <- tempfile(
+  paste0("data-dict-", cli_pin$sha, "-"),
+  tmpdir = experiment_home
+)
+# Never build from a pre-existing, potentially edited source directory.
+archive <- tempfile(fileext = ".tar.gz")
+utils::download.file(
+  paste0(
+    "https://api.github.com/repos/",
+    cli_pin$repository,
+    "/tarball/",
+    cli_pin$sha
+  ),
+  archive,
+  mode = "wb",
+  quiet = TRUE
+)
+unpack <- tempfile("data-dict-source-", tmpdir = experiment_home)
+dir.create(unpack)
+utils::untar(archive, exdir = unpack)
+roots <- list.dirs(unpack, full.names = TRUE, recursive = FALSE)
+if (length(roots) != 1L || !file.exists(file.path(roots, "Cargo.lock"))) {
+  stop(
+    "Pinned data-dict archive has no unique Cargo source root.",
+    call. = FALSE
   )
-  unpack <- tempfile("data-dict-source-", tmpdir = experiment_home)
-  dir.create(unpack)
-  utils::untar(archive, exdir = unpack)
-  roots <- list.dirs(unpack, full.names = TRUE, recursive = FALSE)
-  if (length(roots) != 1L || !file.exists(file.path(roots, "Cargo.lock"))) {
-    stop(
-      "Pinned data-dict archive has no unique Cargo source root.",
-      call. = FALSE
-    )
-  }
-  if (!file.rename(roots, source_dir)) {
-    stop("Could not move data-dict source.", call. = FALSE)
-  }
-  unlink(c(unpack, archive), recursive = TRUE)
 }
+if (!file.rename(roots, source_dir)) {
+  stop("Could not move data-dict source.", call. = FALSE)
+}
+unlink(c(unpack, archive), recursive = TRUE)
+
 cargo <- Sys.which("cargo")
 if (!nzchar(cargo)) {
   stop("Install Rust/cargo before provisioning the CLI.", call. = FALSE)
@@ -207,9 +226,11 @@ installed <- as.data.frame(
   ],
   stringsAsFactors = FALSE
 )
+experiment_check_graft(list(graft = graft_attestation))
 jsonlite::write_json(
   list(
     source_pins = pins,
+    graft = graft_attestation,
     packages = installed,
     R = R.version.string,
     duckdb_fts = fts,

@@ -33,6 +33,36 @@ test_that("development builds require matching source identity despite equal ver
   expect_no_error(experiment_check_sources(pins, list(example = description)))
 })
 
+test_that("Graft attestation rejects changed source and replaced installed code", {
+  checkout <- withr::local_tempdir()
+  installed <- withr::local_tempdir()
+  dir.create(file.path(checkout, "R"))
+  source <- file.path(checkout, "R", "graft.R")
+  payload <- file.path(installed, "graft.rdb")
+  writeLines("original source", source)
+  writeLines("original installed code", payload)
+  attestation <- list(
+    graft = list(
+      source_sha256 = experiment_graft_sources(checkout),
+      installed_sha256 = experiment_tree_digest(installed)
+    )
+  )
+  expect_no_error(experiment_check_graft(attestation, checkout, installed))
+  writeLines("changed source without a version bump", source)
+  expect_error(
+    experiment_check_graft(attestation, checkout, installed),
+    "Graft checkout or installed build changed",
+    class = "simpleError"
+  )
+  writeLines("original source", source)
+  writeLines("replacement installed code with the same version", payload)
+  expect_error(
+    experiment_check_graft(attestation, checkout, installed),
+    "Graft checkout or installed build changed",
+    class = "simpleError"
+  )
+})
+
 test_that("CLI attestation binds exact bytes and the declared source pins", {
   binary <- withr::local_tempfile()
   writeBin(charToRaw("data-dict 0.0.3 original build"), binary)

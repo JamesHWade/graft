@@ -87,6 +87,78 @@ experiment_fts <- function(expected_version) {
   }
 }
 
+experiment_tree_digest <- function(root, paths = ".") {
+  root <- normalizePath(root, winslash = "/")
+  candidates <- file.path(root, paths)
+  files <- unlist(
+    lapply(candidates[file.exists(candidates)], function(path) {
+      if (dir.exists(path)) {
+        list.files(
+          path,
+          recursive = TRUE,
+          full.names = TRUE,
+          all.files = TRUE,
+          no.. = TRUE
+        )
+      } else {
+        path
+      }
+    }),
+    use.names = FALSE
+  )
+  files <- sort(unique(files))
+  hashes <- lapply(files, \(file) unname(cli::hash_file_sha256(file)))
+  names(hashes) <- substring(files, nchar(root) + 2L)
+  digest::digest(
+    jsonlite::toJSON(hashes, auto_unbox = TRUE),
+    algo = "sha256",
+    serialize = FALSE
+  )
+}
+
+experiment_graft_sources <- function(checkout = ".") {
+  experiment_tree_digest(
+    checkout,
+    c(
+      "DESCRIPTION",
+      "NAMESPACE",
+      ".Rbuildignore",
+      ".Rinstignore",
+      "R",
+      "src",
+      "inst",
+      "data",
+      "exec",
+      "configure",
+      "configure.win",
+      "cleanup",
+      "cleanup.win"
+    )
+  )
+}
+
+experiment_check_graft <- function(
+  attestation,
+  checkout = ".",
+  installed = find.package("graft")
+) {
+  if (
+    !identical(
+      attestation$graft$source_sha256,
+      experiment_graft_sources(checkout)
+    ) ||
+      !identical(
+        attestation$graft$installed_sha256,
+        experiment_tree_digest(installed)
+      )
+  ) {
+    stop(
+      "Graft checkout or installed build changed. Run setup.R again.",
+      call. = FALSE
+    )
+  }
+}
+
 experiment_check_cli <- function(attestation, pins, binary) {
   if (
     !identical(attestation$source_pins, pins) ||
@@ -117,8 +189,10 @@ experiment_prepare <- function(fts = FALSE) {
   }
   source(file.path(experiment_home, "environment.R"))
   snapshot <- experiment_snapshot()
+  attestation <- jsonlite::read_json(attestation_path)
+  experiment_check_graft(attestation)
   experiment_check_cli(
-    jsonlite::read_json(attestation_path),
+    attestation,
     jsonlite::read_json("tools/experiments/pins.json"),
     datadict::dd_path()
   )
