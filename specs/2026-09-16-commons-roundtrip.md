@@ -6,7 +6,7 @@ Experiment #62, September 16, 2026. See the
 ## Observed result
 
 Both Graft and manifest metadata compositions pass the complete roundtrip:
-22 testthat assertions across the two backends, plus fail-fast checks on actual
+30 testthat assertions across the two backends, plus fail-fast checks on actual
 Commons results, binding/dictionary identity, validated input, table values,
 PNG signatures and unchanged approval. Each output basis retains **16 exact
 objects**, including the report/table/figure, producer evidence, original inputs,
@@ -18,7 +18,8 @@ bytes remain recoverable after the correction. An explicitly approved but stale
 input selection is refused before Commons construction. A generated output is
 stored while the existing input approval remains unchanged; the host separately
 approves it for later use. Withdrawal denies consultation while historical
-inspection still works.
+inspection still works. Revising a withdrawn input selection preserves its
+policy bytes; restoring its original input revisions does not restore eligibility.
 
 The underlying tools are real Commons and ellmer. Only the model's HTTP responses
 are scripted, through public httr2 mocking. The calculation result is tagged A;
