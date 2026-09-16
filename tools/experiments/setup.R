@@ -51,6 +51,13 @@ if (!skip_r) {
 }
 # A version number alone cannot verify a development package's source.
 for (pin in pins$packages) {
+  if (!file.exists(file.path(experiment_library, pin$package, "DESCRIPTION"))) {
+    stop(
+      "Missing pinned package in the isolated library: ",
+      pin$package,
+      call. = FALSE
+    )
+  }
   description <- utils::packageDescription(
     pin$package,
     lib.loc = experiment_library

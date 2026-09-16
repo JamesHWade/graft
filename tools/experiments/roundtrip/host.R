@@ -53,6 +53,26 @@ roundtrip_generate <- function(store, basis, checkout) {
       )
     }
   )
+  # Consume retained release bytes, not mutable authoring paths, after ingestion.
+  retained_release <- file.path(work, "retained-release")
+  dir.create(retained_release)
+  release_files <- c(
+    "vocabulary.json",
+    "bindings.json",
+    "lab-a.yaml",
+    "lab-b.yaml",
+    "evidence.yaml"
+  )
+  for (i in seq_along(release_refs)) {
+    writeBin(
+      artifact_resolve(store, release_refs[[i]])$bytes,
+      file.path(retained_release, release_files[[i]])
+    )
+  }
+  replay <- publish_bindings(file.path(retained_release, "bindings.json"))
+  stopifnot(identical(replay, publication))
+  publication <- replay
+  fixture <- retained_release
   bundle_path <- file.path(work, "release.json")
   writeLines(artifact_json(publication), bundle_path)
   release <- artifact_save(
