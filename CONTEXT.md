@@ -95,3 +95,14 @@ Deterministic classification of an answer's recorded evidence path and
 receipts. It assesses neither prompt obedience nor semantic fidelity and is
 neither fact-checking nor authentication of stored identities.
 _Avoid_: Fact-check, proof
+
+## Artifact architecture experiments
+
+The proposed direction in ADR 0007 separates preserved artifact bytes and exact
+revision/dependency selections from host approval and current consultation
+eligibility. Vocabulary publishing is an independent module; Commons and data-dict
+retain analytical execution and local contract ownership. Both Graft and manifest
+metadata compositions pass the bounded fixtures under `tools/experiments/`.
+Current Graft public APIs and Tempest contracts remain in force until an explicit
+implementation/migration is verified. The experiments do not establish production
+Reader isolation, Forget/restore or concurrent durability.

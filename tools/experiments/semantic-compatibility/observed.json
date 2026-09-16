@@ -1,0 +1,241 @@
+{
+  "versions": {
+    "commons": "0.1.0.9000",
+    "ellmer": "0.5.0.9000",
+    "shinychat": "0.5.0.9000",
+    "datadict": "0.1.0",
+    "duckdb": "1.5.5",
+    "DBI": "1.3.0",
+    "httr2": "1.3.0",
+    "jsonlite": "2.0.0",
+    "yaml": "2.3.12",
+    "digest": "0.6.39"
+  },
+  "cli": "data-dict 0.0.3",
+  "validated_data_sha256": "6eaf106b9009f4d416b1622b025f4e5ec226db5f81ed039b0e2c52566ff06016",
+  "dictionary_sha256": "2b9ac2432abf8236963f6125d164aa9d1b909c24f6895dad4ab150adc26adfaa",
+  "checks": ["Current Commons installed", "Compatible ellmer installed", "Valid data report is preserved", "Valid Parquet data passes value validation", "Five typed definitions exported", "Filter kind and type", "Aggregate versus row grain", "Direct definition dependency exported", "DuckDB translation exported", "Real Commons dispatched all five model requests", "Calculation 1 succeeded", "Calculation 2 succeeded", "Calculation 3 succeeded", "Calculation 4 succeeded", "Calculation 5 succeeded", "SUM ignores the nullable row and returns 35", "Governed filter returns 15", "Derived aggregate returns 70", "Constant metric returns 42", "Derived row preserves missing value", "Governed calculations emit Commons A provenance", "Calculation names its translation target", "Filtered calculation records executed predicate", "Calculation preserves overflow translation caveat", "Upstream SQL translation executes: total", "Upstream SQL translation executes: doubled", "Upstream SQL translation executes: constant", "Derived row result matches all four expected cells", "Validated data bytes unchanged after calculation", "Invalid values return nonzero validation report status", "Profiling succeeds despite invalid values", "Commons construction does not enforce data-value constraints", "Unrelated Commons errors cannot satisfy unresolved-reference cases", "invalid_definition rejected for unresolved reference by both constructors", "related_reference rejected for unresolved reference by both constructors", "Mixed-grain definition validates in both constructors", "Mixed grain refused at Commons invocation", "R-language definition exposes compiler divergence"],
+  "cases": {
+    "invalid_definition": {
+      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-build-identity-evidence/semantics/invalid_definition.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: missing_column + 1\n   |           ^^^^^^^^^^^^^^ column `missing_column` not found",
+      "commons_error": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `data_dictionary()`:\n! Column \"missing_column\" not found."
+    },
+    "related_reference": {
+      "data_dict_error": "data-dict failed with status 1:\nerror[S20]: A definition may only reference columns/definitions from its table.\n  --> /private/tmp/graft-pr67-build-identity-evidence/semantics/related_reference.yaml:31:11\n   |\n 6 | - name: sales\n...\n30 |   - name: probe\n31 |     expr: other.revenue + 1\n   |           ^^^^^^^^^^^^^ column `other` not found",
+      "commons_error": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `data_dictionary()`:\n! Column \"other\" not found."
+    },
+    "mixed_grain": {
+      "data_dict_error": null,
+      "commons_error": null,
+      "invocation_error": "Mixed-grain definition \"probe\" cannot be grouped by with\n`call_metrics()`; use it in `run_sql()`."
+    },
+    "r_language": {
+      "data_dict_error": null,
+      "commons_error": "Definition \"probe\" on table \"sales\" has an invalid expression.\nCaused by error in `data_dictionary()`:\n! Invalid definition expression at character 1.\n✖ expected an expression"
+    }
+  },
+  "definition_metadata": {
+    "emea": {
+      "name": "emea",
+      "expression": "region = 'EMEA'",
+      "kind": "filter",
+      "type": "boolean",
+      "columns": [
+        "region"
+      ],
+      "translations": [
+        {
+          "target": "SQL(duckdb)",
+          "code": "\"region\" = 'EMEA'"
+        },
+        {
+          "target": "R(tidyverse)",
+          "code": "region == \"EMEA\""
+        },
+        {
+          "target": "R(base)",
+          "code": "region == \"EMEA\""
+        },
+        {
+          "target": "R(data.table)",
+          "code": "region == \"EMEA\""
+        },
+        {
+          "target": "Python(polars)",
+          "code": "pl.col(\"region\") == pl.lit(\"EMEA\")"
+        }
+      ]
+    },
+    "total": {
+      "name": "total",
+      "expression": "SUM(revenue)",
+      "kind": "metric",
+      "type": "number",
+      "columns": [
+        "revenue"
+      ],
+      "translations": [
+        {
+          "target": "SQL(duckdb)",
+          "code": "sum(\"revenue\")",
+          "notes": [
+            "DuckDB sums integers at 128 bits, so a total data-dict reports as an overflow (D09) may succeed."
+          ]
+        },
+        {
+          "target": "R(tidyverse)",
+          "code": "sum(revenue, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "R(base)",
+          "code": "sum(revenue, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "R(data.table)",
+          "code": "sum(revenue, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "Python(polars)",
+          "code": "pl.col(\"revenue\").sum()",
+          "notes": [
+            "polars folds an empty or all-null column to the identity (0 for `sum`, False for `any`, True for `all`) where data-dict returns null, so such an assertion differs on an empty table.",
+            "polars wraps integer arithmetic at 64 bits, where data-dict reports the overflow (D09) and withdraws the verdict rather than producing a wrong value."
+          ]
+        }
+      ]
+    },
+    "doubled": {
+      "name": "doubled",
+      "expression": "revenue * 2",
+      "kind": "derived",
+      "type": "number",
+      "columns": [
+        "revenue"
+      ],
+      "translations": [
+        {
+          "target": "SQL(duckdb)",
+          "code": "\"revenue\" * 2"
+        },
+        {
+          "target": "R(tidyverse)",
+          "code": "revenue * 2L"
+        },
+        {
+          "target": "R(base)",
+          "code": "revenue * 2L"
+        },
+        {
+          "target": "R(data.table)",
+          "code": "revenue * 2L"
+        },
+        {
+          "target": "Python(polars)",
+          "code": "pl.col(\"revenue\") * pl.lit(2)",
+          "notes": [
+            "polars wraps integer arithmetic at 64 bits, where data-dict reports the overflow (D09) and withdraws the verdict rather than producing a wrong value."
+          ]
+        }
+      ]
+    },
+    "constant": {
+      "name": "constant",
+      "expression": "42",
+      "kind": "metric",
+      "type": "number",
+      "columns": [],
+      "translations": [
+        {
+          "target": "SQL(duckdb)",
+          "code": "42"
+        },
+        {
+          "target": "R(tidyverse)",
+          "code": "42L"
+        },
+        {
+          "target": "R(base)",
+          "code": "42L"
+        },
+        {
+          "target": "R(data.table)",
+          "code": "42L"
+        },
+        {
+          "target": "Python(polars)",
+          "code": "pl.lit(42)"
+        }
+      ]
+    },
+    "total_doubled": {
+      "name": "total_doubled",
+      "expression": "SUM(doubled)",
+      "kind": "metric",
+      "type": "number",
+      "columns": [],
+      "definitions": [
+        "doubled"
+      ],
+      "translations": [
+        {
+          "target": "SQL(duckdb)",
+          "code": "sum(\"doubled\")",
+          "notes": [
+            "DuckDB sums integers at 128 bits, so a total data-dict reports as an overflow (D09) may succeed."
+          ]
+        },
+        {
+          "target": "R(tidyverse)",
+          "code": "sum(doubled, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "R(base)",
+          "code": "sum(doubled, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "R(data.table)",
+          "code": "sum(doubled, na.rm = TRUE)",
+          "notes": [
+            "R folds an empty or all-null column to the identity (0, FALSE, TRUE, Inf) where data-dict returns null — and data-dict gives an infinity only for a column that really holds one — so an aggregate assertion differs on such a column.",
+            "R has no 64-bit integers, so arithmetic data-dict reports as an overflow (D09) yields a double here.",
+            "`na.rm = TRUE` drops a NaN along with the nulls, where data-dict folds it in — so an aggregate over a column holding one differs."
+          ]
+        },
+        {
+          "target": "Python(polars)",
+          "code": "pl.col(\"doubled\").sum()",
+          "notes": [
+            "polars folds an empty or all-null column to the identity (0 for `sum`, False for `any`, True for `all`) where data-dict returns null, so such an assertion differs on an empty table.",
+            "polars wraps integer arithmetic at 64 bits, where data-dict reports the overflow (D09) and withdraws the verdict rather than producing a wrong value."
+          ]
+        }
+      ]
+    }
+  },
+  "output_directory": "/private/tmp/graft-pr67-build-identity-evidence/semantics"
+}

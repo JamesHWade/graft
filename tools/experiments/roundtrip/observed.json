@@ -1,0 +1,18 @@
+{
+  "manifest": {
+    "original_total": 6,
+    "revised_total": 7,
+    "retained_objects": 16,
+    "separate_processes": true,
+    "calculation_tag": "A",
+    "output_draft_requires_host_approval": true
+  },
+  "graft": {
+    "original_total": 6,
+    "revised_total": 7,
+    "retained_objects": 16,
+    "separate_processes": true,
+    "calculation_tag": "A",
+    "output_draft_requires_host_approval": true
+  }
+}

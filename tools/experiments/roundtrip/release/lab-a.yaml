@@ -1,0 +1,22 @@
+$version: "0.1.0"
+$learn_more: https://data-dict.tidyverse.org/
+name: lab-a
+version: {number: "1.0.0"}
+description: Independently authored lab-a temperature observations.
+tables:
+  - name: readings
+    columns:
+      - name: reading_id
+        type: string
+        examples: ["s1", "s2"]
+        constraints: [primary_key]
+        description: Local measurement record identity.
+      - name: sample_id
+        type: string
+        examples: ["s1", "s2"]
+        description: Local sample identity.
+      - name: temperature_c
+        type: number(quantity)
+        range: [0, 300]
+        units: degC
+        description: Temperature under ambient conditions.
