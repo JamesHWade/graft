@@ -19,7 +19,7 @@ or relabel an artifact digest as a native snapshot.
 ## Executed evidence
 
 The [recorded local run](../tools/experiments/tempest-migration/observed.json)
-passes **57 assertions**, plus source-integrity and rollback guards.
+passes **64 assertions**, plus source-integrity and rollback guards.
 The complete experiment is also part of the Linux CI suite.
 
 | Evidence | Result |
@@ -49,7 +49,7 @@ history for the records covered by the selected receipts. This is not a general
 export of every record in an arbitrary source store.
 
 Native revision IDs map to exact artifact references. Their payloads retain the
-native IDs; the root depends on every imported revision. Missing receipt coverage,
+native IDs; the root depends on every imported revision. Missing or empty receipt coverage,
 predecessors or evidence links, cross-store snapshots, changed schema bytes, and
 corrupt content fail explicitly.
 
@@ -62,7 +62,7 @@ metadata without requiring two reads to have the same timestamp.
 
 ## Implementation cost and missing machinery
 
-The producer/rollback fixture, migration adapter, and runner contain 286, 371,
+The producer/rollback fixture, migration adapter, and runner contain 286, 376,
 and 93 physical lines respectively, including comments and blank lines. Shared
 content and metadata-driver modules add 425 lines. Tests, provisioning, and
 upstream packages are additional. This is an inventory, not a latency, storage,

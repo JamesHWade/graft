@@ -85,7 +85,7 @@ objects validate, or retain an explicit mapping to them. Exporting only the late
 records loses accepted history and does not meet that requirement.
 
 The [Tempest migration experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md)
-uses current public promotion APIs and shipped synthetic research. Its 57
+uses current public promotion APIs and shipped synthetic research. Its 64
 assertions establish that:
 
 - 11 native revisions and three promotion receipts survive transfer;

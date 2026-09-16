@@ -267,6 +267,28 @@ test_that("required receipts, checkpoints and bundles cannot be omitted", {
   )
 })
 
+test_that("every required receipt retains covered revisions before import", {
+  target <- withr::local_tempdir()
+  path <- withr::local_tempfile(fileext = ".json")
+  for (name in c("initial", "unchanged", "correction")) {
+    for (revisions in list(list(), NULL)) {
+      altered <- migration_fixture
+      altered$receipts[[name]]$record_revisions <- revisions
+      writeBin(charToRaw(artifact_json(altered)), path)
+      expect_error(
+        migration_import(
+          path,
+          artifact_hash(artifact_read_bytes(path)),
+          target
+        ),
+        "Each required receipt must cover native revisions",
+        class = "artifact_experiment_error"
+      )
+    }
+  }
+  expect_length(list.files(target), 0L)
+})
+
 test_that("rollback revalidates the original receipts against native history", {
   directory <- dirname(migration_fixture_path)
   restored <- migration_rollback(directory)

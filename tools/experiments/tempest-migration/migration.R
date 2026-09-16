@@ -146,6 +146,11 @@ migration_validate <- function(export) {
     recursive = FALSE
   )
   for (receipt in export$receipts) {
+    if (
+      !is.list(receipt$record_revisions) || !length(receipt$record_revisions)
+    ) {
+      artifact_error("Each required receipt must cover native revisions.")
+    }
     bundle <- migration_one(
       export$promotion_bundles,
       \(bundle) identical(bundle$bundle_id, receipt$bundle_id),

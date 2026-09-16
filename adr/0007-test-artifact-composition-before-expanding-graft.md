@@ -43,7 +43,7 @@ compare next, with a specific retirement test below.
 | #60 | 18 cases validate portable bindings and use the release in plain R and Commons constructors without a Graft store | Keep one publishing module; ontology alone does not earn a ledger or reasoner |
 | #61 | 38 checks exercise real data-dict/Commons on the same Parquet bytes; R-language definition diverges | Shared YAML is not shared execution semantics; pursue a public resolved-export contract upstream |
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
-| #64 | 57 assertions preserve native Tempest history and receipts in a Graft-free reader; public knowledge admission rejects the portable view | Historical portability is demonstrated; retain the existing consumer contract until its replacement is proved |
+| #64 | 64 assertions preserve native Tempest history and receipts in a Graft-free reader; public knowledge admission rejects the portable view | Historical portability is demonstrated; retain the existing consumer contract until its replacement is proved |
 
 Results and reproducible commands are indexed in
 [`tools/experiments/README.md`](../tools/experiments/README.md). The independent
