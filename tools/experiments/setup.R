@@ -98,6 +98,7 @@ graft_attestation <- list(
 )
 experiment_check_graft(list(graft = graft_attestation))
 invisible(experiment_snapshot())
+package_digests <- experiment_package_digests(pins$packages)
 
 # Commons context search uses ragnar's FTS index. Provision its extension during
 # network-enabled setup, in an explicit cache shared by later R processes.
@@ -227,9 +228,11 @@ installed <- as.data.frame(
   stringsAsFactors = FALSE
 )
 experiment_check_graft(list(graft = graft_attestation))
+experiment_check_packages(list(package_sha256 = package_digests), pins$packages)
 jsonlite::write_json(
   list(
     source_pins = pins,
+    package_sha256 = package_digests,
     graft = graft_attestation,
     packages = installed,
     R = R.version.string,

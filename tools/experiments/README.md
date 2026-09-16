@@ -26,7 +26,10 @@ evidence. Every runner also verifies each development package's installed
 `RemoteSha` against `pins.json`; matching version strings alone are insufficient.
 Updating the snapshot is a deliberate change requiring a new full run.
 `versions.json` is setup's attestation of installed versions, source pins and the
-CLI digest. Every runner requires it and verifies the selected CLI's exact bytes
+CLI digest. Setup also records installed-tree digests for all four pinned
+development packages; every runner rejects changed payloads even when package
+version and source metadata remain unchanged.
+Every runner requires the attestation and verifies the selected CLI's exact bytes
 against that digest and its declared source pins against `pins.json`. An
 unattested manual library/binary combination is rejected even if versions match.
 Setup always reinstalls Graft from the current checkout and records digests of

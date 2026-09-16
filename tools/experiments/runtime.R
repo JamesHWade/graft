@@ -138,6 +138,40 @@ experiment_graft_sources <- function(checkout = ".") {
   )
 }
 
+experiment_package_digests <- function(pins, locate = find.package) {
+  packages <- vapply(pins, \(pin) pin$package, character(1))
+  stats::setNames(
+    lapply(packages, \(package) experiment_tree_digest(locate(package))),
+    packages
+  )
+}
+
+experiment_check_packages <- function(
+  attestation,
+  pins,
+  locate = find.package
+) {
+  actual <- experiment_package_digests(pins, locate)
+  mismatches <- names(actual)[vapply(
+    names(actual),
+    \(package) {
+      !identical(
+        attestation$package_sha256[[package]],
+        actual[[package]]
+      )
+    },
+    logical(1)
+  )]
+  if (length(mismatches)) {
+    stop(
+      "Installed pinned package changed or has no digest: ",
+      paste(mismatches, collapse = ", "),
+      ". Run setup.R again.",
+      call. = FALSE
+    )
+  }
+}
+
 experiment_check_graft <- function(
   attestation,
   checkout = ".",
@@ -191,10 +225,12 @@ experiment_prepare <- function(fts = FALSE) {
   source(file.path(experiment_home, "environment.R"))
   snapshot <- experiment_snapshot()
   attestation <- jsonlite::read_json(attestation_path)
+  pins <- jsonlite::read_json("tools/experiments/pins.json")
+  experiment_check_packages(attestation, pins$packages)
   experiment_check_graft(attestation)
   experiment_check_cli(
     attestation,
-    jsonlite::read_json("tools/experiments/pins.json"),
+    pins,
     datadict::dd_path()
   )
   if (fts) {

@@ -72,6 +72,32 @@ test_that("Graft attestation rejects changed source and replaced installed code"
   )
 })
 
+test_that("pinned package attestation detects payload changes with unchanged metadata", {
+  installed <- withr::local_tempdir()
+  dir.create(file.path(installed, "R"))
+  writeLines(
+    c("Version: 0.1.0.9000", "RemoteSha: unchanged"),
+    file.path(installed, "DESCRIPTION")
+  )
+  payload <- file.path(installed, "R", "example.rdb")
+  writeBin(charToRaw("original lazy-load database"), payload)
+  pins <- list(list(package = "example"))
+  locate <- \(package) installed
+  attestation <- list(package_sha256 = experiment_package_digests(pins, locate))
+  expect_no_error(experiment_check_packages(attestation, pins, locate))
+  writeBin(charToRaw("replaced lazy-load database"), payload)
+  expect_error(
+    experiment_check_packages(attestation, pins, locate),
+    "Installed pinned package changed or has no digest: example",
+    class = "simpleError"
+  )
+  expect_error(
+    experiment_check_packages(list(), pins, locate),
+    "Installed pinned package changed or has no digest: example",
+    class = "simpleError"
+  )
+})
+
 test_that("CLI attestation binds exact bytes and the declared source pins", {
   binary <- withr::local_tempfile()
   writeBin(charToRaw("data-dict 0.0.3 original build"), binary)
