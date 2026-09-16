@@ -33,6 +33,15 @@ test_that("development builds require matching source identity despite equal ver
   expect_no_error(experiment_check_sources(pins, list(example = description)))
 })
 
+test_that("tree digests survive child processes changing collation", {
+  root <- withr::local_tempdir()
+  writeLines("first", file.path(root, "a.R"))
+  writeLines("second", file.path(root, "Z.R"))
+  original <- experiment_tree_digest(root)
+  withr::local_collate("C")
+  expect_identical(experiment_tree_digest(root), original)
+})
+
 test_that("Graft attestation rejects changed source and replaced installed code", {
   checkout <- withr::local_tempdir()
   installed <- withr::local_tempdir()

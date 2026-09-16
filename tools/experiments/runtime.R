@@ -106,7 +106,8 @@ experiment_tree_digest <- function(root, paths = ".") {
     }),
     use.names = FALSE
   )
-  files <- sort(unique(files))
+  # callr children may use a different collation locale from the setup process.
+  files <- sort(unique(files), method = "radix")
   hashes <- lapply(files, \(file) unname(cli::hash_file_sha256(file)))
   names(hashes) <- substring(files, nchar(root) + 2L)
   digest::digest(
