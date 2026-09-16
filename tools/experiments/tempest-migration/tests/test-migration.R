@@ -119,7 +119,7 @@ test_that("incomplete or inconsistent histories fail before import", {
   altered$history <- altered$history[-length(altered$history)]
   expect_error(
     migration_validate(altered),
-    "Missing or ambiguous native revision",
+    "Missing or ambiguous promotion record",
     class = "artifact_experiment_error"
   )
   altered <- migration_fixture
@@ -198,7 +198,7 @@ test_that("selection and evidence dependencies cannot be dropped together", {
   altered$checkpoints$initial <- checkpoint
   expect_error(
     migration_validate(altered),
-    "required evidence dependency",
+    "complete selection",
     class = "artifact_experiment_error"
   )
 })
@@ -342,6 +342,73 @@ test_that("every required receipt retains covered revisions before import", {
         class = "artifact_experiment_error"
       )
     }
+  }
+  expect_length(list.files(target), 0L)
+})
+
+test_that("each receipt must cover every source bundle revision exactly once", {
+  target <- withr::local_tempdir()
+  path <- withr::local_tempfile(fileext = ".json")
+  for (name in names(migration_fixture$receipts)) {
+    refs <- migration_fixture$receipts[[name]]$record_revisions
+    for (i in seq_along(refs)) {
+      for (replacement in list(refs[-i], c(refs[-i], refs[-i][1L]))) {
+        altered <- migration_fixture
+        altered$receipts[[name]]$record_revisions <- replacement
+        writeBin(charToRaw(artifact_json(altered)), path)
+        expect_error(
+          migration_import(
+            path,
+            artifact_hash(artifact_read_bytes(path)),
+            target
+          ),
+          "complete source bundle revision set",
+          class = "artifact_experiment_error"
+        )
+      }
+    }
+  }
+  expect_length(list.files(target), 0L)
+})
+
+test_that("checkpoint completeness comes from its own receipt", {
+  target <- withr::local_tempdir()
+  path <- withr::local_tempfile(fileext = ".json")
+  for (name in names(migration_fixture$checkpoints)) {
+    original <- migration_fixture$checkpoints[[name]]
+    for (i in seq_along(original$record_ids)) {
+      altered <- migration_fixture
+      checkpoint <- original
+      id <- checkpoint$record_ids[[i]]
+      checkpoint$record_ids <- checkpoint$record_ids[-i]
+      checkpoint$revision_ids <- checkpoint$revision_ids[-i]
+      checkpoint$resources <- checkpoint$resources[-i]
+      checkpoint$selections <- lapply(
+        checkpoint$selections,
+        function(selection) {
+          Filter(\(ref) !identical(ref$record_id, id), selection)
+        }
+      )
+      altered$checkpoints[[name]] <- checkpoint
+      writeBin(charToRaw(artifact_json(altered)), path)
+      expect_error(
+        migration_import(
+          path,
+          artifact_hash(artifact_read_bytes(path)),
+          target
+        ),
+        "complete selection",
+        class = "artifact_experiment_error"
+      )
+    }
+    altered <- migration_fixture
+    other <- if (name == "initial") "correction" else "initial"
+    altered$checkpoints[[name]] <- altered$checkpoints[[other]]
+    expect_error(
+      migration_validate(altered),
+      "complete selection",
+      class = "artifact_experiment_error"
+    )
   }
   expect_length(list.files(target), 0L)
 })

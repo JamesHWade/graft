@@ -27,6 +27,48 @@ migration_at <- function(export, record_id, order) {
   rows[[which.max(vapply(rows, \(row) row$revision_number, numeric(1)))]]
 }
 
+# Match the pinned producer's promotion keys against history independently of
+# the receipt. Every source row must resolve exactly once at acceptance time.
+migration_bundle_revisions <- function(export, records, boundary) {
+  keys <- c(
+    Source = "tempest_source_id",
+    Claim = "tempest_claim_id",
+    EvidenceSpan = "id",
+    ClaimSupport = "tempest_claim_support_id",
+    ProgramArtifact = "id"
+  )
+  if (!setequal(names(records), names(keys))) {
+    artifact_error("Unsupported promotion record classes.")
+  }
+  available <- Filter(\(row) row$commit_order <= boundary, export$history)
+  ids <- unique(vapply(available, \(row) row$record_id, character(1)))
+  heads <- lapply(ids, \(id) migration_at(export, id, boundary))
+  unlist(
+    lapply(names(records), function(class) {
+      lapply(records[[class]], function(record) {
+        key <- keys[[class]]
+        migration_one(
+          heads,
+          function(row) {
+            identical(row$class, class) &&
+              !is.null(record[[key]]) &&
+              identical(row$record[[key]], record[[key]])
+          },
+          "promotion record at its receipt boundary."
+        )$revision_id
+      })
+    }),
+    use.names = FALSE
+  )
+}
+
+migration_order_selection <- function(selected) {
+  selected[order(
+    vapply(selected, \(ref) ref$record_id, character(1)),
+    method = "radix"
+  )]
+}
+
 migration_validate <- function(export) {
   if (
     !identical(export$format, 2L) ||
@@ -57,7 +99,7 @@ migration_validate <- function(export) {
   if (anyDuplicated(ids)) {
     artifact_error("Duplicate native revision identity.")
   }
-  keys <- lapply(export$history, \(row) {
+  keys <- lapply(export$history, function(row) {
     row[c("record_id", "class", "revision_number")]
   })
   if (anyDuplicated(keys)) {
@@ -141,29 +183,19 @@ migration_validate <- function(export) {
       }
     }
   }
-  receipt_rows <- unlist(
-    lapply(export$receipts, \(receipt) receipt$record_revisions),
-    recursive = FALSE
-  )
-  for (receipt in export$receipts) {
+  for (name in names(export$receipts)) {
+    receipt <- export$receipts[[name]]
     if (
       !is.list(receipt$record_revisions) || !length(receipt$record_revisions)
     ) {
       artifact_error("Each required receipt must cover native revisions.")
     }
-    bundle <- migration_one(
-      export$promotion_bundles,
-      \(bundle) identical(bundle$bundle_id, receipt$bundle_id),
-      "source promotion bundle."
-    )
+    bundle_name <- if (name == "unchanged") "initial" else name
+    bundle <- export$promotion_bundles[[bundle_name]]
+    source <- jsonlite::fromJSON(bundle$bundle_json, simplifyVector = FALSE)
     if (
-      !identical(
-        jsonlite::fromJSON(
-          bundle$bundle_json,
-          simplifyVector = FALSE
-        )$bundle_id,
-        receipt$bundle_id
-      )
+      !identical(bundle$bundle_id, receipt$bundle_id) ||
+        !identical(source$bundle_id, receipt$bundle_id)
     ) {
       artifact_error("Promotion bundle does not match its retained receipt.")
     }
@@ -187,6 +219,25 @@ migration_validate <- function(export) {
     ) {
       artifact_error("Receipt identity does not match its source snapshot.")
     }
+    expected <- migration_bundle_revisions(
+      export,
+      source$records,
+      receipt$snapshot$commit_order
+    )
+    covered <- vapply(
+      receipt$record_revisions,
+      \(ref) ref$revision_id,
+      character(1)
+    )
+    if (
+      anyDuplicated(expected) ||
+        anyDuplicated(covered) ||
+        !setequal(expected, covered)
+    ) {
+      artifact_error(
+        "Receipt does not retain the complete source bundle revision set."
+      )
+    }
     for (ref in receipt$record_revisions) {
       row <- migration_revision(export, ref$revision_id)
       fields <- c(
@@ -204,16 +255,23 @@ migration_validate <- function(export) {
       }
     }
   }
-  for (checkpoint in export$checkpoints) {
+  for (name in names(export$checkpoints)) {
+    checkpoint <- export$checkpoints[[name]]
     snapshot_check(checkpoint$snapshot)
-    selected <- unlist(checkpoint$selections, recursive = FALSE)
-    selected <- selected[order(
-      vapply(selected, \(ref) ref$record_id, character(1)),
-      method = "radix"
-    )]
+    expected <- migration_order_selection(Filter(
+      function(ref) {
+        ref$class %in% c("Claim", "ClaimSupport", "EvidenceSpan", "Source")
+      },
+      export$receipts[[name]]$record_revisions
+    ))
+    selected <- migration_order_selection(unlist(
+      checkpoint$selections,
+      recursive = FALSE
+    ))
     selected_ids <- vapply(selected, \(ref) ref$record_id, character(1))
     if (
-      anyDuplicated(selected_ids) ||
+      !identical(selected, expected) ||
+        anyDuplicated(selected_ids) ||
         !identical(as.list(selected_ids), checkpoint$record_ids) ||
         !identical(
           lapply(selected, \(ref) ref$revision_id),
@@ -224,17 +282,6 @@ migration_validate <- function(export) {
       artifact_error("Checkpoint does not retain its complete selection.")
     }
     rows <- lapply(selected, function(ref) {
-      if (
-        !any(vapply(
-          receipt_rows,
-          \(covered) identical(covered, ref),
-          logical(1)
-        ))
-      ) {
-        artifact_error(
-          "Checkpoint revision is not covered by a retained receipt."
-        )
-      }
       row <- migration_at(
         export,
         ref$record_id,

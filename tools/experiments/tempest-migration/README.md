@@ -28,7 +28,9 @@ uses only the installed packages and synthetic local fixtures.
    the terminal exported revision to match it.
 4. Import each native revision into the existing manifest artifact driver. One
    retained root records the native-to-artifact identity map and depends on all
-   imported revisions. Native IDs retain their original meanings.
+   imported revisions. Native IDs retain their original meanings. Validate every
+   receipt against the complete source bundle record set and every checkpoint
+   against the complete evidence selection from its own receipt.
 5. Read the target in a fresh process whose library contains only jsonlite,
    digest, and rlang, plus base R packages. Graft and Tempest must be absent.
 6. Exercise missing history, incorrect receipts, incomplete dependencies,

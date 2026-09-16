@@ -1,7 +1,7 @@
 {
   "outcome": "Historical export/read parity; native Tempest admission requires a new public seam",
   "recommendation": "reduce; redesign the Tempest boundary without backwards-compatibility constraints",
-  "assertions": 73,
+  "assertions": 121,
   "native_history_revisions": 11,
   "native_final_heads": 10,
   "retained_receipts": 3,
@@ -13,7 +13,7 @@
   "source_unchanged": true,
   "rollback_verified": true,
   "rollback_receipts_verified": 3,
-  "source_export_sha256": "31addcb9c6cfd9ef9be4ef33372057a3253263372516165940dfaf29d5e54a27",
+  "source_export_sha256": "986012f74db5bbcd7081e45e1a6debd88698fd494c0581ec733edf97b7e7b4db",
   "packages": [
     {
       "package": "commons",
