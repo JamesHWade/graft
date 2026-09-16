@@ -3,6 +3,22 @@ experiment_home <- Sys.getenv("GRAFT_EXPERIMENT_HOME")
 if (nzchar(experiment_home)) {
   source(file.path(experiment_home, "environment.R"))
 }
+# Fail before Commons can implicitly download an extension during context search.
+check_fts <- function() {
+  con <- DBI::dbConnect(duckdb::duckdb())
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  fts <- DBI::dbGetQuery(
+    con,
+    "SELECT installed FROM duckdb_extensions() WHERE extension_name = 'fts'"
+  )
+  if (nrow(fts) != 1L || !isTRUE(fts$installed)) {
+    stop(
+      "Run setup.R to provision DuckDB's FTS extension first.",
+      call. = FALSE
+    )
+  }
+}
+check_fts()
 output <- Sys.getenv(
   "GRAFT_EXPERIMENT_OUTPUT",
   tempfile("artifact-memory-evidence-")

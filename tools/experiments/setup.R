@@ -76,6 +76,20 @@ if (!file.exists(file.path(experiment_library, "graft", "DESCRIPTION"))) {
   )
 }
 
+# Commons context search uses ragnar's FTS index. Provision its extension during
+# network-enabled setup, in DuckDB's default cache shared by later R processes.
+provision_fts <- function() {
+  con <- DBI::dbConnect(duckdb::duckdb())
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  DBI::dbExecute(con, "INSTALL fts; LOAD fts;")
+  DBI::dbGetQuery(
+    con,
+    "SELECT * FROM duckdb_extensions() WHERE extension_name = 'fts'"
+  )
+}
+fts <- provision_fts()
+stopifnot(nrow(fts) == 1L, isTRUE(fts$installed), isTRUE(fts$loaded))
+
 cli_pin <- Filter(
   \(pin) identical(pin$package, pins$data_dict_cli_package),
   pins$packages
@@ -173,6 +187,7 @@ jsonlite::write_json(
     source_pins = pins,
     packages = installed,
     R = R.version.string,
+    duckdb_fts = fts,
     cli = cli_version,
     cli_sha256 = unname(cli::hash_file_sha256(binary)),
     cargo = system2(cargo, "--version", stdout = TRUE)
