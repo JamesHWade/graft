@@ -1,3 +1,5 @@
+source("tools/experiments/runtime.R")
+experiment_prepare(fts = TRUE)
 checkout <- normalizePath(".")
 source("tools/experiments/roundtrip/host.R")
 roundtrip_load(checkout, globalenv())

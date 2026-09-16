@@ -1,3 +1,5 @@
+source("tools/experiments/runtime.R")
+experiment_prepare(fts = TRUE)
 # Run from the repository root. Optional argument: output directory.
 source("tools/experiments/vocabulary/publisher.R")
 args <- commandArgs(trailingOnly = TRUE)
@@ -51,6 +53,46 @@ case("both independently authored schemas validate through public data-dict", {
       `urn:example:dictionary:lab-b:v1` = 0L
     )
   )
+})
+case("dictionary exports tolerate diagnostics but reject missing or ambiguous JSON", {
+  testthat::expect_identical(
+    parse_dictionary_export(c("Warning: diagnostic", '{"tables":[]}', "Done")),
+    list(tables = list())
+  )
+  for (output in list("Warning: no export", c("{}", "{}"))) {
+    testthat::expect_error(
+      parse_dictionary_export(output),
+      "Expected one JSON document",
+      class = "fixture_binding_error"
+    )
+  }
+})
+case("relationship endpoints are scalar stable identifiers even when unused", {
+  for (endpoint in c("domain", "range")) {
+    for (value in list(1, NULL, list("urn:example:sample"), "")) {
+      testthat::expect_error(
+        candidate(function(b, dir) {
+          vpath <- file.path(dir, b$vocabulary$path)
+          v <- read_json(vpath)
+          term <- list(
+            id = "urn:example:unused",
+            kind = "relationship",
+            definition = "Unused relationship",
+            aliases = list(),
+            domain = "urn:example:sample",
+            range = "urn:example:sample"
+          )
+          term[endpoint] <- list(value)
+          v$terms <- c(v$terms, list(term))
+          jsonlite::write_json(v, vpath, auto_unbox = TRUE, null = "null")
+          b$vocabulary$sha256 <- file_hash(vpath)
+          b
+        }),
+        "relationship endpoint must be a nonempty string",
+        class = "fixture_binding_error"
+      )
+    }
+  }
 })
 case("plain R resolves shared sample values without a chat", {
   for (workflow in names(frames)) {

@@ -7,7 +7,7 @@ separate ontology package.**
 
 ## Runtime evidence
 
-The [runner](../tools/experiments/vocabulary/run.R) passes 16 focused cases on
+The [runner](../tools/experiments/vocabulary/run.R) passes 18 focused cases on
 R 4.6.1, Commons 0.1.0.9000 at
 `726a2ed459c2b7c7aebc29539895f04873276b4f`, and datadict 0.1.0 plus the source-built
 data-dict CLI 0.0.3 at `0161d460b6eb70d337028f8eddbf2f443bcb8f67`.

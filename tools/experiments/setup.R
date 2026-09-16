@@ -36,11 +36,16 @@ package_ref <- function(pin) {
   )
   paste0(path, "@", pin$sha)
 }
+snapshot <- jsonlite::read_json("tools/experiments/dependency-snapshot.json")
+cran_packages <- setdiff(
+  names(snapshot$packages),
+  c("graft", vapply(pins$packages, \(pin) pin$package, character(1)))
+)
 if (!skip_r) {
   pak::pkg_install(
     c(
       vapply(pins$packages, package_ref, character(1)),
-      unlist(pins$extra_packages),
+      paste0(cran_packages, "@", unlist(snapshot$packages[cran_packages])),
       paste0("local::", normalizePath("."))
     ),
     lib = experiment_library,
@@ -75,6 +80,8 @@ if (!file.exists(file.path(experiment_library, "graft", "DESCRIPTION"))) {
     call. = FALSE
   )
 }
+source("tools/experiments/runtime.R")
+invisible(experiment_snapshot())
 
 # Commons context search uses ragnar's FTS index. Provision its extension during
 # network-enabled setup, in an explicit cache shared by later R processes.
@@ -96,6 +103,7 @@ provision_fts <- function() {
 }
 fts <- provision_fts()
 stopifnot(nrow(fts) == 1L, isTRUE(fts$installed), isTRUE(fts$loaded))
+experiment_fts(snapshot$fts_version)
 
 cli_pin <- Filter(
   \(pin) identical(pin$package, pins$data_dict_cli_package),

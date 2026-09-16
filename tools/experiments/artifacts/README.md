@@ -9,7 +9,7 @@ Rscript tools/experiments/artifacts/run.R
 
 The same conformance tests run against two compositions:
 
-- **Manifest:** immutable content and JSON metadata files, an atomically replaced
+- **Manifest:** immutable content and JSON metadata files, a replaced
   current-revision map, and explicit host selection/policy files.
 - **Graft:** the same content and selection/policy files, with public Graft
   plan/commit, find and history APIs replacing metadata files/current map.
@@ -27,12 +27,16 @@ are recovered after source/dependency revisions; changing or deleting the
 producer's mutable file does not alter the stored content. A draft can be saved
 without approval. Historical inspection and current consultation have separate
 paths; host withdrawal denies consultation without pretending to erase history.
+Each selection has its own policy record; approval or withdrawal of another
+selection, including one with a different purpose, does not alter its eligibility.
 
 ## Limits that matter to the decision
 
-- Trusted, synthetic, local, single-writer stores only. Atomic rename provides
-  process-visible publication on the tested filesystem, not fsync/power-loss
-  durability, cross-store transactions, distributed locking or secure erasure.
+- Trusted, synthetic, local, single-writer stores only. Replacement stages the
+  old file as a backup before renaming the new file into place, including on
+  Windows. A failed install restores the old file or reports its retained backup
+  path if restoration also fails. This is not atomic for concurrent readers and
+  does not prove power-loss durability, cross-store transactions or secure erasure.
 - Metadata is published after bytes. Interrupted publication can leave orphan
   bytes; retry recovers without duplication. The experiment retains orphans;
   safe retention/collection and interrupted metadata-index publication need a

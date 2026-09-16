@@ -48,7 +48,7 @@ test_that("saving drafts does not authorize consultation and withdrawal preserve
   for (backend in c("manifest", "graft")) {
     store <- local_artifact_store(backend)
     refs <- artifact_fixture(store)
-    expect_identical(file.exists(file.path(store$root, "policy.json")), FALSE)
+    expect_length(list.files(file.path(store$root, "policy")), 0L)
     basis <- artifact_approve(store, list(refs$report), "later synthesis")
     expect_error(
       artifact_read_basis(store, basis, "unrelated purpose"),
@@ -83,11 +83,85 @@ test_that("saving drafts does not authorize consultation and withdrawal preserve
   }
 })
 
+test_that("approvals and withdrawals are independent by selection and purpose", {
+  for (backend in c("manifest", "graft")) {
+    store <- local_artifact_store(backend)
+    refs <- artifact_fixture(store)
+    first <- artifact_approve(store, list(refs$report), "synthesis")
+    second <- artifact_approve(store, list(refs$evidence), "synthesis")
+    third <- artifact_approve(store, list(refs$report), "inspection")
+    first_items <- artifact_read_basis(store, first, "synthesis")
+    third_items <- artifact_read_basis(store, third, "inspection")
+    artifact_revoke(store, second)
+    expect_identical(
+      artifact_read_basis(store, first, "synthesis"),
+      first_items
+    )
+    expect_identical(
+      artifact_read_basis(store, third, "inspection"),
+      third_items
+    )
+    expect_error(
+      artifact_read_basis(store, second, "synthesis"),
+      class = "artifact_experiment_error"
+    )
+    expect_identical(
+      artifact_approve(store, list(refs$evidence), "synthesis"),
+      second
+    )
+    artifact_revoke(store, third)
+    expect_identical(
+      artifact_read_basis(store, first, "synthesis"),
+      first_items
+    )
+    expect_length(artifact_read_basis(store, second, "synthesis"), 3L)
+  }
+})
+
+test_that("replacement works when rename cannot overwrite a destination", {
+  path <- withr::local_tempfile()
+  writeBin(charToRaw("original"), path)
+  rlang::local_bindings(
+    artifact_rename = function(from, to) {
+      if (file.exists(to)) {
+        return(FALSE)
+      }
+      file.rename(from, to)
+    },
+    .env = environment(artifact_write)
+  )
+  artifact_write(charToRaw("replaced"), path, replace = TRUE)
+  expect_identical(artifact_read_bytes(path), charToRaw("replaced"))
+})
+
+test_that("failed replacement restores the previous content", {
+  root <- withr::local_tempdir()
+  path <- file.path(root, "current.json")
+  writeBin(charToRaw("original"), path)
+  rlang::local_bindings(
+    artifact_rename = function(from, to) {
+      if (startsWith(basename(from), "staged-")) {
+        return(FALSE)
+      }
+      file.rename(from, to)
+    },
+    .env = environment(artifact_write)
+  )
+  expect_error(
+    artifact_write(charToRaw("replacement"), path, replace = TRUE),
+    "previous content restored",
+    class = "artifact_experiment_error"
+  )
+  expect_identical(artifact_read_bytes(path), charToRaw("original"))
+  expect_identical(list.files(root), "current.json")
+})
+
 test_that("partial publication and identical retry never lose earlier content", {
   for (backend in c("manifest", "graft")) {
     store <- local_artifact_store(backend)
     input <- withr::local_tempfile()
     writeLines("original", input)
+    original_bytes <- artifact_read_bytes(input)
     expect_error(
       artifact_save(
         store,
@@ -106,14 +180,15 @@ test_that("partial publication and identical retry never lose earlier content", 
       original
     )
     writeLines("correction", input)
+    corrected_bytes <- artifact_read_bytes(input)
     corrected <- artifact_save(store, "artifact:report", input, "text/markdown")
     expect_identical(
-      rawToChar(artifact_resolve(store, original)$bytes),
-      "original\n"
+      artifact_resolve(store, original)$bytes,
+      original_bytes
     )
     expect_identical(
-      rawToChar(artifact_resolve(store, corrected)$bytes),
-      "correction\n"
+      artifact_resolve(store, corrected)$bytes,
+      corrected_bytes
     )
     writeLines("stale proposal", input)
     expect_error(
@@ -130,8 +205,8 @@ test_that("partial publication and identical retry never lose earlier content", 
     # The producer's mutable file is not the retained object.
     unlink(input)
     expect_identical(
-      rawToChar(artifact_resolve(store, original)$bytes),
-      "original\n"
+      artifact_resolve(store, original)$bytes,
+      original_bytes
     )
   }
 })

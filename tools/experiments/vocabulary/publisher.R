@@ -41,14 +41,19 @@ check_pinned_file <- function(root, ref) {
 }
 
 # Validate through upstream and consume its resolved export; never parse YAML.
+parse_dictionary_export <- function(output) {
+  json <- output[grepl("^\\{", output)]
+  if (length(json) != 1L) {
+    binding_error("Expected one JSON document from data-dict export-spec")
+  }
+  jsonlite::fromJSON(json, simplifyVector = FALSE)
+}
+
 read_dictionary <- function(path) {
   validated <- datadict::dd_run(c("validate-spec", path))
   exported <- datadict::dd_run(c("export-spec", path))
   list(
-    model = jsonlite::fromJSON(
-      paste(exported$output, collapse = "\n"),
-      simplifyVector = FALSE
-    ),
+    model = parse_dictionary_export(exported$output),
     evidence = list(command = "validate-spec", status = validated$status)
   )
 }
@@ -100,6 +105,13 @@ publish_bindings <- function(path) {
     }
     check_record(term, fields, "term")
     lapply(term[c("id", "kind", "definition")], check_text, label = "term text")
+    if (identical(term$kind, "relationship")) {
+      lapply(
+        term[c("domain", "range")],
+        check_text,
+        label = "relationship endpoint"
+      )
+    }
     if (
       !term$kind %in% c("concept", "relationship") || !is.null(terms[[term$id]])
     ) {

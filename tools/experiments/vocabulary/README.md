@@ -8,8 +8,11 @@ the [results note](../../../specs/2026-09-16-vocabulary-experiment.md):
 Rscript tools/experiments/vocabulary/run.R /tmp/vocabulary-results
 ```
 
-Set `R_LIBS_USER` to the experiment library and `DATA_DICT` to the pinned CLI
-binary. Execution makes no network or model calls and uses temporary directories
+Set `GRAFT_EXPERIMENT_HOME` to the directory produced by
+[`setup.R`](../README.md#run). Alternatively set `R_LIBS_USER`, `DATA_DICT` and
+`DUCKDB_R_HOME` from that prepared environment. This standalone runner checks the
+dependency snapshot and installed FTS extension before constructing Commons.
+Execution makes no network or model calls and uses temporary directories
 for destructive test candidates. The optional output path receives `results.json`,
 two published JSON bundles and generated Markdown context.
 
@@ -19,7 +22,7 @@ two published JSON bundles and generated Markdown context.
 - `fixtures/v1` and `fixtures/v2` contain independently authored laboratory
   dictionaries, one shared vocabulary, and pinned companion bindings.
 - `run.R` executes plain R consumption, Commons public constructor consumption,
-  historical replay and 16 focused success/failure cases.
+  historical replay and 18 focused success/failure cases.
 - `observed/` contains the recorded run's result and generated context. Rebuild
   output in a separate directory; compare it before replacing recorded evidence.
 

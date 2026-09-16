@@ -13,6 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  artifact-portability:
+    name: Artifact portability (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.6.1'
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: local::.
+          extra-packages: any::callr, any::testthat, any::withr
+          dependencies: 'c("Depends", "Imports", "LinkingTo")'
+          install-pandoc: false
+          install-quarto: false
+      - name: Test artifact replacement and selection lifecycle on Windows
+        shell: Rscript {0}
+        run: |
+          options(graft.experiment.checkout = normalizePath("."))
+          testthat::test_dir("tools/experiments/artifacts/tests", stop_on_failure = TRUE)
+
   experiments:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -23,6 +47,7 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
+          r-version: '4.6.1'
       - name: Choose isolated dependency and evidence paths
         shell: bash
         run: |
@@ -44,7 +69,11 @@ jobs:
               if pin["subdir"]:
                   path += "/" + pin["subdir"]
               refs.append(path + "@" + pin["sha"])
-          refs.extend("any::" + name for name in pins["extra_packages"])
+          with open("tools/experiments/dependency-snapshot.json") as stream:
+              snapshot = json.load(stream)
+          source_packages = {pin["package"] for pin in pins["packages"]} | {"graft"}
+          refs.extend(name + "@" + version for name, version in snapshot["packages"].items()
+                      if name not in source_packages)
           with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
               stream.write("packages=" + ", ".join(refs) + "\n")
       - uses: r-lib/actions/setup-r-dependencies@v2

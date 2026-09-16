@@ -1,3 +1,5 @@
+source("tools/experiments/runtime.R")
+experiment_prepare(fts = FALSE)
 # Run from the repository root; installation is separate from this offline run.
 fixture_dir <- "tools/experiments/semantic-compatibility"
 output <- Sys.getenv(
@@ -22,6 +24,12 @@ error_text <- function(expr) {
     error = conditionMessage
   )
 }
+commons_missing_reference <- function(error, column) {
+  is.character(error) &&
+    length(error) == 1L &&
+    !is.na(error) &&
+    grepl(paste0('Column "', column, '" not found'), error, fixed = TRUE)
+}
 export_spec <- function(path, command = "export-spec") {
   run <- datadict::dd_run(c(command, path))
   # dd_run deliberately interleaves stderr. A JSON document is one line.
@@ -33,7 +41,7 @@ sha <- function(path) digest::digest(file = path, algo = "sha256")
 
 source(file.path(fixture_dir, "model.R"))
 
-versions <- vapply(
+versions <- as.list(vapply(
   c(
     "commons",
     "ellmer",
@@ -50,7 +58,7 @@ versions <- vapply(
     as.character(utils::packageVersion(pkg))
   },
   character(1)
-)
+))
 check(
   utils::packageVersion("commons") >= "0.1.0.9000",
   "Current Commons installed"
@@ -121,7 +129,7 @@ check(
 )
 
 # Both engines consume these same preserved bytes. Commons gets detached frames
-# read from the validated file, not a independently regenerated data frame.
+# read from the validated file, not an independently regenerated data frame.
 detached <- DBI::dbGetQuery(
   con,
   paste0("SELECT * FROM read_parquet(", DBI::dbQuoteString(con, parquet), ")")
@@ -289,6 +297,14 @@ cases <- list(
   mixed_grain = "SUM(revenue) + revenue",
   r_language = "!is.na(revenue)"
 )
+check(
+  !commons_missing_reference("Server not found", "missing_column") &&
+    !commons_missing_reference(
+      "Unrelated constructor failure",
+      "missing_column"
+    ),
+  "Unrelated Commons errors cannot satisfy unresolved-reference cases"
+)
 case_results <- list()
 for (name in names(cases)) {
   dict <- yaml::read_yaml(path)
@@ -341,13 +357,19 @@ for (name in names(cases)) {
     check(
       !is.na(dd_error) &&
         !is.na(commons_error) &&
-        grepl("not found|Unknown|unknown", dd_error),
+        grepl("not found|Unknown|unknown", dd_error) &&
+        commons_missing_reference(
+          commons_error,
+          if (name == "invalid_definition") "missing_column" else "other"
+        ),
       paste(name, "rejected for unresolved reference by both constructors")
     )
   }
   if (name == "r_language") {
     check(
-      is.na(dd_error) && !is.na(commons_error),
+      is.na(dd_error) &&
+        !is.na(commons_error) &&
+        grepl("Invalid definition expression", commons_error, fixed = TRUE),
       "R-language definition exposes compiler divergence"
     )
   }
@@ -392,6 +414,10 @@ jsonlite::write_json(
   auto_unbox = TRUE,
   na = "null"
 )
+stopifnot(identical(
+  jsonlite::read_json(file.path(output, "results.json"))$versions,
+  versions
+))
 cat(
   length(checks),
   "checks passed. Evidence:",

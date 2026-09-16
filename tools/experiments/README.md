@@ -18,9 +18,14 @@ Rscript tools/experiments/run.R
 Setup requires network access, Rust/cargo, normal R build dependencies and a
 writable temporary directory. It installs the pinned upstream sources into its
 own library, installs this Graft checkout, and builds the matching data-dict CLI.
-`pins.json` identifies the development sources; `versions.json` records installed
-package versions and the CLI digest. Other transitive CRAN dependencies are
-resolved from their declared contracts, not a full environment lockfile.
+`pins.json` identifies the development sources. `dependency-snapshot.json` records
+the complete resolved R package set, R 4.6.1 and the FTS extension revision from
+the successful Linux evidence run. Setup requests those exact package versions;
+setup and every runner reject missing packages or version drift before producing
+evidence. Updating the snapshot is a deliberate change requiring a new full run.
+`versions.json` records the installed versions, source pins and CLI digest.
+System libraries and OS images are not locked; this is a package snapshot, not a
+bit-for-bit environment image.
 
 Setup also installs the FTS extension used by Commons context search into an
 isolated cache under `GRAFT_EXPERIMENT_HOME/duckdb` and records its version and
@@ -30,7 +35,9 @@ is installed before it starts the experiments.
 
 The runner itself is offline and credential-free. It sources the generated
 `environment.R` when `GRAFT_EXPERIMENT_HOME` is set. Alternatively supply
-`R_LIBS_USER`, `DATA_DICT` and `DUCKDB_R_HOME` from an already prepared environment. Set
+`R_LIBS_USER`, `DATA_DICT` and `DUCKDB_R_HOME` from an already prepared environment.
+Standalone runners use this same preflight; vocabulary and roundtrip execution
+fail before constructing Commons when the recorded FTS extension is missing. Set
 `GRAFT_EXPERIMENT_OUTPUT` to retain result JSON, validation reports and exports;
 otherwise a temporary evidence directory is created. Failed checks exit nonzero.
 

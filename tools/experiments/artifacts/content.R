@@ -31,6 +31,8 @@ artifact_read_json <- function(path) {
   )
 }
 
+artifact_rename <- function(from, to) file.rename(from, to)
+
 artifact_write <- function(bytes, path, replace = FALSE) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   if (file.exists(path) && !replace) {
@@ -42,8 +44,28 @@ artifact_write <- function(bytes, path, replace = FALSE) {
   staging <- tempfile("staged-", tmpdir = dirname(path))
   on.exit(unlink(staging))
   writeBin(bytes, staging)
-  if (!file.rename(staging, path)) {
-    artifact_error("Atomic rename failed; no success receipt issued.")
+  backup <- NULL
+  if (file.exists(path)) {
+    backup <- tempfile("backup-", tmpdir = dirname(path))
+    if (!artifact_rename(path, backup)) {
+      artifact_error("Could not stage existing content for replacement.")
+    }
+  }
+  if (!artifact_rename(staging, path)) {
+    restored <- is.null(backup) || artifact_rename(backup, path)
+    artifact_error(
+      if (restored) {
+        "Publication failed; previous content restored; no success receipt issued."
+      } else {
+        paste(
+          "Publication and restore failed; previous content retained at",
+          backup
+        )
+      }
+    )
+  }
+  if (!is.null(backup)) {
+    unlink(backup)
   }
   invisible(path)
 }
@@ -209,7 +231,7 @@ artifact_approve <- function(store, roots, purpose) {
   # This explicit fixture host action is approval, never inferred from saving.
   artifact_write(
     charToRaw(artifact_json(list(selection = id, eligible = TRUE))),
-    file.path(store$root, "policy.json"),
+    artifact_digest_path(store$root, "policy", id),
     replace = TRUE
   )
   id
@@ -226,7 +248,7 @@ artifact_read_basis <- function(store, id, purpose = NULL, consult = TRUE) {
   }
   basis <- jsonlite::fromJSON(rawToChar(bytes), simplifyVector = FALSE)
   if (consult) {
-    policy_path <- file.path(store$root, "policy.json")
+    policy_path <- artifact_digest_path(store$root, "policy", id)
     if (!file.exists(policy_path)) {
       artifact_error("No host approval for consultation.")
     }
@@ -258,9 +280,11 @@ artifact_review <- function(store, id) {
 }
 
 artifact_revoke <- function(store, id) {
+  # Verify the retained selection; revoking one basis cannot affect another.
+  artifact_read_basis(store, id, consult = FALSE)
   artifact_write(
     charToRaw(artifact_json(list(selection = id, eligible = FALSE))),
-    file.path(store$root, "policy.json"),
+    artifact_digest_path(store$root, "policy", id),
     replace = TRUE
   )
 }

@@ -347,7 +347,11 @@ roundtrip_process <- function(checkout, root, backend, action) {
     )
     generated <- roundtrip_generate(store, input_basis, checkout)
     stopifnot(identical(
-      artifact_read_json(file.path(root, "policy.json"))$selection,
+      artifact_read_json(artifact_digest_path(
+        root,
+        "policy",
+        input_basis
+      ))$selection,
       input_basis
     ))
     checkpoint <- list(
@@ -359,6 +363,8 @@ roundtrip_process <- function(checkout, root, backend, action) {
         "later artifact use"
       )
     )
+    # Approving generated outputs must preserve the input basis's own approval.
+    artifact_read_basis(store, input_basis, "Commons synthesis")
     artifact_write(
       charToRaw(artifact_json(checkpoint)),
       checkpoint_path,

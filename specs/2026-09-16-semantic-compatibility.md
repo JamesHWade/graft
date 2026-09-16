@@ -5,7 +5,7 @@ Issue: [#61](https://github.com/JamesHWade/graft/issues/61).
 ## Result
 
 **Reuse both packages, but do not claim one compiler yet.** The offline experiment
-passes 37 checks against installed development sources. Five real Commons model
+passes 38 checks against installed development sources. Five real Commons model
 tool calls compute over the same Parquet bytes validated by data-dict. A concrete
 counterexample remains: data-dict accepts an R-language definition that Commons
 rejects. No additional Graft parser, CLI bridge, or evaluator was implemented.

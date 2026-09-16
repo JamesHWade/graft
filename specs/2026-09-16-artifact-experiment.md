@@ -5,7 +5,7 @@ Experiment #59, September 16, 2026. The code is in
 
 ## Observed result
 
-Both metadata compositions pass a shared suite with **104 assertions total**, using real Markdown,
+Both metadata compositions pass a shared suite with **120 assertions total**, using real Markdown,
 Parquet and PNG content. Producer, unchanged consumer and correction consumer
 run in separate terminated R processes. They reopen only persisted JSON
 identifiers and local stores; no live connection or RDS checkpoint crosses the
@@ -51,7 +51,8 @@ for the integrated suite are in `tools/experiments/pins.json`; the runner record
 actual runtime versions separately. No public package code or existing store was
 changed.
 
-Atomic rename is tested as process-visible publication on the local filesystem.
+Replacement uses backup-then-rename with restoration on installation failure.
+The single-writer fixture does not claim atomic replacement for concurrent readers.
 The experiment does not establish power-loss durability, simultaneous writers,
 cloud object retention, physical erasure or backup recovery. Bytes and metadata
 have separate commit boundaries. Orphan bytes are retained for retry; safe
