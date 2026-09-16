@@ -5,7 +5,7 @@ Experiment #59, September 16, 2026. The code is in
 
 ## Observed result
 
-Both metadata compositions pass the same **104 assertions** using real Markdown,
+Both metadata compositions pass a shared suite with **104 assertions total**, using real Markdown,
 Parquet and PNG content. Producer, unchanged consumer and correction consumer
 run in separate terminated R processes. They reopen only persisted JSON
 identifiers and local stores; no live connection or RDS checkpoint crosses the

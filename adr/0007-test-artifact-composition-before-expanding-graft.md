@@ -39,7 +39,7 @@ compare next, with a specific retirement test below.
 
 | Experiment | Runtime result | Architectural consequence |
 | --- | --- | --- |
-| #59 | Both metadata paths pass the same 104 persistence/reuse/failure assertions | Retained content and host policy are required; the current ledger is not required for this bounded lifecycle |
+| #59 | Both metadata paths pass a shared persistence/reuse/failure suite, with 104 assertions total | Retained content and host policy are required; the current ledger is not required for this bounded lifecycle |
 | #60 | 16 cases validate portable bindings and use the release in plain R and Commons constructors without a Graft store | Keep one publishing module; ontology alone does not earn a ledger or reasoner |
 | #61 | 37 checks exercise real data-dict/Commons on the same Parquet bytes; R-language definition diverges | Shared YAML is not shared execution semantics; pursue a public resolved-export contract upstream |
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
