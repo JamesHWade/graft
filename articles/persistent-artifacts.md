@@ -1,0 +1,116 @@
+# Persistent artifacts and selected memory
+
+Your saved work should survive both the end of an R session and a change
+in the software that stores it. Graft’s artifact experiments investigate
+a small layer that preserves reports, tables, figures, and the exact
+evidence selected for later workflows.
+
+**This is a proposed direction.** The artifact code is an experiment in
+the repository, excluded from the installed package. This project is
+pre-production; current APIs may change or be removed. The experiment
+has not yet implemented a replacement application workflow.
+
+## From analysis to later reuse
+
+Suppose Commons produces a report, table, and figure. A useful artifact
+layer preserves their contents, stable identities, revisions, and
+references to the exact inputs and meaning used to produce them. A
+correction creates a new result while the original remains available for
+historical inspection.
+
+| Concern | Proposed owner |
+|----|----|
+| Local schemas, types, constraints, and expressions | data-dict |
+| Shared concepts and qualified bindings across dictionaries | A small vocabulary publisher |
+| Analysis, context search, and calculation evidence | Commons |
+| Artifact contents, revisions, dependencies, and saved selections | An artifact layer with interchangeable metadata storage |
+| Approval, access, reuse purpose, withdrawal, and active task lifetime | The application |
+
+The vocabulary publisher connects domain concepts across workflows. A
+binding can associate two local fields with the same concept while
+retaining their source dictionaries and units. It does not by itself
+establish that their values can be joined or compared.
+
+## Persistent artifacts provide material for memory
+
+A later workflow might select an approved interpretation, a dictionary
+release, and three earlier results. The saved selection records those
+exact revisions and their dependencies. An unchanged day retains the
+full selection even when there is no new acceptance receipt.
+
+Saving a draft and approving its reuse are separate actions. The
+application checks current eligibility when it starts a new workflow.
+Corrections and returning to an earlier input revision do not
+automatically reapprove a withdrawn selection. The prototype permits the
+application to explicitly approve it again; the application owns who may
+do that and for what purpose. Historical access does not imply
+permission to use that evidence in a new task.
+
+The application also owns cancellation of active work, Reader identity,
+and permanent Forget. A stored selection cannot erase copies already
+given to a model.
+
+## What “replaceable” means
+
+The artifact contract should let an application change its storage
+implementation while preserving accumulated work. The first experiments
+use the same content and selection logic with two metadata
+implementations:
+
+- Graft’s accepted commits and bounded revision history;
+- immutable JSON manifests and a map of current artifact revisions.
+
+Both implementations preserve the tested Markdown, Parquet, and PNG
+artifacts across terminated processes and corrections. Both feed real
+Commons analysis and retain its outputs. Vocabulary validation and
+publishing also work without a Graft store. The [experiment
+guide](https://github.com/JamesHWade/graft/tree/main/tools/experiments)
+contains commands, source pins, and recorded results.
+
+These results justify comparing the complete implementations. The
+manifest prototype has not established concurrent publication,
+power-loss recovery, production access control, or erasure and backup
+admission. Graft’s metadata transaction also does not automatically
+include separately stored file contents.
+
+## Existing history is part of the migration contract
+
+Tempest already uses native Graft snapshots and promotion receipts. A
+replacement must preserve the store, schema, batch, snapshot, and
+revision identities those objects validate, or retain an explicit
+mapping to them. Exporting only the latest records loses accepted
+history and does not meet that requirement.
+
+The [Tempest migration
+experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md)
+uses current public promotion APIs and shipped synthetic research. Its
+121 assertions establish that:
+
+- 11 native revisions and three promotion receipts survive transfer;
+- both reports retain their exact four-record evidence selections;
+- a fresh process reads the target with neither Graft nor Tempest
+  installed;
+- withdrawal stays in force, and the unchanged native source supports
+  rollback.
+
+**Tempest’s current public knowledge API rejects the portable view.** It
+requires a native Graft view. We can change that API: backwards
+compatibility is not a requirement. The next experiment should prove the
+redesigned application workflow. Native deletion, complete external
+source bodies, and production recovery remain outside the demonstrated
+profile. [The migration
+issue](https://github.com/JamesHWade/graft/issues/64) records the
+remaining work.
+
+The decision is **reduce scope and redesign the consumer boundary**.
+Graft can remain an implementation of the artifact layer if its
+mechanisms justify their cost. Its name and current architecture are not
+requirements for preserving user work.
+
+See [ADR
+0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)
+for the decision and retirement criteria. Continue with [exact reuse
+bases](https://jameshwade.github.io/graft/articles/reuse-basis.md) for
+supported Graft behavior and [Forget and
+recovery](https://jameshwade.github.io/graft/articles/forget-restore.md)
+for the production lifecycle requirements.

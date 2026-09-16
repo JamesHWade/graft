@@ -78,6 +78,13 @@ working tree.
 Understand storage and projection boundaries, contract compilation, and
 the choices behind the v0.1 package design.
 
+- [Persistent artifacts and selected
+  memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
+
+  Understand the proposed artifact layer, its relationship to Commons
+  and data-dict, and the evidence required before replacing existing
+  storage.
+
 - [Design Forget and backup
   recovery](https://jameshwade.github.io/graft/articles/forget-restore.md):
 

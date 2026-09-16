@@ -2,6 +2,12 @@
 
 ## graft 0.0.0.9000
 
+- A new persistent-artifact guide explains the proposed roles of
+  Commons, data-dict, vocabulary, and selected memory; the Tempest
+  migration experiment preserves historical evidence while demonstrating
+  the remaining public consumer-admission gap
+  ([\#64](https://github.com/JamesHWade/graft/issues/64)).
+
 - A proposed Forget and recovery protocol has offline tests for retired
   store generations, backup admission, interrupted cleanup, and Reader
   isolation; permanent purge and production recovery remain

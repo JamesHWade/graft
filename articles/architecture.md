@@ -13,6 +13,12 @@ and the Open Knowledge Format (OKF) working tree are read views built
 from that ledger. Snapshot views select those reads at one accepted
 commit boundary.
 
+This article describes the current package. The [persistent artifact and
+selected-memory
+proposal](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
+describes the experimentally tested next direction and the migration
+evidence required before replacing an existing consumer’s storage.
+
 Swipe to explore the diagram →
 
 ![A data-dict or LinkML contract compiles into Graft. OKF exchanges

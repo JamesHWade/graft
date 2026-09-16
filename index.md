@@ -34,6 +34,18 @@ Acceptance records a decision for a purpose. It does not make a claim
 true, authorize access, or permit execution of stored code. Applications
 retain those responsibilities.
 
+## Persistent artifacts and selected memory
+
+The proposed next direction connects data-dict’s meaning, Commons
+analysis, and durable reports, tables, figures, and exact evidence
+selections. Experiments compare Graft metadata with immutable JSON
+manifests. The project is pre-production: application APIs may change
+directly as the design is simplified. The artifact layer is experimental
+and is not an installed package API.
+
+[Explore the proposal and migration
+evidence](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
+
 ## Start in R
 
 Install the development package:
