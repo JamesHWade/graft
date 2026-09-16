@@ -39,6 +39,9 @@ and other documentation edits do not require reinstalling unchanged runtime code
 The CLI is built from a newly downloaded and extracted pinned archive each time;
 existing source directories are neither trusted nor overwritten. CI seeds an
 invalid legacy cache to verify this behavior.
+CI scopes GitHub authentication to provisioning steps and disables checkout's
+persisted credentials. Runtime steps clear GitHub token variables and assert
+that they are empty before executing the experiments.
 System libraries and OS images are not locked; this is a package snapshot, not a
 bit-for-bit environment image.
 
