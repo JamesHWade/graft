@@ -14,6 +14,7 @@ test_that("the target retains native identities, history, schema and exact evide
     migration_fixture$schema_file_text
   )
   expect_identical(restored$final_snapshot, migration_fixture$final_snapshot)
+  expect_identical(restored$final_heads, migration_fixture$final_heads)
   expect_identical(
     names(restored$identity_map),
     vapply(migration_fixture$history, \(row) row$revision_id, character(1))
@@ -263,6 +264,62 @@ test_that("required receipts, checkpoints and bundles cannot be omitted", {
   expect_error(
     migration_validate(altered),
     "required receipts",
+    class = "artifact_experiment_error"
+  )
+})
+
+test_that("final heads detect lost terminal revisions before import", {
+  altered <- migration_fixture
+  later <- which(vapply(
+    altered$history,
+    \(row) row$revision_number > 1L,
+    logical(1)
+  ))
+  altered$history <- altered$history[-later]
+  target <- withr::local_tempdir()
+  path <- withr::local_tempfile(fileext = ".json")
+  writeBin(charToRaw(artifact_json(altered)), path)
+  expect_error(
+    migration_import(path, artifact_hash(artifact_read_bytes(path)), target),
+    "Retained terminal revision",
+    class = "artifact_experiment_error"
+  )
+  expect_length(list.files(target), 0L)
+  for (heads in list(NULL, list())) {
+    altered <- migration_fixture
+    altered$final_heads <- heads
+    expect_error(
+      migration_validate(altered),
+      "Final heads must cover",
+      class = "artifact_experiment_error"
+    )
+  }
+  altered <- migration_fixture
+  altered$final_heads <- altered$final_heads[-1L]
+  expect_error(
+    migration_validate(altered),
+    "Final heads must cover",
+    class = "artifact_experiment_error"
+  )
+  altered <- migration_fixture
+  altered$final_heads <- c(altered$final_heads, altered$final_heads[1L])
+  expect_error(
+    migration_validate(altered),
+    "Final heads must cover",
+    class = "artifact_experiment_error"
+  )
+  altered <- migration_fixture
+  altered$final_heads[[1L]]$revision_id <- "changed-head"
+  expect_error(
+    migration_validate(altered),
+    "Retained terminal revision",
+    class = "artifact_experiment_error"
+  )
+  altered <- migration_fixture
+  altered$format <- 1L
+  expect_error(
+    migration_validate(altered),
+    "Unsupported export format",
     class = "artifact_experiment_error"
   )
 })

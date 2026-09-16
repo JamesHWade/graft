@@ -6,10 +6,12 @@ environment shared by the artifact experiments.
 
 ## Decision
 
-**Reduce scope and retain Graft for the existing Tempest integration.** Historical
-content is portable, but the competing reader does not satisfy Tempest's current
-public knowledge-admission contract. This result supports a small artifact
-boundary; it does not justify retiring Graft or migrating user stores now.
+**Reduce scope and redesign the Tempest input boundary.** Historical content is
+portable. The current constructor requires a Graft view, but this project is
+pre-production: backwards compatibility is not a requirement, and the constructor
+can change. Its rejection of the portable view is an integration task, not
+evidence that Graft must survive. Judge the replacement by required artifact and
+research behavior and total complexity.
 
 Calling `tempest_knowledge()` with the portable result produces the expected
 `tempest_knowledge_error`: the input must be a valid pinned Graft view. The
@@ -19,7 +21,7 @@ or relabel an artifact digest as a native snapshot.
 ## Executed evidence
 
 The [recorded local run](../tools/experiments/tempest-migration/observed.json)
-passes **64 assertions**, plus source-integrity and rollback guards.
+passes **73 assertions**, plus source-integrity and rollback guards.
 The complete experiment is also part of the Linux CI suite.
 
 | Evidence | Result |
@@ -48,6 +50,11 @@ IDs/digests, bundle IDs, and receipt IDs. It exports the complete required publi
 history for the records covered by the selected receipts. This is not a general
 export of every record in an arbitrary source store.
 
+An independent public read at the final snapshot records the expected head of
+every exported record. Validation compares each head with the terminal retained
+revision, so dropping a later supersession fails even when receipts still resolve.
+Export format 2 requires these heads; regenerate earlier experimental exports.
+
 Native revision IDs map to exact artifact references. Their payloads retain the
 native IDs; the root depends on every imported revision. Missing or empty receipt coverage,
 predecessors or evidence links, cross-store snapshots, changed schema bytes, and
@@ -62,8 +69,8 @@ metadata without requiring two reads to have the same timestamp.
 
 ## Implementation cost and missing machinery
 
-The producer/rollback fixture, migration adapter, and runner contain 286, 376,
-and 93 physical lines respectively, including comments and blank lines. Shared
+The producer/rollback fixture, migration adapter, and runner contain 304, 407,
+and 94 physical lines respectively, including comments and blank lines. Shared
 content and metadata-driver modules add 425 lines. Tests, provisioning, and
 upstream packages are additional. This is an inventory, not a latency, storage,
 maintenance, or production-cost benchmark.
@@ -93,8 +100,9 @@ Those unavailable bytes are an explicit export limitation; hashes do not recreat
 them. The host supplies a trusted handoff digest; retained receipts do not
 authenticate an untrusted export or create new acceptance events.
 
-#64 remains the migration gate: historical-read parity is proved for this fixture,
-while public consumer admission, deletion coverage, and production replacement
-remain unproved. The next useful step is a minimal public Tempest ingestion seam,
-tested against the same reference output. There is no evidence here to expand
+#64 now tracks the redesigned consumer: historical-read parity is proved for this
+fixture, while working Tempest ingestion and required deletion/withdrawal behavior
+remain unproved. The next step is a minimal artifact input contract in Tempest,
+tested against the same reference output. Breaking current APIs is acceptable;
+preservation of the old constructor is not a gate. There is no evidence here to expand
 Graft's semantic compiler or Commons wrapper.

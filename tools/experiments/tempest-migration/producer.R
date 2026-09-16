@@ -168,14 +168,32 @@ migration_produce <- function(directory) {
   stopifnot(identical(original, checkpoints$initial$resources))
   final <- graft::graft_snapshot(store)
   stopifnot(isTRUE(final@history_complete))
+  final_view <- graft::graft_at(store, final)
+  final_heads <- stats::setNames(
+    lapply(ids, function(id) {
+      row <- graft::graft_history(final_view, id, limit = 1L)
+      fields <- c(
+        "record_id",
+        "class",
+        "revision_id",
+        "revision_number",
+        "commit_order",
+        "batch_id",
+        "schema_build_digest"
+      )
+      migration_plain(lapply(row[fields], \(column) column[[1L]]))
+    }),
+    ids
+  )
   schema_path <- system.file(
     "schema/tempest-research.graft.json",
     package = "tempest"
   )
   export <- list(
-    format = 1L,
+    format = 2L,
     scope = "Tempest accepted-research fixture; one compiled schema; public record history",
     final_snapshot = migration_properties(final),
+    final_heads = final_heads,
     schema = migration_plain(store@schema@manifest),
     schema_file_text = rawToChar(artifact_read_bytes(schema_path)),
     schema_file_sha256 = artifact_hash(artifact_read_bytes(schema_path)),

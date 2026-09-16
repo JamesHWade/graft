@@ -43,9 +43,9 @@ responsibilities.
 
 The proposed next direction connects data-dict's meaning, Commons analysis, and
 durable reports, tables, figures, and exact evidence selections. Experiments
-compare Graft metadata with immutable JSON manifests while preserving current
-application contracts. The artifact layer is experimental and is not an installed
-package API.
+compare Graft metadata with immutable JSON manifests. The project is
+pre-production: application APIs may change directly as the design is simplified.
+The artifact layer is experimental and is not an installed package API.
 
 [Explore the proposal and migration evidence](articles/persistent-artifacts.html).
 

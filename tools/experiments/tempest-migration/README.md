@@ -23,7 +23,9 @@ uses only the installed packages and synthetic local fixtures.
    the original claim's reviewed supersession.
 3. Capture checkpoints through Tempest's shipped briefing recipe. Export the
    required native history, original bundles and manifests, receipts, snapshots,
-   runtime and source schemas, exact report text, and materialized evidence.
+   runtime and source schemas, exact report text, and materialized evidence. Read
+   every final record head independently at the final source snapshot; require
+   the terminal exported revision to match it.
 4. Import each native revision into the existing manifest artifact driver. One
    retained root records the native-to-artifact identity map and depends on all
    imported revisions. Native IDs retain their original meanings.
@@ -39,6 +41,9 @@ uses only the installed packages and synthetic local fixtures.
    entire source directory digest before and after target work and rollback.
 
 ## Evidence and scope
+
+Export format 2 requires final heads. Regenerate older experimental exports;
+backwards compatibility is not required for this pre-production experiment.
 
 `results.json` records the result and source pins; [observed.json](observed.json)
 retains the checked local run. `handoff.json` identifies the

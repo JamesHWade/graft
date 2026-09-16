@@ -79,5 +79,7 @@ Xcode is selected but unavailable. No system setting needs to be changed.
 The dedicated GitHub workflow reruns the complete suite on Linux and uploads
 results. These research sources are excluded from the built R package. Report
 runtime results separately from source inspection and from production readiness.
-Reader isolation, erasure/restore, concurrent durability and real-consumer
-migration remain explicit implementation gates.
+Backwards compatibility is not required in this pre-production project. A working
+redesigned consumer must still preserve its required artifact and research
+behavior. Reader isolation, erasure/restore and concurrent durability remain
+requirements before production use.

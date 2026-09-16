@@ -4,6 +4,12 @@ Independent review for [#63](https://github.com/JamesHWade/graft/issues/63),
 September 16, 2026. This challenges both automatic preservation and automatic
 retirement of Graft. It is decision input, not a second accepted ADR.
 
+**Policy update:** the owner has confirmed this project is pre-production and
+does not require backwards compatibility. The contract-preservation recommendation
+below is historical review input, superseded by [ADR 0007](../adr/0007-test-artifact-composition-before-expanding-graft.md).
+Required evidence and artifact behavior still need to work through the redesigned
+consumer; keeping an old constructor is not a reason to retain Graft.
+
 ## Recommendation
 
 **Reduce Graft's proposed responsibility to persistent artifacts and explicit

@@ -16,9 +16,8 @@ that preserves reports, tables, figures, and the exact evidence selected for
 later workflows.
 
 **This is a proposed direction.** The artifact code is an experiment in the
-repository, excluded from the installed package. Existing public Graft APIs
-remain supported; this proposal has not migrated an application or replaced its
-production storage.
+repository, excluded from the installed package. This project is pre-production; current APIs may change or be removed. The
+experiment has not yet implemented a replacement application workflow.
 
 ## From analysis to later reuse
 
@@ -85,7 +84,7 @@ objects validate, or retain an explicit mapping to them. Exporting only the late
 records loses accepted history and does not meet that requirement.
 
 The [Tempest migration experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md)
-uses current public promotion APIs and shipped synthetic research. Its 64
+uses current public promotion APIs and shipped synthetic research. Its 73
 assertions establish that:
 
 - 11 native revisions and three promotion receipts survive transfer;
@@ -94,15 +93,15 @@ assertions establish that:
 - withdrawal stays in force, and the unchanged native source supports rollback.
 
 **Tempest's current public knowledge API rejects the portable view.** It requires
-a native Graft view. Historical-read parity does not yet establish a supported
-replacement for the application. Native deletion, complete external source
-bodies, and production recovery remain outside the demonstrated profile.
+a native Graft view. We can change that API: backwards compatibility is not a
+requirement. The next experiment should prove the redesigned application workflow.
+Native deletion, complete external source bodies, and production recovery remain
+outside the demonstrated profile.
 [The migration issue](https://github.com/JamesHWade/graft/issues/64) records the
 remaining work.
 
-The decision remains **reduce scope and retain the existing consumer contract
-until replacement passes its tests**. Graft can remain an implementation of the
-artifact layer if its mechanisms justify their cost. Its name and current
+The decision is **reduce scope and redesign the consumer boundary**. Graft can
+remain an implementation of the artifact layer if its mechanisms justify their cost. Its name and current
 architecture are not requirements for preserving user work.
 
 See [ADR 0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)

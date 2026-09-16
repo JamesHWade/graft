@@ -29,7 +29,7 @@ migration_at <- function(export, record_id, order) {
 
 migration_validate <- function(export) {
   if (
-    !identical(export$format, 1L) ||
+    !identical(export$format, 2L) ||
       !isTRUE(export$final_snapshot$history_complete)
   ) {
     artifact_error("Unsupported export format or incomplete source history.")
@@ -273,6 +273,37 @@ migration_validate <- function(export) {
       if (!all(dependencies %in% selected_ids)) {
         artifact_error("Checkpoint is missing a required evidence dependency.")
       }
+    }
+  }
+  heads <- export$final_heads
+  record_ids <- unique(vapply(
+    export$history,
+    \(row) row$record_id,
+    character(1)
+  ))
+  if (
+    !is.list(heads) ||
+      !length(heads) ||
+      anyDuplicated(names(heads)) ||
+      !setequal(names(heads), record_ids)
+  ) {
+    artifact_error("Final heads must cover every exported record exactly once.")
+  }
+  fields <- c(
+    "record_id",
+    "class",
+    "revision_id",
+    "revision_number",
+    "commit_order",
+    "batch_id",
+    "schema_build_digest"
+  )
+  for (id in names(heads)) {
+    latest <- migration_at(export, id, final$commit_order)
+    if (!identical(heads[[id]], latest[fields])) {
+      artifact_error(
+        "Retained terminal revision does not match the exported final head."
+      )
     }
   }
   invisible(export)
