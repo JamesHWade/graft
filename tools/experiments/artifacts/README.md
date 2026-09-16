@@ -1,7 +1,8 @@
 # Persistent artifact experiment (#59)
 
 This is disposable research code, not a supported storage API. Run from the
-repository root after preparing the isolated experiment library:
+repository root after running [`setup.R`](../README.md#run) and setting
+`GRAFT_EXPERIMENT_HOME` to its attested environment directory:
 
 ```sh
 Rscript tools/experiments/artifacts/run.R

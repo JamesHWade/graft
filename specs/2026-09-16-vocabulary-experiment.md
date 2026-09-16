@@ -15,16 +15,16 @@ data-dict CLI 0.0.3 at `0161d460b6eb70d337028f8eddbf2f443bcb8f67`.
 the executable digest and exact content references. Source builds with the same
 version number need the commit pin; version 0.0.3 alone is insufficient.
 
-Actual execution command for this run:
+Reproduction command using the required setup attestation:
 
 ```sh
-R_LIBS_USER=/tmp/graft-experiment-library:/Users/james/Library/R/arm64/4.6/library \
-DATA_DICT=/tmp/data-dict-unification-review-20260915/target/release/data-dict \
+export GRAFT_EXPERIMENT_HOME=/tmp/graft-experiment-dependencies
+Rscript tools/experiments/setup.R
 Rscript tools/experiments/vocabulary/run.R /tmp/graft-vocabulary-results
 ```
 
-After dependency installation, the runner is offline and credential-free. Its
-paths can be changed through standard `R_LIBS_USER` and `DATA_DICT` settings.
+After dependency installation, the runner is offline and credential-free. It
+checks the attested CLI digest and package source pins before producing evidence.
 
 | Case | Observed result |
 | --- | --- |

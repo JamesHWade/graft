@@ -6,7 +6,7 @@
     "commons": "0.1.0.9000",
     "datadict": "0.1.0",
     "data_dict": "data-dict 0.0.3",
-    "cli_binary_sha256": "429ed62277bd15d62077ee3e1d061da67e60c9454e3c2ae8720ad46027854691",
+    "cli_binary_sha256": "39c594ddca9835fd42bb114956e5a4bfceafe84cdf9c59b6f4f94866f191fd72",
     "packages": {
       "jsonlite": "2.0.0",
       "cli": "3.6.6",

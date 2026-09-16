@@ -9,9 +9,9 @@ Rscript tools/experiments/vocabulary/run.R /tmp/vocabulary-results
 ```
 
 Set `GRAFT_EXPERIMENT_HOME` to the directory produced by
-[`setup.R`](../README.md#run). Alternatively set `R_LIBS_USER`, `DATA_DICT` and
-`DUCKDB_R_HOME` from that prepared environment. This standalone runner checks the
-dependency snapshot and installed FTS extension before constructing Commons.
+[`setup.R`](../README.md#run). This standalone runner checks setup's CLI
+attestation, the package/source snapshot and installed FTS extension before
+constructing Commons.
 Execution makes no network or model calls and uses temporary directories
 for destructive test candidates. The optional output path receives `results.json`,
 two published JSON bundles and generated Markdown context.

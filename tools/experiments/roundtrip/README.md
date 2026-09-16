@@ -2,9 +2,8 @@
 
 Run `Rscript tools/experiments/roundtrip/run.R` from the repository root after
 preparing the environment with [`setup.R`](../README.md#run) and setting
-`GRAFT_EXPERIMENT_HOME` to that directory. Alternatively supply `R_LIBS_USER`,
-`DATA_DICT` and `DUCKDB_R_HOME` from the prepared environment. The standalone
-runner checks the dependency snapshot and FTS installation before Commons runs.
+`GRAFT_EXPERIMENT_HOME` to that directory. The standalone runner checks setup's
+CLI attestation, the package/source snapshot and FTS installation before Commons runs.
 No model credentials or
 network are used. Commons' own OS sandbox must be available for `run_r`; failures
 are errors, never silently skipped or replaced with unsafe execution.

@@ -33,14 +33,67 @@ test_that("development builds require matching source identity despite equal ver
   expect_no_error(experiment_check_sources(pins, list(example = description)))
 })
 
+test_that("CLI attestation binds exact bytes and the declared source pins", {
+  binary <- withr::local_tempfile()
+  writeBin(charToRaw("data-dict 0.0.3 original build"), binary)
+  pins <- list(data_dict_cli_version = "0.0.3", source = "expected commit")
+  attestation <- list(
+    source_pins = pins,
+    cli = "data-dict 0.0.3",
+    cli_sha256 = unname(cli::hash_file_sha256(binary))
+  )
+  expect_no_error(experiment_check_cli(attestation, pins, binary))
+  writeBin(charToRaw("data-dict 0.0.3 different build"), binary)
+  expect_error(
+    experiment_check_cli(attestation, pins, binary),
+    "does not match the setup attestation",
+    class = "simpleError"
+  )
+  attestation$cli_sha256 <- unname(cli::hash_file_sha256(binary))
+  attestation$source_pins$source <- "different commit"
+  expect_error(
+    experiment_check_cli(attestation, pins, binary),
+    "does not match the setup attestation",
+    class = "simpleError"
+  )
+})
+
+test_that("runners reject manually prepared environments without attestation", {
+  withr::local_envvar(GRAFT_EXPERIMENT_HOME = "")
+  expect_error(
+    experiment_prepare(),
+    "environment attested by setup.R",
+    class = "simpleError"
+  )
+})
+
 test_that("standalone context runners reject an empty FTS cache before execution", {
+  original_home <- Sys.getenv("GRAFT_EXPERIMENT_HOME")
   for (runner in c("vocabulary", "roundtrip")) {
     cache <- withr::local_tempdir()
+    prepared <- withr::local_tempdir()
+    file.copy(file.path(original_home, "versions.json"), prepared)
+    writeLines(
+      c(
+        paste0(".libPaths(", paste(deparse(.libPaths()), collapse = ""), ")"),
+        paste0(
+          "Sys.setenv(DATA_DICT = ",
+          encodeString(datadict::dd_path(), quote = '"'),
+          ")"
+        ),
+        paste0("options(duckdb.home = ", encodeString(cache, quote = '"'), ")"),
+        paste0(
+          "Sys.setenv(DUCKDB_R_HOME = ",
+          encodeString(cache, quote = '"'),
+          ")"
+        )
+      ),
+      file.path(prepared, "environment.R")
+    )
     result <- callr::r(
-      function(checkout, runner, cache) {
+      function(checkout, runner, prepared) {
         setwd(checkout)
-        Sys.setenv(GRAFT_EXPERIMENT_HOME = "", DUCKDB_R_HOME = cache)
-        options(duckdb.home = NULL)
+        Sys.setenv(GRAFT_EXPERIMENT_HOME = prepared)
         tryCatch(
           {
             source(file.path("tools/experiments", runner, "run.R"))
@@ -49,7 +102,7 @@ test_that("standalone context runners reject an empty FTS cache before execution
           error = conditionMessage
         )
       },
-      args = list(experiment_checkout, runner, cache),
+      args = list(experiment_checkout, runner, prepared),
       libpath = .libPaths()
     )
     expect_match(

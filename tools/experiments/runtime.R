@@ -87,12 +87,41 @@ experiment_fts <- function(expected_version) {
   }
 }
 
+experiment_check_cli <- function(attestation, pins, binary) {
+  if (
+    !identical(attestation$source_pins, pins) ||
+      !identical(
+        attestation$cli,
+        paste("data-dict", pins$data_dict_cli_version)
+      ) ||
+      !is.character(attestation$cli_sha256) ||
+      length(attestation$cli_sha256) != 1L ||
+      !file.exists(binary) ||
+      !identical(unname(cli::hash_file_sha256(binary)), attestation$cli_sha256)
+  ) {
+    stop(
+      "data-dict CLI does not match the setup attestation. Run setup.R again.",
+      call. = FALSE
+    )
+  }
+}
+
 experiment_prepare <- function(fts = FALSE) {
   experiment_home <- Sys.getenv("GRAFT_EXPERIMENT_HOME")
-  if (nzchar(experiment_home)) {
-    source(file.path(experiment_home, "environment.R"))
+  attestation_path <- file.path(experiment_home, "versions.json")
+  if (!nzchar(experiment_home) || !file.exists(attestation_path)) {
+    stop(
+      "Set GRAFT_EXPERIMENT_HOME to an environment attested by setup.R.",
+      call. = FALSE
+    )
   }
+  source(file.path(experiment_home, "environment.R"))
   snapshot <- experiment_snapshot()
+  experiment_check_cli(
+    jsonlite::read_json(attestation_path),
+    jsonlite::read_json("tools/experiments/pins.json"),
+    datadict::dd_path()
+  )
   if (fts) {
     experiment_fts(snapshot$fts_version)
   }

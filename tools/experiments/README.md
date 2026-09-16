@@ -24,9 +24,11 @@ the successful Linux evidence run. Setup requests those exact package versions;
 setup and every runner reject missing packages or version drift before producing
 evidence. Every runner also verifies each development package's installed
 `RemoteSha` against `pins.json`; matching version strings alone are insufficient.
-Manually prepared libraries must retain that installation metadata from the
-pinned sources. Updating the snapshot is a deliberate change requiring a new full run.
-`versions.json` records the installed versions, source pins and CLI digest.
+Updating the snapshot is a deliberate change requiring a new full run.
+`versions.json` is setup's attestation of installed versions, source pins and the
+CLI digest. Every runner requires it and verifies the selected CLI's exact bytes
+against that digest and its declared source pins against `pins.json`. An
+unattested manual library/binary combination is rejected even if versions match.
 System libraries and OS images are not locked; this is a package snapshot, not a
 bit-for-bit environment image.
 
@@ -36,9 +38,9 @@ location. This requires DuckDB 1.5.5 or newer. The generated environment exports
 `DUCKDB_R_HOME` so child processes use that same cache. The runner checks that FTS
 is installed before it starts the experiments.
 
-The runner itself is offline and credential-free. It sources the generated
-`environment.R` when `GRAFT_EXPERIMENT_HOME` is set. Alternatively supply
-`R_LIBS_USER`, `DATA_DICT` and `DUCKDB_R_HOME` from an already prepared environment.
+The runner itself is offline and credential-free. Set `GRAFT_EXPERIMENT_HOME` to
+the directory produced by setup; the runner loads its generated `environment.R`
+and verifies its `versions.json` attestation before execution.
 Standalone runners use this same preflight; vocabulary and roundtrip execution
 fail before constructing Commons when the recorded FTS extension is missing. Set
 `GRAFT_EXPERIMENT_OUTPUT` to retain result JSON, validation reports and exports;

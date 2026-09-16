@@ -177,7 +177,7 @@ if (!identical(cli_version, paste("data-dict", pins$data_dict_cli_version))) {
   stop("Unexpected data-dict CLI version.", call. = FALSE)
 }
 
-# Source this file for local interactive use, or export the printed paths.
+# Shared environment for runners using this setup's attestation.
 environment_file <- file.path(experiment_home, "environment.R")
 writeLines(
   c(
@@ -235,6 +235,10 @@ if (nzchar(Sys.getenv("GITHUB_ENV"))) {
     append = TRUE
   )
 }
-cat("Setup complete. Source ", environment_file, " or use:\n", sep = "")
-cat("R_LIBS_USER=", experiment_library, "\nDATA_DICT=", binary, "\n", sep = "")
-cat("DUCKDB_R_HOME=", experiment_duckdb_home, "\n", sep = "")
+cat(
+  "Setup complete. Set GRAFT_EXPERIMENT_HOME=",
+  experiment_home,
+  "\n",
+  sep = ""
+)
+cat("Then run Rscript tools/experiments/run.R or a standalone runner.\n")
