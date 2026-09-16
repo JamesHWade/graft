@@ -28,6 +28,28 @@ for (backend in c("manifest", "graft")) {
     {
       original <- run("produce")
       unchanged <- run("consume")
+      store <- artifact_store(
+        root,
+        backend,
+        "tools/experiments/artifacts/artifact.data-dict.json"
+      )
+      withdrawn <- tryCatch(
+        {
+          artifact_fixture(store, 2L)
+          testthat::expect_error(
+            roundtrip_admit(store, original$checkpoint$input_basis),
+            "Input selection is stale",
+            class = "artifact_experiment_error"
+          )
+          artifact_revoke(store, original$checkpoint$input_basis)
+          artifact_read_bytes(artifact_digest_path(
+            root,
+            "policy",
+            original$checkpoint$input_basis
+          ))
+        },
+        finally = artifact_close(store)
+      )
       revised <- run("revise")
       testthat::expect_length(
         unique(c(original$pid, unchanged$pid, revised$pid)),
@@ -85,6 +107,24 @@ for (backend in c("manifest", "graft")) {
               consult = FALSE
             ),
             length(revised$output_hashes)
+          )
+          testthat::expect_identical(
+            artifact_read_bytes(artifact_digest_path(
+              root,
+              "policy",
+              original$checkpoint$input_basis
+            )),
+            withdrawn
+          )
+          artifact_fixture(store, 1L)
+          testthat::expect_length(
+            artifact_review(store, original$checkpoint$input_basis),
+            0L
+          )
+          testthat::expect_error(
+            roundtrip_admit(store, original$checkpoint$input_basis),
+            "Selection is not eligible",
+            class = "artifact_experiment_error"
           )
           observed[[backend]] <- list(
             original_total = original$total,

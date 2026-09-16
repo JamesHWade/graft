@@ -318,27 +318,11 @@ roundtrip_process <- function(checkout, root, backend, action) {
     } else {
       NULL
     }
-    if (!is.null(old)) {
-      old_basis <- artifact_read_json(artifact_digest_path(
-        store$root,
-        "selections",
-        old$input_basis
-      ))
-      artifact_approve(store, old_basis$roots, "Commons synthesis")
-    }
     inputs <- artifact_fixture(store, if (action == "produce") 1L else 2L)
     if (!is.null(old)) {
-      # The old policy remains approved, but its dependencies changed.
-      stale <- tryCatch(
-        {
-          roundtrip_admit(store, old$input_basis)
-          FALSE
-        },
-        artifact_experiment_error = function(e) {
-          grepl("stale", conditionMessage(e), fixed = TRUE)
-        }
-      )
-      stopifnot(stale)
+      # Review dependency changes without rewriting the old selection's policy.
+      # A withdrawn selection must remain withdrawn even after later revisions.
+      stopifnot(length(artifact_review(store, old$input_basis)) > 0L)
     }
     input_basis <- artifact_approve(
       store,

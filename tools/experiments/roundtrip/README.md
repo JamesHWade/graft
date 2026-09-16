@@ -30,6 +30,9 @@ For each metadata backend, independent R processes:
 The runner asserts both original total 6 and revised total 7, exact older bytes,
 real PNG signature, typed-empty result, source revision visibility, calculation
 label A versus R-worker label B, policy withdrawal and fresh-process identities.
+It withdraws the prior input selection before revision and verifies that its
+policy bytes remain unchanged. Restoring the original inputs clears staleness
+but does not restore that selection's eligibility.
 The model's answer and citation are scripted protocol data, not evaluated model
 quality or independently verified factual support. No hosted OpenTelemetry
 trajectory service, rendered citation UI or cloud artifact store is involved.
