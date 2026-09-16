@@ -312,7 +312,7 @@ tables, applicable normalized relations, and accepted definitions into a
 detached source created through Commons’s public API:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">commons_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_commons_data_source.html">graft_commons_data_source</a></span><span class="op">(</span><span class="va">view</span>, classes <span class="op">=</span> <span class="st">"person"</span><span class="op">)</span></span>
-<span><span class="va">layer</span> <span class="op">&lt;-</span> <span class="fu">commons</span><span class="fu">::</span><span class="fu"><a href="https://posit-dev.github.io/commons/reference/semantic_layer.html" class="external-link">semantic_layer</a></span><span class="op">(</span><span class="va">commons_source</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">layer</span> <span class="op">&lt;-</span> <span class="fu">commons</span><span class="fu">::</span><span class="fu"><a href="https://posit-dev.github.io/commons/r/reference/semantic_layer.html" class="external-link">semantic_layer</a></span><span class="op">(</span><span class="va">commons_source</span><span class="op">)</span></span></code></pre></div>
 <p>Commons owns that copy, its file measures, and its fallback query
 paths. It never receives Graft’s live DuckDB connection, and later Graft
 commits do not change an existing Commons source.</p>

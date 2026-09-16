@@ -3,7 +3,7 @@
 `graft_commons_data_source()` materializes accepted public tables and
 definitions at one immutable boundary, then loads exact typed values and
 a generated data-dict dictionary into
-[`commons::data_source()`](https://posit-dev.github.io/commons/reference/data_source.html).
+[`commons::data_source()`](https://posit-dev.github.io/commons/r/reference/data_source.html).
 The returned Commons source owns its DuckDB connection and does not
 share Graft's backend.
 
