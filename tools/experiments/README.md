@@ -22,7 +22,10 @@ own library, installs this Graft checkout, and builds the matching data-dict CLI
 the complete resolved R package set, R 4.6.1 and the FTS extension revision from
 the successful Linux evidence run. Setup requests those exact package versions;
 setup and every runner reject missing packages or version drift before producing
-evidence. Updating the snapshot is a deliberate change requiring a new full run.
+evidence. Every runner also verifies each development package's installed
+`RemoteSha` against `pins.json`; matching version strings alone are insufficient.
+Manually prepared libraries must retain that installation metadata from the
+pinned sources. Updating the snapshot is a deliberate change requiring a new full run.
 `versions.json` records the installed versions, source pins and CLI digest.
 System libraries and OS images are not locked; this is a package snapshot, not a
 bit-for-bit environment image.

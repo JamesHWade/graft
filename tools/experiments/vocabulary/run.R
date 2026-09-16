@@ -353,8 +353,8 @@ result <- list(
     )
   ),
   source_pins = list(
-    commons = "726a2ed459c2b7c7aebc29539895f04873276b4f",
-    data_dict = "0161d460b6eb70d337028f8eddbf2f443bcb8f67"
+    commons = utils::packageDescription("commons")$RemoteSha,
+    data_dict = utils::packageDescription("datadict")$RemoteSha
   ),
   references = v1$references,
   limitations = c(

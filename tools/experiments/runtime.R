@@ -20,6 +20,30 @@ experiment_check_versions <- function(expected, actual) {
   }
 }
 
+experiment_check_sources <- function(pins, actual) {
+  mismatches <- vapply(
+    pins,
+    function(pin) {
+      description <- actual[[pin$package]]
+      if (!is.list(description) || !identical(description$RemoteSha, pin$sha)) {
+        pin$package
+      } else {
+        NA_character_
+      }
+    },
+    character(1)
+  )
+  mismatches <- mismatches[!is.na(mismatches)]
+  if (length(mismatches)) {
+    stop(
+      "Experiment source pin mismatch or missing RemoteSha: ",
+      paste(mismatches, collapse = ", "),
+      ". Install the pinned sources with setup.R before running experiments.",
+      call. = FALSE
+    )
+  }
+}
+
 experiment_snapshot <- function() {
   snapshot <- jsonlite::read_json("tools/experiments/dependency-snapshot.json")
   if (!identical(as.character(getRversion()), snapshot$R_version)) {
@@ -37,6 +61,10 @@ experiment_snapshot <- function() {
   })
   names(actual) <- names(snapshot$packages)
   experiment_check_versions(snapshot$packages, actual)
+  pins <- jsonlite::read_json("tools/experiments/pins.json")$packages
+  descriptions <- lapply(pins, \(pin) utils::packageDescription(pin$package))
+  names(descriptions) <- vapply(pins, \(pin) pin$package, character(1))
+  experiment_check_sources(pins, descriptions)
   snapshot
 }
 

@@ -15,6 +15,24 @@ test_that("dependency snapshots reject missing packages and version drift", {
   ))
 })
 
+test_that("development builds require matching source identity despite equal versions", {
+  pins <- list(list(package = "example", sha = strrep("a", 40)))
+  description <- list(Version = "0.1.0.9000", RemoteSha = strrep("b", 40))
+  expect_error(
+    experiment_check_sources(pins, list(example = description)),
+    "source pin mismatch or missing RemoteSha: example",
+    class = "simpleError"
+  )
+  description$RemoteSha <- NULL
+  expect_error(
+    experiment_check_sources(pins, list(example = description)),
+    "source pin mismatch or missing RemoteSha: example",
+    class = "simpleError"
+  )
+  description$RemoteSha <- pins[[1]]$sha
+  expect_no_error(experiment_check_sources(pins, list(example = description)))
+})
+
 test_that("standalone context runners reject an empty FTS cache before execution", {
   for (runner in c("vocabulary", "roundtrip")) {
     cache <- withr::local_tempdir()
