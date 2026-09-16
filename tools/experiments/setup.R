@@ -77,7 +77,14 @@ if (!file.exists(file.path(experiment_library, "graft", "DESCRIPTION"))) {
 }
 
 # Commons context search uses ragnar's FTS index. Provision its extension during
-# network-enabled setup, in DuckDB's default cache shared by later R processes.
+# network-enabled setup, in an explicit cache shared by later R processes.
+if (utils::packageVersion("duckdb") < "1.5.5") {
+  stop("This setup requires DuckDB >= 1.5.5 for DUCKDB_R_HOME.", call. = FALSE)
+}
+experiment_duckdb_home <- file.path(experiment_home, "duckdb")
+dir.create(experiment_duckdb_home, showWarnings = FALSE)
+Sys.setenv(DUCKDB_R_HOME = experiment_duckdb_home)
+options(duckdb.home = experiment_duckdb_home)
 provision_fts <- function() {
   con <- DBI::dbConnect(duckdb::duckdb())
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
@@ -171,7 +178,17 @@ writeLines(
       encodeString(experiment_library, quote = '"'),
       ", .libPaths()))"
     ),
-    paste0("Sys.setenv(DATA_DICT = ", encodeString(binary, quote = '"'), ")")
+    paste0("Sys.setenv(DATA_DICT = ", encodeString(binary, quote = '"'), ")"),
+    paste0(
+      "Sys.setenv(DUCKDB_R_HOME = ",
+      encodeString(experiment_duckdb_home, quote = '"'),
+      ")"
+    ),
+    paste0(
+      "options(duckdb.home = ",
+      encodeString(experiment_duckdb_home, quote = '"'),
+      ")"
+    )
   ),
   environment_file
 )
@@ -198,10 +215,18 @@ jsonlite::write_json(
 )
 if (nzchar(Sys.getenv("GITHUB_ENV"))) {
   cat(
-    paste0("DATA_DICT=", binary, "\n"),
+    paste0(
+      "DATA_DICT=",
+      binary,
+      "\n",
+      "DUCKDB_R_HOME=",
+      experiment_duckdb_home,
+      "\n"
+    ),
     file = Sys.getenv("GITHUB_ENV"),
     append = TRUE
   )
 }
 cat("Setup complete. Source ", environment_file, " or use:\n", sep = "")
 cat("R_LIBS_USER=", experiment_library, "\nDATA_DICT=", binary, "\n", sep = "")
+cat("DUCKDB_R_HOME=", experiment_duckdb_home, "\n", sep = "")

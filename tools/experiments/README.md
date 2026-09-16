@@ -22,14 +22,15 @@ own library, installs this Graft checkout, and builds the matching data-dict CLI
 package versions and the CLI digest. Other transitive CRAN dependencies are
 resolved from their declared contracts, not a full environment lockfile.
 
-Setup also installs the FTS extension used by Commons context search into
-DuckDB's default extension cache and records its version and location. Run setup
-and experiments as the same user with the same DuckDB version and cache. The
-runner checks that FTS is installed before it starts the experiments.
+Setup also installs the FTS extension used by Commons context search into an
+isolated cache under `GRAFT_EXPERIMENT_HOME/duckdb` and records its version and
+location. This requires DuckDB 1.5.5 or newer. The generated environment exports
+`DUCKDB_R_HOME` so child processes use that same cache. The runner checks that FTS
+is installed before it starts the experiments.
 
 The runner itself is offline and credential-free. It sources the generated
 `environment.R` when `GRAFT_EXPERIMENT_HOME` is set. Alternatively supply
-`R_LIBS_USER` and `DATA_DICT` from an already prepared environment. Set
+`R_LIBS_USER`, `DATA_DICT` and `DUCKDB_R_HOME` from an already prepared environment. Set
 `GRAFT_EXPERIMENT_OUTPUT` to retain result JSON, validation reports and exports;
 otherwise a temporary evidence directory is created. Failed checks exit nonzero.
 
