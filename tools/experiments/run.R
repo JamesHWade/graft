@@ -13,7 +13,13 @@ Sys.setenv(
   GRAFT_EXPERIMENT_OUTPUT = output,
   GRAFT_SEMANTIC_OUTPUT = file.path(output, "semantics")
 )
-steps <- c("artifacts", "vocabulary", "semantic-compatibility", "roundtrip")
+steps <- c(
+  "artifacts",
+  "vocabulary",
+  "semantic-compatibility",
+  "roundtrip",
+  "tempest-migration"
+)
 for (step in steps) {
   cat("\nRunning", step, "\n")
   script <- file.path("tools/experiments", step, "run.R")
@@ -34,6 +40,9 @@ jsonlite::write_json(
         "ellmer",
         "datadict",
         "shinychat",
+        "tempest",
+        "deputy",
+        "dsprrr",
         "duckdb",
         "testthat"
       ),

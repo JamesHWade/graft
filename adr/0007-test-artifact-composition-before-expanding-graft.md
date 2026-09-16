@@ -2,7 +2,7 @@
 
 Date: 2026-09-16
 
-Status: proposed, supported by experiments #59–#62; implementation and migration
+Status: proposed, supported by experiments #59–#62 and #64; implementation and migration
 remain separate. This ADR is the recommendation for #63.
 
 ## Decision
@@ -43,6 +43,7 @@ compare next, with a specific retirement test below.
 | #60 | 18 cases validate portable bindings and use the release in plain R and Commons constructors without a Graft store | Keep one publishing module; ontology alone does not earn a ledger or reasoner |
 | #61 | 38 checks exercise real data-dict/Commons on the same Parquet bytes; R-language definition diverges | Shared YAML is not shared execution semantics; pursue a public resolved-export contract upstream |
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
+| #64 | 43 assertions preserve native Tempest history and receipts in a Graft-free reader; public knowledge admission rejects the portable view | Historical portability is demonstrated; retain the existing consumer contract until its replacement is proved |
 
 Results and reproducible commands are indexed in
 [`tools/experiments/README.md`](../tools/experiments/README.md). The independent
@@ -87,17 +88,17 @@ an interpretation correct. A search cache is a rebuildable view over artifacts.
 
 ## Current consumers and migration obligations
 
-Source inspection of Tempest at
-[`bfc32f6`](https://github.com/JamesHWade/tempest/blob/bfc32f6cd387ac64aa628301e110396b668d69a7/R/graft-schema.R)
-finds a real promotion/knowledge integration. Receipts and checkpoints bind store,
+The migration experiment executes Tempest at
+[`3cfe220`](https://github.com/JamesHWade/tempest/tree/3cfe220577bdce61ee3b94684cc4ffdf5e1fdb83)
+through its public promotion/knowledge integration. Receipts and checkpoints bind store,
 batch, schema build, snapshot and native revision identities. Its historical
 selection and reviewed correction behavior must remain available or be explicitly
 mapped; exporting current rows alone is insufficient.
 
 Rill at `7769879c8e8f11f5305df3ada81822269b154fa4` has no `graft` references in its
 inspected `DESCRIPTION` or `R/` sources. Its design ADRs and open #51 define intended
-integration, not shipped migration cost. These are source inspections, not new
-Tempest/Rill runtime acceptance tests. Deployed store inventory, owner approval,
+integration, not shipped migration cost. That Rill finding is an earlier source
+inspection, not a new Rill runtime acceptance test. Deployed store inventory, owner approval,
 retention and data volumes remain unknown; no user stores were searched, opened
 or modified by the experiments.
 
@@ -113,6 +114,12 @@ Before retirement, a bounded real Tempest migration must:
    evidence, including withdrawal/tombstone behavior without implying Forget.
 5. Reopen the unchanged source with its original receipts as rollback evidence.
    Keep it read-only until parity and deployment-specific migration are approved.
+
+The [#64 result](../specs/2026-09-16-tempest-migration.md) establishes historical
+read parity and unchanged-source rollback for the synthetic consumer fixture.
+The current public Tempest constructor rejects the portable view. Consumer
+admission, native deletion coverage, and production replacement remain open;
+the experiment has not satisfied every retirement condition above.
 
 Retire Graft if that target passes the real consumer contract and production
 lifecycle with less total complexity. Retain only the mechanisms a competing
@@ -137,8 +144,8 @@ production authorization. Passing them is not permission to deploy broad memory.
 - #49: design and test content/metadata publication, orphan retention, idempotency
   and crash recovery in the chosen artifact module. Use the shared harness and
   retain both metadata candidates until the operational comparison is meaningful.
-- #64: run a real Tempest migration-conformance experiment as specified above; use
-  #50's existing evidence rather than recreating its completed product proof.
+- #64: close the remaining public Tempest admission and lifecycle gaps using the
+  executed migration fixture; preserve #50's original acceptance evidence.
 - #65: propose a minimal public Commons ingestion seam for validated typed data-dict
   exports, including dependencies, grain, dialect and the R-language counterexample.
 - #66: propose a supported Commons output-artifact handoff for completed table/image

@@ -1,5 +1,17 @@
 {
-  "schema_version": 1,
+  "outcome": "Historical export/read parity; native Tempest admission requires a new public seam",
+  "recommendation": "reduce; retain Graft for the existing Tempest contract",
+  "assertions": 43,
+  "native_history_revisions": 11,
+  "retained_receipts": 3,
+  "retained_target_artifacts": 12,
+  "evidence_per_checkpoint": {
+    "initial": 4,
+    "correction": 4
+  },
+  "source_unchanged": true,
+  "rollback_verified": true,
+  "source_export_sha256": "6de4074d61f282f2a5185f11f80ff0f273cd9f3168813998ed51808a99b18eb9",
   "packages": [
     {
       "package": "commons",
@@ -51,6 +63,5 @@
       "version": "0.0.0.9000"
     }
   ],
-  "data_dict_cli_package": "datadict",
-  "data_dict_cli_version": "0.0.3"
+  "unsupported": ["Native Tempest knowledge admission from a manifest view", "Public deletion/tombstone production through Tempest", "Original external web bodies and executable ProgramArtifact payloads absent from these bundles", "Other schemas, sensitive fields, unselected store history, concurrent writes and production recovery"]
 }

@@ -26,7 +26,7 @@ evidence. Every runner also verifies each development package's installed
 `RemoteSha` against `pins.json`; matching version strings alone are insufficient.
 Updating the snapshot is a deliberate change requiring a new full run.
 `versions.json` is setup's attestation of installed versions, source pins and the
-CLI digest. Setup also records installed-tree digests for all four pinned
+CLI digest. Setup also records installed-tree digests for all pinned
 development packages; every runner rejects changed payloads even when package
 version and source metadata remain unchanged.
 Every runner requires the attestation and verifies the selected CLI's exact bytes
@@ -73,6 +73,7 @@ Xcode is selected but unavailable. No system setting needs to be changed.
 | #60 shared vocabulary | [vocabulary](vocabulary/README.md) | [Results](../../specs/2026-09-16-vocabulary-experiment.md) |
 | #61 compiler compatibility | [semantic compatibility](semantic-compatibility/README.md) | [Results](../../specs/2026-09-16-semantic-compatibility.md) |
 | #62 full Commons roundtrip | [roundtrip](roundtrip/README.md) | [Results](../../specs/2026-09-16-commons-roundtrip.md) |
+| #64 Tempest checkpoint migration | [tempest-migration](tempest-migration/README.md) | [Results](../../specs/2026-09-16-tempest-migration.md) |
 | #63 architecture decision | All above | [ADR 0007](../../adr/0007-test-artifact-composition-before-expanding-graft.md) |
 
 The dedicated GitHub workflow reruns the complete suite on Linux and uploads

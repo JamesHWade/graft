@@ -28,6 +28,11 @@ Current records, search indexes, supported graph relationships, and the Open
 Knowledge Format (OKF) working tree are read views built from that ledger.
 Snapshot views select those reads at one accepted commit boundary.
 
+This article describes the current package. The [persistent artifact and
+selected-memory proposal](persistent-artifacts.html) describes the experimentally
+tested next direction and the migration evidence required before replacing an
+existing consumer's storage.
+
 <figure class="graft-article-figure">
 <p class="graft-swipe-hint">Swipe to explore the diagram &rarr;</p>
 <div class="graft-diagram-scroll">

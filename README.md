@@ -179,6 +179,12 @@ history functions.
 
 ## Documentation
 
+The [persistent artifact and selected-memory proposal](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
+explains how Commons, data-dict, shared vocabulary, and durable outputs could work
+together. The [runnable experiments](tools/experiments/README.md) compare storage
+implementations; the current public APIs below remain in force while that work
+is evaluated.
+
 1. [Get started](https://jameshwade.github.io/graft/articles/getting-started.html)
    with the complete data-dict workflow.
 2. [Author a data-dict
