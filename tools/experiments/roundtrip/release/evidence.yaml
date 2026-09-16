@@ -1,0 +1,20 @@
+$version: "0.1.0"
+$learn_more: https://data-dict.tidyverse.org/
+name: Retained artifact evidence
+description: Synthetic samples; units are arbitrary and sums have no scientific interpretation.
+tables:
+  - name: evidence
+    source:
+      parquet: evidence.parquet
+    columns:
+      - name: sample
+        type: string
+        examples: [s1, s2]
+        constraints: [primary_key]
+      - name: value
+        type: number(quantity)
+        range: [0, 10]
+        units: arbitrary
+    definitions:
+      - name: total
+        expr: SUM(value)

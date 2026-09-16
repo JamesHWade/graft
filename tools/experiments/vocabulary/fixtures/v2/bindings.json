@@ -1,0 +1,139 @@
+{
+  "format": "graft-experiment-bindings/1",
+  "release": "urn:example:bindings:v2",
+  "vocabulary": {
+    "release": "urn:example:vocabulary:v2",
+    "path": "vocabulary.json",
+    "sha256": "6d3d1cb8016a24c738ff3018a91feb7d70f85db68037ecae6a8c35dd71f46d09"
+  },
+  "dictionaries": [
+    {
+      "id": "urn:example:dictionary:lab-a:v2",
+      "workflow": "lab-a",
+      "path": "lab-a.yaml",
+      "sha256": "02142b9a4d2e30b079709cd20a3fe3fe364d955245742d74a946d6e7f0e6669e"
+    },
+    {
+      "id": "urn:example:dictionary:lab-b:v2",
+      "workflow": "lab-b",
+      "path": "lab-b.yaml",
+      "sha256": "70c0112840dfe6ff1121a98493f324da5abc517401b624829f6a11369d792127"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "lab-a:reading_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v2",
+      "table": "readings",
+      "field": "reading_id",
+      "term": "urn:example:measurement",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:sample_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v2",
+      "table": "readings",
+      "field": "sample_id",
+      "term": "urn:example:sample",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:temperature_c",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v2",
+      "table": "readings",
+      "field": "temperature_c",
+      "term": "urn:example:temperature",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:measured-sample",
+      "kind": "relationship",
+      "dictionary": "urn:example:dictionary:lab-a:v2",
+      "table": "readings",
+      "from": "reading_id",
+      "to": "sample_id",
+      "term": "urn:example:measurement-of-sample",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-b:assay_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v2",
+      "table": "assays",
+      "field": "assay_id",
+      "term": "urn:example:measurement",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:specimen_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v2",
+      "table": "assays",
+      "field": "specimen_id",
+      "term": "urn:example:sample",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:temperature_f",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v2",
+      "table": "assays",
+      "field": "temperature_f",
+      "term": "urn:example:temperature",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:measured-sample",
+      "kind": "relationship",
+      "dictionary": "urn:example:dictionary:lab-b:v2",
+      "table": "assays",
+      "from": "assay_id",
+      "to": "specimen_id",
+      "term": "urn:example:measurement-of-sample",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "assertion:1",
+      "subject": "lab-a:reading:r1",
+      "predicate": "urn:example:measurement-of-sample",
+      "object": "lab-a:sample:s1",
+      "source": "urn:example:source:worksheet-1",
+      "status": "accepted",
+      "negated": false,
+      "time": "2026-09-01",
+      "scope": "lab-a"
+    },
+    {
+      "id": "assertion:2",
+      "subject": "lab-b:assay:a1",
+      "predicate": "urn:example:measurement-of-sample",
+      "object": "lab-b:sample:s1",
+      "source": "urn:example:source:worksheet-2",
+      "status": "retracted",
+      "negated": true,
+      "time": "2026-09-02",
+      "scope": "lab-b"
+    }
+  ]
+}

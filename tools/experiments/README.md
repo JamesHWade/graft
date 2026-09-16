@@ -1,0 +1,51 @@
+# Artifact, memory and shared-meaning experiments
+
+These are bounded, disposable architecture experiments for #59–#63. They add no
+public Graft APIs and do not change any existing user store. The suite compares
+Graft with a manifest-based composition under the same behavior checks, then
+integrates each with current Commons and data-dict.
+
+## Run
+
+From the repository root, provision dependencies into an isolated directory:
+
+```sh
+export GRAFT_EXPERIMENT_HOME="/tmp/graft-experiment-dependencies"
+Rscript tools/experiments/setup.R
+Rscript tools/experiments/run.R
+```
+
+Setup requires network access, Rust/cargo, normal R build dependencies and a
+writable temporary directory. It installs the pinned upstream sources into its
+own library, installs this Graft checkout, and builds the matching data-dict CLI.
+`pins.json` identifies the development sources; `versions.json` records installed
+package versions and the CLI digest. Other transitive CRAN dependencies are
+resolved from their declared contracts, not a full environment lockfile.
+
+The runner itself is offline and credential-free. It sources the generated
+`environment.R` when `GRAFT_EXPERIMENT_HOME` is set. Alternatively supply
+`R_LIBS_USER` and `DATA_DICT` from an already prepared environment. Set
+`GRAFT_EXPERIMENT_OUTPUT` to retain result JSON, validation reports and exports;
+otherwise a temporary evidence directory is created. Failed checks exit nonzero.
+
+Commons' native OS sandbox must work. A surrounding sandbox that prevents
+`sandbox_init` needs execution outside that outer sandbox, while retaining
+Commons' own sandbox. Do not enable its unsafe fallback to make tests pass.
+macOS builds may need `DEVELOPER_DIR=/Library/Developer/CommandLineTools` when
+Xcode is selected but unavailable. No system setting needs to be changed.
+
+## Sequence and evidence
+
+| Experiment | Code | Recorded interpretation |
+| --- | --- | --- |
+| #59 persistent artifacts | [artifacts](artifacts/README.md) | [Results](../../specs/2026-09-16-artifact-experiment.md) |
+| #60 shared vocabulary | [vocabulary](vocabulary/README.md) | [Results](../../specs/2026-09-16-vocabulary-experiment.md) |
+| #61 compiler compatibility | [semantic compatibility](semantic-compatibility/README.md) | [Results](../../specs/2026-09-16-semantic-compatibility.md) |
+| #62 full Commons roundtrip | [roundtrip](roundtrip/README.md) | [Results](../../specs/2026-09-16-commons-roundtrip.md) |
+| #63 architecture decision | All above | [ADR 0007](../../adr/0007-test-artifact-composition-before-expanding-graft.md) |
+
+The dedicated GitHub workflow reruns the complete suite on Linux and uploads
+results. These research sources are excluded from the built R package. Report
+runtime results separately from source inspection and from production readiness.
+Reader isolation, erasure/restore, concurrent durability and real-consumer
+migration remain explicit implementation gates.
