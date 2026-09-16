@@ -1,5 +1,19 @@
 {
-  "schema_version": 1,
+  "outcome": "Historical export/read parity; native Tempest admission requires a new public seam",
+  "recommendation": "reduce; redesign the Tempest boundary without backwards-compatibility constraints",
+  "assertions": 121,
+  "native_history_revisions": 11,
+  "native_final_heads": 10,
+  "retained_receipts": 3,
+  "retained_target_artifacts": 12,
+  "evidence_per_checkpoint": {
+    "initial": 4,
+    "correction": 4
+  },
+  "source_unchanged": true,
+  "rollback_verified": true,
+  "rollback_receipts_verified": 3,
+  "source_export_sha256": "986012f74db5bbcd7081e45e1a6debd88698fd494c0581ec733edf97b7e7b4db",
   "packages": [
     {
       "package": "commons",
@@ -51,6 +65,5 @@
       "version": "0.0.0.9000"
     }
   ],
-  "data_dict_cli_package": "datadict",
-  "data_dict_cli_version": "0.0.3"
+  "unsupported": ["Native Tempest knowledge admission from a manifest view", "Public deletion/tombstone production through Tempest", "Original external web bodies and executable ProgramArtifact payloads absent from these bundles", "Other schemas, sensitive fields, unselected store history, concurrent writes and production recovery"]
 }

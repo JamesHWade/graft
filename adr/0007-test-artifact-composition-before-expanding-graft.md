@@ -2,7 +2,7 @@
 
 Date: 2026-09-16
 
-Status: proposed, supported by experiments #59–#62; implementation and migration
+Status: proposed, supported by experiments #59–#62 and #64; implementation and migration
 remain separate. This ADR is the recommendation for #63.
 
 ## Decision
@@ -14,7 +14,9 @@ records. Hosts decide saving, approval, purpose, access and current eligibility.
 Keep the vocabulary publisher separate and internal until actual reuse justifies
 its own distribution.
 
-**Reduce scope; retain the existing Graft consumer contract for now.** Graft is
+**Reduce scope; redesign consumer APIs where that simplifies the composition.**
+This project is pre-production. Backwards compatibility with current Graft or
+Tempest APIs is not a requirement and does not justify retaining Graft. Graft is
 one candidate metadata driver behind that artifact boundary. It is not required
 by the vocabulary or Commons integration, and its name and current arrangement
 have no preservation requirement. The manifest driver remains an executable
@@ -26,10 +28,11 @@ the expression contract; Commons owns analytical execution and its own result
 provenance. The concrete upstream mismatch found in #61 should be addressed at
 that seam, not with another interpreter here.
 
-For existing Tempest consumers, keep the working native revision/snapshot and
-promotion-receipt contract until a real migration proves equivalence. New Rill
-integration is not an already deployed Graft dependency and should use the chosen
-artifact boundary subject to its existing product/access/erasure gates.
+Tempest can adopt a new artifact input contract directly, including breaking
+changes to its current constructors and receipt representation. Preserve the
+required research evidence, provenance, corrections, and selected history through
+the new design. Rill should use the chosen artifact boundary subject to its
+product/access/erasure requirements.
 
 This decision deliberately does not designate the toy manifest implementation as
 production storage or remove working Graft APIs. It chooses what to build and
@@ -43,11 +46,13 @@ compare next, with a specific retirement test below.
 | #60 | 18 cases validate portable bindings and use the release in plain R and Commons constructors without a Graft store | Keep one publishing module; ontology alone does not earn a ledger or reasoner |
 | #61 | 38 checks exercise real data-dict/Commons on the same Parquet bytes; R-language definition diverges | Shared YAML is not shared execution semantics; pursue a public resolved-export contract upstream |
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
+| #64 | 121 assertions preserve native Tempest history and receipts in a Graft-free reader; public knowledge admission rejects the portable view | Historical portability is demonstrated; redesign the Tempest input boundary rather than preserving its Graft-only constructor |
 
 Results and reproducible commands are indexed in
 [`tools/experiments/README.md`](../tools/experiments/README.md). The independent
 [countercase](../specs/2026-09-16-architecture-countercase.md) challenges immediate
-retirement and records what would reverse this decision.
+retirement and records what would reverse this decision. Its compatibility
+concerns are superseded by the pre-production policy in this ADR.
 
 ## Total composition cost
 
@@ -59,7 +64,8 @@ publisher, upstream packages, Commons host integration and artifact extraction.
 Neither gets free production lifecycle guarantees from its short adapter.
 
 The manifest option avoids a Graft runtime dependency, but must earn recovery,
-concurrency and migration behavior before displacing an existing consumer. Graft
+concurrency and evidence-preservation behavior when those are required by the
+intended application. Preserving an old API is not part of that comparison. Graft
 already owns native metadata transactions and accepted history, but external
 bytes remain outside that transaction. Adding a second content store does not
 make their joint publication atomic. The experiment does not measure production
@@ -85,23 +91,24 @@ A vocabulary term does not authorize a join or access. A saved draft does not
 become approved memory. A calculation label or retained citation does not prove
 an interpretation correct. A search cache is a rebuildable view over artifacts.
 
-## Current consumers and migration obligations
+## Current consumers and evidence preservation
 
-Source inspection of Tempest at
-[`bfc32f6`](https://github.com/JamesHWade/tempest/blob/bfc32f6cd387ac64aa628301e110396b668d69a7/R/graft-schema.R)
-finds a real promotion/knowledge integration. Receipts and checkpoints bind store,
+The migration experiment executes Tempest at
+[`3cfe220`](https://github.com/JamesHWade/tempest/tree/3cfe220577bdce61ee3b94684cc4ffdf5e1fdb83)
+through its public promotion/knowledge integration. Receipts and checkpoints bind store,
 batch, schema build, snapshot and native revision identities. Its historical
 selection and reviewed correction behavior must remain available or be explicitly
 mapped; exporting current rows alone is insufficient.
 
 Rill at `7769879c8e8f11f5305df3ada81822269b154fa4` has no `graft` references in its
 inspected `DESCRIPTION` or `R/` sources. Its design ADRs and open #51 define intended
-integration, not shipped migration cost. These are source inspections, not new
-Tempest/Rill runtime acceptance tests. Deployed store inventory, owner approval,
-retention and data volumes remain unknown; no user stores were searched, opened
-or modified by the experiments.
+integration, not shipped migration cost. That Rill finding is an earlier source
+inspection, not a new Rill runtime acceptance test. The project is pre-production;
+these experiments use synthetic data and do not establish a deployed migration
+obligation. No user stores were searched, opened, or modified.
 
-Before retirement, a bounded real Tempest migration must:
+The bounded Tempest experiment checks the following evidence-preservation
+properties. These do not require retaining the old public API:
 
 1. Produce accepted evidence, a no-change selection and a correction through
    Tempest's public promotion path; retain original receipts/checkpoints.
@@ -112,10 +119,17 @@ Before retirement, a bounded real Tempest migration must:
 4. Compare exact contents, revision/dependency relationships and acceptance
    evidence, including withdrawal/tombstone behavior without implying Forget.
 5. Reopen the unchanged source with its original receipts as rollback evidence.
-   Keep it read-only until parity and deployment-specific migration are approved.
+   This is an independent fidelity check, not a compatibility commitment.
 
-Retire Graft if that target passes the real consumer contract and production
-lifecycle with less total complexity. Retain only the mechanisms a competing
+The [#64 result](../specs/2026-09-16-tempest-migration.md) establishes historical
+read parity and unchanged-source rollback for the synthetic consumer fixture.
+The current public Tempest constructor rejects the portable view. That identifies
+an integration change, not a reason to retain Graft. A working redesigned consumer
+and its required deletion/withdrawal behavior remain to be demonstrated.
+
+Retire Graft if the redesigned consumer and required artifact behavior work with
+less total complexity. Production lifecycle controls must be ready before
+production deployment; they do not require keeping an old API. Retain only the mechanisms a competing
 implementation otherwise has to reconstruct. Migration work is an explicit
 bounded test, not an indefinite argument for preserving unrelated features.
 
@@ -124,7 +138,8 @@ bounded test, not an indefinite argument for preserving unrelated features.
 ADRs 0001–0004 and existing public calculation APIs continue to describe current
 behavior. The new direction proposes moving future canonical execution work
 upstream; it does not silently supersede current Definition semantics or perform
-a hard-cut migration. A later implementation ADR must name any replaced contract.
+the breaking changes. Implementation should document replaced contracts and
+update callers directly, without compatibility shims solely for old APIs.
 
 ADRs 0005/0006 and #47/#48 remain production requirements under both storage
 options: Reader isolation, authorized erasure, independent recovery state and
@@ -137,8 +152,8 @@ production authorization. Passing them is not permission to deploy broad memory.
 - #49: design and test content/metadata publication, orphan retention, idempotency
   and crash recovery in the chosen artifact module. Use the shared harness and
   retain both metadata candidates until the operational comparison is meaningful.
-- #64: run a real Tempest migration-conformance experiment as specified above; use
-  #50's existing evidence rather than recreating its completed product proof.
+- #64: close the remaining public Tempest admission and lifecycle gaps using the
+  executed migration fixture; preserve #50's original acceptance evidence.
 - #65: propose a minimal public Commons ingestion seam for validated typed data-dict
   exports, including dependencies, grain, dialect and the R-language counterexample.
 - #66: propose a supported Commons output-artifact handoff for completed table/image

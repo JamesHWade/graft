@@ -103,6 +103,9 @@ revision/dependency selections from host approval and current consultation
 eligibility. Vocabulary publishing is an independent module; Commons and data-dict
 retain analytical execution and local contract ownership. Both Graft and manifest
 metadata compositions pass the bounded fixtures under `tools/experiments/`.
-Current Graft public APIs and Tempest contracts remain in force until an explicit
-implementation/migration is verified. The experiments do not establish production
+The project is pre-production: backwards compatibility with Graft or Tempest
+APIs is not required. Change or remove them directly when the simpler composition
+works; preserve required artifact contents, provenance, corrections, and history.
+A Graft-only Tempest constructor is an integration task, not a reason to retain
+Graft. The experiments do not establish production
 Reader isolation, Forget/restore or concurrent durability.
