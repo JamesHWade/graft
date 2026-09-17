@@ -103,17 +103,28 @@ resumed session is saved again to verify its retained selection and
 provenance. Tempest validates content and dependency references and
 retains the full input.
 
-This demonstrates admission and saved-session reuse. It makes no model
-requests and does not yet accept new research into the artifact store.
-Future acceptance, active-task withdrawal, deletion and production
-recovery remain outside the proven profile. [Issue
-\#64](https://github.com/JamesHWade/graft/issues/64) tracks that
-remaining lifecycle work.
+The [direct acceptance
+experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-acceptance-cycle.md)
+completes the next step with shipped synthetic research proposals. Both
+storage drivers preserve the complete proposal, source bodies and
+reports; a host then accepts an exact selection for a purpose. Saving
+alone grants no approval. A new review records a distinct acceptance
+even when the evidence is unchanged. Correction replaces the current
+eligible selection, and withdrawal stops new consultation and
+host-mediated session resume. Retrying a withdrawn acceptance returns
+history without reapproving it. Historical inspection preserves exact
+bytes. The manifest producer and consumer both run without Graft
+installed.
 
-The decision is to **reduce scope and test the remaining lifecycle**.
-Graft can remain an implementation of the artifact layer if its
-mechanisms justify their cost. Its name and current architecture are not
-requirements for preserving user work.
+The recommendation is now to **retire the current graph/compiler
+architecture from the artifact composition**. The experiments establish
+a replacement route for the tested workflow; they do not ship a new
+public artifact package or remove existing Graft APIs. The
+implementation still needs an explicit home and the publication/recovery
+contract in [\#49](https://github.com/JamesHWade/graft/issues/49). No
+model requests are made in this acceptance fixture. Active-task
+cancellation, authenticated access, deletion and production recovery
+remain separate requirements.
 
 See [ADR
 0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)
