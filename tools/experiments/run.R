@@ -19,7 +19,8 @@ steps <- c(
   "semantic-compatibility",
   "roundtrip",
   "tempest-migration",
-  "tempest-reuse"
+  "tempest-reuse",
+  "tempest-cycle"
 )
 for (step in steps) {
   cat("\nRunning", step, "\n")

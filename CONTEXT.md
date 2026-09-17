@@ -107,6 +107,10 @@ The project is pre-production: backwards compatibility with Graft or Tempest
 APIs is not required. Change or remove them directly when the simpler composition
 works; preserve required artifact contents, provenance, corrections, and history.
 The artifact reuse experiment now admits exact evidence through a public Tempest
-input and preserves saved sessions without Graft installed. Future acceptance
-into artifact storage remains unproved. The experiments do not establish production
+input and preserves saved sessions without Graft installed. The direct acceptance experiment also stages
+completed Tempest proposals, records host acceptance, corrects and withdraws them
+without a native Graft producer. The recommendation is to retire the current
+graph/compiler architecture from the artifact composition while retaining exact
+artifact and host-policy responsibilities. This is an experimental replacement
+path; existing APIs have not been removed. The experiments do not establish production
 Reader isolation, Forget/restore or concurrent durability.

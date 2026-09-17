@@ -1,9 +1,11 @@
-# ADR 0007: Reduce Graft's proposed role to persistent artifacts and selected memory
+# ADR 0007: Replace Graft with an explicit artifact composition
 
 Date: 2026-09-16
 
-Status: proposed, supported by experiments #59–#62 and #64; implementation and migration
-remain separate. This ADR is the recommendation for #63.
+Status: recommendation updated after the direct acceptance experiment in #64.
+Retire the current graph/compiler architecture from the proposed artifact
+composition; package removal and replacement implementation remain separate.
+This ADR is the recommendation for #63.
 
 ## Decision
 
@@ -14,10 +16,14 @@ records. Hosts decide saving, approval, purpose, access and current eligibility.
 Keep the vocabulary publisher separate and internal until actual reuse justifies
 its own distribution.
 
-**Reduce scope; redesign consumer APIs where that simplifies the composition.**
+**Retire the current graph/compiler architecture from the artifact composition.**
+The direct acceptance experiment now completes the tested consumer lifecycle
+without Graft at either end. Preserve the artifact responsibilities in an explicit
+host/module and remove obsolete integrations directly. This decision does not
+remove existing APIs in the experiment PR.
 This project is pre-production. Backwards compatibility with current Graft or
-Tempest APIs is not a requirement and does not justify retaining Graft. Graft is
-one candidate metadata driver behind that artifact boundary. It is not required
+Tempest APIs is not a requirement and does not justify retaining Graft. Graft was
+one of the compared metadata drivers behind that artifact boundary. It is not required
 by the vocabulary or Commons integration, and its name and current arrangement
 have no preservation requirement. The manifest driver remains an executable
 replacement candidate. New callers should not inherit Graft's graph, compiler,
@@ -28,15 +34,15 @@ the expression contract; Commons owns analytical execution and its own result
 provenance. The concrete upstream mismatch found in #61 should be addressed at
 that seam, not with another interpreter here.
 
-Tempest can adopt a new artifact input contract directly, including breaking
-changes to its current constructors and receipt representation. Preserve the
+Tempest now has a public artifact input contract. Future integration can remove
+native constructors and receipt representations directly. Preserve the
 required research evidence, provenance, corrections, and selected history through
 the new design. Rill should use the chosen artifact boundary subject to its
 product/access/erasure requirements.
 
-This decision deliberately does not designate the toy manifest implementation as
-production storage or remove working Graft APIs. It chooses what to build and
-compare next, with a specific retirement test below.
+This decision does not designate the toy manifest implementation as production
+storage or remove working Graft APIs. It chooses a replacement direction from
+the bounded retirement evidence below; implementation remains a separate step.
 
 ## Evidence
 
@@ -46,7 +52,7 @@ compare next, with a specific retirement test below.
 | #60 | 18 cases validate portable bindings and use the release in plain R and Commons constructors without a Graft store | Keep one publishing module; ontology alone does not earn a ledger or reasoner |
 | #61 | 38 checks exercise real data-dict/Commons on the same Parquet bytes; R-language definition diverges | Shared YAML is not shared execution semantics; pursue a public resolved-export contract upstream |
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
-| #64 | Native history and receipts survive migration; the follow-up admits exact artifact evidence and saves/resumes sessions without Graft installed | Historical portability and artifact input are demonstrated; future research acceptance and lifecycle work remain |
+| #64 | Native history survives migration; public artifact input, direct acceptance, correction and withdrawal work without Graft installed in either producer or consumer | The bounded consumer lifecycle has a replacement path; implement the artifact boundary and remove obsolete native integrations |
 
 Results and reproducible commands are indexed in
 [`tools/experiments/README.md`](../tools/experiments/README.md). The independent
@@ -126,12 +132,17 @@ The [#64 result](../specs/2026-09-16-tempest-migration.md) establishes historica
 read parity and unchanged-source rollback for the synthetic consumer fixture.
 The original Graft constructor rejects the portable view. The follow-up
 [artifact input experiment](../specs/2026-09-17-tempest-reuse.md) adds a public
-constructor and proves saved-session reuse without Graft installed. The remaining
-experiment must demonstrate future artifact acceptance and the required
-correction/withdrawal behavior.
+constructor and proves saved-session reuse without Graft installed. The [direct acceptance experiment](../specs/2026-09-17-tempest-acceptance-cycle.md)
+now demonstrates new host acceptance of completed proposals, unchanged reviews,
+correction and withdrawal on both drivers. It preserves complete bundle files,
+source bodies, reports and exact evidence dependencies. Its manifest acceptance
+and consultation processes have no Graft installation. It uses shipped synthetic
+research and makes no new model requests.
 
-Retire Graft if the redesigned consumer and required artifact behavior work with
-less total complexity. Production lifecycle controls must be ready before
+The bounded comparison supports retiring Graft from this composition: the same
+host/content responsibilities work without its graph/compiler/runtime dependency.
+The result report counts the remaining machinery and notes the untested option
+of moving host policy into native transactions; it makes no performance claim. Production lifecycle controls must be ready before
 production deployment; they do not require keeping an old API. Retain only the mechanisms a competing
 implementation otherwise has to reconstruct. Migration work is an explicit
 bounded test, not an indefinite argument for preserving unrelated features.
@@ -155,8 +166,9 @@ production authorization. Passing them is not permission to deploy broad memory.
 - #49: design and test content/metadata publication, orphan retention, idempotency
   and crash recovery in the chosen artifact module. Use the shared harness and
   retain both metadata candidates until the operational comparison is meaningful.
-- #64: close the remaining future-acceptance and lifecycle gaps using the
-  executed migration fixture; preserve #50's original acceptance evidence.
+- #64: record the completed bounded migration, reuse and direct-acceptance
+  evidence and the retirement recommendation; preserve #50's original acceptance
+  evidence. Package removal is implementation work, not part of the experiment.
 - #65: propose a minimal public Commons ingestion seam for validated typed data-dict
   exports, including dependencies, grain, dialect and the R-language counterexample.
 - #66: propose a supported Commons output-artifact handoff for completed table/image
