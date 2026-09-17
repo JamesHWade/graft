@@ -1,6 +1,6 @@
 {
   "outcome": "Public Tempest artifact input and saved-session reuse without Graft",
-  "assertions": 43,
+  "assertions": 46,
   "graft_available": false,
   "graft_loaded": false,
   "retained_sessions": ["initial", "unchanged", "correction"],

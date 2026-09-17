@@ -4,21 +4,39 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
     checkpoint <- if (name == "unchanged") "initial" else name
     input <- fixture$inputs[[checkpoint]]
     observed <- fixture$consumer[[name]]
+    expected_selection <- input$selection
+    ids <- vapply(
+      expected_selection$records,
+      \(ref) ref$record_id,
+      character(1)
+    )
+    expected_selection$records <- expected_selection$records[order(
+      ids,
+      method = "radix"
+    )]
     expect_identical(
       observed$selection,
-      tempest::tempest_artifact_knowledge(
-        input$selection,
-        input$contents
-      )@artifact_selection
+      reuse_order_object_members(expected_selection)
     )
     expect_equal(nrow(observed$sources), 4L)
     expect_identical(fixture$saved[[name]]$no_native_view, TRUE)
     expect_identical(observed$sources, fixture$saved[[name]]$sources)
     expect_identical(observed$selection, fixture$saved[[name]]$selection)
-    expect_setequal(
-      observed$sources$content,
-      unlist(input$contents, use.names = FALSE)
+    bindings <- reuse_source_bindings(observed$sources)
+    expected <- lapply(input$selection$records, function(ref) {
+      list(
+        record_id = ref$record_id,
+        revision_id = ref$revision_id,
+        class = ref$class,
+        content = input$contents[[ref$record_id]]
+      )
+    })
+    names(expected) <- vapply(expected, \(ref) ref$record_id, character(1))
+    expect_identical(
+      bindings[order(names(bindings), method = "radix")],
+      expected[order(names(expected), method = "radix")]
     )
+    expect_length(unique(observed$sources[["id"]]), length(expected))
     expect_identical(
       reuse_order_object_members(observed$selection$provenance$source_receipt),
       reuse_order_object_members(fixture$export$receipts[[checkpoint]])
@@ -48,12 +66,15 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
   expect_identical(fixture$graft_available, FALSE)
   expect_identical(fixture$graft_loaded, FALSE)
   expect_match(
-    paste(fixture$consumer$initial$sources$content, collapse = "\n"),
+    paste(fixture$consumer$initial$sources[["content_text"]], collapse = "\n"),
     "82%",
     fixed = TRUE
   )
   expect_match(
-    paste(fixture$consumer$correction$sources$content, collapse = "\n"),
+    paste(
+      fixture$consumer$correction$sources[["content_text"]],
+      collapse = "\n"
+    ),
     "62%",
     fixed = TRUE
   )
@@ -62,8 +83,8 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
     fixture$consumer$unchanged$selection
   )
   expect_identical(
-    fixture$consumer$initial$sources$content,
-    fixture$consumer$unchanged$sources$content
+    fixture$consumer$initial$sources[["content_text"]],
+    fixture$consumer$unchanged$sources[["content_text"]]
   )
 })
 

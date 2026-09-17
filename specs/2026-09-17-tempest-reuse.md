@@ -7,7 +7,7 @@ exact sources in [pins.json](../tools/experiments/pins.json). Tempest
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
-43 reuse assertions; the complete six-experiment suite also passed, including
+46 reuse assertions; the complete six-experiment suite also passed, including
 121 migration assertions and the source-integrity/rollback guards. The
 [current migration receipt](../tools/experiments/tempest-migration/observed-current.json)
 records that companion run separately from the original historical experiment.
@@ -48,7 +48,8 @@ sessions using public constructors, then exits that process. A second independen
 process rechecks host eligibility and resumes the saved sessions. Both processes
 have Tempest and its required dependencies, and explicitly verify that Graft cannot
 be loaded. Each resumed session is saved again, and its
-public sources and retained selection must match exactly. Host tests reject
+public sources and retained selection must match exactly. Each record ID,
+revision and class is checked together with its exact content bytes. Host tests reject
 wrong-purpose and withdrawn selections before admission and resume, including
 withdrawal after a session was saved. A mismatched saved selection also fails.
 Constructor tests reject incomplete content, changed bytes and substituted dependency revisions.
