@@ -48,53 +48,51 @@ stopifnot(!"graft" %in% packages)
 for (package in packages) {
   stopifnot(file.copy(find.package(package), library, recursive = TRUE))
 }
-consumer <- callr::r(
-  function(checkout, target, handle, output) {
-    stopifnot(!requireNamespace("graft", quietly = TRUE))
-    for (file in c(
-      "artifacts/content.R",
-      "artifacts/backends.R",
-      "tempest-migration/migration.R",
-      "tempest-reuse/reuse.R"
-    )) {
-      source(file.path(checkout, "tools/experiments", file))
-    }
-    values <- list(
-      initial = reuse_session(
-        target,
-        handle,
-        "initial",
-        file.path(output, "initial")
-      ),
-      unchanged = reuse_session(
-        target,
-        handle,
-        "initial",
-        file.path(output, "unchanged")
-      ),
-      correction = reuse_session(
-        target,
-        handle,
-        "correction",
-        file.path(output, "correction")
+consumer_run <- function(phase) {
+  callr::r(
+    function(checkout, target, handle, output, phase) {
+      stopifnot(!requireNamespace("graft", quietly = TRUE))
+      for (file in c(
+        "artifacts/content.R",
+        "artifacts/backends.R",
+        "tempest-migration/migration.R",
+        "tempest-reuse/reuse.R"
+      )) {
+        source(file.path(checkout, "tools/experiments", file))
+      }
+      exercise <- switch(
+        phase,
+        save = reuse_session_save,
+        resume = reuse_session_restore
       )
-    )
-    list(
-      values = values,
-      graft_available = requireNamespace("graft", quietly = TRUE),
-      graft_loaded = "graft" %in% loadedNamespaces()
-    )
-  },
-  args = list(checkout, target, handle, output),
-  libpath = c(library, .Library)
-)
+      values <- lapply(c("initial", "unchanged", "correction"), function(name) {
+        checkpoint <- if (name == "unchanged") "initial" else name
+        exercise(target, handle, checkpoint, file.path(output, name))
+      })
+      names(values) <- c("initial", "unchanged", "correction")
+      list(
+        values = values,
+        process_id = Sys.getpid(),
+        graft_available = requireNamespace("graft", quietly = TRUE),
+        graft_loaded = "graft" %in% loadedNamespaces()
+      )
+    },
+    args = list(checkout, target, handle, output, phase),
+    libpath = c(library, .Library)
+  )
+}
+saved <- consumer_run("save")
+consumer <- consumer_run("resume")
 unlink(library, recursive = TRUE)
 options(
   graft.experiment.checkout = checkout,
   graft.reuse.fixture = list(
     inputs = inputs,
     sessions = output,
+    saved = saved$values,
     consumer = consumer$values,
+    save_process = saved,
+    resume_process = consumer,
     export = export,
     target = target,
     handle = handle,
@@ -116,6 +114,7 @@ result <- list(
   purpose_and_withdrawal_checked = TRUE,
   resume_eligibility_checked = TRUE,
   resumed_selection_verified = TRUE,
+  separate_save_resume_processes = TRUE,
   scope = "Admission and cross-run evidence reuse; no new research acceptance or model-generated report",
   packages = jsonlite::read_json("tools/experiments/pins.json")$packages
 )

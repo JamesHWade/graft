@@ -1,7 +1,8 @@
 test_that("real Tempest admits exact initial and corrected artifact evidence", {
   fixture <- reuse_fixture
-  for (name in c("initial", "correction")) {
-    input <- fixture$inputs[[name]]
+  for (name in c("initial", "unchanged", "correction")) {
+    checkpoint <- if (name == "unchanged") "initial" else name
+    input <- fixture$inputs[[checkpoint]]
     observed <- fixture$consumer[[name]]
     expect_identical(
       observed$selection,
@@ -11,14 +12,16 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
       )@artifact_selection
     )
     expect_equal(nrow(observed$sources), 4L)
-    expect_identical(observed$no_native_view, TRUE)
+    expect_identical(fixture$saved[[name]]$no_native_view, TRUE)
+    expect_identical(observed$sources, fixture$saved[[name]]$sources)
+    expect_identical(observed$selection, fixture$saved[[name]]$selection)
     expect_setequal(
       observed$sources$content,
       unlist(input$contents, use.names = FALSE)
     )
     expect_identical(
       reuse_order_object_members(observed$selection$provenance$source_receipt),
-      reuse_order_object_members(fixture$export$receipts[[name]])
+      reuse_order_object_members(fixture$export$receipts[[checkpoint]])
     )
     expect_setequal(
       vapply(
@@ -33,6 +36,15 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
       )
     )
   }
+  expect_length(
+    unique(c(
+      fixture$save_process$process_id,
+      fixture$resume_process$process_id
+    )),
+    2L
+  )
+  expect_identical(fixture$save_process$graft_available, FALSE)
+  expect_identical(fixture$save_process$graft_loaded, FALSE)
   expect_identical(fixture$graft_available, FALSE)
   expect_identical(fixture$graft_loaded, FALSE)
   expect_match(

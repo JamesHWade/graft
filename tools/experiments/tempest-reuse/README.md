@@ -16,16 +16,18 @@ four-record selection, and supplies exact text and artifact revision references 
 Tempest's public `tempest_artifact_knowledge()` constructor. Original native
 snapshots, receipts and revision mappings are inert provenance.
 
-A fresh consumer process has Tempest and its required dependencies but no Graft
-installation. It creates initial, unchanged and corrected sessions through public
-APIs, saves and resumes each, then checks the public source table and retained
-selection. No model request is made. The fixture demonstrates input admission and
+Two independent consumer processes have Tempest and its required dependencies
+but no Graft installation. The first creates and saves initial, unchanged and
+corrected sessions through public APIs, then exits. The second rechecks host
+eligibility, resumes each session and saves it again. Tests compare the public
+source tables and retained selections across processes. No model request is made. The fixture demonstrates input admission and
 saved-session reuse, not a newly generated report or future artifact acceptance.
 
 Tests reject missing content, changed bytes and dependency revision substitutions.
 Host checks reject the wrong purpose and withdrawn selection while historical
-inspection remains available. These checks run before admission; active-run
-revocation and production storage recovery are outside this experiment.
+inspection remains available. These checks run before admission and resume,
+including withdrawal after save. A different saved selection is also rejected.
+Active-run revocation and production storage recovery are outside this experiment.
 
 `results.json` records assertions and exact package pins. Session bundles remain
 in the output directory. [Interpretation](../../../specs/2026-09-17-tempest-reuse.md).

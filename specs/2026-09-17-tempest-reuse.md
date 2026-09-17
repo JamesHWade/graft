@@ -7,7 +7,7 @@ exact sources in [pins.json](../tools/experiments/pins.json). Tempest
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
-28 reuse assertions; the complete six-experiment suite also passed, including
+43 reuse assertions; the complete six-experiment suite also passed, including
 121 migration assertions and the source-integrity/rollback guards. The
 [current migration receipt](../tools/experiments/tempest-migration/observed-current.json)
 records that companion run separately from the original historical experiment.
@@ -43,15 +43,15 @@ prove that an assertion is true.
 
 ## Executed boundary
 
-The [runner](../tools/experiments/tempest-reuse/run.R) starts a fresh process with
-Tempest and required dependencies, explicitly checks that Graft cannot be loaded,
-and creates three sessions using public constructors. Each is saved and resumed
-after a fresh host eligibility check. The resumed session is saved again, and its
+The [runner](../tools/experiments/tempest-reuse/run.R) creates and saves three
+sessions using public constructors, then exits that process. A second independent
+process rechecks host eligibility and resumes the saved sessions. Both processes
+have Tempest and its required dependencies, and explicitly verify that Graft cannot
+be loaded. Each resumed session is saved again, and its
 public sources and retained selection must match exactly. Host tests reject
 wrong-purpose and withdrawn selections before admission and resume, including
 withdrawal after a session was saved. A mismatched saved selection also fails.
-Constructor tests reject
-incomplete content, changed bytes and substituted dependency revisions.
+Constructor tests reject incomplete content, changed bytes and substituted dependency revisions.
 
 No model is called. The experiment proves admission and saved-session reuse of
 existing evidence. It does not claim newly generated research, future acceptance,
@@ -60,7 +60,7 @@ The previous migration checks continue to cover native history and rollback.
 
 ## Added machinery
 
-This slice adds 112 lines of host translation/session exercise and a 128-line
+This slice adds 113 lines of host translation/session exercise and a 127-line
 runner, including comments and blank lines. Tempest's input module is 289 lines,
 plus integration changes to its existing workspace and persistence paths. Tests,
 documentation and the previously inventoried migration/storage implementation are

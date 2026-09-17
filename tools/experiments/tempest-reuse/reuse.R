@@ -56,18 +56,21 @@ reuse_input <- function(target, handle, checkpoint) {
   )
 }
 
-reuse_session <- function(target, handle, checkpoint, path) {
-  input <- reuse_input(target, handle, checkpoint)
-  knowledge <- do.call(tempest::tempest_artifact_knowledge, input)
-  config <- tempest::tempest_config(chat_fn = function(...) {
+reuse_config <- function() {
+  tempest::tempest_config(chat_fn = function(...) {
     # Construct a real public chat client; this fixture never requests a model.
     ellmer::chat_openai(model = "gpt-4.1-mini", credentials = \() {
       "offline-test"
     })
   })
+}
+
+reuse_session_save <- function(target, handle, checkpoint, path) {
+  input <- reuse_input(target, handle, checkpoint)
+  knowledge <- do.call(tempest::tempest_artifact_knowledge, input)
   session <- tempest::tempest_session(
     "Retained pilot evidence",
-    config = config,
+    config = reuse_config(),
     experts = list(tempest::tempest_expert(
       name = "Evidence reader",
       title = "Analyst",
@@ -76,24 +79,22 @@ reuse_session <- function(target, handle, checkpoint, path) {
     )),
     knowledge = knowledge
   )
-  before <- tempest::tempest_sources(session)
+  sources <- tempest::tempest_sources(session)
   tempest::tempest_session_save(session, path)
-  reopened <- reuse_resume(path, config, target, handle, checkpoint)
-  after <- tempest::tempest_sources(reopened)
-  stopifnot(identical(before, after))
+  list(
+    sources = sources,
+    selection = knowledge@artifact_selection,
+    no_native_view = is.null(knowledge@view)
+  )
+}
+
+reuse_session_restore <- function(target, handle, checkpoint, path) {
+  reopened <- reuse_resume(path, reuse_config(), target, handle, checkpoint)
+  sources <- tempest::tempest_sources(reopened)
   restored_path <- paste0(path, "-resumed")
   tempest::tempest_session_save(reopened, restored_path)
   manifest <- artifact_read_json(file.path(restored_path, "session.json"))
-  stopifnot(identical(
-    manifest$workspace$artifact_selection,
-    knowledge@artifact_selection
-  ))
-  list(
-    sources = after,
-    selection = manifest$workspace$artifact_selection,
-    no_native_view = is.null(knowledge@view),
-    report = "Input admission and saved-session reuse; no model-generated report claimed"
-  )
+  list(sources = sources, selection = manifest$workspace$artifact_selection)
 }
 
 
