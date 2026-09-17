@@ -95,8 +95,10 @@ assertions establish that:
 The [artifact reuse experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-reuse.md)
 adds a public Tempest input for exact artifact selections. Initial, unchanged and
 corrected evidence survive session save/resume in a fresh process without Graft
-installed. The host checks purpose and current eligibility before admission;
-Tempest validates content and dependency references and retains the full input.
+installed. The host checks purpose and current eligibility before admission and
+again before resume. The resumed session is saved again to verify its retained
+selection and provenance. Tempest validates content and dependency references
+and retains the full input.
 
 This demonstrates admission and saved-session reuse. It makes no model requests
 and does not yet accept new research into the artifact store. Future acceptance,

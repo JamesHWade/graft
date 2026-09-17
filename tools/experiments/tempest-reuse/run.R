@@ -49,16 +49,33 @@ for (package in packages) {
   stopifnot(file.copy(find.package(package), library, recursive = TRUE))
 }
 consumer <- callr::r(
-  function(checkout, inputs, output) {
+  function(checkout, target, handle, output) {
     stopifnot(!requireNamespace("graft", quietly = TRUE))
-    for (file in c("artifacts/content.R", "tempest-reuse/reuse.R")) {
+    for (file in c(
+      "artifacts/content.R",
+      "artifacts/backends.R",
+      "tempest-migration/migration.R",
+      "tempest-reuse/reuse.R"
+    )) {
       source(file.path(checkout, "tools/experiments", file))
     }
     values <- list(
-      initial = reuse_session(inputs$initial, file.path(output, "initial")),
-      unchanged = reuse_session(inputs$initial, file.path(output, "unchanged")),
+      initial = reuse_session(
+        target,
+        handle,
+        "initial",
+        file.path(output, "initial")
+      ),
+      unchanged = reuse_session(
+        target,
+        handle,
+        "initial",
+        file.path(output, "unchanged")
+      ),
       correction = reuse_session(
-        inputs$correction,
+        target,
+        handle,
+        "correction",
         file.path(output, "correction")
       )
     )
@@ -68,7 +85,7 @@ consumer <- callr::r(
       graft_loaded = "graft" %in% loadedNamespaces()
     )
   },
-  args = list(checkout, inputs, output),
+  args = list(checkout, target, handle, output),
   libpath = c(library, .Library)
 )
 unlink(library, recursive = TRUE)
@@ -76,6 +93,7 @@ options(
   graft.experiment.checkout = checkout,
   graft.reuse.fixture = list(
     inputs = inputs,
+    sessions = output,
     consumer = consumer$values,
     export = export,
     target = target,
@@ -96,6 +114,8 @@ result <- list(
   graft_loaded = consumer$graft_loaded,
   retained_sessions = c("initial", "unchanged", "correction"),
   purpose_and_withdrawal_checked = TRUE,
+  resume_eligibility_checked = TRUE,
+  resumed_selection_verified = TRUE,
   scope = "Admission and cross-run evidence reuse; no new research acceptance or model-generated report",
   packages = jsonlite::read_json("tools/experiments/pins.json")$packages
 )

@@ -56,7 +56,8 @@ reuse_input <- function(target, handle, checkpoint) {
   )
 }
 
-reuse_session <- function(input, path) {
+reuse_session <- function(target, handle, checkpoint, path) {
+  input <- reuse_input(target, handle, checkpoint)
   knowledge <- do.call(tempest::tempest_artifact_knowledge, input)
   config <- tempest::tempest_config(chat_fn = function(...) {
     # Construct a real public chat client; this fixture never requests a model.
@@ -77,18 +78,35 @@ reuse_session <- function(input, path) {
   )
   before <- tempest::tempest_sources(session)
   tempest::tempest_session_save(session, path)
-  reopened <- tempest::tempest_session_resume(path, config = config)
+  reopened <- reuse_resume(path, config, target, handle, checkpoint)
   after <- tempest::tempest_sources(reopened)
   stopifnot(identical(before, after))
-  manifest <- artifact_read_json(file.path(path, "session.json"))
+  restored_path <- paste0(path, "-resumed")
+  tempest::tempest_session_save(reopened, restored_path)
+  manifest <- artifact_read_json(file.path(restored_path, "session.json"))
   stopifnot(identical(
     manifest$workspace$artifact_selection,
     knowledge@artifact_selection
   ))
   list(
     sources = after,
-    selection = knowledge@artifact_selection,
+    selection = manifest$workspace$artifact_selection,
     native_view = is.null(knowledge@view),
     report = "Input admission and saved-session reuse; no model-generated report claimed"
   )
+}
+
+
+reuse_resume <- function(path, config, target, handle, checkpoint) {
+  current <- reuse_input(target, handle, checkpoint)
+  knowledge <- do.call(tempest::tempest_artifact_knowledge, current)
+  saved <- artifact_read_json(file.path(path, "session.json"))
+  if (
+    !identical(saved$workspace$artifact_selection, knowledge@artifact_selection)
+  ) {
+    artifact_error(
+      "Saved session differs from the currently eligible selection."
+    )
+  }
+  tempest::tempest_session_resume(path, config = config)
 }

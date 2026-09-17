@@ -1,10 +1,12 @@
 {
   "outcome": "Public Tempest artifact input and saved-session reuse without Graft",
-  "assertions": 25,
+  "assertions": 28,
   "graft_available": false,
   "graft_loaded": false,
   "retained_sessions": ["initial", "unchanged", "correction"],
   "purpose_and_withdrawal_checked": true,
+  "resume_eligibility_checked": true,
+  "resumed_selection_verified": true,
   "scope": "Admission and cross-run evidence reuse; no new research acceptance or model-generated report",
   "packages": [
     {

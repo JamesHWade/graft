@@ -62,8 +62,30 @@ test_that("the host checks purpose and withdrawal before Tempest admission", {
     "not eligible",
     class = "artifact_experiment_error"
   )
+  path <- file.path(fixture$sessions, "initial")
+  expect_error(
+    reuse_resume(path, NULL, fixture$target, fixture$handle, "correction"),
+    "differs from the currently eligible selection",
+    class = "artifact_experiment_error"
+  )
+  expect_error(
+    reuse_resume(
+      path,
+      NULL,
+      fixture$target,
+      fixture$historical_handle,
+      "initial"
+    ),
+    "not eligible",
+    class = "artifact_experiment_error"
+  )
   store <- artifact_store(fixture$target, "manifest", "unused")
   artifact_revoke(store, fixture$handle$basis)
+  expect_error(
+    reuse_resume(path, NULL, fixture$target, fixture$handle, "initial"),
+    "not eligible",
+    class = "artifact_experiment_error"
+  )
   expect_error(
     reuse_input(fixture$target, fixture$handle, "initial"),
     "not eligible",

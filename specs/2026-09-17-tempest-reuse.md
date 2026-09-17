@@ -7,7 +7,7 @@ exact sources in [pins.json](../tools/experiments/pins.json). Tempest
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
-25 reuse assertions; the complete six-experiment suite also passed, including
+28 reuse assertions; the complete six-experiment suite also passed, including
 121 migration assertions and the source-integrity/rollback guards.
 
 ## Result and decision
@@ -43,9 +43,12 @@ prove that an assertion is true.
 
 The [runner](../tools/experiments/tempest-reuse/run.R) starts a fresh process with
 Tempest and required dependencies, explicitly checks that Graft cannot be loaded,
-and creates three sessions using public constructors. Each is saved and resumed;
-its public sources and retained selection must match exactly. Host tests reject
-wrong-purpose and withdrawn selections before admission. Constructor tests reject
+and creates three sessions using public constructors. Each is saved and resumed
+after a fresh host eligibility check. The resumed session is saved again, and its
+public sources and retained selection must match exactly. Host tests reject
+wrong-purpose and withdrawn selections before admission and resume, including
+withdrawal after a session was saved. A mismatched saved selection also fails.
+Constructor tests reject
 incomplete content, changed bytes and substituted dependency revisions.
 
 No model is called. The experiment proves admission and saved-session reuse of
@@ -55,7 +58,7 @@ The previous migration checks continue to cover native history and rollback.
 
 ## Added machinery
 
-This slice adds 94 lines of host translation/session exercise and a 108-line
+This slice adds 112 lines of host translation/session exercise and a 128-line
 runner, including comments and blank lines. Tempest's input module is 289 lines,
 plus integration changes to its existing workspace and persistence paths. Tests,
 documentation and the previously inventoried migration/storage implementation are
