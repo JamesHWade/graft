@@ -184,8 +184,12 @@ explains how Commons, data-dict, shared vocabulary, and durable outputs could wo
 together. The [runnable experiments](tools/experiments/README.md) compare storage
 implementations. The [Tempest reuse experiment](specs/2026-09-17-tempest-reuse.md)
 checks public artifact admission and saved-session reuse without Graft installed.
-Future artifact acceptance remains an experiment. This project is pre-production, and current public APIs may
-change or be removed as the composition is simplified.
+The [acceptance cycle](specs/2026-09-17-tempest-acceptance-cycle.md) extends this to
+direct acceptance, correction and withdrawal on both storage drivers, with Graft
+absent from the manifest producer and consumer. The resulting recommendation is
+to retire the current graph/compiler architecture from the artifact composition.
+The replacement remains experimental; existing APIs have not been removed. This
+project is pre-production, and backwards compatibility is not a requirement.
 
 1. [Get started](https://jameshwade.github.io/graft/articles/getting-started.html)
    with the complete data-dict workflow.
