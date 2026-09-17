@@ -32,6 +32,7 @@ test_that("both drivers accept, correct and withdraw research across processes",
       NULL,
       "Reviewed original evidence"
     )
+    initial_input <- cycle_run(backend, root, cycle_input, initial$value)
     saved <- cycle_run(
       backend,
       root,
@@ -76,30 +77,7 @@ test_that("both drivers accept, correct and withdraw research across processes",
     first <- cycle_run(backend, root, cycle_inspect, initial$value)
     expect_identical(
       same$value$selection$records,
-      cycle_run(
-        backend,
-        root,
-        function(store, event) {
-          request <- cycle_inspect(store, event)
-          lapply(request$staged$records, function(record) {
-            item <- artifact_resolve(store, record$ref)
-            list(
-              record_id = record$record_id,
-              revision_id = record$ref$revision,
-              class = record$class,
-              sha256 = item$metadata$payload,
-              dependencies = lapply(item$metadata$dependencies, function(ref) {
-                dep <- artifact_resolve(store, ref)
-                list(
-                  record_id = dep$metadata$meaning$record_id,
-                  revision_id = ref$revision
-                )
-              })
-            )
-          })
-        },
-        initial$value
-      )$value
+      initial_input$value$selection$records
     )
     expect_length(
       unique(c(initial$value$request_id, unchanged$value$request_id)),
@@ -314,6 +292,83 @@ test_that("both drivers accept, correct and withdraw research across processes",
         actual$saved$report,
         artifact_read_bytes(file.path(fixture, paste0(case, "-report.md")))
       )
+      public <- if (case == "initial") saved$value else current$value
+      # Derive required evidence edges and content from the pinned proposal itself.
+      refs <- stats::setNames(
+        public$selection$records,
+        vapply(
+          public$selection$records,
+          function(ref) ref$record_id,
+          character(1)
+        )
+      )
+      metadata <- public$sources[["meta"]]
+      ids <- vapply(
+        metadata,
+        function(meta) meta$artifact_record_id,
+        character(1)
+      )
+      expect_identical(sort(ids), sort(names(refs)))
+      for (class in c("Source", "Claim", "EvidenceSpan", "ClaimSupport")) {
+        id_field <- switch(
+          class,
+          Source = "tempest_source_id",
+          Claim = "tempest_claim_id",
+          EvidenceSpan = "id",
+          ClaimSupport = "tempest_claim_support_id"
+        )
+        for (row in expected$records[[class]]) {
+          id <- paste(class, row[[id_field]], sep = ":")
+          ref <- refs[[id]]
+          expect_identical(ref$class, class)
+          position <- match(id, ids)
+          expect_identical(
+            metadata[[position]]$artifact_revision_id,
+            ref$revision_id
+          )
+          expect_identical(metadata[[position]]$artifact_record_class, class)
+          value <- list(record = row)
+          if (class == "Source") {
+            value$resource <- expected$proof$resources[[1L]]
+          }
+          expect_identical(
+            jsonlite::fromJSON(
+              public$sources[["content_text"]][[position]],
+              simplifyVector = FALSE
+            ),
+            value
+          )
+          fields <- switch(
+            class,
+            EvidenceSpan = c(source_id = "Source"),
+            ClaimSupport = c(
+              statement_id = "Claim",
+              source_id = "Source",
+              evidence_span_id = "EvidenceSpan"
+            ),
+            character()
+          )
+          required_ids <- vapply(
+            names(fields),
+            function(field) paste(fields[[field]], row[[field]], sep = ":"),
+            character(1)
+          )
+          required <- vapply(
+            required_ids,
+            function(target) {
+              paste(target, refs[[target]]$revision_id, sep = "@")
+            },
+            character(1),
+            USE.NAMES = FALSE
+          )
+          actual_edges <- vapply(
+            ref$dependencies,
+            function(edge) paste(edge$record_id, edge$revision_id, sep = "@"),
+            character(1)
+          )
+          expect_identical(sort(actual_edges), sort(required))
+        }
+      }
     }
     if (backend == "manifest") {
       expect_identical(staged$graft_available, FALSE)

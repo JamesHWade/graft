@@ -1,6 +1,6 @@
 {
   "outcome": "Direct research acceptance, correction and withdrawal with both metadata drivers",
-  "assertions": 92,
+  "assertions": 176,
   "observations": {
     "failure_checks": {
       "reject_wrong_bundle_and_report": true,
@@ -15,6 +15,12 @@
       "independent_processes": true,
       "retained_history_after_withdrawal": true
     }
+  },
+  "source_lines": {
+    "host": 375,
+    "runner": 71,
+    "shared_content": 303,
+    "metadata_drivers": 122
   },
   "scope": "Trusted single-writer host; shipped completed research fixtures; no model requests or production recovery",
   "packages": [
