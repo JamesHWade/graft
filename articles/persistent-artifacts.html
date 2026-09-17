@@ -117,8 +117,8 @@ the exact evidence selected for later workflows.</p>
 <p><strong>This is a proposed direction.</strong> The artifact code is
 an experiment in the repository, excluded from the installed package.
 This project is pre-production; current APIs may change or be removed.
-The experiment has not yet implemented a replacement application
-workflow.</p>
+The experiment has not yet implemented a complete replacement
+application workflow.</p>
 <div class="section level2">
 <h2 id="from-analysis-to-later-reuse">From analysis to later reuse<a class="anchor" aria-label="anchor" href="#from-analysis-to-later-reuse"></a>
 </h2>
@@ -229,15 +229,21 @@ installed;</li>
 <li>withdrawal stays in force, and the unchanged native source supports
 rollback.</li>
 </ul>
-<p><strong>Tempest’s current public knowledge API rejects the portable
-view.</strong> It requires a native Graft view. We can change that API:
-backwards compatibility is not a requirement. The next experiment should
-prove the redesigned application workflow. Native deletion, complete
-external source bodies, and production recovery remain outside the
-demonstrated profile. <a href="https://github.com/JamesHWade/graft/issues/64" class="external-link">The migration
-issue</a> records the remaining work.</p>
-<p>The decision is <strong>reduce scope and redesign the consumer
-boundary</strong>. Graft can remain an implementation of the artifact
+<p>The <a href="https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-reuse.md" class="external-link">artifact
+reuse experiment</a> adds a public Tempest input for exact artifact
+selections. Initial, unchanged and corrected evidence survive session
+save/resume across independent processes without Graft installed. The
+host checks purpose and current eligibility before admission and again
+before resume. The resumed session is saved again to verify its retained
+selection and provenance. Tempest validates content and dependency
+references and retains the full input.</p>
+<p>This demonstrates admission and saved-session reuse. It makes no
+model requests and does not yet accept new research into the artifact
+store. Future acceptance, active-task withdrawal, deletion and
+production recovery remain outside the proven profile. <a href="https://github.com/JamesHWade/graft/issues/64" class="external-link">Issue #64</a>
+tracks that remaining lifecycle work.</p>
+<p>The decision is to <strong>reduce scope and test the remaining
+lifecycle</strong>. Graft can remain an implementation of the artifact
 layer if its mechanisms justify their cost. Its name and current
 architecture are not requirements for preserving user work.</p>
 <p>See <a href="https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md" class="external-link">ADR
