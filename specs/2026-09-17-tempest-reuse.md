@@ -7,7 +7,7 @@ exact sources in [pins.json](../tools/experiments/pins.json). Tempest
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
-46 reuse assertions; the complete six-experiment suite also passed, including
+48 reuse assertions; the complete six-experiment suite also passed, including
 121 migration assertions and the source-integrity/rollback guards. The
 [current migration receipt](../tools/experiments/tempest-migration/observed-current.json)
 records that companion run separately from the original historical experiment.
@@ -17,7 +17,9 @@ records that companion run separately from the original historical experiment.
 Tempest can admit retained artifact evidence through a public input contract and
 preserve it across saved-session reuse without Graft installed. The original
 82% evidence, unchanged selection and corrected 62% evidence remain distinct.
-Each input includes four exact Claim/ClaimSupport/EvidenceSpan/Source records,
+The unchanged acceptance retains the initial evidence revisions with its own
+receipt and accepted source snapshot. Each input includes four exact
+Claim/ClaimSupport/EvidenceSpan/Source records,
 content digests, dependency revisions, original receipts and native identity maps.
 JSON object members are canonicalized; receipt values and array order remain exact.
 
@@ -61,7 +63,7 @@ The previous migration checks continue to cover native history and rollback.
 
 ## Added machinery
 
-This slice adds 113 lines of host translation/session exercise and a 127-line
+This slice adds 118 lines of host translation/session exercise and a 127-line
 runner, including comments and blank lines. Tempest's input module is 289 lines,
 plus integration changes to its existing workspace and persistence paths. Tests,
 documentation and the previously inventoried migration/storage implementation are

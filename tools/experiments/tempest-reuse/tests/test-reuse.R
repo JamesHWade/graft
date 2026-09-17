@@ -1,7 +1,7 @@
 test_that("real Tempest admits exact initial and corrected artifact evidence", {
   fixture <- reuse_fixture
   for (name in c("initial", "unchanged", "correction")) {
-    checkpoint <- if (name == "unchanged") "initial" else name
+    checkpoint <- name
     input <- fixture$inputs[[checkpoint]]
     observed <- fixture$consumer[[name]]
     expected_selection <- input$selection
@@ -79,8 +79,19 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
     fixed = TRUE
   )
   expect_identical(
-    fixture$consumer$initial$selection,
-    fixture$consumer$unchanged$selection
+    fixture$consumer$initial$selection$records,
+    fixture$consumer$unchanged$selection$records
+  )
+  expect_identical(
+    fixture$consumer$unchanged$selection$provenance$source_snapshot,
+    reuse_order_object_members(fixture$export$receipts$unchanged$snapshot)
+  )
+  expect_length(
+    unique(c(
+      fixture$consumer$initial$selection$provenance$source_receipt$receipt_id,
+      fixture$consumer$unchanged$selection$provenance$source_receipt$receipt_id
+    )),
+    2L
   )
   expect_identical(
     fixture$consumer$initial$sources[["content_text"]],

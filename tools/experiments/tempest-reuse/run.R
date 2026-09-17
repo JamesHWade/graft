@@ -21,10 +21,10 @@ export <- migration_open(target, historical_handle)
 store <- artifact_store(target, "manifest", "unused")
 handle <- historical_handle
 handle$basis <- artifact_approve(store, list(handle$root), "Tempest research")
-inputs <- lapply(c("initial", "correction"), function(name) {
+inputs <- lapply(c("initial", "unchanged", "correction"), function(name) {
   reuse_input(target, handle, name)
 })
-names(inputs) <- c("initial", "correction")
+names(inputs) <- c("initial", "unchanged", "correction")
 output <- file.path(output_root, "tempest-reuse")
 dir.create(output)
 # Copy only Tempest's required runtime packages, excluding Graft and all optional
@@ -66,8 +66,7 @@ consumer_run <- function(phase) {
         resume = reuse_session_restore
       )
       values <- lapply(c("initial", "unchanged", "correction"), function(name) {
-        checkpoint <- if (name == "unchanged") "initial" else name
-        exercise(target, handle, checkpoint, file.path(output, name))
+        exercise(target, handle, name, file.path(output, name))
       })
       names(values) <- c("initial", "unchanged", "correction")
       list(
@@ -115,6 +114,7 @@ result <- list(
   resume_eligibility_checked = TRUE,
   resumed_selection_verified = TRUE,
   separate_save_resume_processes = TRUE,
+  unchanged_acceptance_preserved = TRUE,
   scope = "Admission and cross-run evidence reuse; no new research acceptance or model-generated report",
   packages = jsonlite::read_json("tools/experiments/pins.json")$packages
 )

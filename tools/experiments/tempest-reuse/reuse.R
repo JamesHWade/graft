@@ -1,9 +1,14 @@
 # Host-owned translation after exact artifact resolution and current eligibility.
 reuse_input <- function(target, handle, checkpoint) {
   export <- migration_open(target, handle, purpose = "Tempest research")
-  basis <- export$checkpoints[[checkpoint]]
-  if (is.null(basis)) {
+  receipt <- export$receipts[[checkpoint]]
+  basis_name <- if (checkpoint == "unchanged") "initial" else checkpoint
+  basis <- export$checkpoints[[basis_name]]
+  if (is.null(basis) || is.null(receipt)) {
     artifact_error("Unknown retained checkpoint.")
+  }
+  if (checkpoint == "unchanged") {
+    basis$snapshot <- receipt$snapshot
   }
   selected <- migration_order_selection(unlist(
     basis$selections,
@@ -44,7 +49,7 @@ reuse_input <- function(target, handle, checkpoint) {
       provenance = list(
         source_export_sha256 = handle$source_export_sha256,
         source_snapshot = basis$snapshot,
-        source_receipt = export$receipts[[checkpoint]],
+        source_receipt = receipt,
         artifact_map = map[vapply(
           selected,
           \(ref) ref$revision_id,

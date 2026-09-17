@@ -11,10 +11,12 @@ For a standalone rerun, use a fresh output directory and run
 `tempest-migration/run.R` followed by `tempest-reuse/run.R` with the same
 `GRAFT_EXPERIMENT_HOME` and `GRAFT_EXPERIMENT_OUTPUT`.
 
-The host checks purpose and current eligibility, resolves the initial or corrected
-four-record selection, and supplies exact text and artifact revision references to
+The host checks purpose and current eligibility, resolves the initial, unchanged or
+corrected four-record selection, and supplies exact text and artifact revision references to
 Tempest's public `tempest_artifact_knowledge()` constructor. Original native
-snapshots, receipts and revision mappings are inert provenance.
+snapshots, receipts and revision mappings are inert provenance. The unchanged
+acceptance carries its own receipt and source snapshot while retaining the
+initial evidence revisions.
 
 Two independent consumer processes have Tempest and its required dependencies
 but no Graft installation. The first creates and saves initial, unchanged and
