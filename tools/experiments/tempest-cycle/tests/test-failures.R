@@ -34,6 +34,28 @@ test_that("rejected proposals and interrupted acceptance never authorize reuse",
           file.path(fixture, "correction-report.md")
         ))
         staged <- stage(store, "initial")
+        bad_purposes <- lapply(
+          list(
+            "",
+            NULL,
+            NA_character_,
+            123,
+            c("one", "two"),
+            "   ",
+            " Tempest research "
+          ),
+          function(purpose) {
+            error_text(cycle_accept(
+              store,
+              staged,
+              "invalid-purpose",
+              NULL,
+              "Reviewed",
+              purpose
+            ))
+          }
+        )
+        empty_after_bad_purposes <- is.null(cycle_head(store))
         candidate <- cycle_candidate(store, staged)
         report <- artifact_resolve(store, candidate$saved$report)
         path <- artifact_digest_path(
@@ -81,6 +103,8 @@ test_that("rejected proposals and interrupted acceptance never authorize reuse",
         writeBin(report$bytes, path)
         list(
           bad_report = bad_report,
+          bad_purposes = bad_purposes,
+          empty_after_bad_purposes = empty_after_bad_purposes,
           wrong_pin = wrong_pin,
           corrupt = corrupt,
           empty_after_corrupt = empty_after_corrupt,
@@ -95,6 +119,14 @@ test_that("rejected proposals and interrupted acceptance never authorize reuse",
       },
       cycle_stage_fixture
     )$value
+    for (message in result$bad_purposes) {
+      expect_match(
+        message,
+        "Acceptance requires one nonempty, unpadded reuse purpose",
+        fixed = TRUE
+      )
+    }
+    expect_identical(result$empty_after_bad_purposes, TRUE)
     expect_match(result$bad_report, "Report differs", fixed = TRUE)
     expect_match(result$wrong_pin, "trusted bundle id", fixed = TRUE)
     expect_match(

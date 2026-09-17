@@ -16,7 +16,7 @@ library. The Graft path uses the same host decisions and content preservation.
 Both retain exact initial, unchanged and corrected acceptance receipts, source
 bodies, four evidence records per selection, reports and original promotion
 bundle files. The [recorded result](../tools/experiments/tempest-cycle/observed.json)
-records 176 passing assertions and the executed failure checks. The complete
+records 192 passing assertions and the executed failure checks. The complete
 seven-experiment suite also passed; the independent dependency/content assertions
 were added afterward and rerun in the focused acceptance fixture.
 
@@ -70,7 +70,7 @@ reference after removing that single framing LF, while preserving the original
 file bytes with their separate artifact digest. This is the shipped fixture's
 serialization convention, not a general report import API.
 
-Negative tests cover missing approval, wrong purpose, stale expected decisions,
+Negative tests cover missing approval, malformed or wrong purpose, stale expected decisions,
 wrong bundle pins, changed reports, corrupted retained bytes, mismatched saved
 sessions and retries that change a decision. An injected failure of the final
 journal publication leaves no acceptance; retry reuses the saved receipt and
@@ -104,15 +104,15 @@ candidate/receipt construction, the acceptance journal, admission, withdrawal
 and session exercise. It also requires the existing shared content module and
 metadata driver module. The runner, fixture orchestration, regression tests and
 Tempest's public artifact input are additional; none are hidden as free adapters.
-The host and shared storage code total 800 lines including comments and blanks:
+The host and shared storage code total 809 lines including comments and blanks:
 
 | Source | Lines |
 | --- | ---: |
-| New host, including session exercise | 375 |
+| New host, including session exercise | 384 |
 | Existing shared content module | 303 |
 | Existing metadata drivers, both alternatives | 122 |
 | New runner | 71 |
-| New test helper and regression tests | 576 |
+| New test helper and regression tests | 608 |
 
 Tempest's previously added public input module is another 289 lines, plus its
 workspace/persistence integration. The prior migration exporter/importer remains

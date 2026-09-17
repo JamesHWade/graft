@@ -199,6 +199,15 @@ cycle_accept <- function(
       "Acceptance requires an explicit host key and review reason."
     )
   }
+  if (
+    !is.character(purpose) ||
+      length(purpose) != 1L ||
+      is.na(purpose) ||
+      !nzchar(purpose) ||
+      !identical(purpose, trimws(purpose))
+  ) {
+    artifact_error("Acceptance requires one nonempty, unpadded reuse purpose.")
+  }
   request <- list(
     key = key,
     staged = staged,

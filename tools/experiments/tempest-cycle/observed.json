@@ -1,6 +1,6 @@
 {
   "outcome": "Direct research acceptance, correction and withdrawal with both metadata drivers",
-  "assertions": 176,
+  "assertions": 192,
   "observations": {
     "failure_checks": {
       "reject_wrong_bundle_and_report": true,
@@ -17,7 +17,7 @@
     }
   },
   "source_lines": {
-    "host": 375,
+    "host": 384,
     "runner": 71,
     "shared_content": 303,
     "metadata_drivers": 122
