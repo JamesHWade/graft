@@ -221,7 +221,7 @@ migration_produce <- function(directory) {
     changes = migration_plain(recipe$briefing_changes(store, first)),
     unchanged = TRUE,
     unsupported = c(
-      "Native Tempest knowledge admission from a manifest view",
+      "Passing a manifest view directly to the Graft-specific constructor (artifact input is tested separately)",
       "Public deletion/tombstone production through Tempest",
       "Original external web bodies and executable ProgramArtifact payloads absent from these bundles",
       "Other schemas, sensitive fields, unselected store history, concurrent writes and production recovery"

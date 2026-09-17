@@ -1,5 +1,9 @@
 # Tempest checkpoint migration result
 
+The [September 17 follow-up](2026-09-17-tempest-reuse.md) closes the artifact input
+and saved-session reuse gap described below. This page records the original
+migration result; future artifact acceptance and lifecycle work remain open.
+
 Experiment #64, September 16, 2026. The [runnable fixture](../tools/experiments/tempest-migration/README.md)
 uses Tempest at `3cfe220577bdce61ee3b94684cc4ffdf5e1fdb83` and the complete pinned
 environment shared by the artifact experiments.

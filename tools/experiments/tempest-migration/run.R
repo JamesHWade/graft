@@ -64,8 +64,8 @@ for (name in names(rollback$checkpoints)) {
   ))
 }
 result <- list(
-  outcome = "Historical export/read parity; native Tempest admission requires a new public seam",
-  recommendation = "reduce; redesign the Tempest boundary without backwards-compatibility constraints",
+  outcome = "Historical export/read parity; artifact admission is tested by tempest-reuse",
+  recommendation = "reduce; complete future artifact acceptance and lifecycle tests",
   assertions = sum(as.data.frame(tests)$passed),
   native_history_revisions = length(produced$export$history),
   native_final_heads = length(produced$export$final_heads),

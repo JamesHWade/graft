@@ -106,6 +106,7 @@ metadata compositions pass the bounded fixtures under `tools/experiments/`.
 The project is pre-production: backwards compatibility with Graft or Tempest
 APIs is not required. Change or remove them directly when the simpler composition
 works; preserve required artifact contents, provenance, corrections, and history.
-A Graft-only Tempest constructor is an integration task, not a reason to retain
-Graft. The experiments do not establish production
+The artifact reuse experiment now admits exact evidence through a public Tempest
+input and preserves saved sessions without Graft installed. Future acceptance
+into artifact storage remains unproved. The experiments do not establish production
 Reader isolation, Forget/restore or concurrent durability.

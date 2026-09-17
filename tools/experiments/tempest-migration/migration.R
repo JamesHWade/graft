@@ -411,12 +411,17 @@ migration_import <- function(export_path, expected_sha256, target) {
   list(root = root, basis = basis, source_export_sha256 = expected_sha256)
 }
 
-migration_open <- function(target, handle, consult = TRUE) {
+migration_open <- function(
+  target,
+  handle,
+  consult = TRUE,
+  purpose = "historical inspection"
+) {
   store <- artifact_store(target, "manifest", "unused")
   items <- artifact_read_basis(
     store,
     handle$basis,
-    "historical inspection",
+    purpose,
     consult = consult
   )
   root <- migration_one(

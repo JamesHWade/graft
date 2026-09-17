@@ -1,5 +1,11 @@
 {
-  "schema_version": 1,
+  "outcome": "Public Tempest artifact input and saved-session reuse without Graft",
+  "assertions": 25,
+  "graft_available": false,
+  "graft_loaded": false,
+  "retained_sessions": ["initial", "unchanged", "correction"],
+  "purpose_and_withdrawal_checked": true,
+  "scope": "Admission and cross-run evidence reuse; no new research acceptance or model-generated report",
   "packages": [
     {
       "package": "commons",
@@ -50,7 +56,5 @@
       "sha": "76a014f74e8d4a236aa0a0c5dda87de388310cf6",
       "version": "0.0.0.9000"
     }
-  ],
-  "data_dict_cli_package": "datadict",
-  "data_dict_cli_version": "0.0.3"
+  ]
 }
