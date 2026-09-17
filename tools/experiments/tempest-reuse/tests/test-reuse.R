@@ -11,7 +11,7 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
       )@artifact_selection
     )
     expect_equal(nrow(observed$sources), 4L)
-    expect_identical(observed$native_view, TRUE)
+    expect_identical(observed$no_native_view, TRUE)
     expect_setequal(
       observed$sources$content,
       unlist(input$contents, use.names = FALSE)

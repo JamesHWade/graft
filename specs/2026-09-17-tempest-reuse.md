@@ -8,7 +8,9 @@ is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71)
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
 28 reuse assertions; the complete six-experiment suite also passed, including
-121 migration assertions and the source-integrity/rollback guards.
+121 migration assertions and the source-integrity/rollback guards. The
+[current migration receipt](../tools/experiments/tempest-migration/observed-current.json)
+records that companion run separately from the original historical experiment.
 
 ## Result and decision
 

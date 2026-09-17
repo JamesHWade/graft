@@ -106,7 +106,7 @@ active-task withdrawal, deletion and production recovery remain outside the
 proven profile. [Issue #64](https://github.com/JamesHWade/graft/issues/64) tracks
 that remaining lifecycle work.
 
-The decision is **reduce scope and test the remaining lifecycle**. Graft can
+The decision is to **reduce scope and test the remaining lifecycle**. Graft can
 remain an implementation of the artifact layer if its mechanisms justify their cost. Its name and current
 architecture are not requirements for preserving user work.
 

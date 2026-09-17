@@ -91,7 +91,7 @@ reuse_session <- function(target, handle, checkpoint, path) {
   list(
     sources = after,
     selection = manifest$workspace$artifact_selection,
-    native_view = is.null(knowledge@view),
+    no_native_view = is.null(knowledge@view),
     report = "Input admission and saved-session reuse; no model-generated report claimed"
   )
 }
