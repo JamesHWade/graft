@@ -17,8 +17,8 @@ test_that("real Tempest admits exact initial and corrected artifact evidence", {
       unlist(input$contents, use.names = FALSE)
     )
     expect_identical(
-      observed$selection$provenance$source_receipt,
-      fixture$export$receipts[[name]]
+      reuse_order_object_members(observed$selection$provenance$source_receipt),
+      reuse_order_object_members(fixture$export$receipts[[name]])
     )
     expect_setequal(
       vapply(

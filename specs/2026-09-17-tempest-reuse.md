@@ -3,7 +3,7 @@
 Experiment #64, September 17, 2026. This follows the
 [historical migration experiment](2026-09-16-tempest-migration.md) and uses the
 exact sources in [pins.json](../tools/experiments/pins.json). Tempest
-[`0e85ef9`](https://github.com/JamesHWade/tempest/tree/0e85ef9fe3263838707993a9f352b1a4b87962e9)
+[`6d3386c`](https://github.com/JamesHWade/tempest/tree/6d3386cbbe22fdc0c1539c436e3ab2f4660567f3)
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
 The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
@@ -17,6 +17,7 @@ preserve it across saved-session reuse without Graft installed. The original
 82% evidence, unchanged selection and corrected 62% evidence remain distinct.
 Each input includes four exact Claim/ClaimSupport/EvidenceSpan/Source records,
 content digests, dependency revisions, original receipts and native identity maps.
+JSON object members are canonicalized; receipt values and array order remain exact.
 
 This removes the Graft-only input boundary as a reason to retain Graft.
 The decision remains **reduce scope while testing replacement**. Graft is still
@@ -55,7 +56,7 @@ The previous migration checks continue to cover native history and rollback.
 ## Added machinery
 
 This slice adds 94 lines of host translation/session exercise and a 108-line
-runner, including comments and blank lines. Tempest's input module is 269 lines,
+runner, including comments and blank lines. Tempest's input module is 289 lines,
 plus integration changes to its existing workspace and persistence paths. Tests,
 documentation and the previously inventoried migration/storage implementation are
 additional. These counts describe code size, not production cost or performance.

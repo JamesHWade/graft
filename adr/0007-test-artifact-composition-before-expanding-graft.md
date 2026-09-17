@@ -94,7 +94,7 @@ an interpretation correct. A search cache is a rebuildable view over artifacts.
 ## Current consumers and evidence preservation
 
 The original migration experiment used Tempest `3cfe220`. The current suite pins
-[`0e85ef9`](https://github.com/JamesHWade/tempest/tree/0e85ef9fe3263838707993a9f352b1a4b87962e9)
+[`6d3386c`](https://github.com/JamesHWade/tempest/tree/6d3386cbbe22fdc0c1539c436e3ab2f4660567f3)
 from [Tempest #71](https://github.com/JamesHWade/tempest/pull/71), including the
 public artifact input. Receipts and checkpoints bind store,
 batch, schema build, snapshot and native revision identities. Its historical
