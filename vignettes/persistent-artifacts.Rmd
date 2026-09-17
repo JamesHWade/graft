@@ -17,7 +17,7 @@ later workflows.
 
 **This is a proposed direction.** The artifact code is an experiment in the
 repository, excluded from the installed package. This project is pre-production; current APIs may change or be removed. The
-experiment has not yet implemented a replacement application workflow.
+experiment has not yet implemented a complete replacement application workflow.
 
 ## From analysis to later reuse
 
@@ -92,15 +92,21 @@ assertions establish that:
 - a fresh process reads the target with neither Graft nor Tempest installed;
 - withdrawal stays in force, and the unchanged native source supports rollback.
 
-**Tempest's current public knowledge API rejects the portable view.** It requires
-a native Graft view. We can change that API: backwards compatibility is not a
-requirement. The next experiment should prove the redesigned application workflow.
-Native deletion, complete external source bodies, and production recovery remain
-outside the demonstrated profile.
-[The migration issue](https://github.com/JamesHWade/graft/issues/64) records the
-remaining work.
+The [artifact reuse experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-reuse.md)
+adds a public Tempest input for exact artifact selections. Initial, unchanged and
+corrected evidence survive session save/resume across independent processes
+without Graft installed. The host checks purpose and current eligibility before admission and
+again before resume. The resumed session is saved again to verify its retained
+selection and provenance. Tempest validates content and dependency references
+and retains the full input.
 
-The decision is **reduce scope and redesign the consumer boundary**. Graft can
+This demonstrates admission and saved-session reuse. It makes no model requests
+and does not yet accept new research into the artifact store. Future acceptance,
+active-task withdrawal, deletion and production recovery remain outside the
+proven profile. [Issue #64](https://github.com/JamesHWade/graft/issues/64) tracks
+that remaining lifecycle work.
+
+The decision is to **reduce scope and test the remaining lifecycle**. Graft can
 remain an implementation of the artifact layer if its mechanisms justify their cost. Its name and current
 architecture are not requirements for preserving user work.
 

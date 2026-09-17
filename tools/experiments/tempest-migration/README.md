@@ -47,8 +47,11 @@ uses only the installed packages and synthetic local fixtures.
 Export format 2 requires final heads. Regenerate older experimental exports;
 backwards compatibility is not required for this pre-production experiment.
 
-`results.json` records the result and source pins; [observed.json](observed.json)
-retains the checked local run. `handoff.json` identifies the
+`results.json` records each run's result and source pins.
+[observed-current.json](observed-current.json) retains the current suite's checked
+migration run against Tempest `6d3386c`. [observed.json](observed.json) preserves
+the historical run against Tempest `3cfe220`, before the public artifact input.
+Its outcome describes that earlier API boundary. `handoff.json` identifies the
 retained manifest target and its root selection. Native source data and the
 imported target remain in the output directory for inspection. All are synthetic.
 The importer reads JSON and bytes; the native rollback uses only the trusted RDS
@@ -70,8 +73,9 @@ The fixture bundles contain accepted Source metadata, evidence excerpts, and
 ProgramArtifact identities. They do not contain complete external web bodies or
 executable program payloads. Their hashes do not recreate those missing bytes.
 
-The target is a historical reader, not a writer for future accepted research or
-a supported Tempest knowledge provider. Retaining a receipt preserves source
+This migration adapter reads retained history. The companion
+[reuse experiment](../tempest-reuse/README.md) tests admission through Tempest's
+public artifact input. Future acceptance into the artifact store remains unproved. Retaining a receipt preserves source
 acceptance evidence; it does not create an acceptance event in a new store or
 authenticate an untrusted export. A trusted host supplies the handoff digest.
 Interrupted migration can leave an incomplete target; this prototype requires a

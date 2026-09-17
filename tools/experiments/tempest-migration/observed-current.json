@@ -1,5 +1,19 @@
 {
-  "schema_version": 1,
+  "outcome": "Historical export/read parity; artifact admission is tested by tempest-reuse",
+  "recommendation": "reduce; complete future artifact acceptance and lifecycle tests",
+  "assertions": 121,
+  "native_history_revisions": 11,
+  "native_final_heads": 10,
+  "retained_receipts": 3,
+  "retained_target_artifacts": 12,
+  "evidence_per_checkpoint": {
+    "initial": 4,
+    "correction": 4
+  },
+  "source_unchanged": true,
+  "rollback_verified": true,
+  "rollback_receipts_verified": 3,
+  "source_export_sha256": "f26cbb7c2f7d7049189195b9f497d333b700265005541788f34b3daf4fb83f18",
   "packages": [
     {
       "package": "commons",
@@ -51,6 +65,5 @@
       "version": "0.0.0.9000"
     }
   ],
-  "data_dict_cli_package": "datadict",
-  "data_dict_cli_version": "0.0.3"
+  "unsupported": ["Passing a manifest view directly to the Graft-specific constructor (artifact input is tested separately)", "Public deletion/tombstone production through Tempest", "Original external web bodies and executable ProgramArtifact payloads absent from these bundles", "Other schemas, sensitive fields, unselected store history, concurrent writes and production recovery"]
 }

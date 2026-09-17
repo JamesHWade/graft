@@ -182,7 +182,9 @@ history functions.
 The [persistent artifact and selected-memory proposal](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
 explains how Commons, data-dict, shared vocabulary, and durable outputs could work
 together. The [runnable experiments](tools/experiments/README.md) compare storage
-implementations. This project is pre-production, and current public APIs may
+implementations. The [Tempest reuse experiment](specs/2026-09-17-tempest-reuse.md)
+checks public artifact admission and saved-session reuse without Graft installed.
+Future artifact acceptance remains an experiment. This project is pre-production, and current public APIs may
 change or be removed as the composition is simplified.
 
 1. [Get started](https://jameshwade.github.io/graft/articles/getting-started.html)
