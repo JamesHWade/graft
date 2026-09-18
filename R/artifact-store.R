@@ -133,14 +133,7 @@ graft_artifact_save <- function(
   artifact_check_limit(max_artifacts, "max_artifacts")
   dependencies <- artifact_refs(dependencies, max_artifacts)
   artifact_dependency_closure(store, dependencies, max_artifacts)
-  metadata <- list(
-    format = 1L,
-    id = enc2utf8(id),
-    payload = artifact_sha(bytes),
-    size = length(bytes),
-    media_type = enc2utf8(media_type),
-    dependencies = dependencies
-  )
+  metadata <- artifact_metadata(id, bytes, media_type, dependencies)
   manifest <- artifact_encode(metadata)
   ref <- list(id = metadata$id, revision = artifact_sha(manifest))
   artifact_put(
@@ -310,6 +303,17 @@ artifact_check_metadata <- function(metadata) {
   if (!identical(dependencies, metadata$dependencies)) {
     artifact_abort("Artifact dependencies must be distinct unnamed references.")
   }
+}
+
+artifact_metadata <- function(id, bytes, media_type, dependencies) {
+  list(
+    format = 1L,
+    id = enc2utf8(id),
+    payload = artifact_sha(bytes),
+    size = length(bytes),
+    media_type = enc2utf8(media_type),
+    dependencies = dependencies
+  )
 }
 
 artifact_sha <- function(bytes) {

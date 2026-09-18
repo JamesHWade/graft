@@ -19,9 +19,9 @@ Setup requires network access, Rust/cargo, normal R build dependencies and a
 writable temporary directory. It installs the pinned upstream sources into its
 own library, installs this Graft checkout, and builds the matching data-dict CLI.
 `pins.json` identifies the development sources. The current Tempest pin includes
-[Tempest #74](https://github.com/JamesHWade/tempest/pull/74), which adds public
-research publication, historical inspection and fresh decision admission on the
-Graft 1.0 consumer contract. Merge that companion before using this application
+[Tempest #78](https://github.com/JamesHWade/tempest/pull/78) and its stack, which
+retain exact artifact inputs in research manifests and accept the Graft 2.0.0
+consumer contract alongside public publication, inspection and fresh admission. Merge that companion before using this application
 workflow with an unpinned Tempest installation. `dependency-snapshot.json` records
 the complete resolved R package set, R 4.6.1 and the FTS extension revision from
 the successful Linux evidence run. Setup requests those exact package versions;

@@ -131,6 +131,17 @@ jobs:
         run: |
           stopifnot(!any(nzchar(Sys.getenv(c("GITHUB_PAT", "GITHUB_TOKEN", "GH_TOKEN")))))
           source("tools/experiments/run.R")
+      - name: Verify the public vocabulary module with pinned data-dict and Commons
+        env:
+          GITHUB_PAT: ""
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+          GRAFT_REQUIRE_VOCABULARY: "true"
+        shell: Rscript {0}
+        run: |
+          source("tools/experiments/runtime.R")
+          experiment_prepare(fts = TRUE)
+          testthat::test_local(filter = "^vocabulary$", stop_on_failure = TRUE)
       - name: Preserve dependency and experiment evidence
         if: always()
         uses: actions/upload-artifact@v4

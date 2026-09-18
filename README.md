@@ -29,8 +29,8 @@ shows shared storage, exact dependency selections, and acceptance and withdrawal
 journals. Current reuse checks the selected decision and purpose alongside the
 application's explicit eligibility decision.
 
-Consumer contract 1.0 is a preproduction cutoff for legacy data-dict compiled
-manifests and graph stores. See the [compatibility guide](https://jameshwade.github.io/graft/articles/compatibility.html)
+Consumer contract 2.0.0 requires recompiling earlier preproduction data-dict
+manifests. The native graph store format remains 3.1.0. See the [compatibility guide](https://jameshwade.github.io/graft/articles/compatibility.html)
 before reopening them with this build.
 
 ## Installation
@@ -223,3 +223,11 @@ project is pre-production, and backwards compatibility is not a requirement.
    and [contract compiler
    reference](https://jameshwade.github.io/graft/articles/contract-compilers.html)
    for implementation details.
+
+## Shared vocabulary
+
+`graft_vocabulary_publish()` validates shared concepts, directed relationships, and
+qualified bindings across data-dict dictionaries. It preserves sources, resolved
+exports, and generated context as one immutable artifact selection.
+`graft_vocabulary_read()` reopens that release without the original files or CLI.
+See [shared concepts across workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).

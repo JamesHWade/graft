@@ -55,8 +55,8 @@ migration_produce <- function(directory) {
   recipe <- migration_recipe()
   fixture <- system.file("examples/accepted-research", package = "tempest")
   pins <- c(
-    initial = "sha256:b19dedc6127d20c515af3bcb9bae9c960bb04cf4a05af5ffafa259f7acf8c43d",
-    correction = "sha256:55485f222bdcaf8aa7fa3233184029fb7aad472cfcee4a01250f727f3c5cbc1a"
+    initial = "sha256:00e1323021683893220b0b919ce019933449d97d01a0da1e0ece858964cb1c86",
+    correction = "sha256:8d12626a5a0c953211e77604357cba44b6359459d9dbd45d732deca86ce5204d"
   )
   store <- graft::graft_open(
     tempest::tempest_graft_schema(),

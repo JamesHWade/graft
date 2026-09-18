@@ -34,7 +34,9 @@ test_that("public API exposes only the documented functions", {
     "graft_sync",
     "graft_tools",
     "graft_verify",
-    "graft_view_snapshot"
+    "graft_view_snapshot",
+    "graft_vocabulary_publish",
+    "graft_vocabulary_read"
   )
 
   expect_identical(sort(getNamespaceExports("graft")), expected)

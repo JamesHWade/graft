@@ -1,0 +1,40 @@
+{
+  "format": "graft-vocabulary/1",
+  "release": "urn:example:vocabulary:v2",
+  "terms": [
+    {
+      "id": "urn:example:sample",
+      "kind": "concept",
+      "definition": "A physical sample identified within its originating laboratory.",
+      "aliases": [
+        "sample",
+        "specimen"
+      ]
+    },
+    {
+      "id": "urn:example:measurement",
+      "kind": "concept",
+      "definition": "One measurement event on a sample.",
+      "aliases": [
+        "measurement",
+        "assay"
+      ]
+    },
+    {
+      "id": "urn:example:temperature",
+      "kind": "concept",
+      "definition": "Measured temperature; units and conditions must be checked separately.",
+      "aliases": [
+        "temperature"
+      ]
+    },
+    {
+      "id": "urn:example:measurement-of-sample",
+      "kind": "relationship",
+      "definition": "A measurement event has the indicated physical sample as its subject.",
+      "aliases": [],
+      "domain": "urn:example:measurement",
+      "range": "urn:example:sample"
+    }
+  ]
+}

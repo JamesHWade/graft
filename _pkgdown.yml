@@ -123,6 +123,7 @@ articles:
       Understand storage and projection boundaries, contract compilation, and
       the choices behind the v0.1 package design.
     contents:
+      - shared-vocabulary
       - persistent-artifacts
       - forget-restore
       - architecture
@@ -130,6 +131,9 @@ articles:
       - v01-design
 
 reference:
+  - title: Shared vocabulary
+    contents:
+      - graft_vocabulary_publish
   - title: Persistent artifacts
     contents:
       - graft_artifact_decide

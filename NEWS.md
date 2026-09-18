@@ -1,6 +1,7 @@
 # graft 0.0.0.9000
 
 
+
 * A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. The installed Tempest consumer now publishes exact evidence and readable synthesis through Graft's public artifacts and decisions, with current admission checks on new runs and resume. Native graph removal (#74) and production recovery (#49) remain follow-up work.
 
 * A proposed Forget and recovery protocol has offline tests for retired store generations, backup admission, interrupted cleanup, and Reader isolation; permanent purge and production recovery remain unimplemented (#48).
@@ -26,6 +27,7 @@
 * `graft_verify()` now validates JSON-encoded tool envelopes from real ellmer 0.5 host loops, preserving cited-read classification across Deputy and dsprrr while rejecting malformed or duplicate-key envelopes (#40).
 * `graft_verify()` classifies every completed text-bearing assistant answer in a recorded ellmer chat from deterministic, offline Graft evidence: valid governed-calculation-only evidence is verified, while missing, non-Graft, errored, malformed, or citation-unmatched read evidence fails closed as untrusted with stable reasons (#24).
 * `graft_verify()` now labels successful generic Graft reads as cited only when every contributing result is independently matched to an explicit quotation or Markdown blockquote; mixed calculation and generic evidence is capped at cited, while unmatched or failed paths remain untrusted (#25).
+* `graft_vocabulary_publish()` and `graft_vocabulary_read()` preserve shared concepts, directed relationships, qualified dictionary bindings, and human-readable context as immutable artifact selections, using public data-dict validation and exports. Consumer contract 2.0.0 requires recompiling legacy data-dict manifests; artifact and decision formats are unchanged (#75).
 * Graft v0.1 replaces the pre-production `kg_*` API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a focused revision-first package boundary.
 * The pkgdown site now starts with ordinary tables and a shipped data-dict example, creates a blank store explicitly, demonstrates change history, and introduces LinkML when richer semantic graph modeling is needed.
 * Canonical record and identity JSON now preserves finite numeric inputs with round-trip-safe double serialization, normalizes signed zero, and rejects character numeric underflow so distinct values cannot collapse into one revision or identity digest.

@@ -1,0 +1,22 @@
+$version: "0.1.0"
+$learn_more: https://data-dict.tidyverse.org/
+name: lab-b
+version: {number: "1.0.0"}
+description: Independently authored lab-b temperature observations.
+tables:
+  - name: assays
+    columns:
+      - name: assay_id
+        type: string
+        examples: ["s1", "s2"]
+        constraints: [primary_key]
+        description: Local measurement record identity.
+      - name: specimen
+        type: string
+        examples: ["s1", "s2"]
+        description: Local sample identity.
+      - name: temperature_f
+        type: number(quantity)
+        range: [0, 300]
+        units: degF
+        description: Temperature under heated conditions.
