@@ -1,0 +1,375 @@
+test_that("artifacts survive correction and process restart", {
+  path <- withr::local_tempdir()
+  store <- graft_artifact_store(path, create = TRUE)
+  bytes <- as.raw(c(0, 255, 10, 13, 1))
+  ref <- graft_artifact_save(
+    store,
+    "report:daily",
+    bytes,
+    "application/octet-stream"
+  )
+  expect_identical(
+    graft_artifact_save(
+      store,
+      "report:daily",
+      bytes,
+      "application/octet-stream"
+    ),
+    ref
+  )
+  corrected <- graft_artifact_save(
+    store,
+    "report:daily",
+    charToRaw("corrected"),
+    "text/plain"
+  )
+  expect_length(unique(c(corrected$revision, ref$revision)), 2)
+  result <- callr::r(
+    function(path, ref, checkout) {
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
+      graft::graft_artifact_read(graft::graft_artifact_store(path), ref)
+    },
+    list(
+      path = path,
+      ref = ref,
+      checkout = if (pkgload::is_dev_package("graft")) {
+        normalizePath("../..")
+      } else {
+        NULL
+      }
+    )
+  )
+  expect_identical(result$bytes, bytes)
+  expect_identical(result$ref, ref)
+  expect_identical(result$metadata$id, "report:daily")
+  expect_equal(result$metadata$size, length(bytes))
+  expect_identical(
+    result$metadata$payload,
+    digest::digest(bytes, algo = "sha256", serialize = FALSE)
+  )
+  expect_identical(
+    rawToChar(graft_artifact_read(store, corrected)$bytes),
+    "corrected"
+  )
+  empty <- graft_artifact_save(
+    store,
+    "empty",
+    raw(),
+    "application/octet-stream"
+  )
+  expect_identical(graft_artifact_read(store, empty)$bytes, raw())
+})
+
+test_that("filesystem paths are validated independently of artifact text", {
+  for (path in list(NULL, NA_character_, "", c("a", "b"), 1)) {
+    expect_error(graft_artifact_store(path), class = "graft_artifact_error")
+  }
+  root <- withr::local_tempdir()
+  withr::local_dir(root)
+  path <- " retained artifacts"
+  store <- graft_artifact_store(path, create = TRUE)
+  ref <- graft_artifact_save(store, "report", charToRaw("kept"), "text/plain")
+  expect_identical(graft_artifact_read(store, ref)$bytes, charToRaw("kept"))
+  expect_identical(graft_artifact_store(store$path), store)
+})
+
+test_that("short relative paths remain usable after long-path normalization", {
+  skip_if_not(identical(Sys.info()[["sysname"]], "Linux"))
+  root <- withr::local_tempdir()
+  parent <- do.call(file.path, c(list(root), rep(list(strrep("d", 80)), 14)))
+  dir.create(parent, recursive = TRUE)
+  withr::local_dir(parent)
+  store <- graft_artifact_store("artifacts", create = TRUE)
+  expect_gt(nchar(store$path, type = "bytes"), 1024)
+  ref <- graft_artifact_save(store, "report", charToRaw("kept"), "text/plain")
+  reopened <- graft_artifact_store(store$path)
+  expect_identical(graft_artifact_read(reopened, ref)$bytes, charToRaw("kept"))
+  expect_identical(reopened, store)
+})
+
+test_that("creation refuses unrelated contents and reopening requires a marker", {
+  path <- withr::local_tempdir()
+  writeLines("keep", file.path(path, "user.txt"))
+  expect_error(
+    graft_artifact_store(path, create = TRUE),
+    class = "graft_artifact_error"
+  )
+  expect_identical(readLines(file.path(path, "user.txt")), "keep")
+  expect_error(graft_artifact_store(path), class = "graft_artifact_error")
+  fresh <- file.path(path, "fresh")
+  store <- graft_artifact_store(fresh, create = TRUE)
+  expect_identical(graft_artifact_store(fresh), store)
+  expect_error(
+    graft_artifact_store(fresh, create = TRUE),
+    class = "graft_artifact_error"
+  )
+  writeLines("unknown", file.path(fresh, "store.json"))
+  expect_error(graft_artifact_store(fresh), class = "graft_artifact_error")
+})
+
+test_that("invalid inputs fail before artifact publication", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  for (id in list(
+    NULL,
+    NA_character_,
+    "",
+    " padded ",
+    c("a", "b"),
+    1,
+    "a\nb"
+  )) {
+    expect_error(
+      graft_artifact_save(store, id, raw(), "text/plain"),
+      class = "graft_artifact_error"
+    )
+  }
+  expect_error(
+    graft_artifact_save(store, "id", "text", "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_save(store, "id", raw(), ""),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_read(store, list(id = "id", revision = "../outside")),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_read(store, list(revision = strrep("a", 64))),
+    class = "graft_artifact_error"
+  )
+  expect_identical(list.files(store$path), "store.json")
+  for (limit in list(0, -1, NA, Inf, 1.5, "1")) {
+    expect_error(
+      graft_artifact_store(store$path, max_bytes = limit),
+      class = "graft_artifact_error"
+    )
+  }
+})
+
+test_that("reads reject corrupt payloads, revisions and mismatched identities", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_artifact_save(store, "id", charToRaw("original"), "text/plain")
+  item <- graft_artifact_read(store, ref)
+  wrong <- ref
+  wrong$id <- "different"
+  expect_error(
+    graft_artifact_read(store, wrong),
+    class = "graft_artifact_error"
+  )
+  content <- file.path(store$path, "content", item$metadata$payload)
+  writeBin(charToRaw("modified"), content)
+  expect_error(graft_artifact_read(store, ref), class = "graft_artifact_error")
+  expect_error(
+    graft_artifact_save(store, "id", charToRaw("original"), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  unlink(content)
+  expect_error(graft_artifact_read(store, ref), class = "graft_artifact_error")
+  writeBin(item$bytes, content)
+  writeBin(charToRaw("{}"), file.path(store$path, "revisions", ref$revision))
+  expect_error(graft_artifact_read(store, ref), class = "graft_artifact_error")
+})
+
+test_that("byte limits apply at saving and reopening", {
+  store <- graft_artifact_store(
+    withr::local_tempdir(),
+    create = TRUE,
+    max_bytes = 4
+  )
+  expect_error(
+    graft_artifact_save(store, "id", charToRaw("large"), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  ref <- graft_artifact_save(store, "id", charToRaw("four"), "text/plain")
+  expect_error(
+    graft_artifact_read(graft_artifact_store(store$path, max_bytes = 3), ref),
+    class = "graft_artifact_error"
+  )
+})
+
+test_that("metadata publication failures retain bytes and permit exact retry", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  original <- graft_artifact_save(
+    store,
+    "id",
+    charToRaw("before"),
+    "text/plain"
+  )
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    if (basename(dirname(to)) == "revisions") {
+      return(FALSE)
+    }
+    file.rename(from, to)
+  })
+  expect_error(
+    graft_artifact_save(store, "id", charToRaw("after"), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_length(list.files(file.path(store$path, "revisions")), 1)
+  expect_length(list.files(file.path(store$path, "content")), 2)
+  expect_identical(
+    rawToChar(graft_artifact_read(store, original)$bytes),
+    "before"
+  )
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    file.rename(from, to)
+  })
+  corrected <- graft_artifact_save(
+    store,
+    "id",
+    charToRaw("after"),
+    "text/plain"
+  )
+  expect_identical(
+    graft_artifact_save(store, "id", charToRaw("after"), "text/plain"),
+    corrected
+  )
+  expect_length(list.files(file.path(store$path, "revisions")), 2)
+  expect_length(list.files(file.path(store$path, "content")), 2)
+})
+
+
+test_that("creation does not treat an unreadable directory as empty", {
+  skip_on_os("windows")
+  path <- withr::local_tempdir()
+  writeLines("keep", file.path(path, "user.txt"))
+  withr::defer(Sys.chmod(path, "0700"))
+  Sys.chmod(path, "0300")
+  skip_if(
+    file.access(path, 4L) == 0L,
+    "Process can read restricted directories"
+  )
+  expect_error(
+    graft_artifact_store(path, create = TRUE),
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(file.path(path, "store.json")), FALSE)
+  Sys.chmod(path, "0700")
+  expect_identical(readLines(file.path(path, "user.txt")), "keep")
+})
+test_that("text bounds use persisted UTF-8 bytes before publication", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  too_long <- iconv(strrep("\u00e9", 600), from = "UTF-8", to = "latin1")
+  expect_equal(nchar(too_long, type = "bytes"), 600)
+  expect_error(
+    graft_artifact_save(store, too_long, raw(), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_save(store, "report", raw(), too_long),
+    class = "graft_artifact_error"
+  )
+  expect_identical(list.files(store$path), "store.json")
+  boundary <- iconv(strrep("\u00e9", 512), from = "UTF-8", to = "latin1")
+  ref <- graft_artifact_save(store, boundary, raw(), "text/plain")
+  expect_identical(
+    graft_artifact_read(store, ref)$metadata$id,
+    enc2utf8(boundary)
+  )
+})
+
+test_that("revision metadata has a configurable handle bound", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  refs <- lapply(seq_len(600), function(i) {
+    graft_artifact_save(
+      store,
+      paste0(strrep('"', 1000), i),
+      raw(),
+      "text/plain"
+    )
+  })
+  expect_error(
+    graft_artifact_save(store, "report", raw(), "text/plain", refs),
+    class = "graft_artifact_error"
+  )
+  larger <- graft_artifact_store(store$path, max_revision_bytes = 2 * 1024^2)
+  ref <- graft_artifact_save(larger, "report", raw(), "text/plain", refs)
+  expect_gt(
+    file.info(file.path(store$path, "revisions", ref$revision))$size,
+    1024^2
+  )
+  expect_error(graft_artifact_read(store, ref), class = "graft_artifact_error")
+  reopened <- graft_artifact_store(store$path, max_revision_bytes = 2 * 1024^2)
+  expect_identical(
+    graft_artifact_read(reopened, ref)$metadata$dependencies,
+    refs
+  )
+  selection <- graft_artifact_select(
+    reopened,
+    list(ref),
+    max_metadata_bytes = 2 * 1024^2
+  )
+  expect_identical(
+    graft_artifact_read_selection(
+      reopened,
+      selection,
+      max_metadata_bytes = 2 * 1024^2
+    )$artifacts,
+    c(list(ref), refs)
+  )
+  for (limit in list(0, -1, 1.5, NA_real_, Inf, "large", numeric())) {
+    expect_error(
+      graft_artifact_store(store$path, max_revision_bytes = limit),
+      class = "graft_artifact_error"
+    )
+  }
+})
+
+test_that("raw vector attributes do not affect artifact publication or retries", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  bytes <- as.raw(c(0, 255))
+  for (attributed in list(
+    setNames(bytes, c("first", "second")),
+    structure(bytes, class = "example"),
+    structure(bytes, dim = c(1L, 2L)),
+    structure(bytes, label = "payload")
+  )) {
+    ref <- graft_artifact_save(
+      store,
+      "raw",
+      attributed,
+      "application/octet-stream"
+    )
+    expect_identical(graft_artifact_read(store, ref)$bytes, bytes)
+    expect_identical(
+      graft_artifact_save(store, "raw", attributed, "application/octet-stream"),
+      ref
+    )
+  }
+  expect_identical(
+    graft_artifact_save(store, "raw", bytes, "application/octet-stream"),
+    ref
+  )
+})
+
+test_that("host Graft error handlers catch artifact failures", {
+  error <- tryCatch(graft_artifact_store(""), graft_error = identity)
+  expect_s3_class(error, "graft_artifact_error")
+})
+
+
+test_that("identity and reference attributes do not change persisted values", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  bytes <- charToRaw("kept")
+  ref <- graft_artifact_save(store, c(label = "report"), bytes, I("text/plain"))
+  expect_identical(ref$id, "report")
+  expect_identical(
+    graft_artifact_read(store, ref)$metadata$media_type,
+    "text/plain"
+  )
+  expect_identical(
+    graft_artifact_save(store, "report", bytes, "text/plain"),
+    ref
+  )
+  attributed <- structure(
+    list(id = I("report"), revision = c(digest = ref$revision)),
+    class = "example"
+  )
+  result <- graft_artifact_read(store, attributed)
+  expect_identical(result$ref, ref)
+  expect_identical(result$bytes, bytes)
+})

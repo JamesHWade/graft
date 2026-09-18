@@ -14,6 +14,14 @@ and let a later task return to the exact knowledge an earlier task used.
 </div>
 </div>
 
+## Shared artifact direction
+
+Graft is being rebuilt around persistent artifacts, immutable revisions and exact
+selections. Tempest and Rill consume this shared infrastructure as applications;
+data-dict owns contracts and Commons owns analytical execution. See the
+[persistent artifact guide](articles/persistent-artifacts.html) for the current
+implementation scope and the completed architecture experiments.
+
 ## From a result to a reusable record
 
 An R workflow produces a conclusion. A person corrects it. A later agent needs

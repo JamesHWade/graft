@@ -2,7 +2,11 @@
 
 Date: 2026-09-16
 
-Status: recommendation updated after the direct acceptance experiment in #64.
+Status: ownership superseded by [ADR 0008](0008-shared-artifact-infrastructure.md).
+The experiment results and recommendation to replace the graph/compiler
+architecture remain evidence. Graft is now the selected shared infrastructure home.
+
+Historical recommendation after the direct acceptance experiment in #64:
 Retire the current graph/compiler architecture from the proposed artifact
 composition; package removal and replacement implementation remain separate.
 This ADR is the recommendation for #63.

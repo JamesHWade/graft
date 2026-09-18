@@ -72,6 +72,8 @@ jobs:
               pins = json.load(stream)
           refs = []
           for pin in pins["packages"]:
+              if pin.get("install_dependencies") is False:
+                  continue
               path = pin["repository"]
               if pin["subdir"]:
                   path += "/" + pin["subdir"]
@@ -92,6 +94,20 @@ jobs:
           dependencies: 'c("Depends", "Imports", "LinkingTo")'
           install-pandoc: false
           install-quarto: false
+      - name: Install deferred pinned sources without floating Remotes
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        shell: Rscript {0}
+        run: |
+          pins <- jsonlite::read_json("tools/experiments/pins.json")
+          for (pin in pins$packages) {
+            if (!identical(pin$install_dependencies, FALSE)) next
+            path <- paste0(pin$repository, if (nzchar(pin$subdir)) paste0("/", pin$subdir))
+            pak::pkg_install(
+              paste0(path, "@", pin$sha), lib = Sys.getenv("R_LIBS_USER"),
+              dependencies = FALSE, ask = FALSE, upgrade = FALSE
+            )
+          }
       - name: Verify pins and rebuild CLI despite a damaged legacy source cache
         env:
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}

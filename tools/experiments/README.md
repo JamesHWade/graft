@@ -18,13 +18,21 @@ Rscript tools/experiments/run.R
 Setup requires network access, Rust/cargo, normal R build dependencies and a
 writable temporary directory. It installs the pinned upstream sources into its
 own library, installs this Graft checkout, and builds the matching data-dict CLI.
-`pins.json` identifies the development sources. `dependency-snapshot.json` records
+`pins.json` identifies the development sources. The current Tempest pin includes
+[Tempest #72](https://github.com/JamesHWade/tempest/pull/72), which accepts the
+additive Graft consumer contracts 0.7 and 0.8. Merge that consumer update before
+using the new Graft API with an unpinned Tempest installation. `dependency-snapshot.json` records
 the complete resolved R package set, R 4.6.1 and the FTS extension revision from
 the successful Linux evidence run. Setup requests those exact package versions;
 setup and every runner reject missing packages or version drift before producing
 evidence. Every runner also verifies each development package's installed
 `RemoteSha` against `pins.json`; matching version strings alone are insufficient.
 Updating the snapshot is a deliberate change requiring a new full run.
+Pins marked `install_dependencies: false` are installed separately after the
+complete hard-dependency snapshot. Tempest requires this because its floating
+`Remotes` otherwise conflicts with the pinned Deputy revision once upstream moves.
+The deferred installation uses the exact source SHA without dependency expansion;
+all subsequent source, version and integrity checks remain mandatory.
 `versions.json` is setup's attestation of installed versions, source pins and the
 CLI digest. Setup also records installed-tree digests for all pinned
 development packages; every runner rejects changed payloads even when package

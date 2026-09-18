@@ -15,9 +15,73 @@ software that stores it. Graft's artifact experiments investigate a small layer
 that preserves reports, tables, figures, and the exact evidence selected for
 later workflows.
 
-**This is a proposed direction.** The artifact code is an experiment in the
-repository, excluded from the installed package. This project is pre-production; current APIs may change or be removed. The
-experiment has not yet implemented a complete replacement application workflow.
+## Save and reopen exact content
+
+The shared local artifact interface preserves opaque bytes and verifies them when
+read. It supports trusted local files with a single writer. Acceptance, access,
+concurrent publication, power-loss durability and permanent erasure remain
+separate requirements; saving these bytes grants no approval.
+
+```{r}
+library(graft)
+path <- tempfile("artifacts-")
+store <- graft_artifact_store(path, create = TRUE)
+original <- graft_artifact_save(
+  store, "report:daily", charToRaw("Original report"), "text/plain"
+)
+corrected <- graft_artifact_save(
+  store, "report:daily", charToRaw("Corrected report"), "text/plain"
+)
+reopened <- graft_artifact_store(path)
+rawToChar(graft_artifact_read(reopened, original)$bytes)
+rawToChar(graft_artifact_read(reopened, corrected)$bytes)
+unlink(path, recursive = TRUE)
+```
+
+References contain an identity and immutable revision. Retain them with your
+workflow; the store deliberately has no automatic latest or approved selection.
+This project is pre-production and existing graph/compiler APIs are being replaced.
+The experiments below remain comparative evidence, not the installed storage code.
+
+## Pin evidence and shared meaning
+
+A dependency is an exact artifact reference. Store dictionary and vocabulary
+releases as content, then reference them alongside the evidence used in a report.
+The selection preserves their bytes; it does not evaluate expressions or infer
+that two measurements are comparable.
+
+```{r}
+path <- tempfile("artifact-selection-")
+store <- graft_artifact_store(path, create = TRUE)
+vocabulary <- graft_artifact_save(
+  store, "vocabulary:lab", charToRaw('{"concept":"sample"}'), "application/json"
+)
+dictionary <- graft_artifact_save(
+  store, "dictionary:assay", charToRaw("name: assay"), "application/yaml",
+  dependencies = list(vocabulary)
+)
+report <- graft_artifact_save(
+  store, "report:assay", charToRaw("Assay interpretation"), "text/plain",
+  dependencies = list(dictionary)
+)
+selection <- graft_artifact_select(store, list(report))
+graft_artifact_read_selection(graft_artifact_store(path), selection)$artifacts
+unlink(path, recursive = TRUE)
+```
+
+The returned list includes the report, dictionary and vocabulary revisions.
+`max_metadata_bytes` separately bounds encoded selection metadata (1 MiB by
+default). Increase it for many long artifact identities and pass that limit on
+both selection creation and reading. Similarly, open the store with a larger
+`max_revision_bytes` (default 1 MiB) when saving or reading artifacts whose
+dependency lists produce large revision manifests.
+
+`max_artifacts` bounds traversal and the store's `max_bytes` bounds total selected
+payload bytes. Reading rechecks the entire closure. Save the selection identifier
+with the application workflow, then apply its own access and reuse decisions.
+Shared host decision recording is follow-up #73; a selection alone is not accepted
+memory. The tiny dictionary above illustrates opaque preservation, not a validated
+data-dict contract.
 
 ## From analysis to later reuse
 
@@ -29,9 +93,9 @@ while the original remains available for historical inspection.
 | Concern | Proposed owner |
 | --- | --- |
 | Local schemas, types, constraints, and expressions | data-dict |
-| Shared concepts and qualified bindings across dictionaries | A small vocabulary publisher |
+| Shared concepts and qualified bindings across dictionaries | A separate internal vocabulary publishing module |
 | Analysis, context search, and calculation evidence | Commons |
-| Artifact contents, revisions, dependencies, and saved selections | An artifact layer with interchangeable metadata storage |
+| Artifact contents, revisions, dependencies, and saved selections | Graft shared artifact infrastructure |
 | Approval, access, reuse purpose, withdrawal, and active task lifetime | The application |
 
 The vocabulary publisher connects domain concepts across workflows. A binding
@@ -112,13 +176,15 @@ The manifest producer and consumer both run without Graft installed.
 
 The recommendation is now to **retire the current graph/compiler architecture
 from the artifact composition**. The experiments establish a replacement route
-for the tested workflow; they do not ship a new public artifact package or remove
-existing Graft APIs. The implementation still needs an explicit home and the
-publication/recovery contract in [#49](https://github.com/JamesHWade/graft/issues/49).
+for the tested workflow; they did not themselves ship a new public artifact interface or remove
+existing Graft APIs. The local artifact functions above are the first delivery slice. [ADR 0008](https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md)
+places shared infrastructure in Graft. Tempest and Rill are end-use applications
+consuming its public interface, not homes for reusable storage engines. Graft
+still needs the publication/recovery implementation in [#49](https://github.com/JamesHWade/graft/issues/49).
 No model requests are made in this acceptance fixture. Active-task cancellation,
 authenticated access, deletion and production recovery remain separate requirements.
 
 See [ADR 0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)
-for the decision and retirement criteria. Continue with [exact reuse
+for the historical comparison, and ADR 0008 for current ownership. Continue with [exact reuse
 bases](reuse-basis.html) for supported Graft behavior and [Forget and
 recovery](forget-restore.html) for the production lifecycle requirements.

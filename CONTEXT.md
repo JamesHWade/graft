@@ -3,7 +3,27 @@
 Graft governs knowledge proposed, reviewed, and accepted for use by people and
 agents.
 
-## Language
+## Shared artifact direction
+
+ADR 0008 places shared artifact infrastructure in Graft. Tempest and Rill are
+applications consuming it; they own domain semantics and product policy.
+
+**Artifact**: Preserved opaque content and its descriptive metadata.
+
+**Artifact reference**: A stable artifact identity paired with an exact immutable
+revision. A reference is not an approval or a mutable latest pointer.
+
+**Artifact selection**: Explicit roots and their complete bounded closure of exact
+artifact dependencies, retained for later inspection and reuse under host policy.
+
+**Decision record**: A retained record of an explicit host decision. Graft supplies
+shared recording mechanisms; the application supplies approval, purpose, actor
+and access policy. Recording a decision is not authentication or factual proof.
+
+The graph/compiler vocabulary below describes existing APIs during replacement.
+The new artifact interface does not require those concepts or native stores.
+
+## Existing graph/compiler language
 
 **Answer**:
 One completed, text-bearing assistant response within a chat. Trust is
@@ -96,7 +116,7 @@ receipts. It assesses neither prompt obedience nor semantic fidelity and is
 neither fact-checking nor authentication of stored identities.
 _Avoid_: Fact-check, proof
 
-## Artifact architecture experiments
+## Historical artifact architecture experiments
 
 The proposed direction in ADR 0007 separates preserved artifact bytes and exact
 revision/dependency selections from host approval and current consultation
@@ -114,3 +134,7 @@ graph/compiler architecture from the artifact composition while retaining exact
 artifact and host-policy responsibilities. This is an experimental replacement
 path; existing APIs have not been removed. The experiments do not establish production
 Reader isolation, Forget/restore or concurrent durability.
+
+ADR 0008 supersedes the package-ownership conclusion: replace the architecture
+inside Graft and keep application integrations thin. The completed experiments
+remain evidence; their manifest host code is not itself a supported storage API.
