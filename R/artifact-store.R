@@ -12,6 +12,10 @@
 #' @param bytes Raw vector containing the complete payload. Content is never
 #'   deserialized or executed by these functions.
 #' @param media_type Nonempty media type describing the opaque payload.
+#' @param dependencies List of exact dependency references. The complete closure
+#'   is verified before saving. No relationships are inferred from payloads.
+#' @param max_artifacts Maximum distinct dependency references traversed before
+#'   saving. Their total payload size is also limited by `max_bytes`.
 #' @param ref Exact reference: a list with `id` and `revision` strings, as
 #'   returned by `graft_artifact_save()`.
 #'
@@ -83,20 +87,30 @@ graft_artifact_store <- function(
 
 #' @rdname graft_artifact_store
 #' @export
-graft_artifact_save <- function(store, id, bytes, media_type) {
+graft_artifact_save <- function(
+  store,
+  id,
+  bytes,
+  media_type,
+  dependencies = list(),
+  max_artifacts = 1000L
+) {
   artifact_check_store(store)
   artifact_check_text(id, "id")
   artifact_check_text(media_type, "media_type")
   if (!is.raw(bytes) || length(bytes) > store$max_bytes) {
     artifact_abort("`bytes` must be a raw vector within the store byte bound.")
   }
+  artifact_check_limit(max_artifacts, "max_artifacts")
+  dependencies <- artifact_refs(dependencies, max_artifacts)
+  artifact_dependency_closure(store, dependencies, max_artifacts)
   metadata <- list(
     format = 1L,
     id = enc2utf8(id),
     payload = artifact_sha(bytes),
     size = length(bytes),
     media_type = enc2utf8(media_type),
-    dependencies = list()
+    dependencies = dependencies
   )
   manifest <- artifact_encode(metadata)
   ref <- list(id = metadata$id, revision = artifact_sha(manifest))
@@ -238,8 +252,9 @@ artifact_check_metadata <- function(metadata) {
   ) {
     artifact_abort("Invalid artifact payload size.")
   }
-  if (!identical(metadata$dependencies, list())) {
-    artifact_abort("Unsupported artifact dependencies.")
+  dependencies <- artifact_refs(metadata$dependencies, .Machine$integer.max)
+  if (!identical(dependencies, metadata$dependencies)) {
+    artifact_abort("Artifact dependencies must be distinct unnamed references.")
   }
 }
 

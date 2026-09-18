@@ -133,6 +133,7 @@ reference:
   - title: Persistent artifacts
     contents:
       - graft_artifact_store
+      - graft_artifact_select
   - title: Define and open
     desc: >
       Compile or load a contract, then create, open, and close a store.

@@ -43,6 +43,40 @@ workflow; the store deliberately has no automatic latest or approved selection.
 This project is pre-production and existing graph/compiler APIs are being replaced.
 The experiments below remain comparative evidence, not the installed storage code.
 
+## Pin evidence and shared meaning
+
+A dependency is an exact artifact reference. Store dictionary and vocabulary
+releases as content, then reference them alongside the evidence used in a report.
+The selection preserves their bytes; it does not evaluate expressions or infer
+that two measurements are comparable.
+
+```{r}
+path <- tempfile("artifact-selection-")
+store <- graft_artifact_store(path, create = TRUE)
+vocabulary <- graft_artifact_save(
+  store, "vocabulary:lab", charToRaw('{"concept":"sample"}'), "application/json"
+)
+dictionary <- graft_artifact_save(
+  store, "dictionary:assay", charToRaw("name: assay"), "application/yaml",
+  dependencies = list(vocabulary)
+)
+report <- graft_artifact_save(
+  store, "report:assay", charToRaw("Assay interpretation"), "text/plain",
+  dependencies = list(dictionary)
+)
+selection <- graft_artifact_select(store, list(report))
+graft_artifact_read_selection(graft_artifact_store(path), selection)$artifacts
+unlink(path, recursive = TRUE)
+```
+
+The returned list includes the report, dictionary and vocabulary revisions.
+`max_artifacts` bounds traversal and the store's `max_bytes` bounds total selected
+payload bytes. Reading rechecks the entire closure. Save the selection identifier
+with the application workflow, then apply its own access and reuse decisions.
+Shared host decision recording is follow-up #73; a selection alone is not accepted
+memory. The tiny dictionary above illustrates opaque preservation, not a validated
+data-dict contract.
+
 ## From analysis to later reuse
 
 Suppose Commons produces a report, table, and figure. A useful artifact layer

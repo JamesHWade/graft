@@ -8,7 +8,14 @@
 \usage{
 graft_artifact_store(path, create = FALSE, max_bytes = 64 * 1024^2)
 
-graft_artifact_save(store, id, bytes, media_type)
+graft_artifact_save(
+  store,
+  id,
+  bytes,
+  media_type,
+  dependencies = list(),
+  max_artifacts = 1000L
+)
 
 graft_artifact_read(store, ref)
 }
@@ -28,6 +35,12 @@ graph store. Creation requires a missing or empty directory.}
 deserialized or executed by these functions.}
 
 \item{media_type}{Nonempty media type describing the opaque payload.}
+
+\item{dependencies}{List of exact dependency references. The complete closure
+is verified before saving. No relationships are inferred from payloads.}
+
+\item{max_artifacts}{Maximum distinct dependency references traversed before
+saving. Their total payload size is also limited by \code{max_bytes}.}
 
 \item{ref}{Exact reference: a list with \code{id} and \code{revision} strings, as
 returned by \code{graft_artifact_save()}.}
