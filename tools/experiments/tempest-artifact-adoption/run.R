@@ -13,12 +13,12 @@ sys.source(
 )
 observed <- example$artifact_research_example()
 stopifnot(
-  observed$evidence_records == 4L,
-  observed$historical_report_retained,
-  observed$unchanged_review_is_distinct,
-  observed$corrected_selection_is_distinct,
-  observed$withdrawal_blocks_reuse,
-  observed$retry_preserves_withdrawal
+  identical(observed$evidence_records, 4L),
+  identical(observed$historical_report_retained, TRUE),
+  identical(observed$unchanged_review_is_distinct, TRUE),
+  identical(observed$corrected_selection_is_distinct, TRUE),
+  identical(observed$withdrawal_blocks_reuse, TRUE),
+  identical(observed$retry_preserves_withdrawal, TRUE)
 )
 jsonlite::write_json(
   list(
