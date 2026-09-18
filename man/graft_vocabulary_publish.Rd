@@ -14,7 +14,9 @@ graft_vocabulary_read(store, selection)
 
 \item{path}{Path to a \code{graft-bindings/1} JSON companion file. Referenced
 vocabulary JSON and dictionary YAML files must be siblings pinned by SHA-256.
-Each input file is limited to 1 MiB. Dictionaries must be self-contained;
+Each input file is limited to 1 MiB, with at most 498 dictionaries per
+release. Sources and generated outputs must fit the store's aggregate byte
+limit. Dictionaries must be self-contained;
 validation/export runs against captured source bytes in a temporary file.}
 
 \item{selection}{Exact selection digest returned by

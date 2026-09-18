@@ -100,6 +100,17 @@ vocabulary_source_bytes <- function(path) {
   bytes
 }
 
+vocabulary_check_source_budget <- function(sizes, max_bytes) {
+  if (anyNA(sizes) || any(sizes < 1L | sizes > 1024^2)) {
+    vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
+  }
+  if (sum(sizes) > max_bytes) {
+    vocabulary_binding_error(
+      "Source files exceed the artifact store's aggregate byte limit"
+    )
+  }
+}
+
 vocabulary_json <- function(bytes) {
   tryCatch(
     jsonlite::fromJSON(rawToChar(bytes), simplifyVector = FALSE),
@@ -195,6 +206,13 @@ vocabulary_companion <- function(b) {
   lapply(b$vocabulary, vocabulary_check_text, label = "vocabulary reference")
   vocabulary_check_pinned_reference(b$vocabulary)
   vocabulary_check_array(b$dictionaries, "dictionaries")
+  # Two artifacts per dictionary, three shared artifacts and one root must fit
+  # the public artifact API's default traversal bound of 1,000 artifacts.
+  if (length(b$dictionaries) > 498L) {
+    vocabulary_binding_error(
+      "A vocabulary release supports at most 498 dictionaries"
+    )
+  }
   vocabulary_check_array(b$bindings, "bindings")
   vocabulary_check_array(b$assertions, "assertions", empty = TRUE)
   ids <- character()

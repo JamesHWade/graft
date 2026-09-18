@@ -8,7 +8,9 @@
 #' @param store A [graft_artifact_store()] handle.
 #' @param path Path to a `graft-bindings/1` JSON companion file. Referenced
 #'   vocabulary JSON and dictionary YAML files must be siblings pinned by SHA-256.
-#'   Each input file is limited to 1 MiB. Dictionaries must be self-contained;
+#'   Each input file is limited to 1 MiB, with at most 498 dictionaries per
+#'   release. Sources and generated outputs must fit the store's aggregate byte
+#'   limit. Dictionaries must be self-contained;
 #'   validation/export runs against captured source bytes in a temporary file.
 #' @param selection Exact selection digest returned by
 #'   `graft_vocabulary_publish()`.
@@ -35,13 +37,28 @@
 #'   `references`, and `context` (Markdown generated from the same release).
 #' @export
 graft_vocabulary_publish <- function(store, path) {
+  artifact_check_store(store)
   source <- vocabulary_source_bytes(path)
   b <- vocabulary_json(source)
   vocabulary_companion(b)
+  files <- file.info(file.path(
+    dirname(path),
+    c(
+      b$vocabulary$path,
+      vapply(b$dictionaries, \(ref) ref$path, character(1))
+    )
+  ))
+  sizes <- files$size
+  sizes[files$isdir %in% TRUE] <- NA_real_
+  vocabulary_check_source_budget(c(length(source), sizes), store$max_bytes)
   vocabulary_bytes <- vocabulary_check_pinned_file(dirname(path), b$vocabulary)
   dictionary_bytes <- lapply(b$dictionaries, \(ref) {
     vocabulary_check_pinned_file(dirname(path), ref)
   })
+  vocabulary_check_source_budget(
+    c(length(source), length(vocabulary_bytes), lengths(dictionary_bytes)),
+    store$max_bytes
+  )
   ids <- vapply(
     b$dictionaries,
     function(ref) {

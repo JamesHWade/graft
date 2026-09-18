@@ -400,3 +400,66 @@ test_that("context renders release-controlled Markdown as literal data", {
   expect_match(html, "&lt;script&gt;", fixed = TRUE)
   expect_identical(release$bindings$assertions[[1L]]$source, injected)
 })
+
+test_that("impossible vocabulary releases fail before CLI work or artifact writes", {
+  path <- withr::local_tempdir()
+  example <- system.file("examples", "vocabulary", "v1", package = "graft")
+  file.copy(list.files(example, full.names = TRUE), path)
+  companion_path <- file.path(path, "bindings.json")
+  original <- jsonlite::read_json(companion_path)
+  store <- graft_artifact_store(file.path(path, "artifacts"), create = TRUE)
+  before <- list.files(store$path, recursive = TRUE, all.files = TRUE)
+  commands <- character()
+  local_mocked_bindings(vocabulary_dictionary_command = function(
+    command,
+    path
+  ) {
+    commands <<- c(commands, command)
+    stop("data-dict should not run")
+  })
+
+  oversized <- original
+  oversized$dictionaries <- c(
+    original$dictionaries,
+    lapply(seq_len(497L), function(i) {
+      ref <- original$dictionaries[[1L]]
+      ref$id <- paste0("extra-dictionary:", i)
+      ref
+    })
+  )
+  jsonlite::write_json(oversized, companion_path, auto_unbox = TRUE)
+  expect_error(
+    graft_vocabulary_publish(store, companion_path),
+    "at most 498 dictionaries",
+    class = "graft_vocabulary_error"
+  )
+  expect_identical(commands, character())
+  expect_identical(
+    list.files(store$path, recursive = TRUE, all.files = TRUE),
+    before
+  )
+
+  jsonlite::write_json(original, companion_path, auto_unbox = TRUE)
+  source_paths <- file.path(
+    path,
+    c(
+      "bindings.json",
+      original$vocabulary$path,
+      vapply(original$dictionaries, \(ref) ref$path, character(1))
+    )
+  )
+  bounded <- graft_artifact_store(
+    store$path,
+    max_bytes = sum(file.info(source_paths)$size) - 1L
+  )
+  expect_error(
+    graft_vocabulary_publish(bounded, companion_path),
+    "Source files exceed",
+    class = "graft_vocabulary_error"
+  )
+  expect_identical(commands, character())
+  expect_identical(
+    list.files(store$path, recursive = TRUE, all.files = TRUE),
+    before
+  )
+})
