@@ -1,5 +1,8 @@
-test_that("v0.1 public API exposes exactly 27 functions", {
+test_that("public API exposes only the documented functions", {
   expected <- c(
+    "graft_artifact_read",
+    "graft_artifact_save",
+    "graft_artifact_store",
     "graft_at",
     "graft_calculate",
     "graft_changes",
