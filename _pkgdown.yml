@@ -132,6 +132,7 @@ articles:
 reference:
   - title: Persistent artifacts
     contents:
+      - graft_artifact_decide
       - graft_artifact_store
       - graft_artifact_select
   - title: Define and open

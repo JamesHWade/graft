@@ -1,8 +1,8 @@
 ---
 title: "Persistent artifacts and selected memory"
 description: >
-  Understand the proposed artifact layer, its relationship to Commons and
-  data-dict, and the evidence required before replacing existing storage.
+  Save exact artifacts, record host decisions and guard current reuse.
+  Understand the relationship to Commons, data-dict and the migration evidence.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Persistent artifacts and selected memory}
@@ -11,15 +11,15 @@ vignette: >
 ---
 
 Your saved work should survive both the end of an R session and a change in the
-software that stores it. Graft's artifact experiments investigate a small layer
-that preserves reports, tables, figures, and the exact evidence selected for
-later workflows.
+software that stores it. Graft preserves reports, tables, figures and the exact
+evidence selected for later workflows. Its decision journal records host reviews
+and separates historical inspection from current reuse.
 
 ## Save and reopen exact content
 
 The shared local artifact interface preserves opaque bytes and verifies them when
-read. It supports trusted local files with a single writer. Acceptance, access,
-concurrent publication, power-loss durability and permanent erasure remain
+read. It supports trusted local files with a single writer. Application approval,
+access, concurrent publication, power-loss durability and permanent erasure remain
 separate requirements; saving these bytes grants no approval.
 
 ```{r}
@@ -79,9 +79,61 @@ dependency lists produce large revision manifests.
 `max_artifacts` bounds traversal and the store's `max_bytes` bounds total selected
 payload bytes. Reading rechecks the entire closure. Save the selection identifier
 with the application workflow, then apply its own access and reuse decisions.
-Shared host decision recording is follow-up #73; a selection alone is not accepted
-memory. The tiny dictionary above illustrates opaque preservation, not a validated
+The decision functions below record host acceptance; a selection alone is not
+accepted memory. The tiny dictionary above illustrates opaque preservation, not a validated
 data-dict contract.
+
+## Record acceptance and withdrawal
+
+Applications decide whether a candidate is acceptable and who may use it. Graft
+records those decisions against exact selections. A stream names one independently
+reviewed subject; a new operation key represents a new review, even when its
+selection is unchanged.
+
+```{r}
+path <- tempfile("artifact-decisions-")
+store <- graft_artifact_store(path, create = TRUE)
+report <- graft_artifact_save(
+  store, "report", charToRaw("Reviewed report"), "text/plain"
+)
+selection <- graft_artifact_select(store, list(report))
+accepted <- graft_artifact_decide(
+  store, "research:topic", "review-1", expected = NULL,
+  selection = selection, action = "accept", actor = "reviewer:alice",
+  reason = "Supporting evidence reviewed", purpose = "research"
+)
+input <- graft_artifact_reuse(
+  store, "research:topic", accepted$id, "research", eligible = TRUE
+)
+input$selection$artifacts
+withdrawn <- graft_artifact_decide(
+  store, "research:topic", "withdraw-1", expected = accepted$id,
+  selection = selection, action = "withdraw", actor = "reviewer:alice",
+  reason = "Evidence needs correction", purpose = "research"
+)
+graft_artifact_read_decision(store, "research:topic", accepted$id)$action
+graft_artifact_read_decision(store, "research:topic")$action
+unlink(path, recursive = TRUE)
+```
+
+The `eligible = TRUE` argument represents the application's current policy
+check; it is not an authentication mechanism. Reuse also requires the current
+accepted head, an exact purpose match and intact selected content. The earlier
+acceptance remains inspectable after withdrawal, but cannot pass current reuse.
+Low-level reads remain available for authorized historical inspection; applications
+must enforce access on every route.
+
+Always supply the predecessor observed during review. An identical retry returns
+its original historical record and never restores eligibility. A changed retry or
+stale new request fails. Withdrawal needs intact decision history but remains
+possible when selected payloads are corrupt or unavailable.
+
+Each stream uses a bounded, append-only journal. Defaults allow 1,000 decisions
+and 1 MiB of aggregate journal metadata; selection bounds are independent.
+Staging is not a committed decision. A complete immutable record is the commit
+point, so an interrupted request can be retried without duplicating acceptance.
+Concurrent writers, power-loss durability and backup recovery remain separate
+operational work.
 
 ## From analysis to later reuse
 

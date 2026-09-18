@@ -516,3 +516,24 @@ test_that("graft_schema routes data-dict YAML through the optional CLI bridge", 
     schema@manifest$compiler$provider
   )
 })
+
+
+test_that("the 1.0 contract rejects the previous data-dict compiler identity", {
+  current <- graft_schema(data_dict_personinfo_export_path())
+  old <- current@manifest
+  old$compiler$script_digest <- paste0(
+    "sha256:",
+    "4f1d239aea4fde0779e833a7493d0695fef3e49e98830aa555656cf5ed9afb5e"
+  )
+  old$fingerprints$build_digest <- manifest_build_digest(old)
+  compiled <- withr::local_tempfile(fileext = ".graft.json")
+  writeLines(canonical_json(old), compiled, useBytes = TRUE)
+  expect_error(graft_schema(compiled), class = "graft_schema_error")
+
+  fresh <- graft_schema(data_dict_personinfo_export_path(), compiled)
+  expect_identical(graft_schema(compiled)@build_digest, fresh@build_digest)
+  path <- withr::local_tempfile(fileext = ".duckdb")
+  store <- graft_open(fresh, path, okf = "disabled")
+  expect_s7_class(store, GraftStore)
+  graft_close(store)
+})
