@@ -29,9 +29,9 @@ while the original remains available for historical inspection.
 | Concern | Proposed owner |
 | --- | --- |
 | Local schemas, types, constraints, and expressions | data-dict |
-| Shared concepts and qualified bindings across dictionaries | A small vocabulary publisher |
+| Shared concepts and qualified bindings across dictionaries | A separate internal vocabulary publishing module |
 | Analysis, context search, and calculation evidence | Commons |
-| Artifact contents, revisions, dependencies, and saved selections | An artifact layer with interchangeable metadata storage |
+| Artifact contents, revisions, dependencies, and saved selections | Graft shared artifact infrastructure |
 | Approval, access, reuse purpose, withdrawal, and active task lifetime | The application |
 
 The vocabulary publisher connects domain concepts across workflows. A binding
@@ -113,12 +113,14 @@ The manifest producer and consumer both run without Graft installed.
 The recommendation is now to **retire the current graph/compiler architecture
 from the artifact composition**. The experiments establish a replacement route
 for the tested workflow; they do not ship a new public artifact package or remove
-existing Graft APIs. The implementation still needs an explicit home and the
-publication/recovery contract in [#49](https://github.com/JamesHWade/graft/issues/49).
+existing Graft APIs. [ADR 0008](https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md)
+places shared infrastructure in Graft. Tempest and Rill are end-use applications
+consuming its public interface, not homes for reusable storage engines. Graft
+still needs the publication/recovery implementation in [#49](https://github.com/JamesHWade/graft/issues/49).
 No model requests are made in this acceptance fixture. Active-task cancellation,
 authenticated access, deletion and production recovery remain separate requirements.
 
 See [ADR 0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)
-for the decision and retirement criteria. Continue with [exact reuse
+for the historical comparison, and ADR 0008 for current ownership. Continue with [exact reuse
 bases](reuse-basis.html) for supported Graft behavior and [Forget and
 recovery](forget-restore.html) for the production lifecycle requirements.

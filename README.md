@@ -188,7 +188,10 @@ The [acceptance cycle](specs/2026-09-17-tempest-acceptance-cycle.md) extends thi
 direct acceptance, correction and withdrawal on both storage drivers, with Graft
 absent from the manifest producer and consumer. The resulting recommendation is
 to retire the current graph/compiler architecture from the artifact composition.
-The replacement remains experimental; existing APIs have not been removed. This
+[ADR 0008](adr/0008-shared-artifact-infrastructure.md) keeps the shared artifact
+infrastructure in Graft. Tempest and Rill consume it as applications and own
+their domain semantics and policy. The replacement remains experimental; existing
+APIs have not been removed. This
 project is pre-production, and backwards compatibility is not a requirement.
 
 1. [Get started](https://jameshwade.github.io/graft/articles/getting-started.html)
