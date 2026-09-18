@@ -1,0 +1,139 @@
+{
+  "format": "graft-bindings/1",
+  "release": "urn:example:bindings:v1",
+  "vocabulary": {
+    "release": "urn:example:vocabulary:v1",
+    "path": "vocabulary.json",
+    "sha256": "2129ba8dab389e8928a36b73cba5f7324da40619f50d41c6c7f1ad12571eef0a"
+  },
+  "dictionaries": [
+    {
+      "id": "urn:example:dictionary:lab-a:v1",
+      "workflow": "lab-a",
+      "path": "lab-a.yaml",
+      "sha256": "7e9840cd2d8fb6218da8169be133edf3ee7a234938ba5fb6e481ddcd42645ed4"
+    },
+    {
+      "id": "urn:example:dictionary:lab-b:v1",
+      "workflow": "lab-b",
+      "path": "lab-b.yaml",
+      "sha256": "120a7e88a76b031ef713fbdb2e251ede1ae6e40ee1d19ca510c29edf5c83de10"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "lab-a:reading_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v1",
+      "table": "readings",
+      "field": "reading_id",
+      "term": "urn:example:measurement",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:sample_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v1",
+      "table": "readings",
+      "field": "sample_id",
+      "term": "urn:example:sample",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:temperature_c",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-a:v1",
+      "table": "readings",
+      "field": "temperature_c",
+      "term": "urn:example:temperature",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-a:measured-sample",
+      "kind": "relationship",
+      "dictionary": "urn:example:dictionary:lab-a:v1",
+      "table": "readings",
+      "from": "reading_id",
+      "to": "sample_id",
+      "term": "urn:example:measurement-of-sample",
+      "scope": "lab-a",
+      "grain": "one measurement event",
+      "condition": "ambient"
+    },
+    {
+      "id": "lab-b:assay_id",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v1",
+      "table": "assays",
+      "field": "assay_id",
+      "term": "urn:example:measurement",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:specimen",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v1",
+      "table": "assays",
+      "field": "specimen",
+      "term": "urn:example:sample",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:temperature_f",
+      "kind": "concept",
+      "dictionary": "urn:example:dictionary:lab-b:v1",
+      "table": "assays",
+      "field": "temperature_f",
+      "term": "urn:example:temperature",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    },
+    {
+      "id": "lab-b:measured-sample",
+      "kind": "relationship",
+      "dictionary": "urn:example:dictionary:lab-b:v1",
+      "table": "assays",
+      "from": "assay_id",
+      "to": "specimen",
+      "term": "urn:example:measurement-of-sample",
+      "scope": "lab-b",
+      "grain": "daily mean per sample",
+      "condition": "heated"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "assertion:1",
+      "subject": "lab-a:reading:r1",
+      "predicate": "urn:example:measurement-of-sample",
+      "object": "lab-a:sample:s1",
+      "source": "urn:example:source:worksheet-1",
+      "status": "accepted",
+      "negated": false,
+      "time": "2026-09-01",
+      "scope": "lab-a"
+    },
+    {
+      "id": "assertion:2",
+      "subject": "lab-b:assay:a1",
+      "predicate": "urn:example:measurement-of-sample",
+      "object": "lab-b:sample:s1",
+      "source": "urn:example:source:worksheet-2",
+      "status": "retracted",
+      "negated": true,
+      "time": "2026-09-02",
+      "scope": "lab-b"
+    }
+  ]
+}

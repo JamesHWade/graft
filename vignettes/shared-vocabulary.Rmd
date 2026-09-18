@@ -1,0 +1,124 @@
+---
+title: "Shared concepts across workflows"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Shared concepts across workflows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+Graft publishes a shared vocabulary alongside persistent artifacts. Data-dict
+owns each workflow's table contract; Commons can use the published context and
+local dictionaries when running a workflow. Plain R can consume the same release.
+
+## Publish one release
+
+The bundled example describes two laboratories that use different names, units,
+and measurement conditions. Concepts identify what their fields describe.
+Relationships state a direction with explicit domain and range concepts. Qualified
+bindings preserve each workflow's table, field, identity scope, grain, and condition.
+
+```{r}
+library(graft)
+path <- system.file("examples", "vocabulary", "v1", "bindings.json", package = "graft")
+store <- graft_artifact_store("lab-vocabulary", create = TRUE)
+selection <- graft_vocabulary_publish(store, path)
+release <- graft_vocabulary_read(store, selection)
+cat(paste(release$context, collapse = "\n"))
+```
+
+Publishing requires `datadict` and its data-dict binary. Graft calls the public
+`validate-spec` and `export-spec` commands against captured dictionary bytes. It
+preserves the exact companion JSON, vocabulary JSON, dictionary YAML, resolved
+exports, validation provenance (including the binary digest), and generated
+Markdown in one artifact selection. Each source file is limited to 1 MiB and must
+be self-contained. Graft does not parse dictionary YAML or evaluate expressions.
+
+Reads verify the entire artifact closure and rebuild the context from the retained
+release. They need neither the original files nor an installed data-dict binary.
+This is content integrity, not a signature or independent proof of the publisher's
+identity or claims. Stores retain the trusted local, single-writer limits described
+in [persistent artifacts](persistent-artifacts.html).
+
+## Companion format
+
+A `graft-bindings/1` JSON file has six fields:
+
+| Field | Meaning |
+|---|---|
+| `format` | `graft-bindings/1` |
+| `release` | Caller-owned release identifier |
+| `vocabulary` | Vocabulary `release`, sibling `path`, and SHA-256 `sha256` |
+| `dictionaries` | Array of dictionary `id`, `workflow`, sibling `path`, and `sha256` references |
+| `bindings` | Array of concept or relationship bindings |
+| `assertions` | Array of explicitly qualified assertions, which may be empty |
+
+Vocabulary files use `graft-vocabulary/1`, a `release`, and an array of `terms`.
+Every term has a stable `id`, `kind` (`concept` or `relationship`), `definition`, and
+an array of `aliases`. Relationships additionally name `domain` and `range` concept
+IDs. Aliases are descriptive labels; they do not create equivalence or resolution rules.
+
+Every binding has `id`, `kind`, `dictionary`, `table`, `term`, `scope`, `grain`, and
+`condition`. A concept binding names one `field`; a relationship binding names
+`from` and `to` fields. Each endpoint must have a concept binding matching the
+relationship's domain or range and its scope, grain, and condition. Multiple
+concepts for one dictionary/table/field are rejected, even if differently qualified.
+
+Every assertion has `id`, `subject`, `predicate`, `object`, `source`, `status`,
+`negated`, `time`, and `scope`. The predicate must name a declared relationship.
+Status is `draft`, `accepted`, or `retracted`; negation is Boolean. Subjects and
+objects are opaque application identities: their actual membership in domain and
+range is not checked. These values are publisher statements, not Graft decisions.
+Time and condition are descriptive strings, not executable rules.
+
+See the [complete example files](https://github.com/JamesHWade/graft/tree/main/inst/examples/vocabulary)
+for every field. Missing, unknown, duplicate, or ambiguous bindings fail publication.
+
+## Use the same release in R and Commons
+
+Plain R can inspect a binding and select its local field without guessing a join:
+
+```{r}
+bindings <- Filter(function(x) x$kind == "concept" &&
+  x$term == "urn:example:temperature", release$bindings$bindings)
+lapply(bindings, function(x) x[c("dictionary", "table", "field", "scope", "grain", "condition")])
+```
+
+A Commons caller supplies the same generated context alongside its own dictionary:
+
+```{r}
+context_file <- tempfile(fileext = ".md")
+writeLines(release$context, context_file)
+context <- commons::context_layer(files = context_file)
+source <- commons::data_source(
+  readings = data.frame(reading_id = "r1", sample_id = "s1", temperature_c = 20),
+  dictionary = file.path(dirname(path), "lab-a.yaml")
+)
+# Supply context and source to the Commons host; retain release$references
+# and selection with resulting artifacts.
+```
+
+The integration test constructs a real Commons object with the published context;
+this checks constructor consumption, not model retrieval quality or factual reasoning.
+Shared concepts do not establish safe joins, comparable units, access permission,
+or execution authority. Negated and retracted assertions remain qualified data.
+There is no ontology reasoner, unit converter, new expression compiler, or automatic
+procedure selection.
+
+## Retain earlier releases
+
+Publish changed dictionaries and bindings as a new release and keep both selection
+digests. A historical reader resolves exact bytes, never a mutable latest pointer.
+Publication itself does not accept the release: hosts can use Graft's decision
+journal when review and current eligibility are needed.
+
+```{r}
+next_path <- system.file("examples", "vocabulary", "v2", "bindings.json", package = "graft")
+next_selection <- graft_vocabulary_publish(store, next_path)
+original <- graft_vocabulary_read(store, selection)
+updated <- graft_vocabulary_read(store, next_selection)
+```

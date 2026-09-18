@@ -223,3 +223,11 @@ project is pre-production, and backwards compatibility is not a requirement.
    and [contract compiler
    reference](https://jameshwade.github.io/graft/articles/contract-compilers.html)
    for implementation details.
+
+## Shared vocabulary
+
+`graft_vocabulary_publish()` validates shared concepts, directed relationships, and
+qualified bindings across data-dict dictionaries. It preserves sources, resolved
+exports, and generated context as one immutable artifact selection.
+`graft_vocabulary_read()` reopens that release without the original files or CLI.
+See [shared concepts across workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).

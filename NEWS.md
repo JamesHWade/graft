@@ -1,5 +1,7 @@
 # graft 0.0.0.9000
 
+* `graft_vocabulary_publish()` and `graft_vocabulary_read()` preserve shared concepts, directed relationships, qualified dictionary bindings, and human-readable context as immutable artifact selections, using public data-dict validation and exports. Consumer contract 2.0.0 requires recompiling legacy data-dict manifests; artifact and decision formats are unchanged (#75).
+
 
 * A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. The installed Tempest consumer now publishes exact evidence and readable synthesis through Graft's public artifacts and decisions, with current admission checks on new runs and resume. Native graph removal (#74) and production recovery (#49) remain follow-up work.
 
