@@ -34,7 +34,8 @@
       "repository": "JamesHWade/tempest",
       "subdir": "",
       "sha": "6d3386cbbe22fdc0c1539c436e3ab2f4660567f3",
-      "version": "0.0.0.9000"
+      "version": "0.0.0.9000",
+      "install_dependencies": false
     },
     {
       "package": "deputy",
