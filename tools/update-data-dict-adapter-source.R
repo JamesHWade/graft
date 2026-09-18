@@ -19,6 +19,18 @@ path <- file.path(
   "graft-data-dict-adapter.source.json"
 )
 
+schema_path <- file.path(root, "inst", "schema", "graft-manifest.schema.json")
+schema_lines <- readLines(schema_path, warn = FALSE)
+schema <- jsonlite::fromJSON(
+  paste(schema_lines, collapse = "\n"),
+  simplifyVector = FALSE
+)
+schema_digest <- schema$allOf[[
+  1L
+]]$then$properties$compiler$properties$script_digest$const
+expected_digest <- graft:::graft_sha256(bytes)
+stopifnot(is.character(schema_digest), length(schema_digest) == 1L)
+
 if (check) {
   if (!file.exists(path)) {
     stop("The committed data-dict adapter source artifact is missing.")
@@ -32,8 +44,19 @@ if (check) {
       )
     )
   }
-  message("The committed data-dict adapter source artifact is current.")
+  if (!identical(schema_digest, expected_digest)) {
+    stop(
+      "The manifest schema adapter digest is stale. Run this script without --check."
+    )
+  }
+  message(
+    "The committed data-dict adapter source and manifest schema are current."
+  )
 } else {
   writeBin(bytes, path)
-  message("Updated ", path, ".")
+  writeLines(
+    gsub(schema_digest, expected_digest, schema_lines, fixed = TRUE),
+    schema_path
+  )
+  message("Updated ", path, " and ", schema_path, ".")
 }
