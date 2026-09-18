@@ -20,6 +20,22 @@ artifact dependencies, retained for later inspection and reuse under host policy
 shared recording mechanisms; the application supplies approval, purpose, actor
 and access policy. Recording a decision is not authentication or factual proof.
 
+**Candidate**: A host-owned proposal represented by exact artifact references.
+Preserving a candidate or selecting its dependencies does not accept it.
+
+**Decision stream**: A host-chosen subject identity with one ordered decision
+history and one current head. A stream is independent of an artifact identity.
+
+**Acceptance event**: A decision record with action `accept`, identifying an exact
+selection, predecessor, request key, actor, reason and purpose. New unchanged
+reviews retain distinct event identities. Keys bind committed requests, not
+consultation eligibility.
+
+**Current artifact consultation**: The host currently permits the requested
+purpose, the requested event is still the stream's accepted head, and Graft has
+verified the complete selection. The result is a point-in-time check, not an
+access token. History remains inspectable after correction or withdrawal.
+
 The graph/compiler vocabulary below describes existing APIs during replacement.
 The new artifact interface does not require those concepts or native stores.
 

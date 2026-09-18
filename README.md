@@ -24,6 +24,11 @@ uses a synthetic backup proof to define the remaining erasure and recovery gates
 The tested agent recipes use ellmer, Deputy and dsprrr. Commons receives a
 detached public source; LinkML supports richer graph domains.
 
+The [persistent artifact guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
+shows shared storage, exact dependency selections, and acceptance and withdrawal
+journals. Current reuse checks the selected decision and purpose alongside the
+application's explicit eligibility decision.
+
 ## Installation
 
 Install the development version from GitHub:

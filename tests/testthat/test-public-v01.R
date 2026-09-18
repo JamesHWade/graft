@@ -1,7 +1,10 @@
 test_that("public API exposes only the documented functions", {
   expected <- c(
+    "graft_artifact_decide",
     "graft_artifact_read",
+    "graft_artifact_read_decision",
     "graft_artifact_read_selection",
+    "graft_artifact_reuse",
     "graft_artifact_save",
     "graft_artifact_select",
     "graft_artifact_store",
