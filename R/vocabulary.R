@@ -183,6 +183,14 @@ graft_vocabulary_read <- function(store, selection) {
         c("model", "evidence", "package_version", "binary_sha256"),
         "dictionary export"
       )
+      vocabulary_check_text(export$package_version, "data-dict package version")
+      vocabulary_check_text(export$binary_sha256, "data-dict binary digest")
+      if (
+        !grepl("^[0-9]+([.-][0-9]+)*$", export$package_version) ||
+          !grepl("^[a-f0-9]{64}$", export$binary_sha256)
+      ) {
+        vocabulary_binding_error("Malformed data-dict validation provenance")
+      }
       if (
         !identical(
           export$evidence,

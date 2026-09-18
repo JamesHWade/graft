@@ -1,9 +1,6 @@
 # Validation and rendering of explicit vocabulary releases; no inferred semantics.
 vocabulary_binding_error <- function(message) {
-  stop(structure(
-    list(message = message, call = NULL),
-    class = c("graft_vocabulary_error", "error", "condition")
-  ))
+  graft_abort("graft_vocabulary_error", message, call = NULL)
 }
 
 vocabulary_check_object <- function(x, label) {
@@ -45,7 +42,7 @@ vocabulary_file_hash <- function(path) {
   digest::digest(file = path, algo = "sha256")
 }
 
-vocabulary_check_pinned_file <- function(root, ref) {
+vocabulary_check_pinned_reference <- function(ref) {
   vocabulary_check_object(ref, "file reference")
   vocabulary_check_text(ref$path, "path")
   vocabulary_check_text(ref$sha256, "sha256")
@@ -59,6 +56,11 @@ vocabulary_check_pinned_file <- function(root, ref) {
       "Pinned files must be siblings with exact SHA-256 digests"
     )
   }
+  invisible(ref)
+}
+
+vocabulary_check_pinned_file <- function(root, ref) {
+  vocabulary_check_pinned_reference(ref)
   path <- file.path(root, ref$path)
   bytes <- vocabulary_source_bytes(path)
   if (!identical(vocabulary_hash(bytes), ref$sha256)) {
@@ -86,7 +88,16 @@ vocabulary_source_bytes <- function(path) {
   ) {
     vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
   }
-  readBin(path, "raw", n = 1024^2 + 1L)
+  bytes <- tryCatch(
+    readBin(path, "raw", n = 1024^2 + 1L),
+    error = function(error) {
+      vocabulary_binding_error("Could not read source file")
+    }
+  )
+  if (length(bytes) < 1L || length(bytes) > 1024^2) {
+    vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
+  }
+  bytes
 }
 
 vocabulary_json <- function(bytes) {
@@ -104,7 +115,7 @@ vocabulary_parse_dictionary_export <- function(output) {
       "Expected one JSON document from data-dict export-spec"
     )
   }
-  jsonlite::fromJSON(json, simplifyVector = FALSE)
+  vocabulary_json(charToRaw(json))
 }
 
 vocabulary_read_dictionary <- function(bytes) {
@@ -118,9 +129,25 @@ vocabulary_read_dictionary <- function(bytes) {
   writeBin(bytes, path)
   result <- tryCatch(
     {
-      validated <- datadict::dd_run(c("validate-spec", path))
-      exported <- datadict::dd_run(c("export-spec", path))
-      list(validated = validated, exported = exported)
+      binary_sha256 <- vocabulary_file_hash(datadict::dd_path())
+      run <- function(command) {
+        result <- vocabulary_dictionary_command(command, path)
+        if (
+          !identical(vocabulary_file_hash(datadict::dd_path()), binary_sha256)
+        ) {
+          vocabulary_binding_error(
+            "The data-dict executable changed during validation/export"
+          )
+        }
+        result
+      }
+      validated <- run("validate-spec")
+      exported <- run("export-spec")
+      list(
+        validated = validated,
+        exported = exported,
+        binary_sha256 = binary_sha256
+      )
     },
     error = function(error) {
       vocabulary_binding_error(paste(
@@ -135,8 +162,12 @@ vocabulary_read_dictionary <- function(bytes) {
     model = vocabulary_parse_dictionary_export(exported$output),
     evidence = list(command = "validate-spec", status = validated$status),
     package_version = as.character(utils::packageVersion("datadict")),
-    binary_sha256 = vocabulary_file_hash(datadict::dd_path())
+    binary_sha256 = result$binary_sha256
   )
+}
+
+vocabulary_dictionary_command <- function(command, path) {
+  datadict::dd_run(c(command, path))
 }
 
 vocabulary_companion <- function(b) {
@@ -162,6 +193,7 @@ vocabulary_companion <- function(b) {
     "vocabulary reference"
   )
   lapply(b$vocabulary, vocabulary_check_text, label = "vocabulary reference")
+  vocabulary_check_pinned_reference(b$vocabulary)
   vocabulary_check_array(b$dictionaries, "dictionaries")
   vocabulary_check_array(b$bindings, "bindings")
   vocabulary_check_array(b$assertions, "assertions", empty = TRUE)
@@ -173,6 +205,7 @@ vocabulary_companion <- function(b) {
       "dictionary reference"
     )
     lapply(ref, vocabulary_check_text, label = "dictionary reference")
+    vocabulary_check_pinned_reference(ref)
     if (ref$id %in% ids) {
       vocabulary_binding_error("Duplicate dictionary ID")
     }
@@ -389,76 +422,92 @@ vocabulary_validate <- function(b, v, dictionaries) {
   invisible(TRUE)
 }
 
+# Quote release-controlled values as JSON code so Markdown treats them as data.
+vocabulary_context_value <- function(x) {
+  text <- as.character(jsonlite::toJSON(x, auto_unbox = TRUE, null = "null"))
+  runs <- gregexpr("`+", text)[[1L]]
+  width <- max(0L, attr(runs, "match.length")) + 1L
+  delimiter <- strrep("`", width)
+  paste0(delimiter, " ", text, " ", delimiter)
+}
+
 # One source of prose: every machine record, including qualifiers, is rendered.
 vocabulary_render_context <- function(published) {
   b <- published$bindings
-  json <- function(x) jsonlite::toJSON(x, auto_unbox = TRUE, null = "null")
+  records <- function(x) {
+    c(
+      "```json",
+      as.character(jsonlite::toJSON(x, auto_unbox = TRUE, null = "null")),
+      "```"
+    )
+  }
+  value <- vocabulary_context_value
   binding_prose <- function(x) {
     location <- if (x$kind == "concept") x$field else paste(x$from, "->", x$to)
     paste0(
-      "Binding `",
-      x$id,
-      "`: `",
-      x$dictionary,
-      "` table `",
-      x$table,
-      "` (`",
-      location,
-      "`) maps to ",
+      "Binding ",
+      value(x$id),
+      ": ",
+      value(x$dictionary),
+      " table ",
+      value(x$table),
+      " (",
+      value(location),
+      ") maps to ",
       x$kind,
-      " `",
-      x$term,
-      "`. Scope: ",
-      x$scope,
+      " ",
+      value(x$term),
+      ". Scope: ",
+      value(x$scope),
       "; grain: ",
-      x$grain,
+      value(x$grain),
       "; condition: ",
-      x$condition,
+      value(x$condition),
       "."
     )
   }
   assertion_prose <- function(x) {
     paste0(
-      "Assertion `",
-      x$id,
-      "`: `",
-      x$subject,
-      "` -> `",
-      x$predicate,
-      "` -> `",
-      x$object,
-      "`. Status: ",
-      x$status,
+      "Assertion ",
+      value(x$id),
+      ": ",
+      value(x$subject),
+      " -> ",
+      value(x$predicate),
+      " -> ",
+      value(x$object),
+      ". Status: ",
+      value(x$status),
       "; negated: ",
       tolower(as.character(x$negated)),
       "; source: ",
-      x$source,
+      value(x$source),
       "; time: ",
-      x$time,
+      value(x$time),
       "; scope: ",
-      x$scope,
+      value(x$scope),
       "."
     )
   }
   c(
     "# Shared vocabulary",
-    paste("Vocabulary release:", published$vocabulary$release),
-    paste("Binding release:", b$release),
+    paste("Vocabulary release:", value(published$vocabulary$release)),
+    paste("Binding release:", value(b$release)),
     paste("Vocabulary SHA-256:", published$references$vocabulary$sha256),
     paste("Bindings SHA-256:", published$references$bindings$sha256),
     "Mappings support discovery. They do not authorize joins, comparison, access, or execution.",
     "Assertions retain direction and qualifiers. Retracted or negated assertions are not positive facts.",
     "## Terms",
-    vapply(published$vocabulary$terms, json, character(1)),
+    records(published$vocabulary$terms),
     "## Exact dictionary references",
-    vapply(b$dictionaries, json, character(1)),
+    records(b$dictionaries),
     "## Binding explanations",
     vapply(b$bindings, binding_prose, character(1)),
     "## Assertion explanations",
     vapply(b$assertions, assertion_prose, character(1)),
     "## Exact binding records",
-    vapply(b$bindings, json, character(1)),
+    records(b$bindings),
     "## Exact qualified assertion records",
-    vapply(b$assertions, json, character(1))
+    records(b$assertions)
   )
 }

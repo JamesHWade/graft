@@ -139,7 +139,8 @@ jobs:
           GRAFT_REQUIRE_VOCABULARY: "true"
         shell: Rscript {0}
         run: |
-          source(file.path(Sys.getenv("GRAFT_EXPERIMENT_HOME"), "environment.R"))
+          source("tools/experiments/runtime.R")
+          experiment_prepare(fts = TRUE)
           testthat::test_local(filter = "^vocabulary$", stop_on_failure = TRUE)
       - name: Preserve dependency and experiment evidence
         if: always()
