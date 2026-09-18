@@ -48,10 +48,12 @@ Export format 2 requires final heads. Regenerate older experimental exports;
 backwards compatibility is not required for this pre-production experiment.
 
 `results.json` records each run's result and source pins.
-[observed-current.json](observed-current.json) retains the current suite's checked
-migration run against Tempest `9c78e83` and Graft consumer contract 1.0.0. The
+[observed-current.json](observed-current.json) retains the earlier contract-1.0 checked
+migration run against Tempest `9c78e83` and Graft consumer contract 1.0.0. That
 2026-09-18 local consumer run used Graft runtime commit `f0c5b60` and passed
 migration, reuse and acceptance-cycle checks (121, 48 and 192 assertions).
+The latest suite uses the exact sources in `../pins.json`; these retained
+migration reports describe their recorded pins, not that changing suite head.
 [observed.json](observed.json) preserves
 the historical run against Tempest `3cfe220`, before the public artifact input.
 Its outcome describes that earlier API boundary. `handoff.json` identifies the

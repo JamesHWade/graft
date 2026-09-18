@@ -109,8 +109,11 @@ evidence path without treating a receipt as a fact-check.</p>
 
 Graft's tested host loops cover ellmer, Deputy and dsprrr; Commons consumes a
 detached public copy and retains its own file measures. Tempest owns research
-products and promotion; accepted-evidence restart integration is tracked in
-[#50](https://github.com/JamesHWade/graft/issues/50). Rill's Reader
+products and scientific validation. Its public artifact workflow publishes exact
+evidence and synthesis and requires current host admission for new runs and
+resume. Contradictory-evidence execution and native graph removal remain in
+[#50](https://github.com/JamesHWade/graft/issues/50) and
+[#74](https://github.com/JamesHWade/graft/issues/74). Rill's Reader
 integration, isolation and permanent Forget gates remain separate work.
 
 The [integration guide](articles/compatibility.html) records supported versions

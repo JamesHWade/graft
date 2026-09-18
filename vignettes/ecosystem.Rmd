@@ -182,8 +182,9 @@ graft_close(store)
 
 A snapshot identifies a boundary, not which records a task selected or permission
 to access them. A full selected basis includes evidence and exact revisions;
-new change receipts do not replace it. Eligibility, Reader scope, permanent
-Forget and backup/restore remain explicit design/integration work.
+new change receipts do not replace it. The artifact workflow records host
+acceptance and withdrawal and checks current purpose-bound eligibility. Reader
+scope, permanent Forget and backup/restore remain separate integration work.
 
 ## Ecosystem ownership and delivery status
 
@@ -195,7 +196,7 @@ Forget and backup/restore remain explicit design/integration work.
 | Deputy | Permissions, execution, offloading, host lifecycle | Real Agent loop and exact offloaded-result recovery |
 | dsprrr | Modules, signatures, execution | Real `react()` loop and proposal signature |
 | Commons | Detached public source, file measures, fallback labels | Existing detached-source compatibility suite; unpinned |
-| Tempest | Scientific evidence, research products, promotion | Existing public contracts inventoried; full reuse proof in #50 |
+| Tempest | Scientific evidence, research products, promotion | Public artifact publication, historical reads and fresh admission on new runs/resume; contradictory-evidence execution and native graph removal remain in #50/#74 |
 | Rill | Readers, Documents, accepted reading outcomes, Archive/Forget | ADR-defined ownership; runtime proof and privacy gates in #47/#48/#51 |
 | scans/vitals | Evaluation | Task-quality evaluation remains in #41 |
 

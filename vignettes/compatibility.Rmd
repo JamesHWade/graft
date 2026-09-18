@@ -44,8 +44,11 @@ list mode remains available for direct R envelopes. This optional argument
 introduced consumer contract 0.6.0 without changing persisted formats. Shared
 artifact storage adds contract 0.7.0; exact dependency selections and their
 configurable metadata bounds add contract 0.8.0. Host decision recording and
-guarded consultation ship with consumer contract 1.0.0. Full
-Tempest/Rill application reuse and scans/vitals evaluation remain in the
+guarded consultation ship with consumer contract 1.0.0. Tempest now publishes
+research evidence and synthesis through this artifact contract and checks fresh
+admission for new runs and resume; see the [artifact guide](persistent-artifacts.html).
+Contradictory-evidence execution, native graph retirement, Rill integration, and
+scans/vitals evaluation remain in the
 [integration backlog](https://github.com/JamesHWade/graft/issues/34).
 
 Consumer contract 1.0.0 is a preproduction hard cut, not a production package
