@@ -1,7 +1,7 @@
 # Artifact, memory and shared-meaning experiments
 
-These are bounded, disposable architecture experiments for #59–#63. They add no
-public Graft APIs and do not change any existing user store. The suite compares
+These are bounded architecture and consumer experiments for #50 and #59–#64.
+They exercise public Graft APIs without changing existing user stores. The suite compares
 Graft with a manifest-based composition under the same behavior checks, then
 integrates each with current Commons and data-dict.
 
@@ -19,10 +19,10 @@ Setup requires network access, Rust/cargo, normal R build dependencies and a
 writable temporary directory. It installs the pinned upstream sources into its
 own library, installs this Graft checkout, and builds the matching data-dict CLI.
 `pins.json` identifies the development sources. The current Tempest pin includes
-[Tempest #73](https://github.com/JamesHWade/tempest/pull/73), which explicitly
-supports the tested Graft 1.0 consumer contract alongside 0.x (>= 0.2.0, < 2.0.0).
-Merge that consumer update before
-using the new Graft API with an unpinned Tempest installation. `dependency-snapshot.json` records
+[Tempest #74](https://github.com/JamesHWade/tempest/pull/74), which adds public
+research publication, historical inspection and fresh decision admission on the
+Graft 1.0 consumer contract. Merge that companion before using this application
+workflow with an unpinned Tempest installation. `dependency-snapshot.json` records
 the complete resolved R package set, R 4.6.1 and the FTS extension revision from
 the successful Linux evidence run. Setup requests those exact package versions;
 setup and every runner reject missing packages or version drift before producing
@@ -85,6 +85,7 @@ Xcode is selected but unavailable. No system setting needs to be changed.
 | #64 Tempest checkpoint migration | [tempest-migration](tempest-migration/README.md) | [Results](../../specs/2026-09-16-tempest-migration.md) |
 | #64 Tempest artifact reuse | [tempest-reuse](tempest-reuse/README.md) | [Results](../../specs/2026-09-17-tempest-reuse.md) |
 | #64 direct Tempest acceptance | [tempest-cycle](tempest-cycle/README.md) | [Results](../../specs/2026-09-17-tempest-acceptance-cycle.md) |
+| #50 supported Tempest adoption | [tempest-artifact-adoption](tempest-artifact-adoption/README.md) | Public Graft storage and decision interfaces |
 | #63 architecture decision | All above | [ADR 0007](../../adr/0007-test-artifact-composition-before-expanding-graft.md) |
 
 The dedicated GitHub workflow reruns the complete suite on Linux and uploads

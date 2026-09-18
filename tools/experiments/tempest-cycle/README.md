@@ -8,8 +8,8 @@ GRAFT_EXPERIMENT_OUTPUT=/tmp/graft-cycle-evidence \
 Rscript tools/experiments/tempest-cycle/run.R
 ```
 
-Use a fresh output directory. The full suite runs this seventh experiment after
-migration and reuse; this runner can also run independently.
+Use a fresh output directory. The full suite runs this as step seven of eight, after
+migration and reuse and before public artifact adoption. It can also run independently.
 
 `host.R` is a trusted single-writer experiment, not a public storage API. It reads
 independently pinned completed Tempest proposals, stages immutable candidates,

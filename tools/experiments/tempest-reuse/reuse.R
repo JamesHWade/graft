@@ -114,5 +114,5 @@ reuse_resume <- function(path, config, target, handle, checkpoint) {
       "Saved session differs from the currently eligible selection."
     )
   }
-  tempest::tempest_session_resume(path, config = config)
+  tempest::tempest_session_resume(path, config = config, knowledge = knowledge)
 }
