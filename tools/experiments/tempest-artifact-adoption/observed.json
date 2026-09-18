@@ -1,5 +1,14 @@
 {
-  "schema_version": 1,
+  "outcome": "Tempest publishes and consults research through public Graft artifacts and decisions",
+  "observations": {
+    "evidence_records": 4,
+    "historical_report_retained": true,
+    "unchanged_review_is_distinct": true,
+    "corrected_selection_is_distinct": true,
+    "withdrawal_blocks_reuse": true,
+    "retry_preserves_withdrawal": true
+  },
+  "scope": "Offline completed-product fixtures; trusted local single writer; no production access or erasure claim",
   "packages": [
     {
       "package": "commons",
@@ -51,7 +60,5 @@
       "sha": "76a014f74e8d4a236aa0a0c5dda87de388310cf6",
       "version": "0.0.0.9000"
     }
-  ],
-  "data_dict_cli_package": "datadict",
-  "data_dict_cli_version": "0.0.3"
+  ]
 }
