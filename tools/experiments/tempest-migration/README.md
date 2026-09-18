@@ -80,9 +80,12 @@ executable program payloads. Their hashes do not recreate those missing bytes.
 
 This migration adapter reads retained history. The companion
 [reuse experiment](../tempest-reuse/README.md) tests admission through Tempest's
-public artifact input. Future acceptance into the artifact store remains unproved. Retaining a receipt preserves source
-acceptance evidence; it does not create an acceptance event in a new store or
-authenticate an untrusted export. A trusted host supplies the handoff digest.
+public artifact input. Acceptance into the target store is outside this historical
+migration fixture; the later [public adoption proof](../tempest-artifact-adoption/README.md)
+exercises publication and explicit acceptance through supported Graft interfaces.
+Retaining a receipt preserves source acceptance evidence; it does not create an
+acceptance event in a new store or authenticate an untrusted export. A trusted
+host supplies the handoff digest.
 Interrupted migration can leave an incomplete target; this prototype requires a
 new empty target and does not implement production cleanup or recovery.
 
