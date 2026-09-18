@@ -44,9 +44,9 @@ Config/testthat/parallel: true
 Config/testthat/start-first: measure-eval, snapshot, commit-plan, agent-tools,
     reuse-basis, changes
 Config/roxygen2/version: 8.1.0
-Config/Needs/check: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
-Config/Needs/coverage: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
-Config/Needs/website: brand.yml, posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
+Config/Needs/check: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
+Config/Needs/coverage: posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
+Config/Needs/website: brand.yml, posit-dev/commons/pkg-r, JamesHWade/dsprrr, JamesHWade/deputy, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 VignetteBuilder: knitr
 BugReports: https://github.com/JamesHWade/graft/issues
