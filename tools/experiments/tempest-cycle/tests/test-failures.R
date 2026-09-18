@@ -9,7 +9,7 @@ test_that("rejected proposals and interrupted acceptance never authorize reuse",
           "examples/accepted-research",
           package = "tempest"
         )
-        pin <- "sha256:b19dedc6127d20c515af3bcb9bae9c960bb04cf4a05af5ffafa259f7acf8c43d"
+        pin <- "sha256:00e1323021683893220b0b919ce019933449d97d01a0da1e0ece858964cb1c86"
         error_text <- function(expr) {
           tryCatch(
             {

@@ -38,6 +38,24 @@ test_that("vocabulary releases preserve exact sources, exports and context", {
     "artifacts"
   ))
   expect_identical(graft_vocabulary_read(reopened, selection), released)
+  restored <- callr::r(
+    function(checkout, path, selection) {
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
+      graft::graft_vocabulary_read(graft::graft_artifact_store(path), selection)
+    },
+    args = list(
+      checkout = if (pkgload::is_dev_package("graft")) {
+        normalizePath(test_path("../.."))
+      } else {
+        NULL
+      },
+      path = file.path(dirname(fixture$path), "artifacts"),
+      selection = selection
+    )
+  )
+  expect_identical(restored, released)
   expect_identical(
     graft_vocabulary_read(reopened, correction)$bindings$release,
     "urn:example:bindings:v2"
@@ -208,5 +226,35 @@ test_that("malformed nested JSON fails with vocabulary errors", {
       graft_vocabulary_publish(fixture$store, fixture$path),
       class = "graft_vocabulary_error"
     )
+  }
+})
+
+test_that("historical vocabulary reads reject malformed artifact references", {
+  fixture <- local_vocabulary()
+  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
+  selected <- graft_artifact_read_selection(fixture$store, selection)
+  root <- graft_artifact_read(fixture$store, selected$roots[[1L]])
+  original <- jsonlite::fromJSON(rawToChar(root$bytes), simplifyVector = FALSE)
+  for (field in c("bindings", "vocabulary", "context", "source", "export")) {
+    for (bad in list("scalar", NULL, list())) {
+      candidate <- original
+      if (field %in% c("source", "export")) {
+        candidate$references$dictionaries[[1L]][field] <- list(bad)
+      } else {
+        candidate$references[field] <- list(bad)
+      }
+      ref <- graft_artifact_save(
+        fixture$store,
+        "malformed-release",
+        vocabulary_encode(candidate),
+        "application/json",
+        root$metadata$dependencies
+      )
+      altered <- graft_artifact_select(fixture$store, list(ref))
+      expect_error(
+        graft_vocabulary_read(fixture$store, altered),
+        class = "graft_vocabulary_error"
+      )
+    }
   }
 })

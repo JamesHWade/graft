@@ -128,6 +128,10 @@ graft_vocabulary_read <- function(store, selection) {
     vocabulary_check_text(ref$id, "dictionary id")
   }
   dependencies <- vocabulary_dependencies(refs)
+  for (ref in dependencies) {
+    vocabulary_check_record(ref, c("id", "revision"), "artifact reference")
+    lapply(ref, vocabulary_check_text, label = "artifact reference")
+  }
   # Selection validation already verifies the entire closure; require the root
   # to bind exactly the sources and generated outputs named by its payload.
   keys <- function(x) {
