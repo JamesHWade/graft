@@ -14,6 +14,16 @@ store](https://jameshwade.github.io/graft/articles/getting-started.md)
 [Try narrative
 reuse](https://jameshwade.github.io/graft/articles/ecosystem.md)
 
+## Shared artifact direction
+
+Graft is being rebuilt around persistent artifacts, immutable revisions
+and exact selections. Tempest and Rill consume this shared
+infrastructure as applications; data-dict owns contracts and Commons
+owns analytical execution. See the [persistent artifact
+guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
+for the current implementation scope and the completed architecture
+experiments.
+
 ## From a result to a reusable record
 
 An R workflow produces a conclusion. A person corrects it. A later agent

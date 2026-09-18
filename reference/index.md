@@ -1,5 +1,15 @@
 # Package index
 
+## Persistent artifacts
+
+- [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  : Preserve immutable artifact content
+- [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
+  [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
+  : Preserve an exact artifact selection
+
 ## Define and open
 
 Compile or load a contract, then create, open, and close a store.

@@ -49,6 +49,27 @@
   the OKF tree. Getting started, the README, and the site home page now
   show the same path.
 
+- [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
+  and
+  [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
+  retain and verify complete bounded selections of exact dependencies,
+  with an explicit `max_metadata_bytes` limit for encoded selections and
+  a store-level `max_revision_bytes` limit for dependency manifests.
+  Duplicate references count once against traversal bounds.
+  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  can pin evidence, dictionary and vocabulary revisions without granting
+  approval The consumer contract advances to 0.8.0
+  ([\#72](https://github.com/JamesHWade/graft/issues/72)).
+
+- [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md),
+  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  and
+  [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  preserve bounded opaque content as immutable revisions in a shared
+  local store, with verified exact reads and idempotent saves; the
+  consumer contract advances to 0.7.0
+  ([\#71](https://github.com/JamesHWade/graft/issues/71)).
+
 - [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
   and
   [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)

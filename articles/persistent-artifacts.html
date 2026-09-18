@@ -114,11 +114,101 @@
 change in the software that stores it. Graft’s artifact experiments
 investigate a small layer that preserves reports, tables, figures, and
 the exact evidence selected for later workflows.</p>
-<p><strong>This is a proposed direction.</strong> The artifact code is
-an experiment in the repository, excluded from the installed package.
-This project is pre-production; current APIs may change or be removed.
-The experiment has not yet implemented a complete replacement
-application workflow.</p>
+<div class="section level2">
+<h2 id="save-and-reopen-exact-content">Save and reopen exact content<a class="anchor" aria-label="anchor" href="#save-and-reopen-exact-content"></a>
+</h2>
+<p>The shared local artifact interface preserves opaque bytes and
+verifies them when read. It supports trusted local files with a single
+writer. Acceptance, access, concurrent publication, power-loss
+durability and permanent erasure remain separate requirements; saving
+these bytes grants no approval.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
+<span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifacts-"</span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">original</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"report:daily"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Original report"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">corrected</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"report:daily"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Corrected report"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">reopened</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_read</a></span><span class="op">(</span><span class="va">reopened</span>, <span class="va">original</span><span class="op">)</span><span class="op">$</span><span class="va">bytes</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] "Original report"</span></span></code></pre>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_read</a></span><span class="op">(</span><span class="va">reopened</span>, <span class="va">corrected</span><span class="op">)</span><span class="op">$</span><span class="va">bytes</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] "Corrected report"</span></span></code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>References contain an identity and immutable revision. Retain them
+with your workflow; the store deliberately has no automatic latest or
+approved selection. This project is pre-production and existing
+graph/compiler APIs are being replaced. The experiments below remain
+comparative evidence, not the installed storage code.</p>
+</div>
+<div class="section level2">
+<h2 id="pin-evidence-and-shared-meaning">Pin evidence and shared meaning<a class="anchor" aria-label="anchor" href="#pin-evidence-and-shared-meaning"></a>
+</h2>
+<p>A dependency is an exact artifact reference. Store dictionary and
+vocabulary releases as content, then reference them alongside the
+evidence used in a report. The selection preserves their bytes; it does
+not evaluate expressions or infer that two measurements are
+comparable.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-selection-"</span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">vocabulary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"vocabulary:lab"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">'{"concept":"sample"}'</span><span class="op">)</span>, <span class="st">"application/json"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">dictionary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"dictionary:assay"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"name: assay"</span><span class="op">)</span>, <span class="st">"application/yaml"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">vocabulary</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"report:assay"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Assay interpretation"</span><span class="op">)</span>, <span class="st">"text/plain"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">dictionary</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/graft_artifact_select.html">graft_artifact_read_selection</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span>, <span class="va">selection</span><span class="op">)</span><span class="op">$</span><span class="va">artifacts</span></span></code></pre></div>
+<pre><code><span><span class="co">## [[1]]</span></span>
+<span><span class="co">## [[1]]$id</span></span>
+<span><span class="co">## [1] "report:assay"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[1]]$revision</span></span>
+<span><span class="co">## [1] "d2a512537a5aeb64afc0579652fe8fb59564e8dec59b3d590110c231b05588d4"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[2]]</span></span>
+<span><span class="co">## [[2]]$id</span></span>
+<span><span class="co">## [1] "dictionary:assay"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[2]]$revision</span></span>
+<span><span class="co">## [1] "514407a409fccc678ce634b5f7794a362960bc555acb66ee3928186e9c853a5f"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[3]]</span></span>
+<span><span class="co">## [[3]]$id</span></span>
+<span><span class="co">## [1] "vocabulary:lab"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[3]]$revision</span></span>
+<span><span class="co">## [1] "084f468d1dd656e8d360372e129b9421e28a561e4f26e48149a354868c14c6b9"</span></span></code></pre>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>The returned list includes the report, dictionary and vocabulary
+revisions. <code>max_metadata_bytes</code> separately bounds encoded
+selection metadata (1 MiB by default). Increase it for many long
+artifact identities and pass that limit on both selection creation and
+reading. Similarly, open the store with a larger
+<code>max_revision_bytes</code> (default 1 MiB) when saving or reading
+artifacts whose dependency lists produce large revision manifests.</p>
+<p><code>max_artifacts</code> bounds traversal and the store’s
+<code>max_bytes</code> bounds total selected payload bytes. Reading
+rechecks the entire closure. Save the selection identifier with the
+application workflow, then apply its own access and reuse decisions.
+Shared host decision recording is follow-up #73; a selection alone is
+not accepted memory. The tiny dictionary above illustrates opaque
+preservation, not a validated data-dict contract.</p>
+</div>
 <div class="section level2">
 <h2 id="from-analysis-to-later-reuse">From analysis to later reuse<a class="anchor" aria-label="anchor" href="#from-analysis-to-later-reuse"></a>
 </h2>
@@ -143,7 +233,7 @@ historical inspection.</p>
 </tr>
 <tr class="even">
 <td>Shared concepts and qualified bindings across dictionaries</td>
-<td>A small vocabulary publisher</td>
+<td>A separate internal vocabulary publishing module</td>
 </tr>
 <tr class="odd">
 <td>Analysis, context search, and calculation evidence</td>
@@ -152,7 +242,7 @@ historical inspection.</p>
 <tr class="even">
 <td>Artifact contents, revisions, dependencies, and saved
 selections</td>
-<td>An artifact layer with interchangeable metadata storage</td>
+<td>Graft shared artifact infrastructure</td>
 </tr>
 <tr class="odd">
 <td>Approval, access, reuse purpose, withdrawal, and active task
@@ -251,16 +341,21 @@ without Graft installed.</p>
 <p>The recommendation is now to <strong>retire the current
 graph/compiler architecture from the artifact composition</strong>. The
 experiments establish a replacement route for the tested workflow; they
-do not ship a new public artifact package or remove existing Graft APIs.
-The implementation still needs an explicit home and the
-publication/recovery contract in <a href="https://github.com/JamesHWade/graft/issues/49" class="external-link">#49</a>. No model
+did not themselves ship a new public artifact interface or remove
+existing Graft APIs. The local artifact functions above are the first
+delivery slice. <a href="https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md" class="external-link">ADR
+0008</a> places shared infrastructure in Graft. Tempest and Rill are
+end-use applications consuming its public interface, not homes for
+reusable storage engines. Graft still needs the publication/recovery
+implementation in <a href="https://github.com/JamesHWade/graft/issues/49" class="external-link">#49</a>. No model
 requests are made in this acceptance fixture. Active-task cancellation,
 authenticated access, deletion and production recovery remain separate
 requirements.</p>
 <p>See <a href="https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md" class="external-link">ADR
-0007</a> for the decision and retirement criteria. Continue with <a href="reuse-basis.html">exact reuse bases</a> for supported Graft
-behavior and <a href="forget-restore.html">Forget and recovery</a> for
-the production lifecycle requirements.</p>
+0007</a> for the historical comparison, and ADR 0008 for current
+ownership. Continue with <a href="reuse-basis.html">exact reuse
+bases</a> for supported Graft behavior and <a href="forget-restore.html">Forget and recovery</a> for the production
+lifecycle requirements.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
