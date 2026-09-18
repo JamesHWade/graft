@@ -41,10 +41,20 @@ cran_packages <- setdiff(
   names(snapshot$packages),
   c("graft", vapply(pins$packages, \(pin) pin$package, character(1)))
 )
+# Install sources with floating Remotes only after their pinned dependencies.
+# Their exact source and all installed versions are still verified below.
+primary_pins <- Filter(
+  \(pin) !identical(pin$install_dependencies, FALSE),
+  pins$packages
+)
+isolated_pins <- Filter(
+  \(pin) identical(pin$install_dependencies, FALSE),
+  pins$packages
+)
 if (!skip_r) {
   pak::pkg_install(
     c(
-      vapply(pins$packages, package_ref, character(1)),
+      vapply(primary_pins, package_ref, character(1)),
       paste0(cran_packages, "@", unlist(snapshot$packages[cran_packages])),
       paste0("local::", normalizePath("."))
     ),
@@ -53,6 +63,18 @@ if (!skip_r) {
     ask = FALSE,
     upgrade = FALSE
   )
+}
+# Install each deferred source after the complete hard-dependency snapshot.
+if (!skip_r) {
+  for (pin in isolated_pins) {
+    pak::pkg_install(
+      package_ref(pin),
+      lib = experiment_library,
+      dependencies = FALSE,
+      ask = FALSE,
+      upgrade = FALSE
+    )
+  }
 }
 # A version number alone cannot verify a development package's source.
 for (pin in pins$packages) {

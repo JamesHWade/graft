@@ -25,6 +25,11 @@ setup and every runner reject missing packages or version drift before producing
 evidence. Every runner also verifies each development package's installed
 `RemoteSha` against `pins.json`; matching version strings alone are insufficient.
 Updating the snapshot is a deliberate change requiring a new full run.
+Pins marked `install_dependencies: false` are installed separately after the
+complete hard-dependency snapshot. Tempest requires this because its floating
+`Remotes` otherwise conflicts with the pinned Deputy revision once upstream moves.
+The deferred installation uses the exact source SHA without dependency expansion;
+all subsequent source, version and integrity checks remain mandatory.
 `versions.json` is setup's attestation of installed versions, source pins and the
 CLI digest. Setup also records installed-tree digests for all pinned
 development packages; every runner rejects changed payloads even when package
