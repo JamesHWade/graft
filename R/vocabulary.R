@@ -37,19 +37,7 @@
 graft_vocabulary_publish <- function(store, path) {
   source <- vocabulary_source_bytes(path)
   b <- vocabulary_json(source)
-  vocabulary_check_record(
-    b,
-    c(
-      "format",
-      "release",
-      "vocabulary",
-      "dictionaries",
-      "bindings",
-      "assertions"
-    ),
-    "bindings"
-  )
-  vocabulary_check_array(b$dictionaries, "dictionaries")
+  vocabulary_companion(b)
   vocabulary_bytes <- vocabulary_check_pinned_file(dirname(path), b$vocabulary)
   dictionary_bytes <- lapply(b$dictionaries, \(ref) {
     vocabulary_check_pinned_file(dirname(path), ref)
@@ -158,6 +146,7 @@ graft_vocabulary_read <- function(store, selection) {
   bindings_bytes <- read(refs$bindings)
   vocabulary_bytes <- read(refs$vocabulary)
   b <- vocabulary_json(bindings_bytes)
+  vocabulary_companion(b)
   v <- vocabulary_json(vocabulary_bytes)
   if (!identical(vocabulary_hash(vocabulary_bytes), b$vocabulary$sha256)) {
     vocabulary_binding_error(

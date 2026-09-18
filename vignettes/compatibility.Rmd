@@ -44,7 +44,8 @@ list mode remains available for direct R envelopes. This optional argument
 introduced consumer contract 0.6.0 without changing persisted formats. Shared
 artifact storage adds contract 0.7.0; exact dependency selections and their
 configurable metadata bounds add contract 0.8.0. Host decision recording and
-guarded consultation ship with consumer contract 2.0.0. Tempest now publishes
+guarded consultation shipped with consumer contract 1.0.0; vocabulary publishing
+advances the current contract to 2.0.0. Tempest now publishes
 research evidence and synthesis through this artifact contract and checks fresh
 admission for new runs and resume; see the [artifact guide](persistent-artifacts.html).
 Contradictory-evidence execution, native graph retirement, Rill integration, and
@@ -58,7 +59,7 @@ code to the compiler scheduled for retirement.
 
 Consumer contract 2.0.0 is a preproduction hard cut, not a production package
 release. The legacy data-dict compiler fingerprints the full Graft namespace, so
-adding the decision functions changes its identity even though compilation rules
+adding exported functions changes its identity even though compilation rules
 are unchanged. Recompile data-dict manifests from retained resolved JSON or YAML.
 Graph stores tied to an earlier compiled manifest are not supported for seamless
 reopening; recreate disposable stores from retained inputs where needed. The

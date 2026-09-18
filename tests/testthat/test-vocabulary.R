@@ -167,3 +167,46 @@ test_that("invalid dictionary sources fail through public upstream validation", 
     class = "graft_vocabulary_error"
   )
 })
+
+test_that("malformed nested JSON fails with vocabulary errors", {
+  fixture <- local_vocabulary()
+  original <- jsonlite::read_json(fixture$path)
+  vocabulary_path <- file.path(dirname(fixture$path), "vocabulary.json")
+  original_vocabulary <- readBin(
+    vocabulary_path,
+    "raw",
+    n = file.info(vocabulary_path)$size
+  )
+  for (bad in list("scalar", NULL, list())) {
+    writeBin(original_vocabulary, vocabulary_path)
+    for (field in c("vocabulary", "dictionaries", "bindings", "assertions")) {
+      candidate <- original
+      if (field == "vocabulary") {
+        candidate[field] <- list(bad)
+      } else {
+        candidate[[field]][1L] <- list(bad)
+      }
+      jsonlite::write_json(
+        candidate,
+        fixture$path,
+        auto_unbox = TRUE,
+        null = "null"
+      )
+      expect_error(
+        graft_vocabulary_publish(fixture$store, fixture$path),
+        class = "graft_vocabulary_error"
+      )
+    }
+    path <- file.path(dirname(fixture$path), "vocabulary.json")
+    vocabulary <- jsonlite::read_json(path)
+    vocabulary$terms[1L] <- list(bad)
+    jsonlite::write_json(vocabulary, path, auto_unbox = TRUE, null = "null")
+    candidate <- original
+    candidate$vocabulary$sha256 <- digest::digest(file = path, algo = "sha256")
+    jsonlite::write_json(candidate, fixture$path, auto_unbox = TRUE)
+    expect_error(
+      graft_vocabulary_publish(fixture$store, fixture$path),
+      class = "graft_vocabulary_error"
+    )
+  }
+})

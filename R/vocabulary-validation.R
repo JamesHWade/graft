@@ -6,6 +6,20 @@ vocabulary_binding_error <- function(message) {
   ))
 }
 
+vocabulary_check_object <- function(x, label) {
+  if (
+    !is.list(x) ||
+      is.data.frame(x) ||
+      is.null(names(x)) ||
+      anyDuplicated(names(x))
+  ) {
+    vocabulary_binding_error(paste(
+      label,
+      "must be a JSON object with unique fields"
+    ))
+  }
+}
+
 vocabulary_check_record <- function(x, fields, label) {
   if (!is.list(x) || !setequal(names(x), fields) || anyDuplicated(names(x))) {
     vocabulary_binding_error(paste(
@@ -32,6 +46,7 @@ vocabulary_file_hash <- function(path) {
 }
 
 vocabulary_check_pinned_file <- function(root, ref) {
+  vocabulary_check_object(ref, "file reference")
   vocabulary_check_text(ref$path, "path")
   vocabulary_check_text(ref$sha256, "sha256")
   if (
@@ -124,7 +139,7 @@ vocabulary_read_dictionary <- function(bytes) {
   )
 }
 
-vocabulary_validate <- function(b, v, dictionaries) {
+vocabulary_companion <- function(b) {
   vocabulary_check_record(
     b,
     c(
@@ -150,6 +165,24 @@ vocabulary_validate <- function(b, v, dictionaries) {
   vocabulary_check_array(b$dictionaries, "dictionaries")
   vocabulary_check_array(b$bindings, "bindings")
   vocabulary_check_array(b$assertions, "assertions", empty = TRUE)
+  ids <- character()
+  for (ref in b$dictionaries) {
+    vocabulary_check_record(
+      ref,
+      c("id", "workflow", "path", "sha256"),
+      "dictionary reference"
+    )
+    lapply(ref, vocabulary_check_text, label = "dictionary reference")
+    if (ref$id %in% ids) {
+      vocabulary_binding_error("Duplicate dictionary ID")
+    }
+    ids <- c(ids, ref$id)
+  }
+  invisible(NULL)
+}
+
+vocabulary_validate <- function(b, v, dictionaries) {
+  vocabulary_companion(b)
   vocabulary_check_record(v, c("format", "release", "terms"), "vocabulary")
   if (
     !identical(v$format, "graft-vocabulary/1") ||
@@ -161,6 +194,7 @@ vocabulary_validate <- function(b, v, dictionaries) {
   vocabulary_check_array(v$terms, "terms")
   terms <- list()
   for (term in v$terms) {
+    vocabulary_check_object(term, "term")
     fields <- c("id", "kind", "definition", "aliases")
     if (identical(term$kind, "relationship")) {
       fields <- c(fields, "domain", "range")
@@ -210,8 +244,22 @@ vocabulary_validate <- function(b, v, dictionaries) {
       vocabulary_binding_error("Duplicate dictionary ID")
     }
     dictionary_ids <- c(dictionary_ids, ref$id)
+    vocabulary_check_object(dictionaries[[ref$id]], "dictionary export")
+    vocabulary_check_object(dictionaries[[ref$id]]$model, "dictionary model")
     if (is.null(dictionaries[[ref$id]]$model$tables)) {
       vocabulary_binding_error("Dictionary export must contain resolved tables")
+    }
+  }
+  for (dictionary in dictionaries) {
+    vocabulary_check_array(dictionary$model$tables, "dictionary tables")
+    for (table in dictionary$model$tables) {
+      vocabulary_check_object(table, "table")
+      vocabulary_check_text(table$name, "table name")
+      vocabulary_check_array(table$columns, "columns")
+      for (column in table$columns) {
+        vocabulary_check_object(column, "column")
+        vocabulary_check_text(column$name, "column name")
+      }
     }
   }
   locate <- function(binding, field) {
@@ -235,6 +283,7 @@ vocabulary_validate <- function(b, v, dictionaries) {
   ids <- character()
   concept_keys <- character()
   for (binding in b$bindings) {
+    vocabulary_check_object(binding, "binding")
     fields <- c(
       "id",
       "kind",
