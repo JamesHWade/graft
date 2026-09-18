@@ -26,18 +26,39 @@
     },
     "schema": {
       "type": "object",
-      "required": ["id", "name", "version", "source_files"],
+      "required": [
+        "id",
+        "name",
+        "version",
+        "source_files"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/uri"},
-        "name": {"type": "string", "minLength": 1},
-        "version": {"type": ["string", "null"]},
+        "id": {
+          "$ref": "#/$defs/uri"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "source_files": {
           "type": "array",
           "minItems": 1,
           "contains": {
             "type": "object",
-            "required": ["root"],
-            "properties": {"root": {"const": true}}
+            "required": [
+              "root"
+            ],
+            "properties": {
+              "root": {
+                "const": true
+              }
+            }
           },
           "minContains": 1,
           "maxContains": 1,
@@ -51,11 +72,24 @@
               "root"
             ],
             "properties": {
-              "schema_id": {"$ref": "#/$defs/nullable_uri"},
-              "name": {"type": "string"},
-              "version": {"type": ["string", "null"]},
-              "content_digest": {"$ref": "#/$defs/digest"},
-              "root": {"type": "boolean"}
+              "schema_id": {
+                "$ref": "#/$defs/nullable_uri"
+              },
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "content_digest": {
+                "$ref": "#/$defs/digest"
+              },
+              "root": {
+                "type": "boolean"
+              }
             },
             "additionalProperties": false
           }
@@ -65,28 +99,42 @@
     },
     "classes": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/class"}
+      "additionalProperties": {
+        "$ref": "#/$defs/class"
+      }
     },
     "slots": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/slot"}
+      "additionalProperties": {
+        "$ref": "#/$defs/slot"
+      }
     },
     "enums": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/enum"}
+      "additionalProperties": {
+        "$ref": "#/$defs/enum"
+      }
     },
     "relations": {
       "type": "array",
-      "items": {"$ref": "#/$defs/relation"}
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
     },
-    "graph_projections": {"$ref": "#/$defs/graph_projections"},
+    "graph_projections": {
+      "$ref": "#/$defs/graph_projections"
+    },
     "validation_invariants": {
       "type": "array",
-      "items": {"$ref": "#/$defs/validation_invariant"}
+      "items": {
+        "$ref": "#/$defs/validation_invariant"
+      }
     },
     "identifier_normalization_versions": {
       "type": "object",
-      "additionalProperties": {"type": "string"}
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "compiler": {
       "type": "object",
@@ -96,42 +144,84 @@
         "script_digest"
       ],
       "properties": {
-        "name": {"type": "string"},
-        "version": {"type": "string"},
-        "script_digest": {"$ref": "#/$defs/digest"},
-        "python_version": {"type": "string"},
-        "linkml_runtime_version": {"type": "string"},
-        "provider": {"$ref": "#/$defs/data_dict_provider"}
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "script_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "python_version": {
+          "type": "string"
+        },
+        "linkml_runtime_version": {
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/data_dict_provider"
+        }
       },
       "additionalProperties": false
     },
     "fingerprints": {
       "type": "object",
-      "required": ["structural_digest", "source_digest", "build_digest"],
+      "required": [
+        "structural_digest",
+        "source_digest",
+        "build_digest"
+      ],
       "properties": {
-        "structural_digest": {"$ref": "#/$defs/digest"},
-        "source_digest": {"$ref": "#/$defs/digest"},
-        "build_digest": {"$ref": "#/$defs/digest"}
+        "structural_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "build_digest": {
+          "$ref": "#/$defs/digest"
+        }
       },
       "additionalProperties": false
     },
-    "dictionary": {"$ref": "#/$defs/data_dict_dictionary"}
+    "dictionary": {
+      "$ref": "#/$defs/data_dict_dictionary"
+    }
   },
   "allOf": [
     {
-      "if": {"required": ["dictionary"]},
+      "if": {
+        "required": [
+          "dictionary"
+        ]
+      },
       "then": {
         "properties": {
           "compiler": {
-            "required": ["name", "version", "script_digest", "provider"],
+            "required": [
+              "name",
+              "version",
+              "script_digest",
+              "provider"
+            ],
             "propertyNames": {
-              "enum": ["name", "version", "script_digest", "provider"]
+              "enum": [
+                "name",
+                "version",
+                "script_digest",
+                "provider"
+              ]
             },
             "properties": {
-              "name": {"const": "graft-data-dict-adapter"},
-              "version": {"const": "0.1.0"},
+              "name": {
+                "const": "graft-data-dict-adapter"
+              },
+              "version": {
+                "const": "0.1.0"
+              },
               "script_digest": {
-                  "const": "sha256:77c21a3091de6787f68ad28de47a1bf24914398fe2f8e00dd6db7aced418c473"
+                "const": "sha256:77c21a3091de6787f68ad28de47a1bf24914398fe2f8e00dd6db7aced418c473"
               }
             }
           },
@@ -160,20 +250,34 @@
         "properties": {
           "compiler": {
             "properties": {
-              "name": {"const": "graft-data-dict-adapter"}
+              "name": {
+                "const": "graft-data-dict-adapter"
+              }
             }
           }
         }
       },
       "then": {
-        "required": ["dictionary"],
+        "required": [
+          "dictionary"
+        ],
         "properties": {
-          "compiler": {"required": ["provider"]}
+          "compiler": {
+            "required": [
+              "provider"
+            ]
+          }
         }
       }
     },
     {
-      "if": {"not": {"required": ["dictionary"]}},
+      "if": {
+        "not": {
+          "required": [
+            "dictionary"
+          ]
+        }
+      },
       "then": {
         "properties": {
           "compiler": {
@@ -187,8 +291,12 @@
               ]
             },
             "properties": {
-              "name": {"const": "graft-linkml-compiler"},
-              "version": {"const": "0.3.0"},
+              "name": {
+                "const": "graft-linkml-compiler"
+              },
+              "version": {
+                "const": "0.3.0"
+              },
               "script_digest": {
                 "const": "sha256:2720893b91978930cbdf3f99feadf9bd96822fdf8ece018c7711af9914f42a7d"
               }
@@ -215,43 +323,90 @@
     },
     "nullable_uri": {
       "oneOf": [
-        {"$ref": "#/$defs/uri"},
-        {"type": "null"}
+        {
+          "$ref": "#/$defs/uri"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "nullable_uri_or_curie": {
       "oneOf": [
-        {"$ref": "#/$defs/uri_or_curie"},
-        {"type": "null"}
+        {
+          "$ref": "#/$defs/uri_or_curie"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "data_dict_provider": {
       "type": "object",
-      "required": ["name", "export_format_version", "source_format"],
+      "required": [
+        "name",
+        "export_format_version",
+        "source_format"
+      ],
       "properties": {
-        "name": {"const": "data-dict"},
-        "export_format_version": {"const": "0.1.0"},
-        "source_spec_version": {"type": ["string", "null"]},
-        "cli_version": {"type": ["string", "null"]},
-        "cli_digest": {
-          "oneOf": [
-            {"$ref": "#/$defs/digest"},
-            {"type": "null"}
+        "name": {
+          "const": "data-dict"
+        },
+        "export_format_version": {
+          "const": "0.1.0"
+        },
+        "source_spec_version": {
+          "type": [
+            "string",
+            "null"
           ]
         },
-        "revision": {"type": ["string", "null"]},
+        "cli_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cli_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "source_format": {
-          "enum": ["yaml", "resolved_json"]
+          "enum": [
+            "yaml",
+            "resolved_json"
+          ]
         }
       },
       "additionalProperties": false
     },
     "data_dict_loss": {
       "type": "object",
-      "required": ["status", "handling"],
+      "required": [
+        "status",
+        "handling"
+      ],
       "properties": {
-        "status": {"type": "string", "minLength": 1},
-        "handling": {"type": "string", "minLength": 1}
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handling": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false
     },
@@ -278,12 +433,18 @@
         "not_enforced"
       ],
       "properties": {
-        "provider": {"$ref": "#/$defs/data_dict_provider"},
+        "provider": {
+          "$ref": "#/$defs/data_dict_provider"
+        },
         "document": {
           "type": "object",
-          "required": ["$version"],
+          "required": [
+            "$version"
+          ],
           "properties": {
-            "$version": {"const": "0.1.0"},
+            "$version": {
+              "const": "0.1.0"
+            },
             "origin": false,
             "tables": {
               "type": "array",
@@ -295,29 +456,48 @@
                   "rows": false,
                   "columns": {
                     "type": "array",
-                    "items": {"$ref": "#/$defs/data_dict_public_column"}
+                    "items": {
+                      "$ref": "#/$defs/data_dict_public_column"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "profile": {"const": "graft-table-v1"},
+        "profile": {
+          "const": "graft-table-v1"
+        },
         "defaults": {
           "type": "object",
-          "required": ["role", "id_policy", "id_format"],
+          "required": [
+            "role",
+            "id_policy",
+            "id_format"
+          ],
           "properties": {
-            "role": {"const": "node"},
-            "id_policy": {"const": "require"},
-            "id_format": {"const": "linkml"}
+            "role": {
+              "const": "node"
+            },
+            "id_policy": {
+              "const": "require"
+            },
+            "id_format": {
+              "const": "linkml"
+            }
           },
           "additionalProperties": false
         },
-        "adapter_version": {"const": "0.1.0"},
+        "adapter_version": {
+          "const": "0.1.0"
+        },
         "requirements": {
           "type": "array",
           "minItems": 1,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "mapped": {
           "type": "object",
@@ -330,9 +510,18 @@
             "restricted_display_to_sensitive"
           ],
           "properties": {
-            "tables_to_classes": {"type": "integer", "minimum": 1},
-            "columns_to_slots": {"type": "integer", "minimum": 1},
-            "enums": {"type": "integer", "minimum": 0},
+            "tables_to_classes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "columns_to_slots": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "enums": {
+              "type": "integer",
+              "minimum": 0
+            },
             "foreign_keys_to_object_references": {
               "type": "integer",
               "minimum": 0
@@ -341,18 +530,25 @@
               "type": "integer",
               "minimum": 0
             },
-            "restricted_display_to_sensitive": {"type": "boolean"}
+            "restricted_display_to_sensitive": {
+              "type": "boolean"
+            }
           },
           "additionalProperties": false
         },
         "preserved": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "not_enforced": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": {"$ref": "#/$defs/data_dict_loss"}
+          "additionalProperties": {
+            "$ref": "#/$defs/data_dict_loss"
+          }
         }
       },
       "additionalProperties": false
@@ -370,23 +566,53 @@
             "maximum"
           ],
           "properties": {
-            "name": {"const": "confidence_bounds"},
-            "applies_to_role": {"const": "statement"},
-            "fields": {"const": ["confidence"]},
-            "rule": {"const": "null_or_between_inclusive"},
-            "minimum": {"const": 0},
-            "maximum": {"const": 1}
+            "name": {
+              "const": "confidence_bounds"
+            },
+            "applies_to_role": {
+              "const": "statement"
+            },
+            "fields": {
+              "const": [
+                "confidence"
+              ]
+            },
+            "rule": {
+              "const": "null_or_between_inclusive"
+            },
+            "minimum": {
+              "const": 0
+            },
+            "maximum": {
+              "const": 1
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["name", "applies_to_role", "fields", "rule"],
+          "required": [
+            "name",
+            "applies_to_role",
+            "fields",
+            "rule"
+          ],
           "properties": {
-            "name": {"const": "valid_time_order"},
-            "applies_to_role": {"const": "statement"},
-            "fields": {"const": ["valid_from", "valid_to"]},
-            "rule": {"const": "null_or_less_than_or_equal"}
+            "name": {
+              "const": "valid_time_order"
+            },
+            "applies_to_role": {
+              "const": "statement"
+            },
+            "fields": {
+              "const": [
+                "valid_from",
+                "valid_to"
+              ]
+            },
+            "rule": {
+              "const": "null_or_less_than_or_equal"
+            }
           },
           "additionalProperties": false
         },
@@ -400,9 +626,17 @@
             "rule"
           ],
           "properties": {
-            "name": {"const": "narrative_shape"},
-            "class": {"type": "string"},
-            "required_fields": {"const": ["statement_text"]},
+            "name": {
+              "const": "narrative_shape"
+            },
+            "class": {
+              "type": "string"
+            },
+            "required_fields": {
+              "const": [
+                "statement_text"
+              ]
+            },
             "forbidden_fields": {
               "const": [
                 "predicate",
@@ -411,30 +645,67 @@
                 "object_datatype"
               ]
             },
-            "rule": {"const": "required_and_forbidden_fields"}
+            "rule": {
+              "const": "required_and_forbidden_fields"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["name", "class", "fields", "cardinality", "rule"],
+          "required": [
+            "name",
+            "class",
+            "fields",
+            "cardinality",
+            "rule"
+          ],
           "properties": {
-            "name": {"const": "exactly_one_semantic_object"},
-            "class": {"type": "string"},
-            "fields": {"const": ["object_entity", "object_value"]},
-            "cardinality": {"const": 1},
-            "rule": {"const": "exactly_one_present"}
+            "name": {
+              "const": "exactly_one_semantic_object"
+            },
+            "class": {
+              "type": "string"
+            },
+            "fields": {
+              "const": [
+                "object_entity",
+                "object_value"
+              ]
+            },
+            "cardinality": {
+              "const": 1
+            },
+            "rule": {
+              "const": "exactly_one_present"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["name", "class", "fields", "rule"],
+          "required": [
+            "name",
+            "class",
+            "fields",
+            "rule"
+          ],
           "properties": {
-            "name": {"const": "semantic_literal_datatype"},
-            "class": {"type": "string"},
-            "fields": {"const": ["object_value", "object_datatype"]},
-            "rule": {"const": "datatype_when_not_inferable"}
+            "name": {
+              "const": "semantic_literal_datatype"
+            },
+            "class": {
+              "type": "string"
+            },
+            "fields": {
+              "const": [
+                "object_value",
+                "object_datatype"
+              ]
+            },
+            "rule": {
+              "const": "datatype_when_not_inferable"
+            }
           },
           "additionalProperties": false
         }
@@ -442,11 +713,17 @@
     },
     "graph_projections": {
       "type": "object",
-      "required": ["node_classes", "semantic_edges", "provenance_edges"],
+      "required": [
+        "node_classes",
+        "semantic_edges",
+        "provenance_edges"
+      ],
       "properties": {
         "node_classes": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "semantic_edges": {
           "type": "object",
@@ -459,17 +736,25 @@
           "properties": {
             "direct_edge_classes": {
               "type": "array",
-              "items": {"type": "string"}
+              "items": {
+                "type": "string"
+              }
             },
             "semantic_statement_classes": {
               "type": "array",
-              "items": {"type": "string"}
+              "items": {
+                "type": "string"
+              }
             },
             "object_relations": {
               "type": "array",
-              "items": {"type": "string"}
+              "items": {
+                "type": "string"
+              }
             },
-            "exclude_narrative_statements": {"const": true}
+            "exclude_narrative_statements": {
+              "const": true
+            }
           },
           "additionalProperties": false
         },
@@ -487,16 +772,31 @@
           "properties": {
             "narrative_statement_classes": {
               "type": "array",
-              "items": {"type": "string"}
+              "items": {
+                "type": "string"
+              }
             },
             "narrative_slots": {
-              "const": ["about", "primary_subject"]
+              "const": [
+                "about",
+                "primary_subject"
+              ]
             },
-            "statement_to_evidence": {"const": true},
-            "evidence_to_source": {"const": true},
-            "supersession": {"const": true},
-            "mention_resolution": {"const": true},
-            "semantic_derivation": {"const": true}
+            "statement_to_evidence": {
+              "const": true
+            },
+            "evidence_to_source": {
+              "const": true
+            },
+            "supersession": {
+              "const": true
+            },
+            "mention_resolution": {
+              "const": true
+            },
+            "semantic_derivation": {
+              "const": true
+            }
           },
           "additionalProperties": false
         }
@@ -516,10 +816,24 @@
         "relations"
       ],
       "properties": {
-        "name": {"type": "string"},
-        "is_a": {"type": ["string", "null"]},
-        "ancestors": {"type": "array", "items": {"type": "string"}},
-        "type_uri": {"$ref": "#/$defs/uri"},
+        "name": {
+          "type": "string"
+        },
+        "is_a": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ancestors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type_uri": {
+          "$ref": "#/$defs/uri"
+        },
         "role": {
           "enum": [
             "node",
@@ -532,26 +846,72 @@
           ]
         },
         "statement_shape": {
-          "type": ["string", "null"],
-          "enum": ["narrative", "semantic", null]
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "narrative",
+            "semantic",
+            null
+          ]
         },
-        "view": {"type": "string"},
+        "view": {
+          "type": "string"
+        },
         "id_policy": {
-          "enum": ["require", "mint", "resolve_exact", "deterministic"]
+          "enum": [
+            "require",
+            "mint",
+            "resolve_exact",
+            "deterministic"
+          ]
         },
         "id_format": {
-          "enum": ["graft", "linkml"]
+          "enum": [
+            "graft",
+            "linkml"
+          ]
         },
-        "label_slot": {"type": ["string", "null"]},
-        "search_slots": {"type": "array", "items": {"type": "string"}},
-        "origin_key_slots": {"type": "array", "items": {"type": "string"}},
-        "qualifier_slots": {"type": "array", "items": {"type": "string"}},
-        "fixed_predicate": {"$ref": "#/$defs/nullable_uri_or_curie"},
+        "label_slot": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search_slots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "origin_key_slots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "qualifier_slots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fixed_predicate": {
+          "$ref": "#/$defs/nullable_uri_or_curie"
+        },
         "slots": {
           "type": "object",
-          "additionalProperties": {"$ref": "#/$defs/slot"}
+          "additionalProperties": {
+            "$ref": "#/$defs/slot"
+          }
         },
-        "relations": {"type": "array", "items": {"type": "string"}}
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "additionalProperties": false
     },
@@ -567,44 +927,124 @@
         "object_reference"
       ],
       "properties": {
-        "name": {"type": "string"},
-        "view_column": {"type": ["string", "null"]},
-        "range": {"type": "string"},
-        "duckdb_type": {"type": "string"},
-        "required": {"type": "boolean"},
-        "multivalued": {"type": "boolean"},
-        "ordered": {"type": "boolean"},
-        "identifier": {"type": "boolean"},
-        "object_reference": {"type": "boolean"},
-        "enum": {"type": ["string", "null"]},
-        "meaning": {"$ref": "#/$defs/nullable_uri_or_curie"},
-        "pattern": {"type": ["string", "null"]},
-        "datetime_format": {
-          "enum": ["offset", "local_utc", null]
+        "name": {
+          "type": "string"
         },
-        "minimum_value": {"type": ["number", "null"]},
-        "maximum_value": {"type": ["number", "null"]},
-        "external_identifier": {"type": ["string", "null"]},
-        "search_weight": {"type": ["number", "null"]},
-        "sensitive": {"type": "boolean"}
+        "view_column": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "type": "string"
+        },
+        "duckdb_type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "multivalued": {
+          "type": "boolean"
+        },
+        "ordered": {
+          "type": "boolean"
+        },
+        "identifier": {
+          "type": "boolean"
+        },
+        "object_reference": {
+          "type": "boolean"
+        },
+        "enum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "meaning": {
+          "$ref": "#/$defs/nullable_uri_or_curie"
+        },
+        "pattern": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "datetime_format": {
+          "enum": [
+            "offset",
+            "local_utc",
+            null
+          ]
+        },
+        "minimum_value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "maximum_value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "external_identifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "search_weight": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sensitive": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": false
     },
     "enum": {
       "type": "object",
-      "required": ["name", "permissible_values"],
+      "required": [
+        "name",
+        "permissible_values"
+      ],
       "properties": {
-        "name": {"type": "string"},
-        "description": {"type": ["string", "null"]},
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "permissible_values": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["value"],
+            "required": [
+              "value"
+            ],
             "properties": {
-              "value": {"type": "string"},
-              "meaning": {"$ref": "#/$defs/nullable_uri_or_curie"},
-              "description": {"type": ["string", "null"]}
+              "value": {
+                "type": "string"
+              },
+              "meaning": {
+                "$ref": "#/$defs/nullable_uri_or_curie"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             },
             "additionalProperties": false
           }
@@ -625,14 +1065,33 @@
         "predicate"
       ],
       "properties": {
-        "name": {"type": "string"},
-        "view": {"type": "string"},
-        "owner_class": {"type": "string"},
-        "owner_view": {"type": "string"},
-        "slot": {"type": "string"},
-        "kind": {"enum": ["object", "value"]},
-        "ordered": {"type": "boolean"},
-        "predicate": {"$ref": "#/$defs/uri_or_curie"}
+        "name": {
+          "type": "string"
+        },
+        "view": {
+          "type": "string"
+        },
+        "owner_class": {
+          "type": "string"
+        },
+        "owner_view": {
+          "type": "string"
+        },
+        "slot": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "object",
+            "value"
+          ]
+        },
+        "ordered": {
+          "type": "boolean"
+        },
+        "predicate": {
+          "$ref": "#/$defs/uri_or_curie"
+        }
       },
       "additionalProperties": false
     }
