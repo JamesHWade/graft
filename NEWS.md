@@ -1,7 +1,5 @@
 # graft 0.0.0.9000
 
-* `graft_artifact_store()`, `graft_artifact_save()` and `graft_artifact_read()` preserve bounded opaque content as immutable revisions in a shared local store, with verified exact reads and idempotent saves (#71).
-
 * A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. Existing APIs remain available, and supported consumer integration and production recovery remain follow-up work (#64).
 
 * A proposed Forget and recovery protocol has offline tests for retired store generations, backup admission, interrupted cleanup, and Reader isolation; permanent purge and production recovery remain unimplemented (#48).
@@ -11,6 +9,7 @@
 
 * `GraftSchema` and `GraftStore` now print concise identity, contract, and lifecycle summaries instead of recursively dumping their internal state.
 * A new `vignette("agents")` documents how Graft is used from an agent host: bounded read-only tools, snapshot-pinned sessions, agent-authored proposals that pass through validation and review, and file-editing agents working through the OKF tree. Getting started, the README, and the site home page now show the same path.
+* `graft_artifact_store()`, `graft_artifact_save()` and `graft_artifact_read()` preserve bounded opaque content as immutable revisions in a shared local store, with verified exact reads and idempotent saves (#71).
 * `graft_calculate()` and `graft_definitions()` replace the pre-production singular measure API with composable, data-dict-compatible metrics, filters, and derived values over one accepted public table, including plan-time type checking, pinned evaluation, grouping, typed predicates, dependency closure, and canonical definition receipts (#21).
 * `graft_calculate()` now fails closed before evaluating a public table or normalized relation that exceeds the hard calculation-input bound.
 * `graft_changes()` can restrict changes to `record_ids` before applying the result limit, preserving selected changes and delete tombstones even in a busy shared store; the compatible addition advances the consumer contract to 0.5.0 (#45).
