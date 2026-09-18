@@ -8,6 +8,10 @@
 #'   [graft_artifact_save()]. Duplicate roots are removed, retaining first order.
 #' @param max_artifacts Maximum number of distinct references traversed. Each
 #'   traversal also limits the sum of payload sizes to the store's `max_bytes`.
+#' @param max_metadata_bytes Maximum encoded selection metadata bytes to save or
+#'   read, a positive whole number. Defaults to 1 MiB (`1024^2`), independently of
+#'   artifact count and payload bounds. Increase it for many long references and
+#'   supply the same or a larger limit when reading that selection.
 #' @param selection Selection digest returned by `graft_artifact_select()`.
 #'
 #' @details
@@ -42,9 +46,15 @@
 #' graft_artifact_read_selection(store, selection)$artifacts
 #' unlink(path, recursive = TRUE)
 #' @export
-graft_artifact_select <- function(store, roots, max_artifacts = 1000L) {
+graft_artifact_select <- function(
+  store,
+  roots,
+  max_artifacts = 1000L,
+  max_metadata_bytes = 1024^2
+) {
   artifact_check_store(store)
   artifact_check_limit(max_artifacts, "max_artifacts")
+  artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
   roots <- artifact_refs(roots, max_artifacts)
   if (!length(roots)) {
     artifact_abort("`roots` must contain at least one artifact reference.")
@@ -56,8 +66,17 @@ graft_artifact_select <- function(store, roots, max_artifacts = 1000L) {
     artifacts = artifacts
   ))
   selection <- artifact_sha(bytes)
-  artifact_put(bytes, artifact_path(store, "selections", selection), 1024^2)
-  graft_artifact_read_selection(store, selection, max_artifacts)
+  artifact_put(
+    bytes,
+    artifact_path(store, "selections", selection),
+    max_metadata_bytes
+  )
+  graft_artifact_read_selection(
+    store,
+    selection,
+    max_artifacts,
+    max_metadata_bytes
+  )
   selection
 }
 
@@ -66,12 +85,17 @@ graft_artifact_select <- function(store, roots, max_artifacts = 1000L) {
 graft_artifact_read_selection <- function(
   store,
   selection,
-  max_artifacts = 1000L
+  max_artifacts = 1000L,
+  max_metadata_bytes = 1024^2
 ) {
   artifact_check_store(store)
   artifact_check_digest(selection)
   artifact_check_limit(max_artifacts, "max_artifacts")
-  bytes <- artifact_bytes(artifact_path(store, "selections", selection), 1024^2)
+  artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
+  bytes <- artifact_bytes(
+    artifact_path(store, "selections", selection),
+    max_metadata_bytes
+  )
   if (!identical(artifact_sha(bytes), selection)) {
     artifact_abort("Artifact selection digest mismatch.")
   }

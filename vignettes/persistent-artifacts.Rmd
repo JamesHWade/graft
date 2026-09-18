@@ -70,6 +70,10 @@ unlink(path, recursive = TRUE)
 ```
 
 The returned list includes the report, dictionary and vocabulary revisions.
+`max_metadata_bytes` separately bounds encoded selection metadata (1 MiB by
+default). Increase it for many long artifact identities and pass that limit on
+both selection creation and reading.
+
 `max_artifacts` bounds traversal and the store's `max_bytes` bounds total selected
 payload bytes. Reading rechecks the entire closure. Save the selection identifier
 with the application workflow, then apply its own access and reuse decisions.

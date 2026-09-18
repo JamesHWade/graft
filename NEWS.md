@@ -10,7 +10,7 @@
 
 * `GraftSchema` and `GraftStore` now print concise identity, contract, and lifecycle summaries instead of recursively dumping their internal state.
 * A new `vignette("agents")` documents how Graft is used from an agent host: bounded read-only tools, snapshot-pinned sessions, agent-authored proposals that pass through validation and review, and file-editing agents working through the OKF tree. Getting started, the README, and the site home page now show the same path.
-* `graft_artifact_select()` and `graft_artifact_read_selection()` retain and verify complete bounded selections of exact dependencies. `graft_artifact_save()` can pin evidence, dictionary and vocabulary revisions without granting approval (#72).
+* `graft_artifact_select()` and `graft_artifact_read_selection()` retain and verify complete bounded selections of exact dependencies, with an explicit `max_metadata_bytes` limit for encoded selections. `graft_artifact_save()` can pin evidence, dictionary and vocabulary revisions without granting approval (#72).
 * `graft_artifact_store()`, `graft_artifact_save()` and `graft_artifact_read()` preserve bounded opaque content as immutable revisions in a shared local store, with verified exact reads and idempotent saves (#71).
 * `graft_calculate()` and `graft_definitions()` replace the pre-production singular measure API with composable, data-dict-compatible metrics, filters, and derived values over one accepted public table, including plan-time type checking, pinned evaluation, grouping, typed predicates, dependency closure, and canonical definition receipts (#21).
 * `graft_calculate()` now fails closed before evaluating a public table or normalized relation that exceeds the hard calculation-input bound.

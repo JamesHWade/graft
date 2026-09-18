@@ -5,9 +5,19 @@
 \alias{graft_artifact_read_selection}
 \title{Preserve an exact artifact selection}
 \usage{
-graft_artifact_select(store, roots, max_artifacts = 1000L)
+graft_artifact_select(
+  store,
+  roots,
+  max_artifacts = 1000L,
+  max_metadata_bytes = 1024^2
+)
 
-graft_artifact_read_selection(store, selection, max_artifacts = 1000L)
+graft_artifact_read_selection(
+  store,
+  selection,
+  max_artifacts = 1000L,
+  max_metadata_bytes = 1024^2
+)
 }
 \arguments{
 \item{store}{A handle returned by \code{\link[=graft_artifact_store]{graft_artifact_store()}}.}
@@ -17,6 +27,11 @@ graft_artifact_read_selection(store, selection, max_artifacts = 1000L)
 
 \item{max_artifacts}{Maximum number of distinct references traversed. Each
 traversal also limits the sum of payload sizes to the store's \code{max_bytes}.}
+
+\item{max_metadata_bytes}{Maximum encoded selection metadata bytes to save or
+read, a positive whole number. Defaults to 1 MiB (\code{1024^2}), independently of
+artifact count and payload bounds. Increase it for many long references and
+supply the same or a larger limit when reading that selection.}
 
 \item{selection}{Selection digest returned by \code{graft_artifact_select()}.}
 }

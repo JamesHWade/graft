@@ -169,6 +169,57 @@ test_that("selection traversal enforces count and aggregate byte bounds", {
   )
 })
 
+test_that("selection metadata has an independent configurable byte bound", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  roots <- lapply(seq_len(500), function(i) {
+    graft_artifact_save(
+      store,
+      paste0(strrep('"', 1000), i),
+      raw(),
+      "text/plain"
+    )
+  })
+  expect_error(
+    graft_artifact_select(store, roots),
+    class = "graft_artifact_error"
+  )
+  expect_length(list.files(file.path(store$path, "selections")), 0L)
+  selection <- graft_artifact_select(
+    store,
+    roots,
+    max_metadata_bytes = 4 * 1024^2
+  )
+  expect_gt(
+    file.info(file.path(store$path, "selections", selection))$size,
+    1024^2
+  )
+  expect_error(
+    graft_artifact_read_selection(store, selection),
+    class = "graft_artifact_error"
+  )
+  result <- graft_artifact_read_selection(
+    graft_artifact_store(store$path),
+    selection,
+    max_metadata_bytes = 4 * 1024^2
+  )
+  expect_identical(result$roots, roots)
+  expect_identical(result$artifacts, roots)
+  for (limit in list(0, -1, 1.5, NA_real_, Inf, "large", numeric())) {
+    expect_error(
+      graft_artifact_select(store, roots, max_metadata_bytes = limit),
+      class = "graft_artifact_error"
+    )
+    expect_error(
+      graft_artifact_read_selection(
+        store,
+        selection,
+        max_metadata_bytes = limit
+      ),
+      class = "graft_artifact_error"
+    )
+  }
+})
+
 test_that("reads independently reject incomplete selections even with valid digests", {
   store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
   source <- graft_artifact_save(
