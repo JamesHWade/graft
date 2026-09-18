@@ -129,3 +129,10 @@ These labels describe the recorded path. They do not measure factual accuracy,
 authenticate producer identities or guarantee that prose faithfully represents
 a source. [Work with agents](articles/agents.html) explains the checks and their
 limits.
+
+### Research consumer
+
+Tempest publishes completed research through Graft's artifact, selection and
+decision interfaces. Its admission checks retain exact reports and evidence while
+requiring current host eligibility. See the [persistent artifact guide](articles/persistent-artifacts.html)
+for the application handoff and its tested scope.

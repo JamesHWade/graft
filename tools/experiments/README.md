@@ -85,6 +85,7 @@ Xcode is selected but unavailable. No system setting needs to be changed.
 | #64 Tempest checkpoint migration | [tempest-migration](tempest-migration/README.md) | [Results](../../specs/2026-09-16-tempest-migration.md) |
 | #64 Tempest artifact reuse | [tempest-reuse](tempest-reuse/README.md) | [Results](../../specs/2026-09-17-tempest-reuse.md) |
 | #64 direct Tempest acceptance | [tempest-cycle](tempest-cycle/README.md) | [Results](../../specs/2026-09-17-tempest-acceptance-cycle.md) |
+| #50 supported Tempest adoption | [tempest-artifact-adoption](tempest-artifact-adoption/README.md) | Public Graft storage and decision interfaces |
 | #63 architecture decision | All above | [ADR 0007](../../adr/0007-test-artifact-composition-before-expanding-graft.md) |
 
 The dedicated GitHub workflow reruns the complete suite on Linux and uploads

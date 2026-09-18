@@ -20,7 +20,8 @@ steps <- c(
   "roundtrip",
   "tempest-migration",
   "tempest-reuse",
-  "tempest-cycle"
+  "tempest-cycle",
+  "tempest-artifact-adoption"
 )
 for (step in steps) {
   cat("\nRunning", step, "\n")

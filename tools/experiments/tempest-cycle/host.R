@@ -350,7 +350,11 @@ cycle_session <- function(store, event, path, resume = FALSE) {
     ) {
       artifact_error("Saved session differs from the eligible acceptance.")
     }
-    session <- tempest::tempest_session_resume(path, config = cycle_config())
+    session <- tempest::tempest_session_resume(
+      path,
+      config = cycle_config(),
+      knowledge = knowledge
+    )
     path <- paste0(path, "-resumed")
   } else {
     session <- tempest::tempest_session(
