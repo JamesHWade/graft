@@ -153,7 +153,7 @@ current authorization checks before a saved basis is read.
 The offline tests cover research and reading selections with real Graft stores,
 a separate worker, and a real ellmer loop served by local fixtures. This build
 reports Graft contract `r graft_contract_version()$contract`. Tempest's public
-schema loader accepts contracts >= 0.2.0 and < 1.0.0 with the companion update in
+schema loader accepts contracts >= 0.2.0 and < 2.0.0 with the companion update in
 [Tempest #73](https://github.com/JamesHWade/tempest/pull/73).
 
 Tempest's accepted-research reuse across restarts is implemented in
