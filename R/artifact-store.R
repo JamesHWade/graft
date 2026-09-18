@@ -4,7 +4,8 @@
 #' exact revision. Saving grants no approval, access or execution authority.
 #'
 #' @param path Directory for a Graft artifact store, distinct from a native
-#'   graph store. Creation requires a missing or empty directory.
+#'   graph store. Creation requires a missing or empty directory. Filesystem
+#'   paths follow platform limits, independently of artifact identity byte limits.
 #' @param create Create a new store? Defaults to `FALSE` for safe reopening.
 #' @param max_bytes Maximum payload bytes per artifact to save or read in this
 #'   handle. Dependency traversal also applies this limit to aggregate payloads.
@@ -63,7 +64,7 @@ graft_artifact_store <- function(
   max_bytes = 64 * 1024^2,
   max_revision_bytes = 1024^2
 ) {
-  artifact_check_text(path, "path")
+  artifact_check_path(path)
   if (!rlang::is_bool(create)) {
     artifact_abort("`create` must be TRUE or FALSE.")
   }
@@ -180,6 +181,16 @@ graft_artifact_read <- function(store, ref) {
 
 artifact_abort <- function(message) {
   rlang::abort(message, class = "graft_artifact_error")
+}
+
+artifact_check_path <- function(path) {
+  if (
+    !rlang::is_string(path) ||
+      !validUTF8(enc2utf8(path)) ||
+      !nzchar(path)
+  ) {
+    artifact_abort("`path` must be a nonempty UTF-8 string.")
+  }
 }
 
 artifact_check_text <- function(x, arg) {

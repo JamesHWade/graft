@@ -26,7 +26,8 @@ graft_artifact_read(store, ref)
 }
 \arguments{
 \item{path}{Directory for a Graft artifact store, distinct from a native
-graph store. Creation requires a missing or empty directory.}
+graph store. Creation requires a missing or empty directory. Filesystem
+paths follow platform limits, independently of artifact identity byte limits.}
 
 \item{create}{Create a new store? Defaults to \code{FALSE} for safe reopening.}
 
