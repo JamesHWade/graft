@@ -20,6 +20,9 @@
 #'   returned by `graft_artifact_save()`.
 #'
 #' @details
+#' Identity, media-type and reference strings are normalized to plain UTF-8
+#' character values without R attributes.
+#'
 #' This interface supports trusted local files with one writer. SHA-256 digests
 #' identify content and metadata. Identical saves return the same reference;
 #' corrections retain earlier revisions. There is no mutable latest pointer.
@@ -95,8 +98,8 @@ graft_artifact_store <- function(
 #' @export
 graft_artifact_save <- function(store, id, bytes, media_type) {
   artifact_check_store(store)
-  artifact_check_text(id, "id")
-  artifact_check_text(media_type, "media_type")
+  id <- artifact_check_text(id, "id")
+  media_type <- artifact_check_text(media_type, "media_type")
   if (!is.raw(bytes)) {
     artifact_abort("`bytes` must be a raw vector.")
   }
@@ -132,7 +135,7 @@ graft_artifact_save <- function(store, id, bytes, media_type) {
 #' @export
 graft_artifact_read <- function(store, ref) {
   artifact_check_store(store)
-  artifact_check_ref(ref)
+  ref <- artifact_check_ref(ref)
   manifest <- artifact_bytes(
     artifact_path(store, "revisions", ref$revision),
     1024^2
@@ -173,6 +176,10 @@ artifact_check_path <- function(path) {
 }
 
 artifact_check_text <- function(x, arg) {
+  if (rlang::is_string(x)) {
+    attributes(x) <- NULL
+    x <- enc2utf8(x)
+  }
   if (
     !rlang::is_string(x) ||
       !validUTF8(enc2utf8(x)) ||
@@ -187,6 +194,7 @@ artifact_check_text <- function(x, arg) {
       "` must be a nonempty, unpadded string of at most 1024 UTF-8 bytes without control characters."
     ))
   }
+  x
 }
 
 artifact_check_limit <- function(x, arg) {
@@ -219,11 +227,15 @@ artifact_check_store <- function(store) {
 }
 
 artifact_check_digest <- function(x) {
+  if (rlang::is_string(x)) {
+    attributes(x) <- NULL
+  }
   if (!rlang::is_string(x) || !grepl("^[0-9a-f]{64}$", x)) {
     artifact_abort(
       "An artifact digest must contain 64 lowercase hexadecimal characters."
     )
   }
+  x
 }
 
 artifact_check_ref <- function(ref) {
@@ -232,8 +244,10 @@ artifact_check_ref <- function(ref) {
       "An artifact reference must contain exactly `id` and `revision`."
     )
   }
-  artifact_check_text(ref$id, "ref$id")
-  artifact_check_digest(ref$revision)
+  list(
+    id = artifact_check_text(ref$id, "ref$id"),
+    revision = artifact_check_digest(ref$revision)
+  )
 }
 
 artifact_check_metadata <- function(metadata) {

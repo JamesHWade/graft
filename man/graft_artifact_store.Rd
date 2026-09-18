@@ -46,6 +46,9 @@ Create or reopen a local artifact store, save opaque bytes, and resolve an
 exact revision. Saving grants no approval, access or execution authority.
 }
 \details{
+Identity, media-type and reference strings are normalized to plain UTF-8
+character values without R attributes.
+
 This interface supports trusted local files with one writer. SHA-256 digests
 identify content and metadata. Identical saves return the same reference;
 corrections retain earlier revisions. There is no mutable latest pointer.
