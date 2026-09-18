@@ -175,10 +175,18 @@ schema loader accepts contracts \>= 0.2.0 and \< 2.0.0 with the
 companion update in [Tempest
 \#73](https://github.com/JamesHWade/tempest/pull/73).
 
-Tempest’s accepted-research reuse across restarts is implemented in
-[Tempest \#66](https://github.com/JamesHWade/tempest/pull/66). The
-remaining deletion and Forget scope is tracked in
-[\#50](https://github.com/JamesHWade/graft/issues/50). Rill’s runtime
+Tempest’s earlier native graph reuse path was implemented in [Tempest
+\#66](https://github.com/JamesHWade/tempest/pull/66). [Tempest
+\#74](https://github.com/JamesHWade/tempest/pull/74) adds publication,
+historical inspection and current decision admission through the public
+artifact contract, including fresh admission for new runs and resume.
+See the [persistent artifact
+guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
+for this workflow. Contradictory-evidence execution remains in
+[\#50](https://github.com/JamesHWade/graft/issues/50), native graph
+retirement in [\#74](https://github.com/JamesHWade/graft/issues/74), and
+permanent Forget in
+[\#48](https://github.com/JamesHWade/graft/issues/48). Rill’s runtime
 proof remains [\#51](https://github.com/JamesHWade/graft/issues/51).
 
 The detailed revision, supersession and exact-reference contract is

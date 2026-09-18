@@ -155,7 +155,7 @@ and selection:</p>
 <span><span class="fu"><a href="../reference/graft_ingest.html">graft_ingest</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">example</span><span class="op">$</span><span class="fu">narrative_records</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/graft_provenance.html">graft_provenance</a></span><span class="op">(</span><span class="st">"example-host"</span>, idempotency_key <span class="op">=</span> <span class="st">"example-1"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $batch_id</span></span>
-<span><span class="co">#&gt; [1] "graft:134QXNNGA38FC6N46S6P6M09SM"</span></span>
+<span><span class="co">#&gt; [1] "graft:02AG28AJG90WSZ37FA20TB5034"</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $inserted</span></span>
 <span><span class="co">#&gt; knowledge    source   support </span></span>
@@ -177,7 +177,7 @@ and selection:</p>
 <span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $duration</span></span>
-<span><span class="co">#&gt; [1] 0.532</span></span>
+<span><span class="co">#&gt; [1] 0.669</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $replay</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
@@ -325,9 +325,10 @@ deserialize arbitrary untrusted RDS content.</p>
 <span><span class="fu"><a href="../reference/graft_close.html">graft_close</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span></code></pre></div>
 <p>A snapshot identifies a boundary, not which records a task selected
 or permission to access them. A full selected basis includes evidence
-and exact revisions; new change receipts do not replace it. Eligibility,
-Reader scope, permanent Forget and backup/restore remain explicit
-design/integration work.</p>
+and exact revisions; new change receipts do not replace it. The artifact
+workflow records host acceptance and withdrawal and checks current
+purpose-bound eligibility. Reader scope, permanent Forget and
+backup/restore remain separate integration work.</p>
 </div>
 <div class="section level2">
 <h2 id="ecosystem-ownership-and-delivery-status">Ecosystem ownership and delivery status<a class="anchor" aria-label="anchor" href="#ecosystem-ownership-and-delivery-status"></a>
@@ -378,7 +379,9 @@ Receipts</td>
 <tr class="odd">
 <td>Tempest</td>
 <td>Scientific evidence, research products, promotion</td>
-<td>Existing public contracts inventoried; full reuse proof in #50</td>
+<td>Public artifact publication, historical reads and fresh admission on
+new runs/resume; contradictory-evidence execution and native graph
+removal remain in #50/#74</td>
 </tr>
 <tr class="even">
 <td>Rill</td>

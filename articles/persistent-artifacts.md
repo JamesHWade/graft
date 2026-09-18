@@ -325,3 +325,25 @@ bases](https://jameshwade.github.io/graft/articles/reuse-basis.md) for
 supported Graft behavior and [Forget and
 recovery](https://jameshwade.github.io/graft/articles/forget-restore.md)
 for the production lifecycle requirements.
+
+## Use retained research in Tempest
+
+Tempest now maps validated completed research into this artifact
+contract. Its `tempest_publish_artifact_research()` retains the exact
+evidence closure, source bodies, program provenance and readable report.
+A host explicitly accepts that selection using
+[`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md).
+
+`tempest_reuse_artifact_research()` validates the scientific evidence
+and consults the current Graft decision using a host eligibility
+callback. New runs and session resume recheck admission. The callback is
+transient; session bundles retain content and decision provenance, never
+a saved permission. Historical inspection uses
+`tempest_read_artifact_research()` and does not grant reuse.
+
+The [Tempest artifact
+guide](https://jameshwade.github.io/tempest/articles/artifact-knowledge.html)
+contains the installed offline example. The pinned experiment suite
+executes that example against these public interfaces. These are
+synthetic completed research fixtures, not production access or erasure
+evidence.

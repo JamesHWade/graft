@@ -419,6 +419,27 @@ ownership. Continue with <a href="reuse-basis.html">exact reuse
 bases</a> for supported Graft behavior and <a href="forget-restore.html">Forget and recovery</a> for the production
 lifecycle requirements.</p>
 </div>
+<div class="section level2">
+<h2 id="use-retained-research-in-tempest">Use retained research in Tempest<a class="anchor" aria-label="anchor" href="#use-retained-research-in-tempest"></a>
+</h2>
+<p>Tempest now maps validated completed research into this artifact
+contract. Its <code>tempest_publish_artifact_research()</code> retains
+the exact evidence closure, source bodies, program provenance and
+readable report. A host explicitly accepts that selection using
+<code><a href="../reference/graft_artifact_decide.html">graft_artifact_decide()</a></code>.</p>
+<p><code>tempest_reuse_artifact_research()</code> validates the
+scientific evidence and consults the current Graft decision using a host
+eligibility callback. New runs and session resume recheck admission. The
+callback is transient; session bundles retain content and decision
+provenance, never a saved permission. Historical inspection uses
+<code>tempest_read_artifact_research()</code> and does not grant
+reuse.</p>
+<p>The <a href="https://jameshwade.github.io/tempest/articles/artifact-knowledge.html" class="external-link">Tempest
+artifact guide</a> contains the installed offline example. The pinned
+experiment suite executes that example against these public interfaces.
+These are synthetic completed research fixtures, not production access
+or erasure evidence.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>

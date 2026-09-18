@@ -7,10 +7,13 @@
   experiments demonstrate migration, public consumer admission, direct
   acceptance, correction, and withdrawal for the supported synthetic
   fixture; the resulting recommendation is to retire Graft’s
-  graph/compiler architecture from this composition. Existing APIs
-  remain available, and supported consumer integration and production
-  recovery remain follow-up work
-  ([\#64](https://github.com/JamesHWade/graft/issues/64)).
+  graph/compiler architecture from this composition. The installed
+  Tempest consumer now publishes exact evidence and readable synthesis
+  through Graft’s public artifacts and decisions, with current admission
+  checks on new runs and resume. Native graph removal
+  ([\#74](https://github.com/JamesHWade/graft/issues/74)) and production
+  recovery ([\#49](https://github.com/JamesHWade/graft/issues/49))
+  remain follow-up work.
 
 - A proposed Forget and recovery protocol has offline tests for retired
   store generations, backup admission, interrupted cleanup, and Reader

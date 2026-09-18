@@ -56,7 +56,7 @@ store <- graft_open(graft_schema(system.file(
 graft_ingest(store, example$narrative_records(),
   graft_provenance("example-host", idempotency_key = "example-1"))
 #> $batch_id
-#> [1] "graft:134QXNNGA38FC6N46S6P6M09SM"
+#> [1] "graft:02AG28AJG90WSZ37FA20TB5034"
 #> 
 #> $inserted
 #> knowledge    source   support 
@@ -78,7 +78,7 @@ graft_ingest(store, example$narrative_records(),
 #> character(0)
 #> 
 #> $duration
-#> [1] 0.532
+#> [1] 0.669
 #> 
 #> $replay
 #> [1] FALSE
@@ -250,9 +250,10 @@ graft_close(store)
 
 A snapshot identifies a boundary, not which records a task selected or
 permission to access them. A full selected basis includes evidence and
-exact revisions; new change receipts do not replace it. Eligibility,
-Reader scope, permanent Forget and backup/restore remain explicit
-design/integration work.
+exact revisions; new change receipts do not replace it. The artifact
+workflow records host acceptance and withdrawal and checks current
+purpose-bound eligibility. Reader scope, permanent Forget and
+backup/restore remain separate integration work.
 
 ## Ecosystem ownership and delivery status
 
@@ -264,7 +265,7 @@ design/integration work.
 | Deputy | Permissions, execution, offloading, host lifecycle | Real Agent loop and exact offloaded-result recovery |
 | dsprrr | Modules, signatures, execution | Real `react()` loop and proposal signature |
 | Commons | Detached public source, file measures, fallback labels | Existing detached-source compatibility suite; unpinned |
-| Tempest | Scientific evidence, research products, promotion | Existing public contracts inventoried; full reuse proof in \#50 |
+| Tempest | Scientific evidence, research products, promotion | Public artifact publication, historical reads and fresh admission on new runs/resume; contradictory-evidence execution and native graph removal remain in \#50/#74 |
 | Rill | Readers, Documents, accepted reading outcomes, Archive/Forget | ADR-defined ownership; runtime proof and privacy gates in \#47/#48/#51 |
 | scans/vitals | Evaluation | Task-quality evaluation remains in \#41 |
 
