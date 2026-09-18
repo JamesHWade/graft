@@ -272,3 +272,36 @@ test_that("text bounds use persisted UTF-8 bytes before publication", {
     enc2utf8(boundary)
   )
 })
+
+
+test_that("raw vector attributes do not affect artifact publication or retries", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  bytes <- as.raw(c(0, 255))
+  for (attributed in list(
+    setNames(bytes, c("first", "second")),
+    structure(bytes, class = "example"),
+    structure(bytes, dim = c(1L, 2L)),
+    structure(bytes, label = "payload")
+  )) {
+    ref <- graft_artifact_save(
+      store,
+      "raw",
+      attributed,
+      "application/octet-stream"
+    )
+    expect_identical(graft_artifact_read(store, ref)$bytes, bytes)
+    expect_identical(
+      graft_artifact_save(store, "raw", attributed, "application/octet-stream"),
+      ref
+    )
+  }
+  expect_identical(
+    graft_artifact_save(store, "raw", bytes, "application/octet-stream"),
+    ref
+  )
+})
+
+test_that("host Graft error handlers catch artifact failures", {
+  error <- tryCatch(graft_artifact_store(""), graft_error = identity)
+  expect_s3_class(error, "graft_artifact_error")
+})

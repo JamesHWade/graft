@@ -11,7 +11,8 @@
 #' @param store A handle returned by `graft_artifact_store()`.
 #' @param id Stable, nonempty artifact identity chosen by the caller, at most
 #'   1024 UTF-8 bytes, without padding or control characters.
-#' @param bytes Raw vector containing the complete payload. Content is never
+#' @param bytes Raw vector containing the complete payload. Attributes are
+#'   discarded; only the byte contents are retained. Content is never
 #'   deserialized or executed by these functions.
 #' @param media_type Nonempty media type describing the opaque payload, at most
 #'   1024 UTF-8 bytes, without padding or control characters.
@@ -96,8 +97,12 @@ graft_artifact_save <- function(store, id, bytes, media_type) {
   artifact_check_store(store)
   artifact_check_text(id, "id")
   artifact_check_text(media_type, "media_type")
-  if (!is.raw(bytes) || length(bytes) > store$max_bytes) {
-    artifact_abort("`bytes` must be a raw vector within the store byte bound.")
+  if (!is.raw(bytes)) {
+    artifact_abort("`bytes` must be a raw vector.")
+  }
+  attributes(bytes) <- NULL
+  if (length(bytes) > store$max_bytes) {
+    artifact_abort("`bytes` exceeds the store byte bound.")
   }
   metadata <- list(
     format = 1L,
@@ -154,7 +159,7 @@ graft_artifact_read <- function(store, ref) {
 }
 
 artifact_abort <- function(message) {
-  rlang::abort(message, class = "graft_artifact_error")
+  graft_abort("graft_artifact_error", message)
 }
 
 artifact_check_path <- function(path) {

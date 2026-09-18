@@ -26,7 +26,8 @@ paths follow platform limits, independently of artifact identity byte limits.}
 \item{id}{Stable, nonempty artifact identity chosen by the caller, at most
 1024 UTF-8 bytes, without padding or control characters.}
 
-\item{bytes}{Raw vector containing the complete payload. Content is never
+\item{bytes}{Raw vector containing the complete payload. Attributes are
+discarded; only the byte contents are retained. Content is never
 deserialized or executed by these functions.}
 
 \item{media_type}{Nonempty media type describing the opaque payload, at most
