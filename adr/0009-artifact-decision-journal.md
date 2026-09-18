@@ -63,3 +63,14 @@ Separate event, key-reservation and head files introduce additional commit state
 A configurable request envelope or separate journal handle adds caller concepts
 without a second storage implementation. The initial module uses three explicit
 functions over the existing artifact store and small internal filesystem seams.
+
+## Consumer version boundary
+
+This delivery uses consumer contract 1.0.0. The legacy data-dict compiler
+attestation captures the full namespace, so adding artifact functions invalidates
+previously compiled manifests despite unchanged compilation rules. This is an
+intentional preproduction cutoff: regenerate those manifests and recreate
+disposable graph stores from retained inputs where necessary. Preserve strict
+digest checks instead of adding old-digest compatibility. Scoped compiler
+attestation is not introduced into architecture scheduled for removal in #74.
+The package version remains developmental; contract 1.0 is not production status.

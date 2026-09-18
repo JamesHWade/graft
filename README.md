@@ -29,6 +29,10 @@ shows shared storage, exact dependency selections, and acceptance and withdrawal
 journals. Current reuse checks the selected decision and purpose alongside the
 application's explicit eligibility decision.
 
+Consumer contract 1.0 is a preproduction cutoff for legacy data-dict compiled
+manifests and graph stores. See the [compatibility guide](https://jameshwade.github.io/graft/articles/compatibility.html)
+before reopening them with this build.
+
 ## Installation
 
 Install the development version from GitHub:

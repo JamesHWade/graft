@@ -1,6 +1,6 @@
 test_that("graft_contract_version reports pinnable versions", {
   version <- graft_contract_version()
-  expect_identical(version$contract, "0.9.0")
+  expect_identical(version$contract, "1.0.0")
 
   expect_identical(
     names(version),
