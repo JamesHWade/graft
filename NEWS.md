@@ -1,5 +1,7 @@
 # graft 0.0.0.9000
 
+* `graft_artifact_store()`, `graft_artifact_save()` and `graft_artifact_read()` preserve bounded opaque content as immutable revisions in a shared local store, with verified exact reads and idempotent saves (#71).
+
 * A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. Existing APIs remain available, and supported consumer integration and production recovery remain follow-up work (#64).
 
 * A proposed Forget and recovery protocol has offline tests for retired store generations, backup admission, interrupted cleanup, and Reader isolation; permanent purge and production recovery remain unimplemented (#48).

@@ -15,9 +15,33 @@ software that stores it. Graft's artifact experiments investigate a small layer
 that preserves reports, tables, figures, and the exact evidence selected for
 later workflows.
 
-**This is a proposed direction.** The artifact code is an experiment in the
-repository, excluded from the installed package. This project is pre-production; current APIs may change or be removed. The
-experiment has not yet implemented a complete replacement application workflow.
+## Save and reopen exact content
+
+The shared local artifact interface preserves opaque bytes and verifies them when
+read. It supports trusted local files with a single writer. Acceptance, access,
+concurrent publication, power-loss durability and permanent erasure remain
+separate requirements; saving these bytes grants no approval.
+
+```{r}
+library(graft)
+path <- tempfile("artifacts-")
+store <- graft_artifact_store(path, create = TRUE)
+original <- graft_artifact_save(
+  store, "report:daily", charToRaw("Original report"), "text/plain"
+)
+corrected <- graft_artifact_save(
+  store, "report:daily", charToRaw("Corrected report"), "text/plain"
+)
+reopened <- graft_artifact_store(path)
+rawToChar(graft_artifact_read(reopened, original)$bytes)
+rawToChar(graft_artifact_read(reopened, corrected)$bytes)
+unlink(path, recursive = TRUE)
+```
+
+References contain an identity and immutable revision. Retain them with your
+workflow; the store deliberately has no automatic latest or approved selection.
+This project is pre-production and existing graph/compiler APIs are being replaced.
+The experiments below remain comparative evidence, not the installed storage code.
 
 ## From analysis to later reuse
 
@@ -112,8 +136,8 @@ The manifest producer and consumer both run without Graft installed.
 
 The recommendation is now to **retire the current graph/compiler architecture
 from the artifact composition**. The experiments establish a replacement route
-for the tested workflow; they do not ship a new public artifact package or remove
-existing Graft APIs. [ADR 0008](https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md)
+for the tested workflow; they did not themselves ship a new public artifact interface or remove
+existing Graft APIs. The local artifact functions above are the first delivery slice. [ADR 0008](https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md)
 places shared infrastructure in Graft. Tempest and Rill are end-use applications
 consuming its public interface, not homes for reusable storage engines. Graft
 still needs the publication/recovery implementation in [#49](https://github.com/JamesHWade/graft/issues/49).

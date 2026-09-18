@@ -130,6 +130,9 @@ articles:
       - v01-design
 
 reference:
+  - title: Persistent artifacts
+    contents:
+      - graft_artifact_store
   - title: Define and open
     desc: >
       Compile or load a contract, then create, open, and close a store.
