@@ -101,12 +101,17 @@ A vocabulary term does not authorize a join or access. A saved draft does not
 become approved memory. A calculation label or retained citation does not prove
 an interpretation correct. A search cache is a rebuildable view over artifacts.
 
-## Current consumers and evidence preservation
+## Consumer evidence at the decision
 
-The original migration experiment used Tempest `3cfe220`. The current suite pins
+The original migration experiment used Tempest `3cfe220`. The follow-up recorded here used
 [`6d3386c`](https://github.com/JamesHWade/tempest/tree/6d3386cbbe22fdc0c1539c436e3ab2f4660567f3)
 from [Tempest #71](https://github.com/JamesHWade/tempest/pull/71), including the
-public artifact input. Receipts and checkpoints bind store,
+public artifact input. These are historical pins. The current suite is defined by
+[`pins.json`](../tools/experiments/pins.json) and now includes
+[Tempest #74](https://github.com/JamesHWade/tempest/pull/74), with public artifact
+publication, historical reads and fresh decision admission.
+
+The native migration receipts and checkpoints bind store,
 batch, schema build, snapshot and native revision identities. Its historical
 selection and reviewed correction behavior must remain available or be explicitly
 mapped; exporting current rows alone is insufficient.
