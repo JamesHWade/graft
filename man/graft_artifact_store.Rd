@@ -22,12 +22,14 @@ graph store. Creation requires a missing or empty directory.}
 
 \item{store}{A handle returned by \code{graft_artifact_store()}.}
 
-\item{id}{Stable, nonempty artifact identity chosen by the caller.}
+\item{id}{Stable, nonempty artifact identity chosen by the caller, at most
+1024 UTF-8 bytes, without padding or control characters.}
 
 \item{bytes}{Raw vector containing the complete payload. Content is never
 deserialized or executed by these functions.}
 
-\item{media_type}{Nonempty media type describing the opaque payload.}
+\item{media_type}{Nonempty media type describing the opaque payload, at most
+1024 UTF-8 bytes, without padding or control characters.}
 
 \item{ref}{Exact reference: a list with \code{id} and \code{revision} strings, as
 returned by \code{graft_artifact_save()}.}
@@ -52,7 +54,8 @@ retries reuse verified content. Orphans are retained rather than deleted
 automatically. Successful reads verify metadata, payload size and digest.
 Interrupted writes cannot yield a successful incomplete reference, but this
 interface does not promise power-loss durability, concurrent publication,
-authorization, erasure or backup recovery. Applications own access and policy.
+authorization, erasure or backup recovery. Applications own access and
+policy.
 Handles contain no open connections and need no closing.
 }
 \examples{

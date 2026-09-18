@@ -224,3 +224,24 @@ test_that("creation does not treat an unreadable directory as empty", {
   Sys.chmod(path, "0700")
   expect_identical(readLines(file.path(path, "user.txt")), "keep")
 })
+
+test_that("text bounds use persisted UTF-8 bytes before publication", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  too_long <- iconv(strrep("\u00e9", 600), from = "UTF-8", to = "latin1")
+  expect_equal(nchar(too_long, type = "bytes"), 600)
+  expect_error(
+    graft_artifact_save(store, too_long, raw(), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_save(store, "report", raw(), too_long),
+    class = "graft_artifact_error"
+  )
+  expect_identical(list.files(store$path), "store.json")
+  boundary <- iconv(strrep("\u00e9", 512), from = "UTF-8", to = "latin1")
+  ref <- graft_artifact_save(store, boundary, raw(), "text/plain")
+  expect_identical(
+    graft_artifact_read(store, ref)$metadata$id,
+    enc2utf8(boundary)
+  )
+})

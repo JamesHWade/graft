@@ -8,10 +8,12 @@
 #' @param create Create a new store? Defaults to `FALSE` for safe reopening.
 #' @param max_bytes Maximum payload bytes to save or read in this handle.
 #' @param store A handle returned by `graft_artifact_store()`.
-#' @param id Stable, nonempty artifact identity chosen by the caller.
+#' @param id Stable, nonempty artifact identity chosen by the caller, at most
+#'   1024 UTF-8 bytes, without padding or control characters.
 #' @param bytes Raw vector containing the complete payload. Content is never
 #'   deserialized or executed by these functions.
-#' @param media_type Nonempty media type describing the opaque payload.
+#' @param media_type Nonempty media type describing the opaque payload, at most
+#'   1024 UTF-8 bytes, without padding or control characters.
 #' @param ref Exact reference: a list with `id` and `revision` strings, as
 #'   returned by `graft_artifact_save()`.
 #'
@@ -26,7 +28,8 @@
 #' automatically. Successful reads verify metadata, payload size and digest.
 #' Interrupted writes cannot yield a successful incomplete reference, but this
 #' interface does not promise power-loss durability, concurrent publication,
-#' authorization, erasure or backup recovery. Applications own access and policy.
+#' authorization, erasure or backup recovery. Applications own access and
+#' policy.
 #' Handles contain no open connections and need no closing.
 #'
 #' @returns
@@ -159,13 +162,13 @@ artifact_check_text <- function(x, arg) {
       !validUTF8(enc2utf8(x)) ||
       !nzchar(x) ||
       !identical(trimws(x), x) ||
-      nchar(x, type = "bytes") > 1024 ||
+      nchar(enc2utf8(x), type = "bytes") > 1024 ||
       grepl("[[:cntrl:]]", x)
   ) {
     artifact_abort(paste0(
       "`",
       arg,
-      "` must be a nonempty, unpadded string of at most 1024 bytes without control characters."
+      "` must be a nonempty, unpadded string of at most 1024 UTF-8 bytes without control characters."
     ))
   }
 }
