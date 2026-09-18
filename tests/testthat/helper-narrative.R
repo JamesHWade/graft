@@ -130,7 +130,11 @@ local_host_responses <- function(calls, answer, .local_envir = parent.frame()) {
         })
       )
       on.exit(server$stop())
-      saveRDS(port, file.path(directory, "port"))
+      pending_port <- file.path(directory, "port.pending")
+      saveRDS(port, pending_port)
+      if (!file.rename(pending_port, file.path(directory, "port"))) {
+        stop("Offline host fixture could not publish its port")
+      }
       repeat {
         httpuv::service(50)
       }

@@ -1,7 +1,7 @@
 # graft 0.0.0.9000
 
 
-* A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. The installed Tempest consumer now publishes exact evidence and readable synthesis through Graft's public artifacts and decisions, with current admission checks on new runs and resume. Native graph removal and production recovery remain follow-up work (#50, #64).
+* A new persistent-artifact guide explains the roles of Commons, data-dict, vocabulary, and selected memory. Offline Tempest experiments demonstrate migration, public consumer admission, direct acceptance, correction, and withdrawal for the supported synthetic fixture; the resulting recommendation is to retire Graft's graph/compiler architecture from this composition. The installed Tempest consumer now publishes exact evidence and readable synthesis through Graft's public artifacts and decisions, with current admission checks on new runs and resume. Native graph removal (#74) and production recovery (#49) remain follow-up work.
 
 * A proposed Forget and recovery protocol has offline tests for retired store generations, backup admission, interrupted cleanup, and Reader isolation; permanent purge and production recovery remain unimplemented (#48).
 * A new Reader access guide and offline two-Reader contract demonstrate isolated stores, host authorization, pinned tool results, revocation, and safe worker rebinds; Rill runtime integration and permanent Forget remain separate gates (#47).
