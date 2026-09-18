@@ -97,7 +97,7 @@ graft_artifact_read_selection <- function(
   max_metadata_bytes = 1024^2
 ) {
   artifact_check_store(store)
-  artifact_check_digest(selection)
+  selection <- artifact_check_digest(selection)
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
   bytes <- artifact_bytes(
@@ -137,7 +137,7 @@ artifact_refs <- function(refs, limit) {
       "Artifact references must be a list within the artifact bound."
     )
   }
-  lapply(refs, artifact_check_ref)
+  refs <- lapply(refs, artifact_check_ref)
   refs <- unname(refs)
   refs <- refs[!duplicated(vapply(refs, artifact_ref_key, character(1)))]
   if (length(refs) > limit) {

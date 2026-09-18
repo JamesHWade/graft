@@ -45,7 +45,8 @@ it for large dependency lists, including when reopening the store.}
 \item{id}{Stable, nonempty artifact identity chosen by the caller, at most
 1024 UTF-8 bytes, without padding or control characters.}
 
-\item{bytes}{Raw vector containing the complete payload. Content is never
+\item{bytes}{Raw vector containing the complete payload. Attributes are
+discarded; only the byte contents are retained. Content is never
 deserialized or executed by these functions.}
 
 \item{media_type}{Nonempty media type describing the opaque payload, at most
@@ -70,6 +71,9 @@ Create or reopen a local artifact store, save opaque bytes, and resolve an
 exact revision. Saving grants no approval, access or execution authority.
 }
 \details{
+Identity, media-type and reference strings are normalized to plain UTF-8
+character values without R attributes.
+
 This interface supports trusted local files with one writer. SHA-256 digests
 identify content and metadata. Identical saves return the same reference;
 corrections retain earlier revisions. There is no mutable latest pointer.

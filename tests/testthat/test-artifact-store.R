@@ -318,3 +318,58 @@ test_that("revision metadata has a configurable handle bound", {
     )
   }
 })
+
+test_that("raw vector attributes do not affect artifact publication or retries", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  bytes <- as.raw(c(0, 255))
+  for (attributed in list(
+    setNames(bytes, c("first", "second")),
+    structure(bytes, class = "example"),
+    structure(bytes, dim = c(1L, 2L)),
+    structure(bytes, label = "payload")
+  )) {
+    ref <- graft_artifact_save(
+      store,
+      "raw",
+      attributed,
+      "application/octet-stream"
+    )
+    expect_identical(graft_artifact_read(store, ref)$bytes, bytes)
+    expect_identical(
+      graft_artifact_save(store, "raw", attributed, "application/octet-stream"),
+      ref
+    )
+  }
+  expect_identical(
+    graft_artifact_save(store, "raw", bytes, "application/octet-stream"),
+    ref
+  )
+})
+
+test_that("host Graft error handlers catch artifact failures", {
+  error <- tryCatch(graft_artifact_store(""), graft_error = identity)
+  expect_s3_class(error, "graft_artifact_error")
+})
+
+
+test_that("identity and reference attributes do not change persisted values", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  bytes <- charToRaw("kept")
+  ref <- graft_artifact_save(store, c(label = "report"), bytes, I("text/plain"))
+  expect_identical(ref$id, "report")
+  expect_identical(
+    graft_artifact_read(store, ref)$metadata$media_type,
+    "text/plain"
+  )
+  expect_identical(
+    graft_artifact_save(store, "report", bytes, "text/plain"),
+    ref
+  )
+  attributed <- structure(
+    list(id = I("report"), revision = c(digest = ref$revision)),
+    class = "example"
+  )
+  result <- graft_artifact_read(store, attributed)
+  expect_identical(result$ref, ref)
+  expect_identical(result$bytes, bytes)
+})

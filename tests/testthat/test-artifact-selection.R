@@ -334,3 +334,29 @@ test_that("selection publication failure has no successful record and can retry"
     list(ref)
   )
 })
+
+
+test_that("selection references and digests use canonical string values", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_artifact_save(store, "evidence", charToRaw("kept"), "text/plain")
+  attributed <- structure(
+    list(id = c(label = ref$id), revision = I(ref$revision)),
+    class = "example"
+  )
+  root <- graft_artifact_save(
+    store,
+    "report",
+    raw(),
+    "text/plain",
+    list(attributed)
+  )
+  expect_identical(
+    graft_artifact_read(store, root)$metadata$dependencies,
+    list(ref)
+  )
+  selection <- graft_artifact_select(store, list(attributed))
+  expect_identical(selection, graft_artifact_select(store, list(ref)))
+  result <- graft_artifact_read_selection(store, c(digest = selection))
+  expect_identical(result$roots, list(ref))
+  expect_identical(result$artifacts, list(ref))
+})
