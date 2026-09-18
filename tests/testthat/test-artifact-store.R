@@ -204,3 +204,23 @@ test_that("metadata publication failures retain bytes and permit exact retry", {
   expect_length(list.files(file.path(store$path, "revisions")), 2)
   expect_length(list.files(file.path(store$path, "content")), 2)
 })
+
+
+test_that("creation does not treat an unreadable directory as empty", {
+  skip_on_os("windows")
+  path <- withr::local_tempdir()
+  writeLines("keep", file.path(path, "user.txt"))
+  withr::defer(Sys.chmod(path, "0700"))
+  Sys.chmod(path, "0300")
+  skip_if(
+    file.access(path, 4L) == 0L,
+    "Process can read restricted directories"
+  )
+  expect_error(
+    graft_artifact_store(path, create = TRUE),
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(file.path(path, "store.json")), FALSE)
+  Sys.chmod(path, "0700")
+  expect_identical(readLines(file.path(path, "user.txt")), "keep")
+})

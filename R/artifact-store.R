@@ -63,6 +63,11 @@ graft_artifact_store <- function(
     if (file.exists(path) && !dir.exists(path)) {
       artifact_abort("`path` must be a missing or empty directory.")
     }
+    if (dir.exists(path) && file.access(path, 4L) != 0L) {
+      artifact_abort(
+        "Cannot verify that the artifact directory is empty: directory is unreadable."
+      )
+    }
     if (
       dir.exists(path) &&
         length(list.files(path, all.files = TRUE, no.. = TRUE))
