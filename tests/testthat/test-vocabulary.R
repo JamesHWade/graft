@@ -463,3 +463,41 @@ test_that("impossible vocabulary releases fail before CLI work or artifact write
     before
   )
 })
+
+
+test_that("generated vocabulary payloads are bounded before artifact writes", {
+  x <- local_vocabulary()
+  selection <- graft_vocabulary_publish(x$store, x$path)
+  refs <- graft_artifact_read_selection(x$store, selection)$artifacts
+  size <- sum(vapply(
+    refs,
+    function(ref) {
+      length(graft_artifact_read(x$store, ref)$bytes)
+    },
+    integer(1)
+  ))
+  target <- file.path(withr::local_tempdir(), "bounded")
+  store <- graft_artifact_store(target, create = TRUE, max_bytes = size - 1L)
+  before <- list.files(target, recursive = TRUE, all.files = TRUE)
+  expect_error(
+    graft_vocabulary_publish(store, x$path),
+    "Release exceeds the artifact store's aggregate byte limit",
+    class = "graft_vocabulary_error"
+  )
+  expect_identical(
+    list.files(target, recursive = TRUE, all.files = TRUE),
+    before
+  )
+  small_metadata <- graft_artifact_store(target, max_revision_bytes = 1L)
+  expect_error(
+    graft_vocabulary_publish(small_metadata, x$path),
+    "Release exceeds the artifact revision byte limit",
+    class = "graft_vocabulary_error"
+  )
+  expect_identical(
+    list.files(target, recursive = TRUE, all.files = TRUE),
+    before
+  )
+  exact <- graft_artifact_store(target, max_bytes = size)
+  expect_identical(graft_vocabulary_publish(exact, x$path), selection)
+})

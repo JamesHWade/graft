@@ -38,7 +38,8 @@ exports, validation provenance (including the binary digest), and generated
 Markdown in one artifact selection. Each source file is limited to 1 MiB and must
 be self-contained. A release can contain at most 498 dictionaries; its sources and
 generated outputs must fit the artifact store's aggregate byte limit. Graft checks
-the dictionary count and source sizes before running data-dict. It does not parse
+the dictionary count and source sizes before running data-dict, then the complete
+encoded release before writing any artifacts. It does not parse
 dictionary YAML or evaluate expressions.
 
 Reads verify the entire artifact closure and rebuild the context from the retained

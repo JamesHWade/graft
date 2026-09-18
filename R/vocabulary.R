@@ -77,20 +77,43 @@ graft_vocabulary_publish <- function(store, path) {
   v <- vocabulary_json(vocabulary_bytes)
   vocabulary_validate(b, v, dictionaries)
   refs <- list()
-  save <- function(name, bytes, media_type) {
-    graft_artifact_save(store, paste0(b$release, ":", name), bytes, media_type)
+  records <- list()
+  prepare <- function(id, bytes, media_type, dependencies = list()) {
+    id <- artifact_check_text(id, "id")
+    metadata <- artifact_metadata(id, bytes, media_type, dependencies)
+    manifest <- artifact_encode(metadata)
+    if (length(manifest) > store$max_revision_bytes) {
+      vocabulary_binding_error(
+        "Release exceeds the artifact revision byte limit"
+      )
+    }
+    ref <- list(id = metadata$id, revision = artifact_sha(manifest))
+    records[[length(records) + 1L]] <<- list(
+      id = id,
+      bytes = bytes,
+      media_type = media_type,
+      dependencies = dependencies
+    )
+    ref
   }
-  refs$bindings <- save("bindings", source, "application/json")
-  refs$vocabulary <- save("vocabulary", vocabulary_bytes, "application/json")
+  prepare_named <- function(name, bytes, media_type) {
+    prepare(paste0(b$release, ":", name), bytes, media_type)
+  }
+  refs$bindings <- prepare_named("bindings", source, "application/json")
+  refs$vocabulary <- prepare_named(
+    "vocabulary",
+    vocabulary_bytes,
+    "application/json"
+  )
   refs$dictionaries <- lapply(seq_along(ids), function(i) {
     list(
       id = ids[[i]],
-      source = save(
+      source = prepare_named(
         paste0("dictionary:", i),
         dictionary_bytes[[i]],
         "application/yaml"
       ),
-      export = save(
+      export = prepare_named(
         paste0("export:", i),
         vocabulary_encode(dictionaries[[i]]),
         "application/json"
@@ -98,13 +121,12 @@ graft_vocabulary_publish <- function(store, path) {
     )
   })
   published <- vocabulary_release(b, v, dictionaries, vocabulary_hash(source))
-  refs$context <- save(
+  refs$context <- prepare_named(
     "context",
     charToRaw(enc2utf8(paste(published$context, collapse = "\n"))),
     "text/markdown"
   )
-  root <- graft_artifact_save(
-    store,
+  root <- prepare(
     b$release,
     vocabulary_encode(list(
       format = "graft-vocabulary-release/1",
@@ -113,6 +135,27 @@ graft_vocabulary_publish <- function(store, path) {
     "application/json",
     dependencies = vocabulary_dependencies(refs)
   )
+  if (
+    sum(vapply(records, \(record) length(record$bytes), integer(1))) >
+      store$max_bytes
+  ) {
+    vocabulary_binding_error(
+      "Release exceeds the artifact store's aggregate byte limit"
+    )
+  }
+  selection_bytes <- artifact_encode(list(
+    format = 1L,
+    roots = list(root),
+    artifacts = c(list(root), vocabulary_dependencies(refs))
+  ))
+  if (length(selection_bytes) > 1024^2) {
+    vocabulary_binding_error(
+      "Release exceeds the artifact selection metadata limit"
+    )
+  }
+  for (record in records) {
+    do.call(graft_artifact_save, c(list(store = store), record))
+  }
   graft_artifact_select(store, list(root))
 }
 
