@@ -224,3 +224,70 @@ test_that("creation does not treat an unreadable directory as empty", {
   Sys.chmod(path, "0700")
   expect_identical(readLines(file.path(path, "user.txt")), "keep")
 })
+test_that("text bounds use persisted UTF-8 bytes before publication", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  too_long <- iconv(strrep("\u00e9", 600), from = "UTF-8", to = "latin1")
+  expect_equal(nchar(too_long, type = "bytes"), 600)
+  expect_error(
+    graft_artifact_save(store, too_long, raw(), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_save(store, "report", raw(), too_long),
+    class = "graft_artifact_error"
+  )
+  expect_identical(list.files(store$path), "store.json")
+  boundary <- iconv(strrep("\u00e9", 512), from = "UTF-8", to = "latin1")
+  ref <- graft_artifact_save(store, boundary, raw(), "text/plain")
+  expect_identical(
+    graft_artifact_read(store, ref)$metadata$id,
+    enc2utf8(boundary)
+  )
+})
+
+test_that("revision metadata has a configurable handle bound", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  refs <- lapply(seq_len(600), function(i) {
+    graft_artifact_save(
+      store,
+      paste0(strrep('"', 1000), i),
+      raw(),
+      "text/plain"
+    )
+  })
+  expect_error(
+    graft_artifact_save(store, "report", raw(), "text/plain", refs),
+    class = "graft_artifact_error"
+  )
+  larger <- graft_artifact_store(store$path, max_revision_bytes = 2 * 1024^2)
+  ref <- graft_artifact_save(larger, "report", raw(), "text/plain", refs)
+  expect_gt(
+    file.info(file.path(store$path, "revisions", ref$revision))$size,
+    1024^2
+  )
+  expect_error(graft_artifact_read(store, ref), class = "graft_artifact_error")
+  reopened <- graft_artifact_store(store$path, max_revision_bytes = 2 * 1024^2)
+  expect_identical(
+    graft_artifact_read(reopened, ref)$metadata$dependencies,
+    refs
+  )
+  selection <- graft_artifact_select(
+    reopened,
+    list(ref),
+    max_metadata_bytes = 2 * 1024^2
+  )
+  expect_identical(
+    graft_artifact_read_selection(
+      reopened,
+      selection,
+      max_metadata_bytes = 2 * 1024^2
+    )$artifacts,
+    c(list(ref), refs)
+  )
+  for (limit in list(0, -1, 1.5, NA_real_, Inf, "large", numeric())) {
+    expect_error(
+      graft_artifact_store(store$path, max_revision_bytes = limit),
+      class = "graft_artifact_error"
+    )
+  }
+})

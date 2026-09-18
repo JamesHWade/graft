@@ -6,7 +6,12 @@
 \alias{graft_artifact_read}
 \title{Preserve immutable artifact content}
 \usage{
-graft_artifact_store(path, create = FALSE, max_bytes = 64 * 1024^2)
+graft_artifact_store(
+  path,
+  create = FALSE,
+  max_bytes = 64 * 1024^2,
+  max_revision_bytes = 1024^2
+)
 
 graft_artifact_save(
   store,
@@ -25,16 +30,25 @@ graph store. Creation requires a missing or empty directory.}
 
 \item{create}{Create a new store? Defaults to \code{FALSE} for safe reopening.}
 
-\item{max_bytes}{Maximum payload bytes to save or read in this handle.}
+\item{max_bytes}{Maximum payload bytes per artifact to save or read in this
+handle. Dependency traversal also applies this limit to aggregate payloads.}
+
+\item{max_revision_bytes}{Maximum encoded metadata bytes per revision to save
+or
+read through this handle, a positive whole number. Defaults to 1 MiB
+(\code{1024^2}), independently of payload and dependency-count bounds. Increase
+it for large dependency lists, including when reopening the store.}
 
 \item{store}{A handle returned by \code{graft_artifact_store()}.}
 
-\item{id}{Stable, nonempty artifact identity chosen by the caller.}
+\item{id}{Stable, nonempty artifact identity chosen by the caller, at most
+1024 UTF-8 bytes, without padding or control characters.}
 
 \item{bytes}{Raw vector containing the complete payload. Content is never
 deserialized or executed by these functions.}
 
-\item{media_type}{Nonempty media type describing the opaque payload.}
+\item{media_type}{Nonempty media type describing the opaque payload, at most
+1024 UTF-8 bytes, without padding or control characters.}
 
 \item{dependencies}{List of exact dependency references. The complete closure
 is verified before saving. No relationships are inferred from payloads.}
@@ -65,7 +79,8 @@ retries reuse verified content. Orphans are retained rather than deleted
 automatically. Successful reads verify metadata, payload size and digest.
 Interrupted writes cannot yield a successful incomplete reference, but this
 interface does not promise power-loss durability, concurrent publication,
-authorization, erasure or backup recovery. Applications own access and policy.
+authorization, erasure or backup recovery. Applications own access and
+policy.
 Handles contain no open connections and need no closing.
 }
 \examples{

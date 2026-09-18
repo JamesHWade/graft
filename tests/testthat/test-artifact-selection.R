@@ -169,6 +169,47 @@ test_that("selection traversal enforces count and aggregate byte bounds", {
   )
 })
 
+test_that("duplicate inputs count once against traversal limits", {
+  store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_artifact_save(store, "source", raw(), "text/plain")
+  selection <- graft_artifact_select(store, list(ref, ref), max_artifacts = 1)
+  expect_identical(
+    graft_artifact_read_selection(store, selection, max_artifacts = 1)$roots,
+    list(ref)
+  )
+  expect_identical(
+    graft_artifact_select(store, list(ref), max_artifacts = 1),
+    selection
+  )
+  report <- graft_artifact_save(
+    store,
+    "report",
+    raw(),
+    "text/plain",
+    list(ref, ref),
+    max_artifacts = 1
+  )
+  expect_identical(
+    graft_artifact_read(store, report)$metadata$dependencies,
+    list(ref)
+  )
+  expect_error(
+    graft_artifact_select(store, list(ref, ref, report), max_artifacts = 1),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_artifact_save(
+      store,
+      "another",
+      raw(),
+      "text/plain",
+      list(ref, ref, report),
+      max_artifacts = 1
+    ),
+    class = "graft_artifact_error"
+  )
+})
+
 test_that("selection metadata has an independent configurable byte bound", {
   store <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
   roots <- lapply(seq_len(500), function(i) {

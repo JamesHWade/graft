@@ -23,13 +23,15 @@ graft_artifact_read_selection(
 \item{store}{A handle returned by \code{\link[=graft_artifact_store]{graft_artifact_store()}}.}
 
 \item{roots}{Nonempty list of exact artifact references returned by
-\code{\link[=graft_artifact_save]{graft_artifact_save()}}. Duplicate roots are removed, retaining first order.}
+\code{\link[=graft_artifact_save]{graft_artifact_save()}}. Duplicate roots are removed, retaining first
+order.}
 
 \item{max_artifacts}{Maximum number of distinct references traversed. Each
 traversal also limits the sum of payload sizes to the store's \code{max_bytes}.}
 
 \item{max_metadata_bytes}{Maximum encoded selection metadata bytes to save or
-read, a positive whole number. Defaults to 1 MiB (\code{1024^2}), independently of
+read, a positive whole number. Defaults to 1 MiB (\code{1024^2}), independently
+of
 artifact count and payload bounds. Increase it for many long references and
 supply the same or a larger limit when reading that selection.}
 
@@ -37,12 +39,15 @@ supply the same or a larger limit when reading that selection.}
 }
 \value{
 \code{graft_artifact_select()} returns an immutable SHA-256 selection digest.
-\code{graft_artifact_read_selection()} returns \code{id}, \code{roots} and \code{artifacts}, where
-\code{artifacts} contains the complete ordered list of exact dependency references.
+\code{graft_artifact_read_selection()} returns \code{id}, \code{roots} and \code{artifacts},
+where
+\code{artifacts} contains the complete ordered list of exact dependency
+references.
 }
 \description{
 Retain explicit roots and their complete dependency closure as an immutable
-selection. Selection records content, not approval, permission or factual truth.
+selection. Selection records content, not approval, permission or factual
+truth.
 }
 \details{
 Save dependencies with \code{graft_artifact_save(dependencies = list(ref, ...))}.
@@ -55,14 +60,17 @@ duplicates retain their first occurrence. Closure order is breadth-first.
 Both selection functions verify every selected payload. Reads independently
 recompute the dependency closure and reject altered or incomplete selections.
 The returned references can be resolved with \code{\link[=graft_artifact_read]{graft_artifact_read()}}.
-Corrections do not change an earlier selection. Applications separately decide
+Corrections do not change an earlier selection. Applications separately
+decide
 whether a selection may be consulted for a purpose, and enforce access.
-Storage limits and publication guarantees are those of \code{\link[=graft_artifact_store]{graft_artifact_store()}}.
+Storage limits and publication guarantees are those of
+\code{\link[=graft_artifact_store]{graft_artifact_store()}}.
 }
 \examples{
 path <- tempfile("artifacts-")
 store <- graft_artifact_store(path, create = TRUE)
-source <- graft_artifact_save(store, "source", charToRaw("Evidence"), "text/plain")
+source <- graft_artifact_save(store, "source", charToRaw("Evidence"),
+"text/plain")
 report <- graft_artifact_save(
   store, "report", charToRaw("Interpretation"), "text/plain",
   dependencies = list(source)

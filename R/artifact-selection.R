@@ -1,15 +1,18 @@
 #' Preserve an exact artifact selection
 #'
 #' Retain explicit roots and their complete dependency closure as an immutable
-#' selection. Selection records content, not approval, permission or factual truth.
+#' selection. Selection records content, not approval, permission or factual
+#' truth.
 #'
 #' @param store A handle returned by [graft_artifact_store()].
 #' @param roots Nonempty list of exact artifact references returned by
-#'   [graft_artifact_save()]. Duplicate roots are removed, retaining first order.
+#'   [graft_artifact_save()]. Duplicate roots are removed, retaining first
+#'   order.
 #' @param max_artifacts Maximum number of distinct references traversed. Each
 #'   traversal also limits the sum of payload sizes to the store's `max_bytes`.
 #' @param max_metadata_bytes Maximum encoded selection metadata bytes to save or
-#'   read, a positive whole number. Defaults to 1 MiB (`1024^2`), independently of
+#'   read, a positive whole number. Defaults to 1 MiB (`1024^2`), independently
+#'   of
 #'   artifact count and payload bounds. Increase it for many long references and
 #'   supply the same or a larger limit when reading that selection.
 #' @param selection Selection digest returned by `graft_artifact_select()`.
@@ -25,19 +28,24 @@
 #' Both selection functions verify every selected payload. Reads independently
 #' recompute the dependency closure and reject altered or incomplete selections.
 #' The returned references can be resolved with [graft_artifact_read()].
-#' Corrections do not change an earlier selection. Applications separately decide
+#' Corrections do not change an earlier selection. Applications separately
+#' decide
 #' whether a selection may be consulted for a purpose, and enforce access.
-#' Storage limits and publication guarantees are those of [graft_artifact_store()].
+#' Storage limits and publication guarantees are those of
+#' [graft_artifact_store()].
 #'
 #' @returns
 #' `graft_artifact_select()` returns an immutable SHA-256 selection digest.
-#' `graft_artifact_read_selection()` returns `id`, `roots` and `artifacts`, where
-#' `artifacts` contains the complete ordered list of exact dependency references.
+#' `graft_artifact_read_selection()` returns `id`, `roots` and `artifacts`,
+#' where
+#' `artifacts` contains the complete ordered list of exact dependency
+#' references.
 #'
 #' @examples
 #' path <- tempfile("artifacts-")
 #' store <- graft_artifact_store(path, create = TRUE)
-#' source <- graft_artifact_save(store, "source", charToRaw("Evidence"), "text/plain")
+#' source <- graft_artifact_save(store, "source", charToRaw("Evidence"),
+#' "text/plain")
 #' report <- graft_artifact_save(
 #'   store, "report", charToRaw("Interpretation"), "text/plain",
 #'   dependencies = list(source)
@@ -124,14 +132,20 @@ graft_artifact_read_selection <- function(
 }
 
 artifact_refs <- function(refs, limit) {
-  if (!is.list(refs) || is.object(refs) || length(refs) > limit) {
+  if (!is.list(refs) || is.object(refs)) {
     artifact_abort(
       "Artifact references must be a list within the artifact bound."
     )
   }
   lapply(refs, artifact_check_ref)
   refs <- unname(refs)
-  refs[!duplicated(vapply(refs, artifact_ref_key, character(1)))]
+  refs <- refs[!duplicated(vapply(refs, artifact_ref_key, character(1)))]
+  if (length(refs) > limit) {
+    artifact_abort(
+      "Artifact references must be a list within the artifact bound."
+    )
+  }
+  refs
 }
 
 artifact_ref_key <- function(ref) paste(ref$id, ref$revision, sep = "\n")

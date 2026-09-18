@@ -6,12 +6,20 @@
 #' @param path Directory for a Graft artifact store, distinct from a native
 #'   graph store. Creation requires a missing or empty directory.
 #' @param create Create a new store? Defaults to `FALSE` for safe reopening.
-#' @param max_bytes Maximum payload bytes to save or read in this handle.
+#' @param max_bytes Maximum payload bytes per artifact to save or read in this
+#'   handle. Dependency traversal also applies this limit to aggregate payloads.
+#' @param max_revision_bytes Maximum encoded metadata bytes per revision to save
+#'   or
+#'   read through this handle, a positive whole number. Defaults to 1 MiB
+#'   (`1024^2`), independently of payload and dependency-count bounds. Increase
+#'   it for large dependency lists, including when reopening the store.
 #' @param store A handle returned by `graft_artifact_store()`.
-#' @param id Stable, nonempty artifact identity chosen by the caller.
+#' @param id Stable, nonempty artifact identity chosen by the caller, at most
+#'   1024 UTF-8 bytes, without padding or control characters.
 #' @param bytes Raw vector containing the complete payload. Content is never
 #'   deserialized or executed by these functions.
-#' @param media_type Nonempty media type describing the opaque payload.
+#' @param media_type Nonempty media type describing the opaque payload, at most
+#'   1024 UTF-8 bytes, without padding or control characters.
 #' @param dependencies List of exact dependency references. The complete closure
 #'   is verified before saving. No relationships are inferred from payloads.
 #' @param max_artifacts Maximum distinct dependency references traversed before
@@ -30,7 +38,8 @@
 #' automatically. Successful reads verify metadata, payload size and digest.
 #' Interrupted writes cannot yield a successful incomplete reference, but this
 #' interface does not promise power-loss durability, concurrent publication,
-#' authorization, erasure or backup recovery. Applications own access and policy.
+#' authorization, erasure or backup recovery. Applications own access and
+#' policy.
 #' Handles contain no open connections and need no closing.
 #'
 #' @returns
@@ -51,13 +60,15 @@
 graft_artifact_store <- function(
   path,
   create = FALSE,
-  max_bytes = 64 * 1024^2
+  max_bytes = 64 * 1024^2,
+  max_revision_bytes = 1024^2
 ) {
   artifact_check_text(path, "path")
   if (!rlang::is_bool(create)) {
     artifact_abort("`create` must be TRUE or FALSE.")
   }
   artifact_check_limit(max_bytes, "max_bytes")
+  artifact_check_limit(max_revision_bytes, "max_revision_bytes")
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   if (create) {
     if (file.exists(path) && !dir.exists(path)) {
@@ -85,7 +96,11 @@ graft_artifact_store <- function(
     artifact_abort("Unsupported artifact store marker.")
   }
   structure(
-    list(path = normalizePath(path, winslash = "/"), max_bytes = max_bytes),
+    list(
+      path = normalizePath(path, winslash = "/"),
+      max_bytes = max_bytes,
+      max_revision_bytes = max_revision_bytes
+    ),
     class = "graft_artifact_store"
   )
 }
@@ -127,7 +142,7 @@ graft_artifact_save <- function(
   artifact_put(
     manifest,
     artifact_path(store, "revisions", ref$revision),
-    1024^2
+    store$max_revision_bytes
   )
   graft_artifact_read(store, ref)
   ref
@@ -140,7 +155,7 @@ graft_artifact_read <- function(store, ref) {
   artifact_check_ref(ref)
   manifest <- artifact_bytes(
     artifact_path(store, "revisions", ref$revision),
-    1024^2
+    store$max_revision_bytes
   )
   if (!identical(artifact_sha(manifest), ref$revision)) {
     artifact_abort("Artifact revision digest mismatch.")
@@ -173,13 +188,13 @@ artifact_check_text <- function(x, arg) {
       !validUTF8(enc2utf8(x)) ||
       !nzchar(x) ||
       !identical(trimws(x), x) ||
-      nchar(x, type = "bytes") > 1024 ||
+      nchar(enc2utf8(x), type = "bytes") > 1024 ||
       grepl("[[:cntrl:]]", x)
   ) {
     artifact_abort(paste0(
       "`",
       arg,
-      "` must be a nonempty, unpadded string of at most 1024 bytes without control characters."
+      "` must be a nonempty, unpadded string of at most 1024 UTF-8 bytes without control characters."
     ))
   }
 }
@@ -205,11 +220,15 @@ artifact_check_limit <- function(x, arg) {
 artifact_check_store <- function(store) {
   if (
     !inherits(store, "graft_artifact_store") ||
-      !identical(names(store), c("path", "max_bytes"))
+      !identical(names(store), c("path", "max_bytes", "max_revision_bytes"))
   ) {
     artifact_abort("`store` must be a Graft artifact store handle.")
   }
-  graft_artifact_store(store$path, max_bytes = store$max_bytes)
+  graft_artifact_store(
+    store$path,
+    max_bytes = store$max_bytes,
+    max_revision_bytes = store$max_revision_bytes
+  )
   invisible(NULL)
 }
 
