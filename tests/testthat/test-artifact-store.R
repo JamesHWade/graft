@@ -62,6 +62,33 @@ test_that("artifacts survive correction and process restart", {
   expect_identical(graft_artifact_read(store, empty)$bytes, raw())
 })
 
+test_that("filesystem paths are validated independently of artifact text", {
+  for (path in list(NULL, NA_character_, "", c("a", "b"), 1)) {
+    expect_error(graft_artifact_store(path), class = "graft_artifact_error")
+  }
+  root <- withr::local_tempdir()
+  withr::local_dir(root)
+  path <- " retained artifacts"
+  store <- graft_artifact_store(path, create = TRUE)
+  ref <- graft_artifact_save(store, "report", charToRaw("kept"), "text/plain")
+  expect_identical(graft_artifact_read(store, ref)$bytes, charToRaw("kept"))
+  expect_identical(graft_artifact_store(store$path), store)
+})
+
+test_that("short relative paths remain usable after long-path normalization", {
+  skip_if_not(identical(Sys.info()[["sysname"]], "Linux"))
+  root <- withr::local_tempdir()
+  parent <- do.call(file.path, c(list(root), rep(list(strrep("d", 80)), 14)))
+  dir.create(parent, recursive = TRUE)
+  withr::local_dir(parent)
+  store <- graft_artifact_store("artifacts", create = TRUE)
+  expect_gt(nchar(store$path, type = "bytes"), 1024)
+  ref <- graft_artifact_save(store, "report", charToRaw("kept"), "text/plain")
+  reopened <- graft_artifact_store(store$path)
+  expect_identical(graft_artifact_read(reopened, ref)$bytes, charToRaw("kept"))
+  expect_identical(reopened, store)
+})
+
 test_that("creation refuses unrelated contents and reopening requires a marker", {
   path <- withr::local_tempdir()
   writeLines("keep", file.path(path, "user.txt"))
