@@ -179,6 +179,16 @@
   capped at cited, while unmatched or failed paths remain untrusted
   ([\#25](https://github.com/JamesHWade/graft/issues/25)).
 
+- [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  and
+  [`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  preserve shared concepts, directed relationships, qualified dictionary
+  bindings, and human-readable context as immutable artifact selections,
+  using public data-dict validation and exports. Consumer contract 2.0.0
+  requires recompiling legacy data-dict manifests; artifact and decision
+  formats are unchanged
+  ([\#75](https://github.com/JamesHWade/graft/issues/75)).
+
 - Graft v0.1 replaces the pre-production `kg_*` API, bundled
   applications, Tempest adapter, physical migration subsystem, and dual
   authoritative record tables with a focused revision-first package

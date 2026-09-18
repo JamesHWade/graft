@@ -159,6 +159,12 @@ for the application handoff and its tested scope.
 
 # Package index
 
+## Shared vocabulary
+
+- [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  [`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  : Publish and read a shared vocabulary release
+
 ## Persistent artifacts
 
 - [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
@@ -328,6 +334,9 @@ working tree.
 
 Understand storage and projection boundaries, contract compilation, and
 the choices behind the v0.1 package design.
+
+- [Shared concepts across
+  workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
 
 - [Persistent artifacts and selected
   memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):

@@ -78,6 +78,9 @@ working tree.
 Understand storage and projection boundaries, contract compilation, and
 the choices behind the v0.1 package design.
 
+- [Shared concepts across
+  workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
+
 - [Persistent artifacts and selected
   memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
 

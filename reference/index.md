@@ -1,5 +1,11 @@
 # Package index
 
+## Shared vocabulary
+
+- [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  [`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  : Publish and read a shared vocabulary release
+
 ## Persistent artifacts
 
 - [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)

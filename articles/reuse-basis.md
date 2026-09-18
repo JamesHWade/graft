@@ -170,10 +170,10 @@ saved basis is read.
 
 The offline tests cover research and reading selections with real Graft
 stores, a separate worker, and a real ellmer loop served by local
-fixtures. This build reports Graft contract 1.0.0. Tempest’s public
-schema loader accepts contracts \>= 0.2.0 and \< 2.0.0 with the
+fixtures. This build reports Graft contract 2.0.0. Tempest’s public
+schema loader accepts contracts \>= 0.2.0 and \< 3.0.0 with the
 companion update in [Tempest
-\#73](https://github.com/JamesHWade/tempest/pull/73).
+\#78](https://github.com/JamesHWade/tempest/pull/78).
 
 Tempest’s earlier native graph reuse path was implemented in [Tempest
 \#66](https://github.com/JamesHWade/tempest/pull/66). [Tempest
