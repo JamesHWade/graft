@@ -1,8 +1,8 @@
 ---
 title: "Persistent artifacts and selected memory"
 description: >
-  Understand the proposed artifact layer, its relationship to Commons and
-  data-dict, and the evidence required before replacing existing storage.
+  Save exact artifacts, record host decisions and guard current reuse.
+  Understand the relationship to Commons, data-dict and the migration evidence.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Persistent artifacts and selected memory}
@@ -11,15 +11,15 @@ vignette: >
 ---
 
 Your saved work should survive both the end of an R session and a change in the
-software that stores it. Graft's artifact experiments investigate a small layer
-that preserves reports, tables, figures, and the exact evidence selected for
-later workflows.
+software that stores it. Graft preserves reports, tables, figures and the exact
+evidence selected for later workflows. Its decision journal records host reviews
+and separates historical inspection from current reuse.
 
 ## Save and reopen exact content
 
 The shared local artifact interface preserves opaque bytes and verifies them when
-read. It supports trusted local files with a single writer. Application approval, access,
-concurrent publication, power-loss durability and permanent erasure remain
+read. It supports trusted local files with a single writer. Application approval,
+access, concurrent publication, power-loss durability and permanent erasure remain
 separate requirements; saving these bytes grants no approval.
 
 ```{r}
@@ -93,7 +93,9 @@ selection is unchanged.
 ```{r}
 path <- tempfile("artifact-decisions-")
 store <- graft_artifact_store(path, create = TRUE)
-report <- graft_artifact_save(store, "report", charToRaw("Reviewed report"), "text/plain")
+report <- graft_artifact_save(
+  store, "report", charToRaw("Reviewed report"), "text/plain"
+)
 selection <- graft_artifact_select(store, list(report))
 accepted <- graft_artifact_decide(
   store, "research:topic", "review-1", expected = NULL,
