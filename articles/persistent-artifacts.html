@@ -18,9 +18,9 @@
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Persistent artifacts and selected memory">
-<meta name="description" content="Understand the proposed artifact layer, its relationship to Commons and data-dict, and the evidence required before replacing existing storage.
+<meta name="description" content="Save exact artifacts, record host decisions and guard current reuse. Understand the relationship to Commons, data-dict and the migration evidence.
 ">
-<meta property="og:description" content="Understand the proposed artifact layer, its relationship to Commons and data-dict, and the evidence required before replacing existing storage.
+<meta property="og:description" content="Save exact artifacts, record host decisions and guard current reuse. Understand the relationship to Commons, data-dict and the migration evidence.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
@@ -111,15 +111,16 @@
     
     
 <p>Your saved work should survive both the end of an R session and a
-change in the software that stores it. Graft’s artifact experiments
-investigate a small layer that preserves reports, tables, figures, and
-the exact evidence selected for later workflows.</p>
+change in the software that stores it. Graft preserves reports, tables,
+figures and the exact evidence selected for later workflows. Its
+decision journal records host reviews and separates historical
+inspection from current reuse.</p>
 <div class="section level2">
 <h2 id="save-and-reopen-exact-content">Save and reopen exact content<a class="anchor" aria-label="anchor" href="#save-and-reopen-exact-content"></a>
 </h2>
 <p>The shared local artifact interface preserves opaque bytes and
 verifies them when read. It supports trusted local files with a single
-writer. Acceptance, access, concurrent publication, power-loss
+writer. Application approval, access, concurrent publication, power-loss
 durability and permanent erasure remain separate requirements; saving
 these bytes grants no approval.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
@@ -204,10 +205,71 @@ artifacts whose dependency lists produce large revision manifests.</p>
 <p><code>max_artifacts</code> bounds traversal and the store’s
 <code>max_bytes</code> bounds total selected payload bytes. Reading
 rechecks the entire closure. Save the selection identifier with the
-application workflow, then apply its own access and reuse decisions.
-Shared host decision recording is follow-up #73; a selection alone is
+application workflow, then apply its own access and reuse decisions. The
+decision functions below record host acceptance; a selection alone is
 not accepted memory. The tiny dictionary above illustrates opaque
 preservation, not a validated data-dict contract.</p>
+</div>
+<div class="section level2">
+<h2 id="record-acceptance-and-withdrawal">Record acceptance and withdrawal<a class="anchor" aria-label="anchor" href="#record-acceptance-and-withdrawal"></a>
+</h2>
+<p>Applications decide whether a candidate is acceptable and who may use
+it. Graft records those decisions against exact selections. A stream
+names one independently reviewed subject; a new operation key represents
+a new review, even when its selection is unchanged.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-decisions-"</span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"report"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Reviewed report"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">accepted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_decide</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"research:topic"</span>, <span class="st">"review-1"</span>, expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  selection <span class="op">=</span> <span class="va">selection</span>, action <span class="op">=</span> <span class="st">"accept"</span>, actor <span class="op">=</span> <span class="st">"reviewer:alice"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Supporting evidence reviewed"</span>, purpose <span class="op">=</span> <span class="st">"research"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">input</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_reuse</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"research:topic"</span>, <span class="va">accepted</span><span class="op">$</span><span class="va">id</span>, <span class="st">"research"</span>, eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">input</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">artifacts</span></span></code></pre></div>
+<pre><code><span><span class="co">## [[1]]</span></span>
+<span><span class="co">## [[1]]$id</span></span>
+<span><span class="co">## [1] "report"</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## [[1]]$revision</span></span>
+<span><span class="co">## [1] "be41974429575fb1dffa3a66cc3e2cc4e3f3d6dd9983ef6cb558e8b3de05d147"</span></span></code></pre>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">withdrawn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_decide</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"research:topic"</span>, <span class="st">"withdraw-1"</span>, expected <span class="op">=</span> <span class="va">accepted</span><span class="op">$</span><span class="va">id</span>,</span>
+<span>  selection <span class="op">=</span> <span class="va">selection</span>, action <span class="op">=</span> <span class="st">"withdraw"</span>, actor <span class="op">=</span> <span class="st">"reviewer:alice"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Evidence needs correction"</span>, purpose <span class="op">=</span> <span class="st">"research"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_read_decision</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"research:topic"</span>, <span class="va">accepted</span><span class="op">$</span><span class="va">id</span><span class="op">)</span><span class="op">$</span><span class="va">action</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] "accept"</span></span></code></pre>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_read_decision</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"research:topic"</span><span class="op">)</span><span class="op">$</span><span class="va">action</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] "withdraw"</span></span></code></pre>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>The <code>eligible = TRUE</code> argument represents the
+application’s current policy check; it is not an authentication
+mechanism. Reuse also requires the current accepted head, an exact
+purpose match and intact selected content. The earlier acceptance
+remains inspectable after withdrawal, but cannot pass current reuse.
+Low-level reads remain available for authorized historical inspection;
+applications must enforce access on every route.</p>
+<p>Always supply the predecessor observed during review. An identical
+retry returns its original historical record and never restores
+eligibility. A changed retry or stale new request fails. Withdrawal
+needs intact decision history but remains possible when selected
+payloads are corrupt or unavailable.</p>
+<p>Each stream uses a bounded, append-only journal. Defaults allow 1,000
+decisions and 1 MiB of aggregate journal metadata; selection bounds are
+independent. Staging is not a committed decision. A complete immutable
+record is the commit point, so an interrupted request can be retried
+without duplicating acceptance. Concurrent writers, power-loss
+durability and backup recovery remain separate operational work.</p>
 </div>
 <div class="section level2">
 <h2 id="from-analysis-to-later-reuse">From analysis to later reuse<a class="anchor" aria-label="anchor" href="#from-analysis-to-later-reuse"></a>

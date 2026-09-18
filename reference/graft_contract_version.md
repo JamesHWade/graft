@@ -24,5 +24,5 @@ A named list of character scalars: `contract`, `store_format`, `plan`,
 
 ``` r
 graft_contract_version()$contract
-#> [1] "0.8.0"
+#> [1] "1.0.0"
 ```

@@ -46,15 +46,16 @@ retain those responsibilities.
 
 ## Persistent artifacts and selected memory
 
-The proposed next direction connects data-dict’s meaning, Commons
-analysis, and durable reports, tables, figures, and exact evidence
-selections. Experiments compare Graft metadata with immutable JSON
-manifests. The project is pre-production: application APIs may change
-directly as the design is simplified. The artifact layer is experimental
-and is not an installed package API.
+The shared artifact API preserves reports, tables, figures and exact
+dependency selections. Acceptance and withdrawal journals retain each
+host review. Current reuse requires the current accepted decision, its
+exact purpose, verified payloads and an explicit host eligibility
+decision. Historical inspection remains separate from permission to
+reuse. The project is pre-production: application APIs may change
+directly as the design is simplified.
 
-[Explore the proposal and migration
-evidence](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
+[Use persistent artifacts and
+decisions](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
 
 ## Start in R
 
@@ -148,6 +149,10 @@ the checks and their limits.
 
 ## Persistent artifacts
 
+- [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  [`graft_artifact_reuse()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  : Record host decisions about exact artifact selections
 - [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
@@ -315,9 +320,9 @@ the choices behind the v0.1 package design.
 - [Persistent artifacts and selected
   memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
 
-  Understand the proposed artifact layer, its relationship to Commons
-  and data-dict, and the evidence required before replacing existing
-  storage.
+  Save exact artifacts, record host decisions and guard current reuse.
+  Understand the relationship to Commons, data-dict and the migration
+  evidence.
 
 - [Design Forget and backup
   recovery](https://jameshwade.github.io/graft/articles/forget-restore.md):

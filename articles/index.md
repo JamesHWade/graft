@@ -81,9 +81,9 @@ the choices behind the v0.1 package design.
 - [Persistent artifacts and selected
   memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
 
-  Understand the proposed artifact layer, its relationship to Commons
-  and data-dict, and the evidence required before replacing existing
-  storage.
+  Save exact artifacts, record host decisions and guard current reuse.
+  Understand the relationship to Commons, data-dict and the migration
+  evidence.
 
 - [Design Forget and backup
   recovery](https://jameshwade.github.io/graft/articles/forget-restore.md):

@@ -2,6 +2,10 @@
 
 ## Persistent artifacts
 
+- [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  [`graft_artifact_reuse()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  : Record host decisions about exact artifact selections
 - [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)

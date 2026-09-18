@@ -49,6 +49,18 @@
   the OKF tree. Getting started, the README, and the site home page now
   show the same path.
 
+- [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
+  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  and
+  [`graft_artifact_reuse()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  record host acceptance and withdrawal with exact predecessor guards
+  and idempotent retries, distinguish historical inspection from current
+  purpose-bound consultation, and advance the consumer contract to
+  1.0.0. Legacy data-dict compiled manifests must be regenerated;
+  seamless reopening of graph stores tied to the previous compiler
+  digest is unsupported
+  ([\#73](https://github.com/JamesHWade/graft/issues/73)).
+
 - [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   and
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
