@@ -49,7 +49,8 @@ backwards compatibility is not required for this pre-production experiment.
 
 `results.json` records each run's result and source pins.
 [observed-current.json](observed-current.json) retains the current suite's checked
-migration run against Tempest `6d3386c`. [observed.json](observed.json) preserves
+migration run against Tempest `57bde99` and Graft consumer contract 0.7.0
+([CI evidence](https://github.com/JamesHWade/graft/actions/runs/35309726294)). [observed.json](observed.json) preserves
 the historical run against Tempest `3cfe220`, before the public artifact input.
 Its outcome describes that earlier API boundary. `handoff.json` identifies the
 retained manifest target and its root selection. Native source data and the
