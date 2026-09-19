@@ -20,7 +20,8 @@ graft_artifact_read_selection(
 )
 }
 \arguments{
-\item{store}{A handle returned by \code{\link[=graft_artifact_store]{graft_artifact_store()}}.}
+\item{store}{A handle returned by \code{\link[=graft_artifact_store]{graft_artifact_store()}} or
+\code{\link[=graft_artifact_store_postgres]{graft_artifact_store_postgres()}}.}
 
 \item{roots}{Nonempty list of exact artifact references returned by
 \code{\link[=graft_artifact_save]{graft_artifact_save()}}. Duplicate roots are removed, retaining first

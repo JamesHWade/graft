@@ -4,7 +4,8 @@
 #' selection. Selection records content, not approval, permission or factual
 #' truth.
 #'
-#' @param store A handle returned by [graft_artifact_store()].
+#' @param store A handle returned by [graft_artifact_store()] or
+#'   [graft_artifact_store_postgres()].
 #' @param roots Nonempty list of exact artifact references returned by
 #'   [graft_artifact_save()]. Duplicate roots are removed, retaining first
 #'   order.
@@ -74,9 +75,11 @@ graft_artifact_select <- function(
     artifacts = artifacts
   ))
   selection <- artifact_sha(bytes)
-  artifact_put(
+  artifact_storage_put(
+    store,
+    "selections",
+    selection,
     bytes,
-    artifact_path(store, "selections", selection),
     max_metadata_bytes
   )
   graft_artifact_read_selection(
@@ -100,8 +103,10 @@ graft_artifact_read_selection <- function(
   selection <- artifact_check_digest(selection)
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
-  bytes <- artifact_bytes(
-    artifact_path(store, "selections", selection),
+  bytes <- artifact_storage_read(
+    store,
+    "selections",
+    selection,
     max_metadata_bytes
   )
   if (!identical(artifact_sha(bytes), selection)) {

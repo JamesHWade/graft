@@ -40,7 +40,8 @@ read through this handle, a positive whole number. Defaults to 1 MiB
 (\code{1024^2}), independently of payload and dependency-count bounds. Increase
 it for large dependency lists, including when reopening the store.}
 
-\item{store}{A handle returned by \code{graft_artifact_store()}.}
+\item{store}{A handle returned by \code{\link[=graft_artifact_store]{graft_artifact_store()}} or
+\code{\link[=graft_artifact_store_postgres]{graft_artifact_store_postgres()}}.}
 
 \item{id}{Stable, nonempty artifact identity chosen by the caller, at most
 1024 UTF-8 bytes, without padding or control characters.}
@@ -74,7 +75,7 @@ exact revision. Saving grants no approval, access or execution authority.
 Identity, media-type and reference strings are normalized to plain UTF-8
 character values without R attributes.
 
-This interface supports trusted local files with one writer. SHA-256 digests
+Local stores support trusted files with one writer. SHA-256 digests
 identify content and metadata. Identical saves return the same reference;
 corrections retain earlier revisions. There is no mutable latest pointer.
 
@@ -86,7 +87,9 @@ Interrupted writes cannot yield a successful incomplete reference, but this
 interface does not promise power-loss durability, concurrent publication,
 authorization, erasure or backup recovery. Applications own access and
 policy.
-Handles contain no open connections and need no closing.
+Local handles contain no open connections and need no closing.
+For transaction-scoped database persistence, use
+\code{\link[=graft_artifact_store_postgres]{graft_artifact_store_postgres()}} with the same artifact APIs.
 }
 \examples{
 path <- tempfile("artifacts-")

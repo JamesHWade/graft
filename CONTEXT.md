@@ -49,3 +49,15 @@ Consumer contract 3 retains artifact formats 1 and vocabulary release format 1.
 Native graph stores, compiler manifests, commit plans, snapshots, calculations,
 and managed OKF working trees are retired. Earlier ADRs remain historical.
 See ADR 0010 for the current cut and consumer responsibilities.
+
+## Persistence scopes
+
+Local artifact stores support trusted files and one writer. PostgreSQL stores
+use the same bytes and digests inside a host-owned transaction, with a host-bound
+scope and a transaction lock per scope. Every retained object belongs to its
+scope; equal content in different scopes does not share a retained row.
+
+The scope is not authentication. Rill binds it from the active authenticated
+Reader and rechecks authority for inspection and reuse. Graft does not own
+Reader identities, Document access, approval meaning, or permanent Forget.
+See ADR 0011 for the PostgreSQL boundary.

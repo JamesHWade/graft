@@ -14,7 +14,8 @@
 #'   read through this handle, a positive whole number. Defaults to 1 MiB
 #'   (`1024^2`), independently of payload and dependency-count bounds. Increase
 #'   it for large dependency lists, including when reopening the store.
-#' @param store A handle returned by `graft_artifact_store()`.
+#' @param store A handle returned by [graft_artifact_store()] or
+#'   [graft_artifact_store_postgres()].
 #' @param id Stable, nonempty artifact identity chosen by the caller, at most
 #'   1024 UTF-8 bytes, without padding or control characters.
 #' @param bytes Raw vector containing the complete payload. Attributes are
@@ -33,7 +34,7 @@
 #' Identity, media-type and reference strings are normalized to plain UTF-8
 #' character values without R attributes.
 #'
-#' This interface supports trusted local files with one writer. SHA-256 digests
+#' Local stores support trusted files with one writer. SHA-256 digests
 #' identify content and metadata. Identical saves return the same reference;
 #' corrections retain earlier revisions. There is no mutable latest pointer.
 #'
@@ -45,7 +46,9 @@
 #' interface does not promise power-loss durability, concurrent publication,
 #' authorization, erasure or backup recovery. Applications own access and
 #' policy.
-#' Handles contain no open connections and need no closing.
+#' Local handles contain no open connections and need no closing.
+#' For transaction-scoped database persistence, use
+#' [graft_artifact_store_postgres()] with the same artifact APIs.
 #'
 #' @returns
 #' `graft_artifact_store()` returns a local store handle.
@@ -136,14 +139,18 @@ graft_artifact_save <- function(
   metadata <- artifact_metadata(id, bytes, media_type, dependencies)
   manifest <- artifact_encode(metadata)
   ref <- list(id = metadata$id, revision = artifact_sha(manifest))
-  artifact_put(
+  artifact_storage_put(
+    store,
+    "content",
+    metadata$payload,
     bytes,
-    artifact_path(store, "content", metadata$payload),
     store$max_bytes
   )
-  artifact_put(
+  artifact_storage_put(
+    store,
+    "revisions",
+    ref$revision,
     manifest,
-    artifact_path(store, "revisions", ref$revision),
     store$max_revision_bytes
   )
   graft_artifact_read(store, ref)
@@ -155,8 +162,10 @@ graft_artifact_save <- function(
 graft_artifact_read <- function(store, ref) {
   artifact_check_store(store)
   ref <- artifact_check_ref(ref)
-  manifest <- artifact_bytes(
-    artifact_path(store, "revisions", ref$revision),
+  manifest <- artifact_storage_read(
+    store,
+    "revisions",
+    ref$revision,
     store$max_revision_bytes
   )
   if (!identical(artifact_sha(manifest), ref$revision)) {
@@ -167,8 +176,10 @@ graft_artifact_read <- function(store, ref) {
   if (!identical(metadata$id, ref$id)) {
     artifact_abort("Artifact identity does not match the reference.")
   }
-  bytes <- artifact_bytes(
-    artifact_path(store, "content", metadata$payload),
+  bytes <- artifact_storage_read(
+    store,
+    "content",
+    metadata$payload,
     store$max_bytes
   )
   if (
@@ -235,6 +246,23 @@ artifact_check_limit <- function(x, arg) {
 }
 
 artifact_check_store <- function(store) {
+  if (inherits(store, "graft_artifact_postgres_store")) {
+    if (
+      !identical(
+        names(store),
+        c("connection", "scope", "max_bytes", "max_revision_bytes")
+      )
+    ) {
+      artifact_abort("`store` must be a Graft artifact store handle.")
+    }
+    graft_artifact_store_postgres(
+      store$connection,
+      store$scope,
+      max_bytes = store$max_bytes,
+      max_revision_bytes = store$max_revision_bytes
+    )
+    return(invisible(NULL))
+  }
   if (
     !inherits(store, "graft_artifact_store") ||
       !identical(names(store), c("path", "max_bytes", "max_revision_bytes"))

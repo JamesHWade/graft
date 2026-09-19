@@ -206,3 +206,38 @@ contains the installed offline example. Current Tempest consumer tests exercise
 publication, fresh-process reads, corrections, and current admission through these
 public interfaces. The earlier pinned experiment suite remains historical
 evidence. These synthetic fixtures do not establish production access or erasure.
+
+## PostgreSQL and host-selected scopes
+
+`graft_artifact_store_postgres()` uses the same artifact, selection, decision,
+and vocabulary interfaces inside a host-owned DBI transaction. Its optional
+DBI and RPostgres dependencies are needed only for PostgreSQL stores.
+
+```{r, eval=FALSE}
+DBI::dbWithTransaction(connection, {
+  # The host derives this scope from authenticated identity and checks access.
+  store <- graft_artifact_store_postgres(
+    connection, scope = trusted_scope, create = TRUE
+  )
+  ref <- graft_artifact_save(store, "note", charToRaw("Accepted text"), "text/plain")
+  selection <- graft_artifact_select(store, list(ref))
+  accepted <- graft_artifact_decide(
+    store, "note", "review-1", expected = NULL,
+    selection = selection, action = "accept", actor = trusted_actor,
+    reason = "Explicit review", purpose = "reader-context"
+  )
+  # Host catalog and receipt writes can use this same connection.
+})
+# Only successful transaction completion commits the operation.
+```
+
+Every retained row belongs to one scope. Graft serializes operations within a
+scope until commit or rollback; the host can atomically retain its own records
+in the same transaction. A scope key is not authentication, and the database
+role can still access other scopes directly. Applications must check access
+before every operation and supply scope from trusted identity, including in
+background workers. Connections and store handles are process-local.
+
+This boundary does not implement permanent Forget or prevent an old database
+backup from restoring deleted content. Those remain explicit host and storage
+obligations before a broad memory rollout.
