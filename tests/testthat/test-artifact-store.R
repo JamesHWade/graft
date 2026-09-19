@@ -373,3 +373,34 @@ test_that("identity and reference attributes do not change persisted values", {
   expect_identical(result$ref, ref)
   expect_identical(result$bytes, bytes)
 })
+
+test_that("opening a store rejects a FIFO marker without blocking", {
+  skip_on_os("windows")
+  skip_if(!nzchar(Sys.which("mkfifo")), "mkfifo is unavailable")
+  path <- withr::local_tempdir()
+  graft_artifact_store(path, create = TRUE)
+  marker <- file.path(path, "store.json")
+  unlink(marker)
+  expect_equal(system2("mkfifo", shQuote(marker)), 0)
+  result <- callr::r(
+    function(path, checkout) {
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
+      tryCatch(
+        graft::graft_artifact_store(path),
+        graft_artifact_error = function(cnd) class(cnd)[[1L]]
+      )
+    },
+    list(
+      path = path,
+      checkout = if (pkgload::is_dev_package("graft")) {
+        normalizePath("../..")
+      } else {
+        NULL
+      }
+    ),
+    timeout = 10
+  )
+  expect_identical(result, "graft_artifact_error")
+})

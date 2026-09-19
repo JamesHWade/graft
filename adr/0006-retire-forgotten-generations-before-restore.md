@@ -4,6 +4,8 @@ status: proposed
 
 # Retire forgotten generations before restore
 
+Current artifact mechanics are specified in [ADR 0012](0012-verify-artifact-replacements-before-admission.md). The native graph inventory and replay experiments below are historical; they do not validate the current artifact backend. The application journal and disposal obligations remain open.
+
 For [#48](https://github.com/JamesHWade/graft/issues/48), propose a host-owned
 Forget journal independent of knowledge backups, plus replacement of the
 entire affected Reader's store generation. A retired generation can never be
