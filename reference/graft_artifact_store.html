@@ -95,7 +95,8 @@ it for large dependency lists, including when reopening the store.</p></dd>
 
 
 <dt id="arg-store">store<a class="anchor" aria-label="anchor" href="#arg-store"></a></dt>
-<dd><p>A handle returned by <code>graft_artifact_store()</code>.</p></dd>
+<dd><p>A handle returned by <code>graft_artifact_store()</code> or
+<code><a href="graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code>.</p></dd>
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
@@ -139,7 +140,7 @@ returned by <code>graft_artifact_save()</code>.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Identity, media-type and reference strings are normalized to plain UTF-8
 character values without R attributes.</p>
-<p>This interface supports trusted local files with one writer. SHA-256 digests
+<p>Local stores support trusted files with one writer. SHA-256 digests
 identify content and metadata. Identical saves return the same reference;
 corrections retain earlier revisions. There is no mutable latest pointer.</p>
 <p>Payloads are published before immutable revision metadata, using staged files
@@ -150,7 +151,9 @@ Interrupted writes cannot yield a successful incomplete reference, but this
 interface does not promise power-loss durability, concurrent publication,
 authorization, erasure or backup recovery. Applications own access and
 policy.
-Handles contain no open connections and need no closing.</p>
+Local handles contain no open connections and need no closing.
+For transaction-scoped database persistence, use
+<code><a href="graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code> with the same artifact APIs.</p>
     </div>
 
     <div class="section level2">

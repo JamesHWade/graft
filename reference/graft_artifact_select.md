@@ -27,7 +27,9 @@ graft_artifact_read_selection(
 - store:
 
   A handle returned by
-  [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md).
+  [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  or
+  [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md).
 
 - roots:
 

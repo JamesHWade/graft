@@ -48,6 +48,8 @@
 <li>
 <code><a href="../reference/graft_artifact_store.html">graft_artifact_store()</a></code>, <code><a href="../reference/graft_artifact_store.html">graft_artifact_save()</a></code>, and <code><a href="../reference/graft_artifact_store.html">graft_artifact_read()</a></code> retain bounded opaque bytes as immutable revisions with verified exact reads (<a href="https://github.com/JamesHWade/graft/issues/71" class="external-link">#71</a>).</li>
 <li>
+<code><a href="../reference/graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code> retains artifacts, selections, and decisions in host-selected PostgreSQL scopes with transaction rollback and serialized scope writes (<a href="https://github.com/JamesHWade/graft/issues/47" class="external-link">#47</a>).</li>
+<li>
 <code><a href="../reference/graft_contract_version.html">graft_contract_version()</a></code> reports consumer contract 3.0.0 and the retained artifact, selection, decision, vocabulary, binding, and vocabulary-release formats. Existing artifact identities are unchanged (<a href="https://github.com/JamesHWade/graft/issues/74" class="external-link">#74</a>).</li>
 <li>
 <code><a href="../reference/graft_vocabulary_publish.html">graft_vocabulary_publish()</a></code> and <code><a href="../reference/graft_vocabulary_publish.html">graft_vocabulary_read()</a></code> retain shared concepts, relationships, exact data-dict bindings, source bytes, and literal context across dictionary corrections (<a href="https://github.com/JamesHWade/graft/issues/76" class="external-link">#76</a>).</li>

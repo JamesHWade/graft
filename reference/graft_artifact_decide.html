@@ -93,7 +93,8 @@ them and checks the mechanical conditions for current consultation.</p>
 
 
 <dl><dt id="arg-store">store<a class="anchor" aria-label="anchor" href="#arg-store"></a></dt>
-<dd><p>A handle returned by <code><a href="graft_artifact_store.html">graft_artifact_store()</a></code>.</p></dd>
+<dd><p>A handle returned by <code><a href="graft_artifact_store.html">graft_artifact_store()</a></code> or
+<code><a href="graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code>.</p></dd>
 
 
 <dt id="arg-stream">stream<a class="anchor" aria-label="anchor" href="#arg-stream"></a></dt>
@@ -190,7 +191,7 @@ the head from contiguous, digest-verified records. Interrupted staging is
 ignored and never promoted automatically; a lost response after publication
 is recoverable by an identical retry. History scanning is bounded by count
 and total encoded bytes, and the same or larger limits are needed on reopen.
-This supports trusted local files and one writer. Predecessor checks reject
+Local stores support trusted files and one writer. Predecessor checks reject
 stale sequential decisions; they do not provide concurrent compare-and-swap,
 authentication, power-loss durability, backup recovery or permanent erasure.</p>
     </div>

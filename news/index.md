@@ -27,6 +27,10 @@
   [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   retain bounded opaque bytes as immutable revisions with verified exact
   reads ([\#71](https://github.com/JamesHWade/graft/issues/71)).
+- [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md)
+  retains artifacts, selections, and decisions in host-selected
+  PostgreSQL scopes with transaction rollback and serialized scope
+  writes ([\#47](https://github.com/JamesHWade/graft/issues/47)).
 - [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
   reports consumer contract 3.0.0 and the retained artifact, selection,
   decision, vocabulary, binding, and vocabulary-release formats.

@@ -50,7 +50,9 @@ graft_artifact_reuse(
 - store:
 
   A handle returned by
-  [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md).
+  [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  or
+  [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md).
 
 - stream:
 
@@ -155,7 +157,7 @@ derives the head from contiguous, digest-verified records. Interrupted
 staging is ignored and never promoted automatically; a lost response
 after publication is recoverable by an identical retry. History scanning
 is bounded by count and total encoded bytes, and the same or larger
-limits are needed on reopen. This supports trusted local files and one
+limits are needed on reopen. Local stores support trusted files and one
 writer. Predecessor checks reject stale sequential decisions; they do
 not provide concurrent compare-and-swap, authentication, power-loss
 durability, backup recovery or permanent erasure.

@@ -122,6 +122,8 @@ exact identities.
   [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
   : Preserve immutable artifact content
+- [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md)
+  : Open a transaction-scoped PostgreSQL artifact store
 - [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   : Preserve an exact artifact selection

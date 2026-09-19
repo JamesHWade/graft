@@ -345,6 +345,40 @@ corrections, and current admission through these public interfaces. The
 earlier pinned experiment suite remains historical evidence. These
 synthetic fixtures do not establish production access or erasure.</p>
 </div>
+<div class="section level2">
+<h2 id="postgresql-and-host-selected-scopes">PostgreSQL and host-selected scopes<a class="anchor" aria-label="anchor" href="#postgresql-and-host-selected-scopes"></a>
+</h2>
+<p><code><a href="../reference/graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code> uses the same artifact,
+selection, decision, and vocabulary interfaces inside a host-owned DBI
+transaction. Its optional DBI and RPostgres dependencies are needed only
+for PostgreSQL stores.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbWithTransaction.html" class="external-link">dbWithTransaction</a></span><span class="op">(</span><span class="va">connection</span>, <span class="op">{</span></span>
+<span>  <span class="co"># The host derives this scope from authenticated identity and checks access.</span></span>
+<span>  <span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store_postgres.html">graft_artifact_store_postgres</a></span><span class="op">(</span></span>
+<span>    <span class="va">connection</span>, scope <span class="op">=</span> <span class="va">trusted_scope</span>, create <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">ref</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"note"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Accepted text"</span><span class="op">)</span>, <span class="st">"text/plain"</span><span class="op">)</span></span>
+<span>  <span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">ref</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">accepted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_decide</a></span><span class="op">(</span></span>
+<span>    <span class="va">store</span>, <span class="st">"note"</span>, <span class="st">"review-1"</span>, expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>    selection <span class="op">=</span> <span class="va">selection</span>, action <span class="op">=</span> <span class="st">"accept"</span>, actor <span class="op">=</span> <span class="va">trusted_actor</span>,</span>
+<span>    reason <span class="op">=</span> <span class="st">"Explicit review"</span>, purpose <span class="op">=</span> <span class="st">"reader-context"</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="co"># Host catalog and receipt writes can use this same connection.</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co"># Only successful transaction completion commits the operation.</span></span></code></pre></div>
+<p>Every retained row belongs to one scope. Graft serializes operations
+within a scope until commit or rollback; the host can atomically retain
+its own records in the same transaction. A scope key is not
+authentication, and the database role can still access other scopes
+directly. Applications must check access before every operation and
+supply scope from trusted identity, including in background workers.
+Connections and store handles are process-local.</p>
+<p>This boundary does not implement permanent Forget or prevent an old
+database backup from restoring deleted content. Those remain explicit
+host and storage obligations before a broad memory rollout.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>

@@ -53,7 +53,8 @@ graft_artifact_read(store, ref)
 
 - store:
 
-  A handle returned by `graft_artifact_store()`.
+  A handle returned by `graft_artifact_store()` or
+  [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md).
 
 - id:
 
@@ -98,8 +99,8 @@ graft_artifact_read(store, ref)
 Identity, media-type and reference strings are normalized to plain UTF-8
 character values without R attributes.
 
-This interface supports trusted local files with one writer. SHA-256
-digests identify content and metadata. Identical saves return the same
+Local stores support trusted files with one writer. SHA-256 digests
+identify content and metadata. Identical saves return the same
 reference; corrections retain earlier revisions. There is no mutable
 latest pointer.
 
@@ -110,8 +111,11 @@ deleted automatically. Successful reads verify metadata, payload size
 and digest. Interrupted writes cannot yield a successful incomplete
 reference, but this interface does not promise power-loss durability,
 concurrent publication, authorization, erasure or backup recovery.
-Applications own access and policy. Handles contain no open connections
-and need no closing.
+Applications own access and policy. Local handles contain no open
+connections and need no closing. For transaction-scoped database
+persistence, use
+[`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md)
+with the same artifact APIs.
 
 ## Examples
 
