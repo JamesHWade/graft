@@ -16,6 +16,7 @@ test_that("consumer contract names only retained formats", {
     c(
       "graft_contract_version",
       "graft_artifact_store",
+      "graft_artifact_store_postgres",
       "graft_artifact_save",
       "graft_artifact_read",
       "graft_artifact_select",

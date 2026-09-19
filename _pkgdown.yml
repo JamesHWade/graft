@@ -27,6 +27,7 @@ reference:
   - title: Retain exact artifacts
     contents:
       - graft_artifact_store
+      - graft_artifact_store_postgres
       - graft_artifact_select
   - title: Record host decisions
     contents:

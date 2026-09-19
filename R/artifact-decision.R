@@ -4,7 +4,8 @@
 #' Applications make the decisions and enforce access policy; Graft records
 #' them and checks the mechanical conditions for current consultation.
 #'
-#' @param store A handle returned by [graft_artifact_store()].
+#' @param store A handle returned by [graft_artifact_store()] or
+#'   [graft_artifact_store_postgres()].
 #' @param stream Host-chosen identity for one independently reviewed subject.
 #' @param key Host-chosen idempotency key, unique within the stream. A new review
 #'   requires a new key, even when the selection is unchanged.
@@ -52,7 +53,7 @@
 #' ignored and never promoted automatically; a lost response after publication
 #' is recoverable by an identical retry. History scanning is bounded by count
 #' and total encoded bytes, and the same or larger limits are needed on reopen.
-#' This supports trusted local files and one writer. Predecessor checks reject
+#' Local stores support trusted files and one writer. Predecessor checks reject
 #' stale sequential decisions; they do not provide concurrent compare-and-swap,
 #' authentication, power-loss durability, backup recovery or permanent erasure.
 #'
@@ -163,11 +164,12 @@ graft_artifact_decide <- function(
     artifact_abort("Decision head changed before publication; review it again.")
   }
   id <- artifact_sha(bytes)
-  path <- file.path(
-    artifact_decision_path(store, request$stream),
+  key <- paste0(
+    artifact_sha(charToRaw(request$stream)),
+    "/",
     sprintf("%010d-%s.json", value$sequence, id)
   )
-  artifact_put(bytes, path, max_metadata_bytes)
+  artifact_storage_put(store, "decisions", key, bytes, max_metadata_bytes)
   graft_artifact_read_decision(
     store,
     request$stream,
@@ -337,15 +339,8 @@ artifact_decisions <- function(
 ) {
   artifact_check_limit(max_decisions, "max_decisions")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
-  path <- artifact_decision_path(store, stream)
-  if (!file.exists(path)) {
-    return(list())
-  }
-  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
-    artifact_abort("Decision journal is not a readable directory.")
-  }
-  files <- list.files(path, all.files = TRUE, no.. = TRUE)
-  files <- sort(files[!grepl("^staged-", files)])
+  entries <- artifact_decision_entries(store, stream, max_decisions)
+  files <- entries$name
   if (
     length(files) > max_decisions ||
       !all(grepl("^[0-9]{10}-[0-9a-f]{64}\\.json$", files))
@@ -354,19 +349,17 @@ artifact_decisions <- function(
       "Decision journal has invalid entries or exceeds its record bound."
     )
   }
-  paths <- file.path(path, files)
-  sizes <- file.info(paths)$size
-  if (
-    anyNA(sizes) || any(dir.exists(paths)) || sum(sizes) > max_metadata_bytes
-  ) {
+  sizes <- entries$size
+  if (anyNA(sizes) || sum(sizes) > max_metadata_bytes) {
     artifact_abort(
       "Decision journal exceeds its metadata bound or has invalid entries."
     )
   }
   records <- list()
   keys <- character()
-  for (i in seq_along(paths)) {
-    bytes <- artifact_bytes(paths[[i]], max_metadata_bytes)
+  for (i in seq_along(files)) {
+    key <- paste0(artifact_sha(charToRaw(stream)), "/", files[[i]])
+    bytes <- artifact_storage_read(store, "decisions", key, max_metadata_bytes)
     id <- substr(files[[i]], 12L, 75L)
     if (
       !startsWith(files[[i]], sprintf("%010d-", i)) ||

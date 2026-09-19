@@ -18,6 +18,8 @@ Imports:
     jsonlite,
     rlang
 Suggests:
+    DBI,
+    RPostgres,
     callr,
     commonmark,
     commons,
