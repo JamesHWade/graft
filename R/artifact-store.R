@@ -369,8 +369,13 @@ artifact_path <- function(store, kind, digest) {
 }
 
 artifact_bytes <- function(path, limit) {
-  size <- file.info(path)$size
-  if (is.na(size) || dir.exists(path) || size > limit) {
+  info <- fs::file_info(path, fail = FALSE, follow = FALSE)
+  size <- as.numeric(info$size)
+  if (
+    !identical(as.character(info$type), "file") ||
+      is.na(size) ||
+      size > limit
+  ) {
     artifact_abort("Artifact file is missing or exceeds the byte bound.")
   }
   bytes <- tryCatch(

@@ -20,6 +20,7 @@ articles:
     contents:
       - getting-started
       - persistent-artifacts
+      - artifact-recovery
       - shared-vocabulary
       - architecture
       - compatibility
@@ -29,6 +30,10 @@ reference:
       - graft_artifact_store
       - graft_artifact_store_postgres
       - graft_artifact_select
+  - title: Verify replacement stores
+    contents:
+      - graft_artifact_manifest
+      - graft_artifact_replacement_plan
   - title: Record host decisions
     contents:
       - graft_artifact_decide

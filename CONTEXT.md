@@ -61,3 +61,16 @@ The scope is not authentication. Rill binds it from the active authenticated
 Reader and rechecks authority for inspection and reuse. Graft does not own
 Reader identities, Document access, approval meaning, or permanent Forget.
 See ADR 0011 for the PostgreSQL boundary.
+
+## Artifact replacement and Forget
+
+Consumer contract 3.1 adds complete bounded artifact manifests and non-destructive
+replacement plans for local stores and PostgreSQL scopes. Exclusions follow exact
+reverse dependencies, affected selections, and whole historical decision streams.
+Survivors retain their exact bytes and identities. Failed targets remain quarantined;
+retry with a fresh empty target. ADR 0012 supersedes the native graph recovery recipe.
+
+Hosts supply additional private-copy and metadata roots, authorize Forget, retire
+generations in an independent durable journal, reject old backups, invalidate
+contexts/caches, and arrange disposal. No source deletion or production restore
+admission ships with these mechanics. Graft #48 remains the rollout gate.
