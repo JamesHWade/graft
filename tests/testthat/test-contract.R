@@ -1,19 +1,30 @@
-test_that("graft_contract_version reports pinnable versions", {
-  version <- graft_contract_version()
-  expect_identical(version$contract, "2.0.0")
-
+test_that("consumer contract names only retained formats", {
   expect_identical(
-    names(version),
-    c("contract", "store_format", "plan", "snapshot_schema", "manifest", "okf")
+    graft_contract_version(),
+    list(
+      contract = "3.0.0",
+      artifact = "1",
+      selection = "1",
+      decision = "1",
+      vocabulary = "graft-vocabulary/1",
+      bindings = "graft-bindings/1",
+      vocabulary_release = "graft-vocabulary-release/1"
+    )
   )
-  expect_all_true(vapply(version, rlang::is_string, logical(1)))
-  expect_match(version$contract, "^[0-9]+\\.[0-9]+\\.[0-9]+$")
-  expect_identical(version$store_format, graft:::graft_store_format_version)
-  expect_identical(version$plan, graft:::graft_plan_version)
-  expect_identical(
-    version$snapshot_schema,
-    as.character(graft:::graft_snapshot_schema_version)
+  expect_setequal(
+    getNamespaceExports("graft"),
+    c(
+      "graft_contract_version",
+      "graft_artifact_store",
+      "graft_artifact_save",
+      "graft_artifact_read",
+      "graft_artifact_select",
+      "graft_artifact_read_selection",
+      "graft_artifact_decide",
+      "graft_artifact_read_decision",
+      "graft_artifact_reuse",
+      "graft_vocabulary_publish",
+      "graft_vocabulary_read"
+    )
   )
-  expect_identical(version$manifest, graft:::graft_manifest_version)
-  expect_identical(version$okf, graft:::graft_okf_version)
 })

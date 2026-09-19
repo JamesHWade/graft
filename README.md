@@ -1,233 +1,67 @@
-# graft <img src="man/figures/logo.png" align="right" height="139" alt="Graft hex sticker: a tree frog tending a grafted branch." />
+# graft <img src="man/figures/logo.png" align="right" height="138" alt="Graft logo" />
 
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JamesHWade/graft/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/JamesHWade/graft/graph/badge.svg)](https://app.codecov.io/gh/JamesHWade/graft)
-<!-- badges: end -->
+Graft retains **persistent artifacts and shared vocabulary** for R workflows and
+agents. Reports, evidence, dictionary releases, and other outputs remain readable
+at exact revisions after the process that produced them has ended.
 
-graft gives R workflows and agents durable, reviewed knowledge. Preserve research
-conclusions, interpretations, definitions and related records so a later task
-can reuse an exact accepted version and inspect what changed.
+## What belongs here
 
-Start with a [data-dict](https://data-dict.tidyverse.org/) contract. Graft adds
-validated acceptance, stable identity, revision history, snapshots and bounded
-reads. Applications own the meaning of accepted content, permission to consult
-it and authority to execute code. Acceptance is not factual truth.
+- **Artifacts:** immutable bytes and descriptive metadata, with verified reads.
+- **Selections:** explicit roots and their complete exact dependency closure.
+- **Decisions:** host acceptance and withdrawal, purpose, history, and safe retries.
+- **Vocabulary:** shared concepts and relationships bound to pinned data-dict
+  dictionaries, with retained source bytes and rendered context.
 
-Follow the [offline quickstart](https://jameshwade.github.io/graft/articles/getting-started.html),
-try [narrative reuse](https://jameshwade.github.io/graft/articles/ecosystem.html),
-or retain an [exact reuse basis](https://jameshwade.github.io/graft/articles/reuse-basis.html).
-The [Reader access example](https://jameshwade.github.io/graft/articles/reader-access.html)
-shows separate stores and host authorization with two synthetic Readers.
-The [Forget and recovery proposal](https://jameshwade.github.io/graft/articles/forget-restore.html)
-uses a synthetic backup proof to define the remaining erasure and recovery gates.
-The tested agent recipes use ellmer, Deputy and dsprrr. Commons receives a
-detached public source; LinkML supports richer graph domains.
+Commons supplies live analysis capabilities. Data-dict describes data. Graft
+retains their inputs, shared meaning, and outputs. Tempest and Rill are consuming
+applications: they own research validation, user access, review, and retention
+policy. Graft does not decide which claims are true or which tools an agent may use.
 
-The [persistent artifact guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
-shows shared storage, exact dependency selections, and acceptance and withdrawal
-journals. Current reuse checks the selected decision and purpose alongside the
-application's explicit eligibility decision.
-
-Consumer contract 2.0.0 requires recompiling earlier preproduction data-dict
-manifests. The native graph store format remains 3.1.0. See the [compatibility guide](https://jameshwade.github.io/graft/articles/compatibility.html)
-before reopening them with this build.
-
-## Installation
-
-Install the development version from GitHub:
-
-```r
-pak::pak("JamesHWade/graft")
-```
-
-Using a resolved data-dict contract or an existing `.graft.json` contract is
-R-only. The data-dict CLI and LinkML's Python dependencies are optional
-authoring tools, not store runtime requirements.
-
-## From related tables to history
-
-The package includes a small team directory as data-dict source YAML and
-resolved `export-spec` JSON. `graft_schema()` compiles the resolved JSON using R
-alone. `graft_open()` initializes a blank store when its path does not exist.
+## Retain and reuse a report
 
 ```r
 library(graft)
-
-resolved_json <- system.file(
-  "extdata",
-  "team-directory.data-dict.json",
-  package = "graft",
-  mustWork = TRUE
+store <- graft_artifact_store("research-artifacts", create = TRUE)
+report <- graft_artifact_save(
+  store, "report:pilot", charToRaw("Pilot evidence and conclusions"), "text/plain"
 )
-schema <- graft_schema(resolved_json)
-
-store_path <- tempfile(fileext = ".duckdb")
-store <- graft_open(schema, store_path, okf = "disabled")
-```
-
-Candidate records are ordinary data frames. Here, an employment row points to
-an organization that is not part of the batch or the store:
-
-```r
-records <- list(
-  organization = data.frame(
-    id = "org:daily-planet",
-    name = "Daily Planet"
-  ),
-  person = data.frame(
-    id = "person:lois-lane",
-    full_name = "Lois Lane",
-    job_title = "Reporter"
-  ),
-  employment = data.frame(
-    id = "employment:lois-lane:daily-planet",
-    person_id = "person:lois-lane",
-    organization_id = "org:missing"
-  )
+selection <- graft_artifact_select(store, list(report))
+accepted <- graft_artifact_decide(
+  store, "pilot", "review-1", expected = NULL,
+  selection = selection, action = "accept", actor = "reviewer",
+  reason = "Evidence reviewed", purpose = "briefing"
 )
 
-origin <- graft_provenance(
-  producer = "directory-import",
-  idempotency_key = "directory-2026-08-09"
-)
-
-plan <- graft_plan(store, records, origin)
-plan@valid
-#> [1] FALSE
-
-plan@issues[, c("class", "record_id", "field", "message")]
+# Reopen in a later process. The host supplies current eligibility.
+store <- graft_artifact_store("research-artifacts")
+graft_artifact_reuse(store, "pilot", accepted$id, "briefing", eligible = TRUE)
+rawToChar(graft_artifact_read(store, report)$bytes)
 ```
 
-Planning is read-only. Correct the reference, create a fresh plan, inspect the
-proposed inserts, and commit the complete batch:
+Saving or selecting an artifact does not approve it. A later correction changes
+current eligibility while preserving the earlier bytes and decision history.
+Applications recheck admission before starting or resuming work.
 
-```r
-records$employment$organization_id <- "org:daily-planet"
-plan <- graft_plan(store, records, origin)
+## Shared meaning across workflows
 
-plan@changes[, c("class", "record_id", "action", "changed_fields")]
+[`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.html)
+pins vocabulary, field bindings, and dictionary releases in one selection.
+[`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.html)
+restores them without the original files or data-dict CLI. Relationships describe
+meaning; they do not authorize joins, convert units, or execute reasoning.
 
-if (plan@valid) {
-  graft_commit(store, plan)
-}
-```
+## Scope and status
 
-When a later source changes a fact, the update becomes another reviewable plan
-rather than overwriting the earlier record:
+This is a pre-production local store for trusted files and one writer. Concurrent
+publication, power-loss recovery, authenticated access, and permanent erasure are
+separate work. The artifact contract allows future persistence implementations;
+no interchangeable backend API is promised today.
 
-```r
-updated_person <- list(person = data.frame(
-  id = "person:lois-lane",
-  full_name = "Lois Lane",
-  job_title = "Investigative editor"
-))
+Consumer contract **3.0.0** removes the native graph store, LinkML compiler,
+commit plans, graph snapshots, managed OKF tree, and graph-specific agent tools.
+There are no compatibility wrappers. Existing artifact, selection, and decision
+formats keep their exact identities.
 
-update_plan <- graft_plan(
-  store,
-  updated_person,
-  graft_provenance(
-    producer = "hr-review",
-    idempotency_key = "hr-review-2026-08-10"
-  )
-)
-
-update_plan@changes[, c("record_id", "action", "changed_fields")]
-graft_commit(store, update_plan)
-
-graft_get(store, "person:lois-lane")$record
-graft_history(store, "person:lois-lane")[
-  , c("revision_number", "committed_at", "producer", "changed_fields")
-]
-```
-
-The current record has the new title. History retains both accepted versions,
-their changed fields, and their producers.
-
-## Give an agent bounded reads
-
-Pin the accepted boundary, then hand the pinned view to a model. Later commits
-cannot change what that session reads:
-
-```r
-snapshot <- graft_snapshot(store)
-view <- graft_at(store, snapshot)
-
-tools <- graft_tools(view, result_format = "json")
-names(tools)
-#> [1] "graft_find"       "graft_get"        "graft_query"
-#> [4] "graft_history"    "graft_dictionary"
-
-chat <- ellmer::chat_anthropic()
-chat$set_tools(tools)
-chat$chat("Who works at the Daily Planet, and has that person's title changed?")
-```
-
-The record tools delegate to `graft_find()`, `graft_get()`, `graft_query()`, and
-`graft_history()`. They expose no SQL, filesystem, network, or mutation
-argument, and every result reports the limit it applied, whether it was
-truncated, and the contract digest it came from. Writes stay in R, behind a
-reviewable plan.
-
-```r
-graft_close(store)
-unlink(store_path)
-```
-
-## Choose a contract provider
-
-Start with [data-dict](https://jameshwade.github.io/graft/articles/data-dict-schema.html)
-when the domain is naturally expressed as related tables. Graft validates its
-scalar foreign keys, but does not treat them as graph traversal edges.
-
-Use [LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.html)
-when you need traversable relationships, inheritance, ontology identifiers,
-polymorphic references, or other richer graph semantics. Both providers compile
-to the same Graft contract and use the same store, plan, commit, retrieval, and
-history functions.
-
-## Documentation
-
-The [persistent artifact and selected-memory proposal](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
-explains how Commons, data-dict, shared vocabulary, and durable outputs could work
-together. The [runnable experiments](tools/experiments/README.md) compare storage
-implementations. The [Tempest reuse experiment](specs/2026-09-17-tempest-reuse.md)
-checks public artifact admission and saved-session reuse without Graft installed.
-The [acceptance cycle](specs/2026-09-17-tempest-acceptance-cycle.md) extends this to
-direct acceptance, correction and withdrawal on both storage drivers, with Graft
-absent from the manifest producer and consumer. The resulting recommendation is
-to retire the current graph/compiler architecture from the artifact composition.
-[ADR 0008](adr/0008-shared-artifact-infrastructure.md) keeps the shared artifact
-infrastructure in Graft. Tempest and Rill consume it as applications and own
-their domain semantics and policy. The replacement remains experimental; existing
-APIs have not been removed. This
-project is pre-production, and backwards compatibility is not a requirement.
-
-1. [Get started](https://jameshwade.github.io/graft/articles/getting-started.html)
-   with the complete data-dict workflow.
-2. [Author a data-dict
-   contract](https://jameshwade.github.io/graft/articles/data-dict-schema.html).
-3. Read about [change
-   control](https://jameshwade.github.io/graft/articles/knowledge-change-control.html)
-   and [retrieval and
-   history](https://jameshwade.github.io/graft/articles/retrieval.html).
-4. [Work with
-   agents](https://jameshwade.github.io/graft/articles/agents.html): bounded
-   tools, pinned snapshots, and agent-authored proposals.
-5. [Add graph semantics with
-   LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.html).
-6. Use [open
-   knowledge](https://jameshwade.github.io/graft/articles/open-knowledge-format.html)
-   for a readable file projection, or read the
-   [architecture](https://jameshwade.github.io/graft/articles/architecture.html)
-   and [contract compiler
-   reference](https://jameshwade.github.io/graft/articles/contract-compilers.html)
-   for implementation details.
-
-## Shared vocabulary
-
-`graft_vocabulary_publish()` validates shared concepts, directed relationships, and
-qualified bindings across data-dict dictionaries. It preserves sources, resolved
-exports, and generated context as one immutable artifact selection.
-`graft_vocabulary_read()` reopens that release without the original files or CLI.
-See [shared concepts across workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).
+Read [getting started](https://jameshwade.github.io/graft/articles/getting-started.html),
+[persistent artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.html),
+and [shared vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).

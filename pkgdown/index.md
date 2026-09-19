@@ -1,141 +1,108 @@
 # graft
 
 <div class="graft-hero">
-<p class="graft-eyebrow">Durable knowledge for R workflows and agents</p>
-<h2 data-toc-skip>Keep what you learn.<br>Review what changes.</h2>
+<p class="graft-eyebrow">Persistent artifacts and shared vocabulary for R</p>
+<h2 data-toc-skip>Keep what you learn.<br>Return to the exact evidence.</h2>
 <p class="graft-hero-copy">
-Give research conclusions, interpretations, definitions and related records an
-accepted history. Start with <code>data-dict.yaml</code>, review proposed changes,
-and let a later task return to the exact knowledge an earlier task used.
+Retain reports, evidence and shared concepts after the workflow ends. Record
+what a host accepted, preserve earlier revisions, and give a later task the
+exact artifacts behind an answer.
 </p>
 <div class="graft-actions">
-<a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a>
-<a class="btn btn-outline-secondary" href="articles/ecosystem.html">Try narrative reuse</a>
+<a class="btn btn-primary" href="articles/getting-started.html">Retain your first artifact</a>
+<a class="btn btn-outline-secondary" href="articles/shared-vocabulary.html">Share concepts across workflows</a>
 </div>
 </div>
 
-## Shared artifact direction
+## From a result to persistent memory
 
-Graft is being rebuilt around persistent artifacts, immutable revisions and exact
-selections. Tempest and Rill consume this shared infrastructure as applications;
-data-dict owns contracts and Commons owns analytical execution. See the
-[persistent artifact guide](articles/persistent-artifacts.html) for the current
-implementation scope and the completed architecture experiments.
-
-## From a result to a reusable record
-
-An R workflow produces a conclusion. A person corrects it. A later agent needs
-the earlier answer and the evidence behind it. Replacing yesterday's file
-loses that distinction; Graft retains each accepted revision and the producer
-recorded for the change.
+A workflow produces a conclusion. A person reviews it. A later task needs both
+the original answer and the evidence behind it. Graft keeps immutable artifact
+revisions and exact dependency selections so a correction can coexist with the
+history it replaces.
 
 <table class="table graft-workflow">
-<thead><tr><th>Describe</th><th>Review</th><th>Reuse</th></tr></thead>
+<thead><tr><th>Retain</th><th>Review</th><th>Reuse</th></tr></thead>
 <tbody><tr>
-<td>Use data-dict to describe fields, meaning and relationships.</td>
-<td>Inspect a proposed plan, correct invalid references, then accept it.</td>
-<td>Read current history or pin an exact boundary for a later task.</td>
+<td>Save artifact bytes and select exact dependencies.</td>
+<td>Record the host's acceptance or withdrawal for a stated purpose.</td>
+<td>Verify the selected bytes and check current host eligibility.</td>
 </tr></tbody>
 </table>
 
-data-dict supplies the contract. Graft adds validated acceptance, stable
-identity, revisions, snapshots and bounded retrieval. Ordinary tables are a
-useful starting point; their values can include Markdown, interpretations,
-preferences and normalized evidence links.
-
-Acceptance records a decision for a purpose. It does not make a claim true,
-authorize access, or permit execution of stored code. Applications retain those
-responsibilities.
-
-## Persistent artifacts and selected memory
-
-The shared artifact API preserves reports, tables, figures and exact dependency
-selections. Acceptance and withdrawal journals retain each host review. Current
-reuse requires the current accepted decision, its exact purpose, verified
-payloads and an explicit host eligibility decision. Historical inspection remains
-separate from permission to reuse. The project is pre-production: application
-APIs may change directly as the design is simplified.
-
-[Use persistent artifacts and decisions](articles/persistent-artifacts.html).
+Saving or selecting an artifact does not approve it. Historical inspection
+preserves evidence of an earlier decision; a new task still needs current
+permission. Applications decide access, scientific validity, review and retention.
 
 ## Start in R
 
-Install the development package:
-
 ```r
 pak::pak("JamesHWade/graft")
+
+library(graft)
+store <- graft_artifact_store("research-artifacts", create = TRUE)
+report <- graft_artifact_save(
+  store, "report:pilot", charToRaw("Pilot evidence and conclusions"), "text/plain"
+)
+selection <- graft_artifact_select(store, list(report))
+rawToChar(graft_artifact_read(store, report)$bytes)
 ```
 
-The [quickstart](articles/getting-started.html) runs entirely offline. It uses a
-shipped resolved data-dict contract to create a store, reject a broken
-reference, accept a correction, inspect history and pin a snapshot. No model
-credentials or Python installation are required.
-
-Author your own `data-dict.yaml` with the optional data-dict CLI, then compile
-its resolved export in R. Existing compiled contracts also run in R alone.
-[LinkML](articles/linkml-schema.html) remains available for domains needing
-richer graph semantics.
+The [quickstart](articles/getting-started.html) runs offline and introduces exact
+revisions, selections and host decisions. The core artifact workflow requires
+neither a schema compiler nor model credentials.
 
 ## Choose your next workflow
 
 <div class="graft-paths">
 <section>
-<h3>Review changing knowledge</h3>
-<p>Keep proposals separate from accepted records. Inspect changes, handle stale
-plans and retry without manufacturing another revision.</p>
-<p><a href="articles/knowledge-change-control.html">Review and accept changes</a></p>
+<h3>Preserve a reviewed result</h3>
+<p>Retain a report with its evidence and record acceptance or withdrawal without
+rewriting its earlier bytes.</p>
+<p><a href="articles/persistent-artifacts.html">Use artifacts and decisions</a></p>
 </section>
 <section>
-<h3>Return to an exact answer</h3>
-<p>Retain the full selected evidence across restarts and unchanged days. Flag
-changed dependencies for review while preserving the earlier interpretation.</p>
-<p><a href="articles/reuse-basis.html">Retain an exact reuse basis</a></p>
+<h3>Share concepts and relationships</h3>
+<p>Bind vocabulary to exact data-dict dictionary releases. Reopen the retained
+source and rendered context without the original files.</p>
+<p><a href="articles/shared-vocabulary.html">Build a shared vocabulary</a></p>
 </section>
 <section>
-<h3>Give an agent bounded reads</h3>
-<p>Use ordinary ellmer tools with ellmer, Deputy or dsprrr. Keep connections in
-the process that owns them and reconnect workers from serializable references.</p>
-<p><a href="articles/ecosystem.html">Explore tested host recipes</a></p>
+<h3>Understand the package boundaries</h3>
+<p>Compose Commons analysis, data-dict contracts and Graft persistence while
+keeping application policy with the consuming product.</p>
+<p><a href="articles/architecture.html">Read the architecture</a></p>
 </section>
 <section>
-<h3>Calculate and inspect receipts</h3>
-<p>Evaluate accepted Definitions against a pinned boundary. Inspect the recorded
-evidence path without treating a receipt as a fact-check.</p>
-<p><a href="reference/graft_calculate.html">Calculate with accepted Definitions</a></p>
+<h3>Check integration contracts</h3>
+<p>Inspect the supported formats, optional dependencies and tested scope before
+connecting a workflow.</p>
+<p><a href="articles/compatibility.html">Read integration requirements</a></p>
 </section>
 </div>
 
-## What works together today
+## What works together
 
-Graft's tested host loops cover ellmer, Deputy and dsprrr; Commons consumes a
-detached public copy and retains its own file measures. Tempest owns research
-products and scientific validation. Its public artifact workflow publishes exact
-evidence and synthesis and requires current host admission for new runs and
-resume. Contradictory-evidence execution and native graph removal remain in
-[#50](https://github.com/JamesHWade/graft/issues/50) and
-[#74](https://github.com/JamesHWade/graft/issues/74). Rill's Reader
-integration, isolation and permanent Forget gates remain separate work.
+Commons supplies live analytical capabilities. Data-dict describes data. Graft
+retains artifacts, exact selections, decision history and shared meaning.
+Tempest and Rill consume this infrastructure as applications; their scientific
+or Reader-specific policies remain theirs. Vocabulary relationships describe
+meaning and do not execute reasoning, authorize joins or select agent tools.
 
-The [integration guide](articles/compatibility.html) records supported versions
-and limitations. The [ecosystem guide](articles/ecosystem.html) separates tested
-composition from planned application behavior. Generic read tools alone do not
-enforce Reader permissions or decide what an agent may consult automatically.
+Tempest's public artifact workflow publishes completed research and retains its
+reports and evidence. New research and resume require fresh host admission.
+See the [persistent artifact guide](articles/persistent-artifacts.html) for the
+application handoff and its tested scope. Rill's Reader integration, isolation
+and permanent Forget gates remain separate work.
 
-## Read a result's evidence path
+## Scope and status
 
-Graft classifies recorded answer evidence as **Verified**, **Cited** or
-**Untrusted**. Verified paths use governed calculations with matching receipts;
-Cited paths use independently matched Graft reads. Failures, unknown sources or
-mixed unsupported evidence keep a result Untrusted.
+Graft is a pre-production local store for trusted files and one writer.
+Concurrent publication, power-loss recovery, authenticated access and permanent
+erasure are separate work. The artifact contract allows future persistence
+implementations; no interchangeable backend API is promised today.
 
-These labels describe the recorded path. They do not measure factual accuracy,
-authenticate producer identities or guarantee that prose faithfully represents
-a source. [Work with agents](articles/agents.html) explains the checks and their
-limits.
-
-### Research consumer
-
-Tempest publishes completed research through Graft's artifact, selection and
-decision interfaces. Its admission checks retain exact reports and evidence while
-requiring current host eligibility. See the [persistent artifact guide](articles/persistent-artifacts.html)
-for the application handoff and its tested scope.
+Consumer contract **3.0.0** removes the native graph store, LinkML compiler,
+commit plans, graph snapshots, managed OKF tree and graph-specific agent tools.
+There are no compatibility wrappers. Retained artifact, selection, decision and
+vocabulary formats keep their exact identities.

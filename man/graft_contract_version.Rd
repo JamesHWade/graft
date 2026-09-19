@@ -2,24 +2,21 @@
 % Please edit documentation in R/contract.R
 \name{graft_contract_version}
 \alias{graft_contract_version}
-\title{Report the Graft consumer contract version}
+\title{Report Graft's artifact and vocabulary contracts}
 \usage{
 graft_contract_version()
 }
 \value{
-A named list of character scalars: \code{contract}, \code{store_format},
-\code{plan}, \code{snapshot_schema}, \code{manifest}, and \code{okf}.
+A named list of character scalars describing the consumer API and
+persisted artifact, selection, decision, vocabulary, and binding formats.
 }
 \description{
-\code{graft_contract_version()} returns the versions a downstream package can
-pin against instead of hashing Graft's namespace or checking a git commit.
-The \code{contract} entry follows semantic versioning for the exported
-functions, their arguments, and the shapes of the values they return: a
-change that breaks an existing consumer increments the major component, a
-compatible addition increments the minor component, and a behavior fix
-increments the patch component. The remaining entries name the persisted
-formats a consumer may store, compare, or serialize.
+Consumer contract 3 removes the native graph store, schema compiler, commit
+plans, snapshots, and managed working tree. Artifacts and selections retain
+format 1; the cut does not change their bytes or digest identities.
+Applications interpret payloads and decide whether evidence is eligible for
+use. Graft verifies exact retention and records explicit host decisions.
 }
 \examples{
-graft_contract_version()$contract
+graft_contract_version()
 }

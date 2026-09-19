@@ -40,7 +40,7 @@ unlink(path, recursive = TRUE)
 
 References contain an identity and immutable revision. Retain them with your
 workflow; the store deliberately has no automatic latest or approved selection.
-This project is pre-production and existing graph/compiler APIs are being replaced.
+This project is pre-production. Consumer contract 3 removes the graph/compiler APIs.
 The experiments below remain comparative evidence, not the installed storage code.
 
 ## Pin evidence and shared meaning
@@ -174,72 +174,19 @@ permanent Forget. A stored selection cannot erase copies already given to a mode
 
 ## What “replaceable” means
 
-The artifact contract should let an application change its storage implementation
-while preserving accumulated work. The first experiments use the same content
-and selection logic with two metadata implementations:
+Applications retain exact artifacts, dependency selections, and host decisions.
+They do not depend on graph tables, a schema compiler, or native store objects.
+A future storage implementation must preserve those identities and history;
+Graft does not yet expose a pluggable backend interface.
 
-- Graft's accepted commits and bounded revision history;
-- immutable JSON manifests and a map of current artifact revisions.
+The earlier composition experiments compared native graph storage with immutable
+manifests. Their source and observations remain in the repository as historical
+research. They motivated the artifact contract and the consumer contract 3 cut;
+they are not current native-store usage instructions.
 
-Both implementations preserve the tested Markdown, Parquet, and PNG artifacts
-across terminated processes and corrections. Both feed real Commons analysis and
-retain its outputs. Vocabulary validation and publishing also work without a
-Graft store. The [experiment guide](https://github.com/JamesHWade/graft/tree/main/tools/experiments)
-contains commands, source pins, and recorded results.
-
-These results justify comparing the complete implementations. The manifest
-prototype has not established concurrent publication, power-loss recovery,
-production access control, or erasure and backup admission. Graft's metadata
-transaction also does not automatically include separately stored file contents.
-
-## Existing history is part of the migration contract
-
-Tempest already uses native Graft snapshots and promotion receipts. A replacement
-must preserve the store, schema, batch, snapshot, and revision identities those
-objects validate, or retain an explicit mapping to them. Exporting only the latest
-records loses accepted history and does not meet that requirement.
-
-The [Tempest migration experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md)
-uses current public promotion APIs and shipped synthetic research. Its 121
-assertions establish that:
-
-- 11 native revisions and three promotion receipts survive transfer;
-- both reports retain their exact four-record evidence selections;
-- a fresh process reads the target with neither Graft nor Tempest installed;
-- withdrawal stays in force, and the unchanged native source supports rollback.
-
-The [artifact reuse experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-reuse.md)
-adds a public Tempest input for exact artifact selections. Initial, unchanged and
-corrected evidence survive session save/resume across independent processes
-without Graft installed. The host checks purpose and current eligibility before admission and
-again before resume. The resumed session is saved again to verify its retained
-selection and provenance. Tempest validates content and dependency references
-and retains the full input.
-
-The [direct acceptance experiment](https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-acceptance-cycle.md)
-completes the next step with shipped synthetic research proposals. Both storage
-drivers preserve the complete proposal, source bodies and reports; a host then
-accepts an exact selection for a purpose. Saving alone grants no approval. A new
-review records a distinct acceptance even when the evidence is unchanged.
-Correction replaces the current eligible selection, and withdrawal stops new
-consultation and host-mediated session resume. Retrying a withdrawn acceptance
-returns history without reapproving it. Historical inspection preserves exact bytes.
-The manifest producer and consumer both run without Graft installed.
-
-The recommendation is now to **retire the current graph/compiler architecture
-from the artifact composition**. The experiments establish a replacement route
-for the tested workflow; they did not themselves ship a new public artifact interface or remove
-existing Graft APIs. The local artifact functions above are the first delivery slice. [ADR 0008](https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md)
-places shared infrastructure in Graft. Tempest and Rill are end-use applications
-consuming its public interface, not homes for reusable storage engines. Graft
-still needs the publication/recovery implementation in [#49](https://github.com/JamesHWade/graft/issues/49).
-No model requests are made in this acceptance fixture. Active-task cancellation,
-authenticated access, deletion and production recovery remain separate requirements.
-
-See [ADR 0007](https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md)
-for the historical comparison, and ADR 0008 for current ownership. Continue with [exact reuse
-bases](reuse-basis.html) for supported Graft behavior and [Forget and
-recovery](forget-restore.html) for the production lifecycle requirements.
+Shared infrastructure remains in Graft. Tempest and Rill own product semantics,
+access, approval, and retention. Publication recovery remains separate work in
+[#49](https://github.com/JamesHWade/graft/issues/49).
 
 ## Use retained research in Tempest
 
@@ -255,6 +202,7 @@ retain content and decision provenance, never a saved permission. Historical
 inspection uses `tempest_read_artifact_research()` and does not grant reuse.
 
 The [Tempest artifact guide](https://jameshwade.github.io/tempest/articles/artifact-knowledge.html)
-contains the installed offline example. The pinned experiment suite executes that
-example against these public interfaces. These are synthetic completed research
-fixtures, not production access or erasure evidence.
+contains the installed offline example. Current Tempest consumer tests exercise
+publication, fresh-process reads, corrections, and current admission through these
+public interfaces. The earlier pinned experiment suite remains historical
+evidence. These synthetic fixtures do not establish production access or erasure.

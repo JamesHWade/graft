@@ -1,184 +1,52 @@
 ---
-title: "How graft stores and retrieves knowledge"
-description: >
-  See how source contracts, reviewable plans, accepted revisions, and derived
-  read views fit together.
+title: "Architecture"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{How graft stores and retrieves knowledge}
+  %\VignetteIndexEntry{Architecture}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
+## Ownership
 
-Most Graft workflows begin with source records and a contract, not an existing
-knowledge store. `graft_open()` creates a blank local store when its path does
-not exist. From there, candidate records are checked in a read-only plan before
-one transaction accepts them as revisions.
+| Component | Owns |
+|---|---|
+| Commons | Live analysis and tools supplied by the application |
+| Data-dict | Data description and dictionary semantics |
+| Graft | Exact artifacts, selections, decision history, vocabulary releases |
+| Tempest | Research evidence, verification, reports, and research admission |
+| Rill | Reader experience, access, approval, and retention policy |
 
-The accepted revision ledger is the source of record content and history.
-Current records, search indexes, supported graph relationships, and the Open
-Knowledge Format (OKF) working tree are read views built from that ledger.
-Snapshot views select those reads at one accepted commit boundary.
+## Stored contracts
 
-This article describes the current package. The [persistent artifact and
-selected-memory proposal](persistent-artifacts.html) describes the experimentally
-tested next direction and the migration evidence required before replacing an
-existing consumer's storage.
+An artifact revision binds its identity, media type, bytes, and exact dependencies.
+A selection binds explicit roots to the verified dependency closure. A decision
+stream records explicit host accepts and withdrawals for one subject and purpose.
+An unchanged review can add a decision without changing the selection.
 
-<figure class="graft-article-figure">
-<p class="graft-swipe-hint">Swipe to explore the diagram &rarr;</p>
-<div class="graft-diagram-scroll">
-<img
-  class="graft-architecture-visual"
-  src="../reference/figures/okf-linkml-duckdb-system.svg"
-  alt="A data-dict or LinkML contract compiles into Graft. OKF exchanges readable proposals and projections with Graft. Graft commits to and retrieves accepted revisions from DuckDB."
->
-</div>
-<figcaption>
-The contract defines valid records; the ledger records what was accepted; OKF
-is a readable proposal and projection surface.
-</figcaption>
-</figure>
+Historical inspection and current consultation are separate. Inspection can read
+an old accepted selection after correction. Consultation also requires the exact
+current accepted event, purpose match, and current host eligibility.
 
-## From a contract to accepted knowledge
+Vocabulary releases are artifacts: concepts, relationships, field bindings,
+dictionary source bytes, canonical exports, and literal context are retained
+together. They provide a shared vocabulary, not an executable ontology reasoner.
 
-### Start with a source contract
+## Persistence boundary
 
-For related tables, start with data-dict. Graft maps its supported tables,
-columns, primary keys, scalar types, enums, sensitivity declarations, and
-foreign keys into a compiled `.graft.json` contract. Planning validates the
-mapped foreign keys, but Graft does not turn them into graph traversal edges.
+The current implementation uses bounded immutable local files and one writer.
+It verifies digests and predecessor identity, ignores abandoned staging, and
+supports identical retries. It does not provide distributed transactions,
+power-loss guarantees, authentication, or permanent deletion.
 
-Move to LinkML when the domain needs ontology identifiers, inheritance,
-polymorphic references, or semantic statements. An ordinary LinkML object
-reference is also a validation rule, not automatically a graph edge. The
-semantic graph projection is driven by classes that the compiled contract
-declares as graph-producing edges or semantic statements.
+Replaceable persistence means applications depend on these artifact semantics,
+not graph tables or a compiler. A future engine must preserve exact retained
+identities and history. No public pluggable-backend interface exists today.
 
-Both providers compile to the same runtime contract. A provider defines valid
-record meaning; it does not store accepted records or provide another mutation
-path. [Contract compiler boundaries](contract-compilers.html) documents the
-provider-specific dependencies, supported profiles, and mapping limits.
+## Native graph retirement
 
-### Review a plan before writing
-
-`graft_plan()` accepts named data frames and explicit provenance. It normalizes
-values, resolves identity, validates the complete candidate set, and compares
-the candidates with current accepted heads. The result separates inserts,
-updates, matches, and issues so a caller can decide whether the proposed change
-is correct.
-
-Planning writes no accepted records or provenance. The plan binds its result to
-the store identity, schema digest, expected record heads, idempotency state, and
-a deterministic digest. If any of those preconditions changes, the old plan
-cannot be committed.
-
-### Commit one checked plan
-
-`graft_commit()` rechecks the plan, store, active contract, write capability,
-idempotency state, and expected heads immediately before mutation. Records,
-provenance, and identity decisions commit in one transaction.
-
-Each accepted revision retains its record content, predecessor, changed fields,
-schema digest, accepted batch, and producer provenance. Historical state comes
-from those accepted revisions rather than from logs or overwritten current
-tables.
-
-### Build read views from revisions
-
-Graft derives current record heads, identifiers, search data, declared semantic
-relationships, and the OKF working tree from accepted revisions and the active
-contract. These views can be checked and rebuilt; they do not accept writes on
-their own.
-
-That separation matters when a projection is stale or damaged: the accepted
-revision chain remains the recovery source.
-
-## What appears in the semantic graph
-
-Graft does not infer graph meaning from every field that contains another
-record's ID.
-
-- A supported data-dict foreign key validates its concrete target.
-- An ordinary LinkML object-reference slot validates its declared range.
-- A LinkML class with a compiled edge or semantic-statement role contributes
-  edges to the semantic graph projection.
-- Narrative statements remain accepted, searchable knowledge but do not become
-  semantic subject-predicate-object edges.
-
-This keeps a database join, a validated reference, and a domain assertion from
-being treated as interchangeable. See [Add graph semantics with
-LinkML](linkml-schema.html) for a working semantic-statement example.
-
-## Why Graft uses S7 at stable boundaries
-
-S7 protects the objects whose invariants must survive across function calls:
-
-- `GraftSchema` owns a validated compiled contract and its digests.
-- `GraftProvenance` identifies the producer event and replay boundary.
-- `GraftCommitPlan` owns the candidate change set and commit preconditions.
-- `GraftStore` owns store identity and private connection state.
-- `GraftSnapshot` owns a serializable accepted commit identity.
-- `GraftView` binds that snapshot to a live store for read-only retrieval.
-
-Records remain data frames, candidate collections remain named lists, and
-retrieval results remain data frames or lists. Graft does not create an R class
-for every data-dict table or LinkML class; the compiled contract remains the
-domain type system.
-
-## DuckDB stays behind the package API
-
-The current store uses embedded DuckDB, but public functions describe user
-operations: open, plan, commit, retrieve, inspect, and synchronize. No public
-function exposes internal table names or accepts raw SQL.
-
-The store owns its connection, transactions, format version, migrations, and
-projection maintenance. A future backend change therefore need not change the
-public workflow.
-
-## Failed preconditions do not become partial changes
-
-The package makes common failure states explicit:
-
-- invalid candidates return collected issues and cannot commit;
-- an altered plan fails digest verification;
-- a changed contract or record head makes a plan stale;
-- a transaction failure accepts none of the batch;
-- an OKF edit remains a proposal until reviewed and committed;
-- projection drift can be detected and repaired from revisions; and
-- retrieval limits and truncation are reported.
-
-There is no force flag that turns a failed precondition into acceptance. Create
-a new plan against the current state instead.
-
-## OKF is a readable working surface
-
-<figure class="graft-article-figure">
-<p class="graft-swipe-hint">Swipe to explore the diagram &rarr;</p>
-<div class="graft-diagram-scroll">
-<img
-  class="graft-architecture-visual"
-  src="../reference/figures/okf-acceptance-loop.svg"
-  alt="Accepted revisions synchronize to readable files; edits return through review and commit."
->
-</div>
-<figcaption>
-Readable file edits remain proposals until they pass the same plan and commit
-checks as records submitted from R.
-</figcaption>
-</figure>
-
-For code, start with [Getting started](getting-started.html). Continue with
-[data-dict](data-dict-schema.html), [change
-control](knowledge-change-control.html), and [retrieval](retrieval.html). Add
-[LinkML](linkml-schema.html) when the domain needs semantic graph behavior, and
-use [open knowledge](open-knowledge-format.html) for the readable working
-surface.
+Consumer contract 3 removes graph/compiler APIs and their DuckDB, Python,
+LinkML, S7, and graph-adapter dependencies. There is no compatibility layer.
+The retained artifact formats are unchanged. The source history, earlier ADRs,
+and experiment observations record the previous architecture; their native
+examples are not supported recipes for current Graft.

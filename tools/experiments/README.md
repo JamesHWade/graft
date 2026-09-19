@@ -1,3 +1,12 @@
+# Historical composition experiments
+
+These pinned experiments record the comparison that led to Graft's artifact
+architecture. Native graph, migration, and compiler experiments require their
+recorded historical Graft/Tempest revisions; they are not runnable against
+consumer contract 3. Current supported verification lives in `tests/testthat`
+and `.github/workflows/vocabulary.yaml`. Original commands and observations
+follow as research history.
+
 # Artifact, memory and shared-meaning experiments
 
 These are bounded architecture and consumer experiments for #50 and #59–#64.
