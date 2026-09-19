@@ -118,6 +118,15 @@ artifact_postgres_lock <- function(connection, scope) {
       )
     }
   )
+  isolation <- artifact_postgres_query(
+    connection,
+    "SHOW transaction_isolation"
+  )[[1L]]
+  if (!identical(isolation, "read committed")) {
+    artifact_abort(
+      "PostgreSQL artifact operations require READ COMMITTED isolation."
+    )
+  }
   artifact_postgres_query(
     connection,
     "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",

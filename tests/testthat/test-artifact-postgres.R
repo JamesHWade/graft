@@ -266,3 +266,20 @@ test_that("PostgreSQL vocabulary releases stay within their host scope", {
     expect_identical(graft_vocabulary_read(reopened, selection), retained)
   })
 })
+
+
+test_that("PostgreSQL rejects transaction snapshots that can hide committed decisions", {
+  connection <- local_artifact_postgres()
+  for (isolation in c("REPEATABLE READ", "SERIALIZABLE", "READ UNCOMMITTED")) {
+    DBI::dbBegin(connection)
+    DBI::dbExecute(
+      connection,
+      paste("SET TRANSACTION ISOLATION LEVEL", isolation)
+    )
+    expect_error(
+      graft_artifact_store_postgres(connection, "reader", create = TRUE),
+      class = "graft_artifact_error"
+    )
+    DBI::dbRollback(connection)
+  }
+})

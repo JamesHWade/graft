@@ -25,3 +25,8 @@ Reader disablement and Archive are distinct from permanent Forget. Neither
 PostgreSQL deletion nor transaction rollback constitutes a backup erasure
 protocol. Issue #48 remains the rollout gate. Do not serialize store handles,
 use scope keys as bearer credentials, or expose raw connections to models.
+
+Only READ COMMITTED transactions are supported. Each query must see decisions
+committed by a previous holder after acquiring the scope lock. Repeatable-read
+snapshots can otherwise admit conflicting successors despite lock ordering;
+unsupported isolation levels are rejected before artifact reads or writes.
