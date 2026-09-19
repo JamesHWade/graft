@@ -1,11 +1,13 @@
 # Report Graft's artifact and vocabulary contracts
 
-Consumer contract 3 removes the native graph store, schema compiler,
-commit plans, snapshots, and managed working tree. Artifacts and
-selections retain format 1; the cut does not change their bytes or
-digest identities. Applications interpret payloads and decide whether
-evidence is eligible for use. Graft verifies exact retention and records
-explicit host decisions.
+Consumer contract 3.1 adds bounded artifact manifests and
+non-destructive replacement plans. These operations do not authorize
+Forget or backup restore. Consumer contract 3 removes the native graph
+store, schema compiler, commit plans, snapshots, and managed working
+tree. Artifacts and selections retain format 1; the cut does not change
+their bytes or digest identities. Applications interpret payloads and
+decide whether evidence is eligible for use. Graft verifies exact
+retention and records explicit host decisions.
 
 ## Usage
 
@@ -16,18 +18,24 @@ graft_contract_version()
 ## Value
 
 A named list of character scalars describing the consumer API and
-persisted artifact, selection, decision, vocabulary, and binding
-formats.
+artifact, manifest, replacement, selection, decision, vocabulary, and
+binding formats.
 
 ## Examples
 
 ``` r
 graft_contract_version()
 #> $contract
-#> [1] "3.0.0"
+#> [1] "3.1.0"
 #> 
 #> $artifact
 #> [1] "1"
+#> 
+#> $manifest
+#> [1] "graft-artifact-manifest/1"
+#> 
+#> $replacement
+#> [1] "graft-artifact-replacement/1"
 #> 
 #> $selection
 #> [1] "1"

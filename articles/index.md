@@ -12,6 +12,9 @@
   Understand the relationship to Commons, data-dict and the migration
   evidence.
 
+- [Verify a replacement artifact
+  store](https://jameshwade.github.io/graft/articles/artifact-recovery.md):
+
 - [Shared concepts across
   workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
 

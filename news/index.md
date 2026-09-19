@@ -16,6 +16,16 @@
   identical retries, and separate historical inspection from current
   purpose-bound consultation
   ([\#73](https://github.com/JamesHWade/graft/issues/73)).
+- [`graft_artifact_manifest()`](https://jameshwade.github.io/graft/reference/graft_artifact_manifest.md),
+  [`graft_artifact_replacement_plan()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md),
+  and
+  [`graft_artifact_replace()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)
+  verify complete bounded store inventories and copy exact survivors
+  into an empty quarantine store. Plans exclude declared dependents,
+  affected selections, and whole affected decision histories;
+  applications still own Forget approval, generation retirement, restore
+  admission, and disposal
+  ([\#48](https://github.com/JamesHWade/graft/issues/48)).
 - [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   and
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
@@ -32,9 +42,9 @@
   PostgreSQL scopes with transaction rollback and serialized scope
   writes ([\#47](https://github.com/JamesHWade/graft/issues/47)).
 - [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
-  reports consumer contract 3.0.0 and the retained artifact, selection,
-  decision, vocabulary, binding, and vocabulary-release formats.
-  Existing artifact identities are unchanged
+  reports consumer contract 3.1.0 and the artifact, manifest,
+  replacement, selection, decision, vocabulary, binding, and
+  vocabulary-release formats. Existing artifact identities are unchanged
   ([\#74](https://github.com/JamesHWade/graft/issues/74)).
 - [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
   and

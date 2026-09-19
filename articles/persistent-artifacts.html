@@ -379,6 +379,17 @@ Connections and store handles are process-local.</p>
 database backup from restoring deleted content. Those remain explicit
 host and storage obligations before a broad memory rollout.</p>
 </div>
+<div class="section level2">
+<h2 id="build-a-verified-replacement">Build a verified replacement<a class="anchor" aria-label="anchor" href="#build-a-verified-replacement"></a>
+</h2>
+<p>A host can preview exclusions with
+<code><a href="../reference/graft_artifact_replacement_plan.html">graft_artifact_replacement_plan()</a></code> and copy exact survivors
+into a separate empty store with <code><a href="../reference/graft_artifact_replacement_plan.html">graft_artifact_replace()</a></code>.
+<code><a href="../reference/graft_artifact_manifest.html">graft_artifact_manifest()</a></code> verifies the complete logical
+object set, including historical decisions. See <a href="artifact-recovery.html">Verify a replacement artifact store</a>
+for the runnable example and the separate Forget and restore
+obligations.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>

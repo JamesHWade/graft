@@ -12,6 +12,14 @@
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   : Preserve an exact artifact selection
 
+## Verify replacement stores
+
+- [`graft_artifact_manifest()`](https://jameshwade.github.io/graft/reference/graft_artifact_manifest.md)
+  : Inventory a complete artifact store
+- [`graft_artifact_replacement_plan()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)
+  [`graft_artifact_replace()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)
+  : Plan and build a bounded artifact-store replacement
+
 ## Record host decisions
 
 - [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)

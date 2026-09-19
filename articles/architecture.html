@@ -132,11 +132,18 @@ executable ontology reasoner.</p>
 <div class="section level2">
 <h2 id="persistence-boundary">Persistence boundary<a class="anchor" aria-label="anchor" href="#persistence-boundary"></a>
 </h2>
-<p>The current implementation uses bounded immutable local files and one
-writer. It verifies digests and predecessor identity, ignores abandoned
-staging, and supports identical retries. It does not provide distributed
-transactions, power-loss guarantees, authentication, or permanent
-deletion.</p>
+<p>Graft supports bounded immutable local files with one writer and
+PostgreSQL scopes inside host-owned transactions. Normal reads verify
+digests and predecessor identity, ignore abandoned staging, and support
+identical retries. Complete manifests require every entry to be
+accounted for, rejecting abandoned staging and unknown objects.
+Replacement plans copy exact survivors to empty quarantine stores and
+verify the whole image. They do not provide distributed transactions,
+power-loss guarantees, authentication, or permanent deletion.</p>
+<p>Applications retire generations and enforce restore admission using
+an independent durable journal. A valid content checksum does not
+authorize an old backup. See <a href="artifact-recovery.html">Verify a
+replacement artifact store</a>.</p>
 <p>Replaceable persistence means applications depend on these artifact
 semantics, not graph tables or a compiler. A future engine must preserve
 exact retained identities and history. No public pluggable-backend

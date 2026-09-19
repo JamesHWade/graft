@@ -8,10 +8,16 @@ graft::graft_contract_version()
 ```
 
     ## $contract
-    ## [1] "3.0.0"
+    ## [1] "3.1.0"
     ## 
     ## $artifact
     ## [1] "1"
+    ## 
+    ## $manifest
+    ## [1] "graft-artifact-manifest/1"
+    ## 
+    ## $replacement
+    ## [1] "graft-artifact-replacement/1"
     ## 
     ## $selection
     ## [1] "1"
@@ -28,10 +34,10 @@ graft::graft_contract_version()
     ## $vocabulary_release
     ## [1] "graft-vocabulary-release/1"
 
-Graft requires R 4.3 or later and imports digest, jsonlite, and rlang.
-Publishing vocabulary additionally requires the data-dict R package and
-CLI; reading a published release requires neither the CLI nor original
-dictionary files.
+Graft requires R 4.3 or later and imports digest, fs, jsonlite, and
+rlang. Publishing vocabulary additionally requires the data-dict R
+package and CLI; reading a published release requires neither the CLI
+nor original dictionary files.
 
 The dictionary integration is pinned in `DESCRIPTION` to the validated
 data-dict source revision. Commons is host-owned: pass retained

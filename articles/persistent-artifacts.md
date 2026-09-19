@@ -315,3 +315,16 @@ Connections and store handles are process-local.
 This boundary does not implement permanent Forget or prevent an old
 database backup from restoring deleted content. Those remain explicit
 host and storage obligations before a broad memory rollout.
+
+## Build a verified replacement
+
+A host can preview exclusions with
+[`graft_artifact_replacement_plan()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)
+and copy exact survivors into a separate empty store with
+[`graft_artifact_replace()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md).
+[`graft_artifact_manifest()`](https://jameshwade.github.io/graft/reference/graft_artifact_manifest.md)
+verifies the complete logical object set, including historical
+decisions. See [Verify a replacement artifact
+store](https://jameshwade.github.io/graft/articles/artifact-recovery.md)
+for the runnable example and the separate Forget and restore
+obligations.

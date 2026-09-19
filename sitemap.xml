@@ -2,6 +2,7 @@
 <url><loc>https://jameshwade.github.io/graft/404.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/LICENSE-text.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/architecture.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/articles/artifact-recovery.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/compatibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/index.html</loc></url>
@@ -11,6 +12,8 @@
 <url><loc>https://jameshwade.github.io/graft/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/news/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_decide.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_manifest.html</loc></url>
+<url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_select.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_store.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.html</loc></url>
