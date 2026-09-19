@@ -13,7 +13,7 @@ vignette: >
 graft::graft_contract_version()
 ```
 
-Graft requires R 4.3 or later and imports digest, jsonlite, and rlang. Publishing
+Graft requires R 4.3 or later and imports digest, fs, jsonlite, and rlang. Publishing
 vocabulary additionally requires the data-dict R package and CLI; reading a
 published release requires neither the CLI nor original dictionary files.
 

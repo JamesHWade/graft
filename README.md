@@ -52,12 +52,13 @@ meaning; they do not authorize joins, convert units, or execute reasoning.
 
 ## Scope and status
 
-This is a pre-production local store for trusted files and one writer. Concurrent
-publication, power-loss recovery, authenticated access, and permanent erasure are
-separate work. The artifact contract allows future persistence implementations;
-no interchangeable backend API is promised today.
+This pre-production package supports trusted local files with one writer and
+PostgreSQL scopes inside host-owned transactions. Power-loss recovery,
+authenticated access, and permanent erasure remain separate work. The artifact
+contract allows future persistence implementations; no interchangeable backend
+API is promised today.
 
-Consumer contract **3.0.0** removes the native graph store, LinkML compiler,
+Consumer contract **3.1.0** adds verified replacement mechanics. Contract 3 removes the native graph store, LinkML compiler,
 commit plans, graph snapshots, managed OKF tree, and graph-specific agent tools.
 There are no compatibility wrappers. Existing artifact, selection, and decision
 formats keep their exact identities.
@@ -65,3 +66,10 @@ formats keep their exact identities.
 Read [getting started](https://jameshwade.github.io/graft/articles/getting-started.html),
 [persistent artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.html),
 and [shared vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).
+
+## Verified replacement stores
+
+Preview exclusions and verify exact survivors in a separate store with artifact
+manifests and replacement plans. See the [replacement guide](https://jameshwade.github.io/graft/articles/artifact-recovery.html).
+Applications still own permanent Forget authorization, generation retirement,
+backup admission, and disposal; these operations never delete source content.
