@@ -1,186 +1,39 @@
 url: https://jameshwade.github.io/graft/
 title: graft
-
-repo:
-  branch: main
-  url:
-    home: https://github.com/JamesHWade/graft/
-    source: https://github.com/JamesHWade/graft/blob/main/
-    issue: https://github.com/JamesHWade/graft/issues/
-    user: https://github.com/
-
-development:
-  mode: auto
-  version_label: warning
-  version_tooltip: Development documentation
-
 template:
   light-switch: true
   bslib:
     version: 5
     brand: _brand.yml
-    pkgdown-nav-height: 72px
-    navbar-light-bg: "#EEF7F3"
-    navbar-dark-bg: "#12362D"
-
+development:
+  mode: auto
 home:
-  title: "graft: Durable knowledge for R workflows and agents"
+  title: "graft: Persistent artifacts and shared vocabulary"
   description: >
-    Review and retain research conclusions, interpretations and related records
-    with data-dict contracts, accepted history and exact reuse for later tasks.
-  sidebar:
-    structure: [links, license, authors, dev]
-
+    Retain exact evidence, reports, shared concepts, and host decisions across workflows.
 navbar:
   structure:
-    left: [intro, learn, integrate, design, reference, news]
+    left: [intro, articles, reference, news]
     right: [search, github, lightswitch]
-  components:
-    intro:
-      text: Get started
-      href: articles/getting-started.html
-    learn:
-      text: Learn
-      menu:
-        - text: Start with data-dict
-          href: articles/data-dict-schema.html
-        - text: Review knowledge changes
-          href: articles/knowledge-change-control.html
-        - text: Retrieve records and history
-          href: articles/retrieval.html
-        - text: Retain an exact reuse basis
-          href: articles/reuse-basis.html
-        - text: Calculate with accepted Definitions
-          href: reference/graft_calculate.html
-    integrate:
-      text: Integrate
-      menu:
-        - text: Work with agents
-          href: articles/agents.html
-        - text: Reuse narrative knowledge
-          href: articles/ecosystem.html
-        - text: Keep Readers' knowledge separate
-          href: articles/reader-access.html
-        - text: Supported integrations
-          href: articles/compatibility.html
-    design:
-      text: Design
-      menu:
-        - text: Persistent artifacts and selected memory
-          href: articles/persistent-artifacts.html
-        - text: Add graph semantics with LinkML
-          href: articles/linkml-schema.html
-        - text: Open knowledge
-          href: articles/open-knowledge-format.html
-        - text: Design Forget and recovery
-          href: articles/forget-restore.html
-        - text: Architecture
-          href: articles/architecture.html
-        - text: Contract compilers
-          href: articles/contract-compilers.html
-        - text: v0.1 design notes
-          href: articles/v01-design.html
-    github:
-      icon: fab fa-github fa-lg
-      href: https://github.com/JamesHWade/graft/
-      aria-label: View graft on GitHub
-
-footer:
-  structure:
-    left: developed_by
-    right: [github, built_with]
-  components:
-    github: Source and issues are available on [GitHub](https://github.com/JamesHWade/graft).
-
 articles:
-  - title: Start here
-    desc: >
-      Build a new store from related tables with a data-dict contract.
+  - title: Learn graft
     contents:
       - getting-started
-      - data-dict-schema
-  - title: Use graft
-    desc: >
-      Review and accept changes, retrieve current and historical records, and
-      give agents bounded access to both.
-    contents:
-      - knowledge-change-control
-      - retrieval
-      - agents
-      - compatibility
-      - ecosystem
-      - reuse-basis
-      - reader-access
-  - title: Add richer representations
-    desc: >
-      Add semantic graph relationships with LinkML or synchronize a readable
-      working tree.
-    contents:
-      - linkml-schema
-      - open-knowledge-format
-  - title: Design and internals
-    desc: >
-      Understand storage and projection boundaries, contract compilation, and
-      the choices behind the v0.1 package design.
-    contents:
-      - shared-vocabulary
       - persistent-artifacts
-      - forget-restore
+      - shared-vocabulary
       - architecture
-      - contract-compilers
-      - v01-design
-
+      - compatibility
 reference:
-  - title: Shared vocabulary
+  - title: Retain exact artifacts
     contents:
-      - graft_vocabulary_publish
-  - title: Persistent artifacts
-    contents:
-      - graft_artifact_decide
       - graft_artifact_store
       - graft_artifact_select
-  - title: Define and open
-    desc: >
-      Compile or load a contract, then create, open, and close a store.
+  - title: Record host decisions
     contents:
-      - graft_schema
-      - graft_open
-      - graft_close
-  - title: Propose and accept
-    desc: >
-      Record where candidates came from, inspect a plan, and commit it.
+      - graft_artifact_decide
+  - title: Share vocabulary
     contents:
-      - graft_provenance
-      - graft_plan
-      - graft_proposal_type
-      - graft_proposal_plan
-      - graft_commit
-      - graft_ingest
-  - title: Retrieve and inspect
-    desc: >
-      Pin an accepted boundary, then read records, search results, fixed
-      projections, and history.
+      - graft_vocabulary_publish
+  - title: Consumer contract
     contents:
-      - graft_snapshot
-      - graft_at
-      - graft_view_snapshot
-      - graft_get
-      - graft_find
-      - graft_query
-      - graft_history
-      - graft_changes
-      - graft_dictionary
-      - graft_definitions
-      - graft_calculate
-  - title: Synchronize and integrate
-    desc: >
-      Synchronize readable files, review file edits, and provide bounded
-      read-only tools to an agent host, then verify its recorded evidence.
-    contents:
-      - graft_sync
-      - graft_status
-      - graft_review
-      - graft_tools
-      - graft_verify
-      - graft_commons_data_source
       - graft_contract_version
