@@ -5,7 +5,8 @@
 #' authentication, and choice of scope.
 #'
 #' @param connection An open `RPostgres::PqConnection` in an active transaction
-#'   started through DBI. Pools must supply a checked-out connection.
+#'   started through DBI at PostgreSQL's `READ COMMITTED` isolation level.
+#'   Pools must supply a checked-out connection.
 #' @param scope Host-selected isolation key, at most 1024 UTF-8 bytes. Every
 #'   object read and write is restricted to this scope. This key is not an
 #'   authentication credential; never let an agent choose it.

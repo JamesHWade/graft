@@ -14,7 +14,8 @@ graft_artifact_store_postgres(
 }
 \arguments{
 \item{connection}{An open \code{RPostgres::PqConnection} in an active transaction
-started through DBI. Pools must supply a checked-out connection.}
+started through DBI at PostgreSQL's \verb{READ COMMITTED} isolation level.
+Pools must supply a checked-out connection.}
 
 \item{scope}{Host-selected isolation key, at most 1024 UTF-8 bytes. Every
 object read and write is restricted to this scope. This key is not an
