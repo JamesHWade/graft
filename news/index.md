@@ -2,281 +2,39 @@
 
 ## graft 0.0.0.9000
 
-- A new persistent-artifact guide explains the roles of Commons,
-  data-dict, vocabulary, and selected memory. Offline Tempest
-  experiments demonstrate migration, public consumer admission, direct
-  acceptance, correction, and withdrawal for the supported synthetic
-  fixture; the resulting recommendation is to retire Graft’s
-  graph/compiler architecture from this composition. The installed
-  Tempest consumer now publishes exact evidence and readable synthesis
-  through Graft’s public artifacts and decisions, with current admission
-  checks on new runs and resume. Native graph removal
-  ([\#74](https://github.com/JamesHWade/graft/issues/74)) and production
-  recovery ([\#49](https://github.com/JamesHWade/graft/issues/49))
-  remain follow-up work.
-
-- A proposed Forget and recovery protocol has offline tests for retired
-  store generations, backup admission, interrupted cleanup, and Reader
-  isolation; permanent purge and production recovery remain
-  unimplemented ([\#48](https://github.com/JamesHWade/graft/issues/48)).
-
-- A new Reader access guide and offline two-Reader contract demonstrate
-  isolated stores, host authorization, pinned tool results, revocation,
-  and safe worker rebinds; Rill runtime integration and permanent Forget
-  remain separate gates
-  ([\#47](https://github.com/JamesHWade/graft/issues/47)).
-
-- Agent integrations now require ellmer 0.5.0 or later;
-  [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-  and
-  [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
-  reject older installations explicitly instead of risking omitted
-  answers from incompatible transcript classes
-  ([\#36](https://github.com/JamesHWade/graft/issues/36)).
-
-- [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
-  now supports current Commons sources without a version or revision
-  pin, retains its detached connection without modifying Commons fields,
-  and checks the public constructor interface
-  ([\#36](https://github.com/JamesHWade/graft/issues/36)).
-
-- `GraftSchema` and `GraftStore` now print concise identity, contract,
-  and lifecycle summaries instead of recursively dumping their internal
-  state.
-
-- A new
-  [`vignette("agents")`](https://jameshwade.github.io/graft/articles/agents.md)
-  documents how Graft is used from an agent host: bounded read-only
-  tools, snapshot-pinned sessions, agent-authored proposals that pass
-  through validation and review, and file-editing agents working through
-  the OKF tree. Getting started, the README, and the site home page now
-  show the same path.
-
+- Graft now contains persistent artifacts, exact dependency selections,
+  host decision history, and shared vocabulary. Native graph stores,
+  LinkML compilation, commit plans, snapshots, calculations, managed OKF
+  trees, and graph agent adapters are removed without compatibility
+  wrappers. The website describes the supported artifact architecture
+  ([\#74](https://github.com/JamesHWade/graft/issues/74)).
 - [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
-  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
+  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
   and
   [`graft_artifact_reuse()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
-  record host acceptance and withdrawal with exact predecessor guards
-  and idempotent retries, distinguish historical inspection from current
-  purpose-bound consultation, and advance the consumer contract to
-  1.0.0. Legacy data-dict compiled manifests must be regenerated;
-  seamless reopening of graph stores tied to the previous compiler
-  digest is unsupported
+  retain explicit host acceptance and withdrawal, guard predecessors and
+  identical retries, and separate historical inspection from current
+  purpose-bound consultation
   ([\#73](https://github.com/JamesHWade/graft/issues/73)).
-
 - [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   and
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
-  retain and verify complete bounded selections of exact dependencies,
-  with an explicit `max_metadata_bytes` limit for encoded selections and
-  a store-level `max_revision_bytes` limit for dependency manifests.
-  Duplicate references count once against traversal bounds.
-  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
-  can pin evidence, dictionary and vocabulary revisions without granting
-  approval The consumer contract advances to 0.8.0
+  retain and verify bounded exact dependency closures
   ([\#72](https://github.com/JamesHWade/graft/issues/72)).
-
 - [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md),
-  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
+  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md),
   and
   [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
-  preserve bounded opaque content as immutable revisions in a shared
-  local store, with verified exact reads and idempotent saves; the
-  consumer contract advances to 0.7.0
-  ([\#71](https://github.com/JamesHWade/graft/issues/71)).
-
-- [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
-  and
-  [`graft_definitions()`](https://jameshwade.github.io/graft/reference/graft_definitions.md)
-  replace the pre-production singular measure API with composable,
-  data-dict-compatible metrics, filters, and derived values over one
-  accepted public table, including plan-time type checking, pinned
-  evaluation, grouping, typed predicates, dependency closure, and
-  canonical definition receipts
-  ([\#21](https://github.com/JamesHWade/graft/issues/21)).
-
-- [`graft_calculate()`](https://jameshwade.github.io/graft/reference/graft_calculate.md)
-  now fails closed before evaluating a public table or normalized
-  relation that exceeds the hard calculation-input bound.
-
-- [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
-  can restrict changes to `record_ids` before applying the result limit,
-  preserving selected changes and delete tombstones even in a busy
-  shared store; the compatible addition advances the consumer contract
-  to 0.5.0 ([\#45](https://github.com/JamesHWade/graft/issues/45)).
-
-- [`graft_changes()`](https://jameshwade.github.io/graft/reference/graft_changes.md)
-  lists every record whose accepted revision differs between two
-  committed boundaries (snapshots, batch IDs, or times) as one bounded
-  store-wide table with the action, revision count, the public fields
-  whose values differ between the two boundary revisions, and the latest
-  public record, so a host can ask “what was accepted since this
-  snapshot” without looping over
-  [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
-  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
-
-- [`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
-  materializes selected public tables, normalized relations, prose, and
-  accepted definitions at one immutable boundary, then returns a
-  detached source owned by an optional Commons integration
-  ([\#21](https://github.com/JamesHWade/graft/issues/21)).
-
+  retain bounded opaque bytes as immutable revisions with verified exact
+  reads ([\#71](https://github.com/JamesHWade/graft/issues/71)).
 - [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
-  reports the semantic consumer contract version together with the
-  persisted store, plan, snapshot, manifest, and OKF format versions,
-  giving downstream packages a stable value to pin against instead of a
-  git commit or a namespace digest
-  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
-
-- [`graft_dictionary()`](https://jameshwade.github.io/graft/reference/graft_dictionary.md)
-  and its agent tool expose bounded public dictionary context with
-  explicit semantics, privacy filtering, pagination, and
-  accepted-boundary receipts; this addition advances the consumer
-  contract to 0.3.0
-  ([\#37](https://github.com/JamesHWade/graft/issues/37)).
-
-- [`graft_proposal_type()`](https://jameshwade.github.io/graft/reference/graft_proposal_type.md)
-  derives public structured-output schemas from the accepted dictionary,
-  and
-  [`graft_proposal_plan()`](https://jameshwade.github.io/graft/reference/graft_proposal_plan.md)
-  validates raw producer output as a reviewable plan without committing;
-  the consumer contract advances to 0.4.0
-  ([\#38](https://github.com/JamesHWade/graft/issues/38)).
-
-- `graft_tools(result_format = "json")` returns complete explicit JSON
-  envelopes for supported ellmer, Deputy, and dsprrr invocation. The
-  default list mode preserves direct R results; chat registrations
-  should select JSON mode to avoid ellmer’s implicit-conversion
-  deprecation. This compatible addition advances the consumer contract
-  to 0.6.0 ([\#53](https://github.com/JamesHWade/graft/issues/53)).
-
-- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-  adds bounded definition discovery and one composite calculation tool
-  when accepted definitions exist; every result carries one canonical
-  receipt for its exact accepted boundary and schema, while calculation
-  receipts identify the full accepted definition closure
-  ([\#21](https://github.com/JamesHWade/graft/issues/21),
-  [\#23](https://github.com/JamesHWade/graft/issues/23)).
-
-- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
-  now validates JSON-encoded tool envelopes from real ellmer 0.5 host
-  loops, preserving cited-read classification across Deputy and dsprrr
-  while rejecting malformed or duplicate-key envelopes
-  ([\#40](https://github.com/JamesHWade/graft/issues/40)).
-
-- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
-  classifies every completed text-bearing assistant answer in a recorded
-  ellmer chat from deterministic, offline Graft evidence: valid
-  governed-calculation-only evidence is verified, while missing,
-  non-Graft, errored, malformed, or citation-unmatched read evidence
-  fails closed as untrusted with stable reasons
-  ([\#24](https://github.com/JamesHWade/graft/issues/24)).
-
-- [`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
-  now labels successful generic Graft reads as cited only when every
-  contributing result is independently matched to an explicit quotation
-  or Markdown blockquote; mixed calculation and generic evidence is
-  capped at cited, while unmatched or failed paths remain untrusted
-  ([\#25](https://github.com/JamesHWade/graft/issues/25)).
-
+  reports consumer contract 3.0.0 and the retained artifact, selection,
+  decision, vocabulary, binding, and vocabulary-release formats.
+  Existing artifact identities are unchanged
+  ([\#74](https://github.com/JamesHWade/graft/issues/74)).
 - [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
   and
   [`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
-  preserve shared concepts, directed relationships, qualified dictionary
-  bindings, and human-readable context as immutable artifact selections,
-  using public data-dict validation and exports. Consumer contract 2.0.0
-  requires recompiling legacy data-dict manifests; artifact and decision
-  formats are unchanged
-  ([\#75](https://github.com/JamesHWade/graft/issues/75)).
-
-- Graft v0.1 replaces the pre-production `kg_*` API, bundled
-  applications, Tempest adapter, physical migration subsystem, and dual
-  authoritative record tables with a focused revision-first package
-  boundary.
-
-- The pkgdown site now starts with ordinary tables and a shipped
-  data-dict example, creates a blank store explicitly, demonstrates
-  change history, and introduces LinkML when richer semantic graph
-  modeling is needed.
-
-- Canonical record and identity JSON now preserves finite numeric inputs
-  with round-trip-safe double serialization, normalizes signed zero, and
-  rejects character numeric underflow so distinct values cannot collapse
-  into one revision or identity digest.
-
-- Store format 3 makes immutable record revisions authoritative and
-  treats current records, multivalued relations, graph edges, and search
-  state as verified rebuildable projections.
-
-- [`graft_at()`](https://jameshwade.github.io/graft/reference/graft_at.md)
-  and
-  [`graft_snapshot()`](https://jameshwade.github.io/graft/reference/graft_snapshot.md)
-  capture serializable accepted-knowledge references and create
-  immutable read views; read-only tools built from a view remain pinned
-  to that boundary.
-
-- [`graft_commit()`](https://jameshwade.github.io/graft/reference/graft_commit.md)
-  and
-  [`graft_ingest()`](https://jameshwade.github.io/graft/reference/graft_ingest.md)
-  atomically accept immutable reviewed plans through set-based DuckDB
-  operations and return ordinary summaries with insert, update, match,
-  observation, replay, and timing details.
-
-- [`graft_find()`](https://jameshwade.github.io/graft/reference/graft_find.md),
-  [`graft_get()`](https://jameshwade.github.io/graft/reference/graft_get.md),
-  [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md),
-  and
-  [`graft_query()`](https://jameshwade.github.io/graft/reference/graft_query.md)
-  provide bounded deterministic retrieval directly from the
-  authoritative revision ledger, including exact historical types,
-  evidence, graph traversal, and integrity diagnosis.
-
-- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
-  and
-  [`graft_close()`](https://jameshwade.github.io/graft/reference/graft_close.md)
-  manage the only DuckDB backend through an invariant-checked S7
-  `GraftStore`, including ownership-aware connection cleanup and
-  read-only reopen behavior.
-
-- [`graft_open()`](https://jameshwade.github.io/graft/reference/graft_open.md)
-  now seeds contract definitions only when initializing a new store, so
-  reopening with edited definitions cannot bypass plan review;
-  package-owned DuckDB connections also use isolated extension storage.
-
-- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
-  and
-  [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
-  produce the same tamper-evident S7 `GraftCommitPlan` for ordinary
-  records and edited OKF knowledge without persistent writes.
-
-- [`graft_plan()`](https://jameshwade.github.io/graft/reference/graft_plan.md)
-  and
-  [`graft_review()`](https://jameshwade.github.io/graft/reference/graft_review.md)
-  now carry a `disposition` column on `@changes`: `duplicate`, `new`, or
-  `revision` restate the ledger action for accepted statements, while
-  `supersedes`, `superseded`, `contradicts`, and `contradicted` surface
-  statement-level relations declared by the staged records through
-  `superseded_by` and `contradicts` evidence, attached to the declaring
-  row so they remain visible when the accepted target is not restaged;
-  the plan format version is now `0.2.0`
-  ([\#32](https://github.com/JamesHWade/graft/issues/32)).
-
-- [`graft_provenance()`](https://jameshwade.github.io/graft/reference/graft_provenance.md)
-  creates immutable S7 provenance carrying producer, run, replay, and
-  JSON metadata identity.
-
-- [`graft_schema()`](https://jameshwade.github.io/graft/reference/graft_schema.md)
-  compiles LinkML or the supported `graft-table-v1` data-dict profile
-  into the same invariant-checked contract. YAML authoring uses the
-  optional data-dict CLI, committed resolved JSON remains R-only, and
-  unsupported provider semantics fail closed.
-
-- [`graft_status()`](https://jameshwade.github.io/graft/reference/graft_status.md)
-  and
-  [`graft_sync()`](https://jameshwade.github.io/graft/reference/graft_sync.md)
-  inspect and explicitly synchronize the deterministic OKF working tree
-  without making it an independent source of accepted knowledge.
-
-- [`graft_view_snapshot()`](https://jameshwade.github.io/graft/reference/graft_view_snapshot.md)
-  returns an isolated, path-free copy of the exact immutable snapshot
-  retained by a `GraftView`.
+  retain shared concepts, relationships, exact data-dict bindings,
+  source bytes, and literal context across dictionary corrections
+  ([\#76](https://github.com/JamesHWade/graft/issues/76)).

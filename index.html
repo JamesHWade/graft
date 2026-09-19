@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>graft: Durable knowledge for R workflows and agents • graft</title>
+<title>graft: Persistent artifacts and shared vocabulary • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -17,10 +17,10 @@
 <link href="deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Durable knowledge for R workflows and agents">
-<meta name="description" content="Review and retain research conclusions, interpretations and related records with data-dict contracts, accepted history and exact reuse for later tasks.
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Persistent artifacts and shared vocabulary">
+<meta name="description" content="Retain exact evidence, reports, shared concepts, and host decisions across workflows.
 ">
-<meta property="og:description" content="Review and retain research conclusions, interpretations and related records with data-dict contracts, accepted history and exact reuse for later tasks.
+<meta property="og:description" content="Retain exact evidence, reports, shared concepts, and host decisions across workflows.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="index.html">graft</a>
 
-    <small class="nav-text text-warning me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,38 +41,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="articles/getting-started.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-learn" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Learn</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-learn">
-<li><a class="dropdown-item" href="articles/data-dict-schema.html">Start with data-dict</a></li>
-    <li><a class="dropdown-item" href="articles/knowledge-change-control.html">Review knowledge changes</a></li>
-    <li><a class="dropdown-item" href="articles/retrieval.html">Retrieve records and history</a></li>
-    <li><a class="dropdown-item" href="articles/reuse-basis.html">Retain an exact reuse basis</a></li>
-    <li><a class="dropdown-item" href="reference/graft_calculate.html">Calculate with accepted Definitions</a></li>
-  </ul>
-</li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-integrate" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Integrate</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-integrate">
-<li><a class="dropdown-item" href="articles/agents.html">Work with agents</a></li>
-    <li><a class="dropdown-item" href="articles/ecosystem.html">Reuse narrative knowledge</a></li>
-    <li><a class="dropdown-item" href="articles/reader-access.html">Keep Readers' knowledge separate</a></li>
-    <li><a class="dropdown-item" href="articles/compatibility.html">Supported integrations</a></li>
-  </ul>
-</li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-design">
-<li><a class="dropdown-item" href="articles/persistent-artifacts.html">Persistent artifacts and selected memory</a></li>
-    <li><a class="dropdown-item" href="articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
-    <li><a class="dropdown-item" href="articles/open-knowledge-format.html">Open knowledge</a></li>
-    <li><a class="dropdown-item" href="articles/forget-restore.html">Design Forget and recovery</a></li>
-    <li><a class="dropdown-item" href="articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="articles/contract-compilers.html">Contract compilers</a></li>
-    <li><a class="dropdown-item" href="articles/v01-design.html">v0.1 design notes</a></li>
-  </ul>
-</li>
+<li class="nav-item"><a class="nav-link" href="articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
@@ -80,7 +49,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/graft/" aria-label="View graft on GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/graft/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch">
@@ -103,31 +72,26 @@
 </div>
 <div class="graft-hero">
 <p class="graft-eyebrow">
-Durable knowledge for R workflows and agents
+Persistent artifacts and shared vocabulary for R
 </p>
 <h2 data-toc-skip>
-Keep what you learn.<br>Review what changes.
+Keep what you learn.<br>Return to the exact evidence.
 </h2>
 <p class="graft-hero-copy">
-Give research conclusions, interpretations, definitions and related records an accepted history. Start with <code>data-dict.yaml</code>, review proposed changes, and let a later task return to the exact knowledge an earlier task used.
+Retain reports, evidence and shared concepts after the workflow ends. Record what a host accepted, preserve earlier revisions, and give a later task the exact artifacts behind an answer.
 </p>
 <div class="graft-actions">
-<p><a class="btn btn-primary" href="articles/getting-started.html">Build your first store</a> <a class="btn btn-outline-secondary" href="articles/ecosystem.html">Try narrative reuse</a></p>
+<p><a class="btn btn-primary" href="articles/getting-started.html">Retain your first artifact</a> <a class="btn btn-outline-secondary" href="articles/shared-vocabulary.html">Share concepts across workflows</a></p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="shared-artifact-direction">Shared artifact direction<a class="anchor" aria-label="anchor" href="#shared-artifact-direction"></a>
+<h2 id="from-a-result-to-persistent-memory">From a result to persistent memory<a class="anchor" aria-label="anchor" href="#from-a-result-to-persistent-memory"></a>
 </h2>
-<p>Graft is being rebuilt around persistent artifacts, immutable revisions and exact selections. Tempest and Rill consume this shared infrastructure as applications; data-dict owns contracts and Commons owns analytical execution. See the <a href="articles/persistent-artifacts.html">persistent artifact guide</a> for the current implementation scope and the completed architecture experiments.</p>
-</div>
-<div class="section level2">
-<h2 id="from-a-result-to-a-reusable-record">From a result to a reusable record<a class="anchor" aria-label="anchor" href="#from-a-result-to-a-reusable-record"></a>
-</h2>
-<p>An R workflow produces a conclusion. A person corrects it. A later agent needs the earlier answer and the evidence behind it. Replacing yesterday’s file loses that distinction; Graft retains each accepted revision and the producer recorded for the change.</p>
+<p>A workflow produces a conclusion. A person reviews it. A later task needs both the original answer and the evidence behind it. Graft keeps immutable artifact revisions and exact dependency selections so a correction can coexist with the history it replaces.</p>
 <table class="table table graft-workflow">
 <thead><tr>
 <th>
-Describe
+Retain
 </th>
 <th>
 Review
@@ -138,93 +102,87 @@ Reuse
 </tr></thead>
 <tbody><tr>
 <td>
-Use data-dict to describe fields, meaning and relationships.
+Save artifact bytes and select exact dependencies.
 </td>
 <td>
-Inspect a proposed plan, correct invalid references, then accept it.
+Record the host’s acceptance or withdrawal for a stated purpose.
 </td>
 <td>
-Read current history or pin an exact boundary for a later task.
+Verify the selected bytes and check current host eligibility.
 </td>
 </tr></tbody>
 </table>
-<p>data-dict supplies the contract. Graft adds validated acceptance, stable identity, revisions, snapshots and bounded retrieval. Ordinary tables are a useful starting point; their values can include Markdown, interpretations, preferences and normalized evidence links.</p>
-<p>Acceptance records a decision for a purpose. It does not make a claim true, authorize access, or permit execution of stored code. Applications retain those responsibilities.</p>
-</div>
-<div class="section level2">
-<h2 id="persistent-artifacts-and-selected-memory">Persistent artifacts and selected memory<a class="anchor" aria-label="anchor" href="#persistent-artifacts-and-selected-memory"></a>
-</h2>
-<p>The shared artifact API preserves reports, tables, figures and exact dependency selections. Acceptance and withdrawal journals retain each host review. Current reuse requires the current accepted decision, its exact purpose, verified payloads and an explicit host eligibility decision. Historical inspection remains separate from permission to reuse. The project is pre-production: application APIs may change directly as the design is simplified.</p>
-<p><a href="articles/persistent-artifacts.html">Use persistent artifacts and decisions</a>.</p>
+<p>Saving or selecting an artifact does not approve it. Historical inspection preserves evidence of an earlier decision; a new task still needs current permission. Applications decide access, scientific validity, review and retention.</p>
 </div>
 <div class="section level2">
 <h2 id="start-in-r">Start in R<a class="anchor" aria-label="anchor" href="#start-in-r"></a>
 </h2>
-<p>Install the development package:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span><span class="op">)</span></span></code></pre></div>
-<p>The <a href="articles/getting-started.html">quickstart</a> runs entirely offline. It uses a shipped resolved data-dict contract to create a store, reject a broken reference, accept a correction, inspect history and pin a snapshot. No model credentials or Python installation are required.</p>
-<p>Author your own <code>data-dict.yaml</code> with the optional data-dict CLI, then compile its resolved export in R. Existing compiled contracts also run in R alone. <a href="articles/linkml-schema.html">LinkML</a> remains available for domains needing richer graph semantics.</p>
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="st">"research-artifacts"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"report:pilot"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Pilot evidence and conclusions"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">report</span><span class="op">)</span><span class="op">$</span><span class="va">bytes</span><span class="op">)</span></span></code></pre></div>
+<p>The <a href="articles/getting-started.html">quickstart</a> runs offline and introduces exact revisions, selections and host decisions. The core artifact workflow requires neither a schema compiler nor model credentials.</p>
 </div>
 <div class="section level2">
 <h2 id="choose-your-next-workflow">Choose your next workflow<a class="anchor" aria-label="anchor" href="#choose-your-next-workflow"></a>
 </h2>
 <div class="graft-paths">
 <section><h3>
-Review changing knowledge
+Preserve a reviewed result
 </h3>
 <p>
-Keep proposals separate from accepted records. Inspect changes, handle stale plans and retry without manufacturing another revision.
+Retain a report with its evidence and record acceptance or withdrawal without rewriting its earlier bytes.
 </p>
 <p>
-<a href="articles/knowledge-change-control.html">Review and accept changes</a>
+<a href="articles/persistent-artifacts.html">Use artifacts and decisions</a>
 </p>
 </section><section><h3>
-Return to an exact answer
+Share concepts and relationships
 </h3>
 <p>
-Retain the full selected evidence across restarts and unchanged days. Flag changed dependencies for review while preserving the earlier interpretation.
+Bind vocabulary to exact data-dict dictionary releases. Reopen the retained source and rendered context without the original files.
 </p>
 <p>
-<a href="articles/reuse-basis.html">Retain an exact reuse basis</a>
+<a href="articles/shared-vocabulary.html">Build a shared vocabulary</a>
 </p>
 </section><section><h3>
-Give an agent bounded reads
+Understand the package boundaries
 </h3>
 <p>
-Use ordinary ellmer tools with ellmer, Deputy or dsprrr. Keep connections in the process that owns them and reconnect workers from serializable references.
+Compose Commons analysis, data-dict contracts and Graft persistence while keeping application policy with the consuming product.
 </p>
 <p>
-<a href="articles/ecosystem.html">Explore tested host recipes</a>
+<a href="articles/architecture.html">Read the architecture</a>
 </p>
 </section><section><h3>
-Calculate and inspect receipts
+Check integration contracts
 </h3>
 <p>
-Evaluate accepted Definitions against a pinned boundary. Inspect the recorded evidence path without treating a receipt as a fact-check.
+Inspect the supported formats, optional dependencies and tested scope before connecting a workflow.
 </p>
 <p>
-<a href="reference/graft_calculate.html">Calculate with accepted Definitions</a>
+<a href="articles/compatibility.html">Read integration requirements</a>
 </p>
 </section>
 </div>
 </div>
 <div class="section level2">
-<h2 id="what-works-together-today">What works together today<a class="anchor" aria-label="anchor" href="#what-works-together-today"></a>
+<h2 id="what-works-together">What works together<a class="anchor" aria-label="anchor" href="#what-works-together"></a>
 </h2>
-<p>Graft’s tested host loops cover ellmer, Deputy and dsprrr; Commons consumes a detached public copy and retains its own file measures. Tempest owns research products and scientific validation. Its public artifact workflow publishes exact evidence and synthesis and requires current host admission for new runs and resume. Contradictory-evidence execution and native graph removal remain in <a href="https://github.com/JamesHWade/graft/issues/50" class="external-link">#50</a> and <a href="https://github.com/JamesHWade/graft/issues/74" class="external-link">#74</a>. Rill’s Reader integration, isolation and permanent Forget gates remain separate work.</p>
-<p>The <a href="articles/compatibility.html">integration guide</a> records supported versions and limitations. The <a href="articles/ecosystem.html">ecosystem guide</a> separates tested composition from planned application behavior. Generic read tools alone do not enforce Reader permissions or decide what an agent may consult automatically.</p>
+<p>Commons supplies live analytical capabilities. Data-dict describes data. Graft retains artifacts, exact selections, decision history and shared meaning. Tempest and Rill consume this infrastructure as applications; their scientific or Reader-specific policies remain theirs. Vocabulary relationships describe meaning and do not execute reasoning, authorize joins or select agent tools.</p>
+<p>Tempest’s public artifact workflow publishes completed research and retains its reports and evidence. New research and resume require fresh host admission. See the <a href="articles/persistent-artifacts.html">persistent artifact guide</a> for the application handoff and its tested scope. Rill’s Reader integration, isolation and permanent Forget gates remain separate work.</p>
 </div>
 <div class="section level2">
-<h2 id="read-a-results-evidence-path">Read a result’s evidence path<a class="anchor" aria-label="anchor" href="#read-a-results-evidence-path"></a>
+<h2 id="scope-and-status">Scope and status<a class="anchor" aria-label="anchor" href="#scope-and-status"></a>
 </h2>
-<p>Graft classifies recorded answer evidence as <strong>Verified</strong>, <strong>Cited</strong> or <strong>Untrusted</strong>. Verified paths use governed calculations with matching receipts; Cited paths use independently matched Graft reads. Failures, unknown sources or mixed unsupported evidence keep a result Untrusted.</p>
-<p>These labels describe the recorded path. They do not measure factual accuracy, authenticate producer identities or guarantee that prose faithfully represents a source. <a href="articles/agents.html">Work with agents</a> explains the checks and their limits.</p>
-<div class="section level3">
-<h3 id="research-consumer">Research consumer<a class="anchor" aria-label="anchor" href="#research-consumer"></a>
-</h3>
-<p>Tempest publishes completed research through Graft’s artifact, selection and decision interfaces. Its admission checks retain exact reports and evidence while requiring current host eligibility. See the <a href="articles/persistent-artifacts.html">persistent artifact guide</a> for the application handoff and its tested scope.</p>
-</div>
+<p>Graft is a pre-production local store for trusted files and one writer. Concurrent publication, power-loss recovery, authenticated access and permanent erasure are separate work. The artifact contract allows future persistence implementations; no interchangeable backend API is promised today.</p>
+<p>Consumer contract <strong>3.0.0</strong> removes the native graph store, LinkML compiler, commit plans, graph snapshots, managed OKF tree and graph-specific agent tools. There are no compatibility wrappers. Retained artifact, selection, decision and vocabulary formats keep their exact identities.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -241,6 +199,14 @@ Evaluate accepted Definitions against a pinned boundary. Inspect the recorded ev
 <li>
 <a href="https://opensource.org/licenses/mit-license.php" class="external-link">MIT</a> + file <a href="LICENSE-text.html">LICENSE</a>
 </li>
+</ul>
+</div>
+
+
+<div class="citation">
+<h2 data-toc-skip>Citation</h2>
+<ul class="list-unstyled">
+<li><a href="authors.html#citation">Citing graft</a></li>
 </ul>
 </div>
 
@@ -262,7 +228,7 @@ Evaluate accepted Definitions against a pinned boundary. Inspect the recorded ev
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Source and issues are available on <a href="https://github.com/JamesHWade/graft" class="external-link">GitHub</a>. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

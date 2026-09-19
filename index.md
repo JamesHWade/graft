@@ -1,158 +1,115 @@
 # graft
 
-Durable knowledge for R workflows and agents
+Persistent artifacts and shared vocabulary for R
 
-## Keep what you learn. Review what changes.
+## Keep what you learn. Return to the exact evidence.
 
-Give research conclusions, interpretations, definitions and related
-records an accepted history. Start with `data-dict.yaml`, review
-proposed changes, and let a later task return to the exact knowledge an
-earlier task used.
+Retain reports, evidence and shared concepts after the workflow ends.
+Record what a host accepted, preserve earlier revisions, and give a
+later task the exact artifacts behind an answer.
 
-[Build your first
-store](https://jameshwade.github.io/graft/articles/getting-started.md)
-[Try narrative
-reuse](https://jameshwade.github.io/graft/articles/ecosystem.md)
+[Retain your first
+artifact](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Share concepts across
+workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
 
-## Shared artifact direction
+## From a result to persistent memory
 
-Graft is being rebuilt around persistent artifacts, immutable revisions
-and exact selections. Tempest and Rill consume this shared
-infrastructure as applications; data-dict owns contracts and Commons
-owns analytical execution. See the [persistent artifact
-guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
-for the current implementation scope and the completed architecture
-experiments.
+A workflow produces a conclusion. A person reviews it. A later task
+needs both the original answer and the evidence behind it. Graft keeps
+immutable artifact revisions and exact dependency selections so a
+correction can coexist with the history it replaces.
 
-## From a result to a reusable record
-
-An R workflow produces a conclusion. A person corrects it. A later agent
-needs the earlier answer and the evidence behind it. Replacing
-yesterday’s file loses that distinction; Graft retains each accepted
-revision and the producer recorded for the change.
-
-| Describe | Review | Reuse |
+| Retain | Review | Reuse |
 |----|----|----|
-| Use data-dict to describe fields, meaning and relationships. | Inspect a proposed plan, correct invalid references, then accept it. | Read current history or pin an exact boundary for a later task. |
+| Save artifact bytes and select exact dependencies. | Record the host’s acceptance or withdrawal for a stated purpose. | Verify the selected bytes and check current host eligibility. |
 
-data-dict supplies the contract. Graft adds validated acceptance, stable
-identity, revisions, snapshots and bounded retrieval. Ordinary tables
-are a useful starting point; their values can include Markdown,
-interpretations, preferences and normalized evidence links.
-
-Acceptance records a decision for a purpose. It does not make a claim
-true, authorize access, or permit execution of stored code. Applications
-retain those responsibilities.
-
-## Persistent artifacts and selected memory
-
-The shared artifact API preserves reports, tables, figures and exact
-dependency selections. Acceptance and withdrawal journals retain each
-host review. Current reuse requires the current accepted decision, its
-exact purpose, verified payloads and an explicit host eligibility
-decision. Historical inspection remains separate from permission to
-reuse. The project is pre-production: application APIs may change
-directly as the design is simplified.
-
-[Use persistent artifacts and
-decisions](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
+Saving or selecting an artifact does not approve it. Historical
+inspection preserves evidence of an earlier decision; a new task still
+needs current permission. Applications decide access, scientific
+validity, review and retention.
 
 ## Start in R
-
-Install the development package:
 
 ``` r
 
 pak::pak("JamesHWade/graft")
+
+library(graft)
+store <- graft_artifact_store("research-artifacts", create = TRUE)
+report <- graft_artifact_save(
+  store, "report:pilot", charToRaw("Pilot evidence and conclusions"), "text/plain"
+)
+selection <- graft_artifact_select(store, list(report))
+rawToChar(graft_artifact_read(store, report)$bytes)
 ```
 
 The
 [quickstart](https://jameshwade.github.io/graft/articles/getting-started.md)
-runs entirely offline. It uses a shipped resolved data-dict contract to
-create a store, reject a broken reference, accept a correction, inspect
-history and pin a snapshot. No model credentials or Python installation
-are required.
-
-Author your own `data-dict.yaml` with the optional data-dict CLI, then
-compile its resolved export in R. Existing compiled contracts also run
-in R alone.
-[LinkML](https://jameshwade.github.io/graft/articles/linkml-schema.md)
-remains available for domains needing richer graph semantics.
+runs offline and introduces exact revisions, selections and host
+decisions. The core artifact workflow requires neither a schema compiler
+nor model credentials.
 
 ## Choose your next workflow
 
-### Review changing knowledge
+### Preserve a reviewed result
 
-Keep proposals separate from accepted records. Inspect changes, handle
-stale plans and retry without manufacturing another revision.
+Retain a report with its evidence and record acceptance or withdrawal
+without rewriting its earlier bytes.
 
-[Review and accept
-changes](https://jameshwade.github.io/graft/articles/knowledge-change-control.md)
+[Use artifacts and
+decisions](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
 
-### Return to an exact answer
+### Share concepts and relationships
 
-Retain the full selected evidence across restarts and unchanged days.
-Flag changed dependencies for review while preserving the earlier
-interpretation.
+Bind vocabulary to exact data-dict dictionary releases. Reopen the
+retained source and rendered context without the original files.
 
-[Retain an exact reuse
-basis](https://jameshwade.github.io/graft/articles/reuse-basis.md)
+[Build a shared
+vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
 
-### Give an agent bounded reads
+### Understand the package boundaries
 
-Use ordinary ellmer tools with ellmer, Deputy or dsprrr. Keep
-connections in the process that owns them and reconnect workers from
-serializable references.
+Compose Commons analysis, data-dict contracts and Graft persistence
+while keeping application policy with the consuming product.
 
-[Explore tested host
-recipes](https://jameshwade.github.io/graft/articles/ecosystem.md)
+[Read the
+architecture](https://jameshwade.github.io/graft/articles/architecture.md)
 
-### Calculate and inspect receipts
+### Check integration contracts
 
-Evaluate accepted Definitions against a pinned boundary. Inspect the
-recorded evidence path without treating a receipt as a fact-check.
+Inspect the supported formats, optional dependencies and tested scope
+before connecting a workflow.
 
-[Calculate with accepted
-Definitions](https://jameshwade.github.io/graft/reference/graft_calculate.md)
+[Read integration
+requirements](https://jameshwade.github.io/graft/articles/compatibility.md)
 
-## What works together today
+## What works together
 
-Graft’s tested host loops cover ellmer, Deputy and dsprrr; Commons
-consumes a detached public copy and retains its own file measures.
-Tempest owns research products and scientific validation. Its public
-artifact workflow publishes exact evidence and synthesis and requires
-current host admission for new runs and resume. Contradictory-evidence
-execution and native graph removal remain in
-[\#50](https://github.com/JamesHWade/graft/issues/50) and
-[\#74](https://github.com/JamesHWade/graft/issues/74). Rill’s Reader
+Commons supplies live analytical capabilities. Data-dict describes data.
+Graft retains artifacts, exact selections, decision history and shared
+meaning. Tempest and Rill consume this infrastructure as applications;
+their scientific or Reader-specific policies remain theirs. Vocabulary
+relationships describe meaning and do not execute reasoning, authorize
+joins or select agent tools.
+
+Tempest’s public artifact workflow publishes completed research and
+retains its reports and evidence. New research and resume require fresh
+host admission. See the [persistent artifact
+guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
+for the application handoff and its tested scope. Rill’s Reader
 integration, isolation and permanent Forget gates remain separate work.
 
-The [integration
-guide](https://jameshwade.github.io/graft/articles/compatibility.md)
-records supported versions and limitations. The [ecosystem
-guide](https://jameshwade.github.io/graft/articles/ecosystem.md)
-separates tested composition from planned application behavior. Generic
-read tools alone do not enforce Reader permissions or decide what an
-agent may consult automatically.
+## Scope and status
 
-## Read a result’s evidence path
+Graft is a pre-production local store for trusted files and one writer.
+Concurrent publication, power-loss recovery, authenticated access and
+permanent erasure are separate work. The artifact contract allows future
+persistence implementations; no interchangeable backend API is promised
+today.
 
-Graft classifies recorded answer evidence as **Verified**, **Cited** or
-**Untrusted**. Verified paths use governed calculations with matching
-receipts; Cited paths use independently matched Graft reads. Failures,
-unknown sources or mixed unsupported evidence keep a result Untrusted.
-
-These labels describe the recorded path. They do not measure factual
-accuracy, authenticate producer identities or guarantee that prose
-faithfully represents a source. [Work with
-agents](https://jameshwade.github.io/graft/articles/agents.md) explains
-the checks and their limits.
-
-### Research consumer
-
-Tempest publishes completed research through Graft’s artifact, selection
-and decision interfaces. Its admission checks retain exact reports and
-evidence while requiring current host eligibility. See the [persistent
-artifact
-guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
-for the application handoff and its tested scope.
+Consumer contract **3.0.0** removes the native graph store, LinkML
+compiler, commit plans, graph snapshots, managed OKF tree and
+graph-specific agent tools. There are no compatibility wrappers.
+Retained artifact, selection, decision and vocabulary formats keep their
+exact identities.

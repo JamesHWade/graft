@@ -1,224 +1,54 @@
 # Supported integrations
 
-Graft’s store, plan, commit, and retrieval functions work without an
-agent package. Add the dependencies for the interfaces you use:
-
-| Interface | Tested baseline |
-|----|----|
-| Resolved data-dict JSON | Export format `0.1.0` |
-| YAML authoring | CLI `0.0.1`, revision [d794c96](https://github.com/tidyverse/data-dict/tree/d794c9616f7803199432e9b31b519216aa78d1b0) |
-| Agent tools and verification | ellmer **0.5.0** (also the required minimum) |
-| Detached Commons source | Current upstream Commons R package, with ellmer 0.5.0 |
-
-Compiled contracts and resolved JSON run with Graft’s R dependencies
-alone. They do not need a CLI, Python interpreter, ellmer, or Commons.
-Install the data-dict CLI only where you author contracts. Agent tools
-can be invoked locally and recorded answers verified without credentials
-or network requests. Commons is optional and owns its source, agent
-loop, and labels.
-
-Commons is not pinned to a version or revision. CI installs its current
-upstream R package and exercises the detached-source contract. At
-runtime, Graft checks that Commons exports `data_source()` with the
-arguments it needs; additional arguments are allowed. These checks
-diagnose incompatible constructor changes, while integration tests check
-behavior.
-
-[Reuse narrative
-knowledge](https://jameshwade.github.io/graft/articles/ecosystem.md)
-gives executable recipes for current ellmer, Deputy and dsprrr public
-interfaces. The host compatibility suite covers real sync/streaming tool
-loops with a loopback-only synthetic server. Use
-`graft_tools(view, result_format = "json")` for the supported ellmer
-return path; list mode remains available for direct R envelopes. This
-optional argument introduced consumer contract 0.6.0 without changing
-persisted formats. Shared artifact storage adds contract 0.7.0; exact
-dependency selections and their configurable metadata bounds add
-contract 0.8.0. Host decision recording and guarded consultation shipped
-with consumer contract 1.0.0; vocabulary publishing advances the current
-contract to 2.0.0. Tempest now publishes research evidence and synthesis
-through this artifact contract and checks fresh admission for new runs
-and resume; see the [artifact
-guide](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
-Contradictory-evidence execution, native graph retirement, Rill
-integration, and scans/vitals evaluation remain in the [integration
-backlog](https://github.com/JamesHWade/graft/issues/34).
-
-The vocabulary module adds namespace functions that change the legacy
-data-dict compiler attestation. Recompile native manifests; existing
-artifact selections and decisions keep their independent formats. This
-does not add compatibility code to the compiler scheduled for
-retirement.
-
-Consumer contract 2.0.0 is a preproduction hard cut, not a production
-package release. The legacy data-dict compiler fingerprints the full
-Graft namespace, so adding exported functions changes its identity even
-though compilation rules are unchanged. Recompile data-dict manifests
-from retained resolved JSON or YAML. Graph stores tied to an earlier
-compiled manifest are not supported for seamless reopening; recreate
-disposable stores from retained inputs where needed. The opaque
-artifact, selection and journal formats are independent of that
-compiler. Strict digest checks remain; no old-digest allowlist or
-migration shim is added. The legacy compiler and its namespace-wide
-attestation remain scheduled for removal in
-[\#74](https://github.com/JamesHWade/graft/issues/74).
-
-The 2026-09-05 proof used ellmer 0.5.0, Deputy
-`14e378951bb0f36a2a76fad0eff69b3cf8acab38`, and dsprrr
-`76a014f74e8d4a236aa0a0c5dda87de388310cf6`. These record test evidence;
-Graft’s optional host dependencies are not revision-pinned. Run
-`Rscript tools/check-host-composition.R` to check installed versions;
-missing hosts fail that runner rather than silently skipping integration
-coverage.
-
-Two real data-dict producers are compared separately: baseline 0.0.1 at
-`d794c9616f7803199432e9b31b519216aa78d1b0`, and release 0.0.3 at
-`9b48e97a61c4d12600cbb9dff3b1bb2aa14f6f71`. Both export the narrative
-fixture and reject unknown root extensions. Both can export nested types
-that Graft’s narrow profile rejects. Release 0.0.3 reports the
-deliberately violated assertion; the baseline does not. Graft itself
-treats those assertions as metadata. Release 0.0.3 also renders
-descriptions as HTML and adds expression translations, so it has its own
-frozen resolved fixture rather than an assumed byte-identical export.
-Current upstream documentation is not evidence that the baseline CLI
-implements every described feature.
-
-## Use ellmer 0.5.0 or later
+## Current consumer contract
 
 ``` r
 
-install.packages("ellmer")
-packageVersion("ellmer")
+graft::graft_contract_version()
 ```
 
-Both
-[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
-and
-[`graft_verify()`](https://jameshwade.github.io/graft/reference/graft_verify.md)
-check this minimum at runtime and give an installation error for an
-older ellmer. The package uses public tool definitions, `AssistantTurn`,
-`UserTurn`, tool request/result content, and `AssistantPartialTurn`.
-Completed answers receive one verification row; interrupted partial
-answers do not.
+    ## $contract
+    ## [1] "3.0.0"
+    ## 
+    ## $artifact
+    ## [1] "1"
+    ## 
+    ## $selection
+    ## [1] "1"
+    ## 
+    ## $decision
+    ## [1] "1"
+    ## 
+    ## $vocabulary
+    ## [1] "graft-vocabulary/1"
+    ## 
+    ## $bindings
+    ## [1] "graft-bindings/1"
+    ## 
+    ## $vocabulary_release
+    ## [1] "graft-vocabulary-release/1"
 
-The old declaration allowed ellmer 0.3.0, whose recorded turns could be
-silently omitted by the verifier. Graft now requires the 0.5.0 baseline
-rather than maintaining multiple transcript representations. See
-ellmer’s [release notes](https://ellmer.tidyverse.org/news/index.html)
-for its changes. Follow [Work with
-agents](https://jameshwade.github.io/graft/articles/agents.md) to
-register tools, pin accepted knowledge, and inspect verification.
-Verification classifies the recorded evidence path; it does not
-fact-check an answer or authenticate receipt identifiers.
+Graft requires R 4.3 or later and imports digest, jsonlite, and rlang.
+Publishing vocabulary additionally requires the data-dict R package and
+CLI; reading a published release requires neither the CLI nor original
+dictionary files.
 
-## Reproduce the data-dict artifacts
+The dictionary integration is pinned in `DESCRIPTION` to the validated
+data-dict source revision. Commons is host-owned: pass retained
+vocabulary context and validated data to its public source API. Graft
+does not maintain a Commons connection adapter or copy executable agent
+tools.
 
-The [data-dict specification](https://data-dict.tidyverse.org/spec.html)
-describes the source format. Graft implements the narrower profile
-documented in [Use a data-dict
-contract](https://jameshwade.github.io/graft/articles/data-dict-schema.md).
-Unsupported export versions and unsupported shapes produce errors
-instead of silent conversions.
+Tempest publishes research through the artifact API and supplies its own
+scientific validation and admission callback. scans reads Tempest’s
+public trajectory projection rather than reconstructing Graft’s storage
+protocol.
 
-Build the tested CLI in an isolated directory:
+## Hard cut from native graph APIs
 
-``` bash
-cargo install --locked \
-  --git https://github.com/tidyverse/data-dict \
-  --rev d794c9616f7803199432e9b31b519216aa78d1b0 \
-  --root /tmp/graft-data-dict \
-  data-dict-cli
-```
-
-From the repository root, compare the real producer with all three
-committed exports and compare the resulting structural contract digests:
-
-``` bash
-GRAFT_TEST_DATA_DICT_CLI=/tmp/graft-data-dict/bin/data-dict \
-  Rscript -e 'devtools::test(filter = "^data-dict-cli$", stop_on_failure = TRUE)'
-```
-
-The ordinary suite skips this producer check unless the environment
-variable is set. Other data-dict tests use local exports and fake CLI
-calls; they never install a compiler or access a provider.
-
-When intentionally refreshing fixtures, export each source with the
-selected producer and review the JSON diff before replacing the
-committed file:
-
-``` bash
-/tmp/graft-data-dict/bin/data-dict export-spec \
-  inst/extdata/team-directory.data-dict.yaml --pretty \
-  > /tmp/team-directory.data-dict.json
-diff -u inst/extdata/team-directory.data-dict.json /tmp/team-directory.data-dict.json
-```
-
-Repeat for `tests/testthat/fixtures/data-dict/personinfo/data-dict.yaml`
-and `tests/testthat/fixtures/data-dict/tempest/data-dict.yaml`,
-comparing each with its sibling `data-dict.export.json`. The parity test
-compares parsed exports, so formatting-only differences do not count as
-semantic changes. When changing the producer, update the recorded
-revision and expected CLI/export versions together with the fixture
-evidence and compatibility workflow.
-
-The CLI’s `--version` does not establish its Git revision. Graft records
-the executable digest and observed version; a configured revision is
-caller-supplied provenance. See [Contract compiler
-details](https://jameshwade.github.io/graft/articles/contract-compilers.md).
-If Graft’s adapter implementation changes, regenerate and check
-`inst/schema/graft-data-dict-adapter.source.json` with
-`tools/update-data-dict-adapter-source.R` and update the manifest
-schema’s pinned adapter digest.
-
-## Use the current Commons integration
-
-``` r
-
-pak::pak("posit-dev/commons/pkg-r")
-```
-
-[`graft_commons_data_source()`](https://jameshwade.github.io/graft/reference/graft_commons_data_source.md)
-copies selected public accepted tables at one boundary into a detached
-source. It retains typed empty tables, omits restricted columns, and
-exports accepted definitions. Later Graft commits do not change the
-copy; create a new source to pick up a newer boundary.
-
-Commons keeps its own file measures, fallback queries, and evidence
-labels. Its conversations do not acquire Graft verification merely
-because their data came from this adapter. See the [agent
-guide](https://jameshwade.github.io/graft/articles/agents.html#use-the-same-boundary-with-commons)
-for composition.
-
-## Run the compatibility checks
-
-The `compatibility.yaml` workflow installs dependencies before its
-offline checks:
-
-- Older ellmer (0.4.0) must be rejected explicitly, including a chat
-  containing an actual recorded assistant answer.
-- ellmer 0.5.0 exercises bounded tools and verification through public
-  ellmer objects, including a real Graft calculation receipt and
-  interrupted turns. It also exercises dictionary discovery and
-  structured proposals through a real `chat_structured()` call with
-  local fake HTTP responses.
-- The pinned data-dict CLI reproduces the exports; current upstream
-  Commons constructs real detached sources with historical,
-  restricted-field, and typed-empty cases.
-
-The normal R package check resolves the available ellmer release
-satisfying `>= 0.5.0`, while the separate baseline job keeps testing
-exactly 0.5.0. A future release failure calls for reviewing the changed
-public interface, not relaxing receipt or validation checks.
-
-To reproduce the ellmer check, install the chosen version into a
-separate R library and start a fresh process:
-
-``` bash
-R_LIBS=/path/to/isolated-library \
-  Rscript tools/check-ellmer-compatibility.R 0.5.0
-```
-
-The script asserts the loaded version and prints its library path,
-preventing an installed development build from silently standing in for
-the test version. Dependency installation is separate from the check.
-Tests create local stores and recorded chats and never call a model.
+The graph store, schema compiler, plans, receipts, snapshots,
+calculation engine, and managed OKF tree have been removed. Native graph
+stores and snapshots cannot be opened by this package. Consumer upgrades
+remove those paths together with old persisted product schemas. Graft
+artifact, selection, decision, and vocabulary formats retain their
+existing content identities.

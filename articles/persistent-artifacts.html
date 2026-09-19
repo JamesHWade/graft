@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">graft</a>
 
-    <small class="nav-text text-warning me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Unreleased version">0.0.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,38 +41,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Get started</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-learn" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Learn</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-learn">
-<li><a class="dropdown-item" href="../articles/data-dict-schema.html">Start with data-dict</a></li>
-    <li><a class="dropdown-item" href="../articles/knowledge-change-control.html">Review knowledge changes</a></li>
-    <li><a class="dropdown-item" href="../articles/retrieval.html">Retrieve records and history</a></li>
-    <li><a class="dropdown-item" href="../articles/reuse-basis.html">Retain an exact reuse basis</a></li>
-    <li><a class="dropdown-item" href="../reference/graft_calculate.html">Calculate with accepted Definitions</a></li>
-  </ul>
-</li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-integrate" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Integrate</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-integrate">
-<li><a class="dropdown-item" href="../articles/agents.html">Work with agents</a></li>
-    <li><a class="dropdown-item" href="../articles/ecosystem.html">Reuse narrative knowledge</a></li>
-    <li><a class="dropdown-item" href="../articles/reader-access.html">Keep Readers' knowledge separate</a></li>
-    <li><a class="dropdown-item" href="../articles/compatibility.html">Supported integrations</a></li>
-  </ul>
-</li>
-<li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-design" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Design</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-design">
-<li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persistent artifacts and selected memory</a></li>
-    <li><a class="dropdown-item" href="../articles/linkml-schema.html">Add graph semantics with LinkML</a></li>
-    <li><a class="dropdown-item" href="../articles/open-knowledge-format.html">Open knowledge</a></li>
-    <li><a class="dropdown-item" href="../articles/forget-restore.html">Design Forget and recovery</a></li>
-    <li><a class="dropdown-item" href="../articles/architecture.html">Architecture</a></li>
-    <li><a class="dropdown-item" href="../articles/contract-compilers.html">Contract compilers</a></li>
-    <li><a class="dropdown-item" href="../articles/v01-design.html">v0.1 design notes</a></li>
-  </ul>
-</li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -80,7 +49,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/graft/" aria-label="View graft on GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/JamesHWade/graft/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch">
@@ -143,8 +112,8 @@ these bytes grants no approval.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>References contain an identity and immutable revision. Retain them
 with your workflow; the store deliberately has no automatic latest or
-approved selection. This project is pre-production and existing
-graph/compiler APIs are being replaced. The experiments below remain
+approved selection. This project is pre-production. Consumer contract 3
+removes the graph/compiler APIs. The experiments below remain
 comparative evidence, not the installed storage code.</p>
 </div>
 <div class="section level2">
@@ -340,84 +309,19 @@ already given to a model.</p>
 <div class="section level2">
 <h2 id="what-replaceable-means">What “replaceable” means<a class="anchor" aria-label="anchor" href="#what-replaceable-means"></a>
 </h2>
-<p>The artifact contract should let an application change its storage
-implementation while preserving accumulated work. The first experiments
-use the same content and selection logic with two metadata
-implementations:</p>
-<ul>
-<li>Graft’s accepted commits and bounded revision history;</li>
-<li>immutable JSON manifests and a map of current artifact
-revisions.</li>
-</ul>
-<p>Both implementations preserve the tested Markdown, Parquet, and PNG
-artifacts across terminated processes and corrections. Both feed real
-Commons analysis and retain its outputs. Vocabulary validation and
-publishing also work without a Graft store. The <a href="https://github.com/JamesHWade/graft/tree/main/tools/experiments" class="external-link">experiment
-guide</a> contains commands, source pins, and recorded results.</p>
-<p>These results justify comparing the complete implementations. The
-manifest prototype has not established concurrent publication,
-power-loss recovery, production access control, or erasure and backup
-admission. Graft’s metadata transaction also does not automatically
-include separately stored file contents.</p>
-</div>
-<div class="section level2">
-<h2 id="existing-history-is-part-of-the-migration-contract">Existing history is part of the migration contract<a class="anchor" aria-label="anchor" href="#existing-history-is-part-of-the-migration-contract"></a>
-</h2>
-<p>Tempest already uses native Graft snapshots and promotion receipts. A
-replacement must preserve the store, schema, batch, snapshot, and
-revision identities those objects validate, or retain an explicit
-mapping to them. Exporting only the latest records loses accepted
-history and does not meet that requirement.</p>
-<p>The <a href="https://github.com/JamesHWade/graft/blob/main/specs/2026-09-16-tempest-migration.md" class="external-link">Tempest
-migration experiment</a> uses current public promotion APIs and shipped
-synthetic research. Its 121 assertions establish that:</p>
-<ul>
-<li>11 native revisions and three promotion receipts survive
-transfer;</li>
-<li>both reports retain their exact four-record evidence
-selections;</li>
-<li>a fresh process reads the target with neither Graft nor Tempest
-installed;</li>
-<li>withdrawal stays in force, and the unchanged native source supports
-rollback.</li>
-</ul>
-<p>The <a href="https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-reuse.md" class="external-link">artifact
-reuse experiment</a> adds a public Tempest input for exact artifact
-selections. Initial, unchanged and corrected evidence survive session
-save/resume across independent processes without Graft installed. The
-host checks purpose and current eligibility before admission and again
-before resume. The resumed session is saved again to verify its retained
-selection and provenance. Tempest validates content and dependency
-references and retains the full input.</p>
-<p>The <a href="https://github.com/JamesHWade/graft/blob/main/specs/2026-09-17-tempest-acceptance-cycle.md" class="external-link">direct
-acceptance experiment</a> completes the next step with shipped synthetic
-research proposals. Both storage drivers preserve the complete proposal,
-source bodies and reports; a host then accepts an exact selection for a
-purpose. Saving alone grants no approval. A new review records a
-distinct acceptance even when the evidence is unchanged. Correction
-replaces the current eligible selection, and withdrawal stops new
-consultation and host-mediated session resume. Retrying a withdrawn
-acceptance returns history without reapproving it. Historical inspection
-preserves exact bytes. The manifest producer and consumer both run
-without Graft installed.</p>
-<p>The recommendation is now to <strong>retire the current
-graph/compiler architecture from the artifact composition</strong>. The
-experiments establish a replacement route for the tested workflow; they
-did not themselves ship a new public artifact interface or remove
-existing Graft APIs. The local artifact functions above are the first
-delivery slice. <a href="https://github.com/JamesHWade/graft/blob/main/adr/0008-shared-artifact-infrastructure.md" class="external-link">ADR
-0008</a> places shared infrastructure in Graft. Tempest and Rill are
-end-use applications consuming its public interface, not homes for
-reusable storage engines. Graft still needs the publication/recovery
-implementation in <a href="https://github.com/JamesHWade/graft/issues/49" class="external-link">#49</a>. No model
-requests are made in this acceptance fixture. Active-task cancellation,
-authenticated access, deletion and production recovery remain separate
-requirements.</p>
-<p>See <a href="https://github.com/JamesHWade/graft/blob/main/adr/0007-test-artifact-composition-before-expanding-graft.md" class="external-link">ADR
-0007</a> for the historical comparison, and ADR 0008 for current
-ownership. Continue with <a href="reuse-basis.html">exact reuse
-bases</a> for supported Graft behavior and <a href="forget-restore.html">Forget and recovery</a> for the production
-lifecycle requirements.</p>
+<p>Applications retain exact artifacts, dependency selections, and host
+decisions. They do not depend on graph tables, a schema compiler, or
+native store objects. A future storage implementation must preserve
+those identities and history; Graft does not yet expose a pluggable
+backend interface.</p>
+<p>The earlier composition experiments compared native graph storage
+with immutable manifests. Their source and observations remain in the
+repository as historical research. They motivated the artifact contract
+and the consumer contract 3 cut; they are not current native-store usage
+instructions.</p>
+<p>Shared infrastructure remains in Graft. Tempest and Rill own product
+semantics, access, approval, and retention. Publication recovery remains
+separate work in <a href="https://github.com/JamesHWade/graft/issues/49" class="external-link">#49</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="use-retained-research-in-tempest">Use retained research in Tempest<a class="anchor" aria-label="anchor" href="#use-retained-research-in-tempest"></a>
@@ -435,10 +339,11 @@ provenance, never a saved permission. Historical inspection uses
 <code>tempest_read_artifact_research()</code> and does not grant
 reuse.</p>
 <p>The <a href="https://jameshwade.github.io/tempest/articles/artifact-knowledge.html" class="external-link">Tempest
-artifact guide</a> contains the installed offline example. The pinned
-experiment suite executes that example against these public interfaces.
-These are synthetic completed research fixtures, not production access
-or erasure evidence.</p>
+artifact guide</a> contains the installed offline example. Current
+Tempest consumer tests exercise publication, fresh-process reads,
+corrections, and current admission through these public interfaces. The
+earlier pinned experiment suite remains historical evidence. These
+synthetic fixtures do not establish production access or erasure.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -451,7 +356,7 @@ or erasure evidence.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Source and issues are available on <a href="https://github.com/JamesHWade/graft" class="external-link">GitHub</a>. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
