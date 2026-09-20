@@ -249,3 +249,7 @@ exact survivors into a separate empty store with `graft_artifact_replace()`.
 `graft_artifact_manifest()` verifies the complete logical object set, including
 historical decisions. See [Verify a replacement artifact store](artifact-recovery.html)
 for the runnable example and the separate Forget and restore obligations.
+
+For a complete copy that retains every object and historical decision, use
+`graft_artifact_backup()`. Verification and restore require the receipt retained
+by the host independently of the bundle. See [Back up and restore an artifact store](artifact-backups.html).

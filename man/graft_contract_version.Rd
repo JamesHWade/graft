@@ -8,12 +8,14 @@ graft_contract_version()
 }
 \value{
 A named list of character scalars describing the consumer API and
-artifact, manifest, replacement, selection, decision, vocabulary, and
+artifact, manifest, replacement, backup, selection, decision, vocabulary, and
 binding formats.
 }
 \description{
-Consumer contract 3.1 adds bounded artifact manifests and non-destructive
-replacement plans. These operations do not authorize Forget or backup restore.
+Consumer contract 3.2 adds closed artifact backup bundles with externally
+supplied identity receipts and strict restore verification. Contract 3.1 adds
+bounded manifests and replacement plans. These operations do not authorize
+Forget or backup restore.
 Consumer contract 3 removes the native graph store, schema compiler, commit
 plans, snapshots, and managed working tree. Artifacts and selections retain
 format 1; the cut does not change their bytes or digest identities.
