@@ -11,10 +11,12 @@ ArtifactSelection(id = character(0), roots = NULL, artifacts = NULL)
 
 \item{roots}{Exact root references in caller order.}
 
-\item{artifacts}{Complete breadth-first dependency closure.}
+\item{artifacts}{Complete breadth-first dependency closure, including the
+roots and their dependencies.}
 }
 \description{
 An \code{ArtifactSelection} records one exact selection digest, its roots, and
-the complete verified dependency closure. It does not grant approval or
-access to the selected artifacts.
+the complete verified dependency closure: the roots and all of their
+dependencies. It does not grant approval or access to the selected
+artifacts.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/aaa-value-types.R
 \name{Artifact}
 \alias{Artifact}
-\title{Materialized immutable artifact content}
+\title{An immutable artifact with its content loaded}
 \usage{
 Artifact(
   ref = ArtifactRef(),
@@ -24,7 +24,7 @@ Artifact(
 \item{data}{Decoded scalar text or raw bytes.}
 }
 \description{
-An \code{Artifact} contains exact bytes together with the media type and exact
-dependency references recorded with those bytes. \code{data} is decoded text for
+An \code{Artifact} contains exact bytes, their media type, and the exact
+dependency references recorded with them. \code{data} is decoded text for
 \verb{text/*} media types and raw bytes for all other media types.
 }

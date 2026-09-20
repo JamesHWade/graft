@@ -22,9 +22,9 @@ Decision(
 
 \item{sequence}{Chronological sequence number within the stream.}
 
-\item{stream}{Host-chosen decision stream.}
+\item{stream}{Decision stream chosen and controlled by the host application.}
 
-\item{key}{Stable host idempotency key.}
+\item{key}{Stable request key supplied by the host application.}
 
 \item{previous}{Exact predecessor decision digest, or \code{NULL} for the first
 record.}
@@ -33,15 +33,15 @@ record.}
 
 \item{selection}{Exact selection digest named by the decision.}
 
-\item{actor}{Host-supplied actor identity.}
+\item{actor}{Actor identity supplied by the host application.}
 
-\item{reason}{Host-supplied review or withdrawal reason.}
+\item{reason}{Review or withdrawal reason supplied by the host application.}
 
-\item{purpose}{Host-supplied consultation purpose.}
+\item{purpose}{Consultation purpose supplied by the host application.}
 }
 \description{
-\code{Decision} is a journal value describing one acceptance or withdrawal. Its
-\code{selection} property is the exact selection digest, not a materialized
-selection. It is a descriptor and does not authenticate its actor or grant
-current consultation access.
+\code{Decision} is a retained journal record describing one acceptance or
+withdrawal. Its \code{selection} property stores the exact selection digest, not
+the selected artifacts themselves. The record does not authenticate its
+actor or grant current consultation access.
 }

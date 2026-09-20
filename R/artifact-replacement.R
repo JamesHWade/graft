@@ -1,44 +1,44 @@
 #' Plan and build a bounded artifact-store replacement
 #'
 #' Compute an operational replacement plan after forgetting exact artifact
-#' revisions and/or complete decision streams. The plan preserves every
-#' revision which is not a forgotten revision or a transitive reverse
-#' dependent, then retains only content referenced by those revisions. A
-#' selection is removed when any of its exact references is removed. A whole
-#' decision stream is removed when any historical record names a removed
-#' selection, or when the stream is explicitly requested.
+#' revisions, complete decision streams, or both. The plan preserves every
+#' revision that is neither forgotten nor a transitive reverse dependent, which
+#' is a revision that depends directly or indirectly on a forgotten revision.
+#' It then retains only content referenced by those revisions. It removes a
+#' selection when any exact reference in it is removed. It removes a whole
+#' decision stream when a historical record names a removed selection or when
+#' the stream is explicitly requested.
 #'
 #' @param store A handle returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param forget A list of exact artifact references returned by
-#'   [graft_save()]. It may be empty when `forget_streams` is
-#'   nonempty.
+#'   [graft_save()]. It may be empty if `forget_streams` is nonempty.
 #' @param forget_streams Character vector of complete decision stream names to
 #'   remove. The names must already exist in the source inventory.
 #' @param max_objects Maximum number of inventoried objects.
 #' @param max_total_bytes Maximum total bytes inventoried across objects.
-#' @param max_metadata_bytes Maximum aggregate encoded bytes allowed while
-#'   reading selection metadata and complete decision journals. Revision
-#'   metadata uses the source and target store `max_revision_bytes` limits.
+#' @param max_metadata_bytes Maximum aggregate encoded bytes allowed for
+#'   selection metadata and complete decision journals. Revision metadata uses
+#'   the source and target store `max_revision_bytes` limits.
 #' @param source A source artifact-store handle for a replacement operation.
 #' @param target An empty artifact-store handle to receive the replacement.
 #' @param plan A plan returned by
-#'   [graft_plan_replacement()]. The plan is operational data; it is
-#'   not an authorization or approval record.
+#'   [graft_plan_replacement()]. The plan contains operational data, not an
+#'   authorization or approval record.
 #'
 #' @details
-#' The inventory is bounded and must enumerate every artifact revision,
-#' selection, decision record, and content object in the source store. Opaque
-#' payload bytes are never scanned for identifiers, private fields, reasons, or
-#' other erasure roots. The host must supply all additional roots and streams
-#' required by its Forget policy, including copies outside this artifact store.
+#' The bounded inventory must enumerate every artifact revision, selection,
+#' decision record, and content object in the source store. Opaque payload bytes
+#' are never scanned for identifiers, private fields, reasons, or other erasure
+#' roots. The host must supply all additional roots and streams required by its
+#' Forget policy, including copies outside this artifact store.
 #'
 #' Planning does not authorize Forget and does not delete anything. Replacement
 #' copies verified objects into a new empty store. The source is never changed.
-#' A copy or verification failure can leave a partial target; the host must
-#' quarantine and discard that target and rebuild a new empty target. Local
-#' stores require quiesced single-writer access. PostgreSQL callers must hold
-#' the host transaction and scope lock for the operation.
+#' A copy or verification failure can leave a partial target. The host must
+#' quarantine and discard that target, then rebuild a new empty target. Local
+#' stores require a quiescent single writer. PostgreSQL callers must hold the
+#' host transaction and scope lock for the operation.
 #'
 #' @returns
 #' `graft_plan_replacement()` returns a list with format

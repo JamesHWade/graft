@@ -153,7 +153,7 @@ graft_value_nullable_selection <- function(value, name) {
 #' An exact immutable artifact reference
 #'
 #' `ArtifactRef` identifies one logical artifact identity and one immutable
-#' revision. It is a value descriptor; it does not grant access to the artifact.
+#' revision. It only identifies the artifact; it does not grant access to it.
 #'
 #' @param id Stable artifact identity.
 #' @param revision Lowercase SHA-256 digest of the immutable revision metadata.
@@ -173,10 +173,10 @@ ArtifactRef <- S7::new_class(
   )
 )
 
-#' Materialized immutable artifact content
+#' An immutable artifact with its content loaded
 #'
-#' An `Artifact` contains exact bytes together with the media type and exact
-#' dependency references recorded with those bytes. `data` is decoded text for
+#' An `Artifact` contains exact bytes, their media type, and the exact
+#' dependency references recorded with them. `data` is decoded text for
 #' `text/*` media types and raw bytes for all other media types.
 #'
 #' @param ref Exact artifact reference.
@@ -209,12 +209,14 @@ Artifact <- S7::new_class(
 #' A verified artifact dependency selection
 #'
 #' An `ArtifactSelection` records one exact selection digest, its roots, and
-#' the complete verified dependency closure. It does not grant approval or
-#' access to the selected artifacts.
+#' the complete verified dependency closure: the roots and all of their
+#' dependencies. It does not grant approval or access to the selected
+#' artifacts.
 #'
 #' @param id Exact selection digest.
 #' @param roots Exact root references in caller order.
-#' @param artifacts Complete breadth-first dependency closure.
+#' @param artifacts Complete breadth-first dependency closure, including the
+#'   roots and their dependencies.
 #' @export
 ArtifactSelection <- S7::new_class(
   "ArtifactSelection",
@@ -237,22 +239,22 @@ ArtifactSelection <- S7::new_class(
 
 #' A host decision recorded in an artifact stream
 #'
-#' `Decision` is a journal value describing one acceptance or withdrawal. Its
-#' `selection` property is the exact selection digest, not a materialized
-#' selection. It is a descriptor and does not authenticate its actor or grant
-#' current consultation access.
+#' `Decision` is a retained journal record describing one acceptance or
+#' withdrawal. Its `selection` property stores the exact selection digest, not
+#' the selected artifacts themselves. The record does not authenticate its
+#' actor or grant current consultation access.
 #'
 #' @param id Decision digest.
 #' @param sequence Chronological sequence number within the stream.
-#' @param stream Host-chosen decision stream.
-#' @param key Stable host idempotency key.
+#' @param stream Decision stream chosen and controlled by the host application.
+#' @param key Stable request key supplied by the host application.
 #' @param previous Exact predecessor decision digest, or `NULL` for the first
 #'   record.
 #' @param action Either `"accept"` or `"withdraw"`.
 #' @param selection Exact selection digest named by the decision.
-#' @param actor Host-supplied actor identity.
-#' @param reason Host-supplied review or withdrawal reason.
-#' @param purpose Host-supplied consultation purpose.
+#' @param actor Actor identity supplied by the host application.
+#' @param reason Review or withdrawal reason supplied by the host application.
+#' @param purpose Consultation purpose supplied by the host application.
 #' @export
 Decision <- S7::new_class(
   "Decision",
@@ -301,19 +303,21 @@ Decision <- S7::new_class(
   )
 )
 
-#' The result of a current reviewed-artifact lookup
+#' A result from a current reviewed-artifact lookup
 #'
 #' `Recall` reports a point-in-time `status` of `missing`, `withdrawn`, or
-#' `accepted`. Missing and withdrawn results contain no materialized payload.
-#' Accepted results contain the current verified decision, selection, roots,
-#' and complete materialized dependency closure.
+#' `accepted`. Missing and withdrawn results contain no artifact content.
+#' Accepted results contain the current verified decision, selection, root
+#' artifacts, and every artifact in the verified dependency closure.
 #'
 #' @param status Lookup status.
 #' @param decision Current verified decision, or `NULL` when missing.
 #' @param selection Current verified selection, or `NULL` when missing or
 #'   withdrawn.
-#' @param roots Materialized root artifacts for an accepted recall.
-#' @param artifacts Complete materialized closure for an accepted recall.
+#' @param roots Root artifacts with their retained bytes and metadata for an
+#'   accepted recall.
+#' @param artifacts All artifacts in the accepted dependency closure, with
+#'   their retained bytes and metadata.
 #' @export
 Recall <- S7::new_class(
   "Recall",

@@ -14,7 +14,7 @@ VocabularyRelease(
 )
 }
 \arguments{
-\item{selection}{Exact retained \link{ArtifactSelection}.}
+\item{selection}{Exact retained \link{ArtifactSelection} for this release.}
 
 \item{vocabulary}{Retained concepts and relationships.}
 
@@ -24,12 +24,12 @@ VocabularyRelease(
 
 \item{references}{Exact source and export references for the release.}
 
-\item{context}{Literal context materialized from the release.}
+\item{context}{Literal context stored with the release.}
 }
 \description{
-\code{VocabularyRelease} is a typed descriptor for one verified vocabulary
-publication. Its selection identifies the immutable release in the artifact
-store; the other properties are materialized from that selection by
-\code{\link[=graft_read_vocabulary]{graft_read_vocabulary()}}. The properties are ordinary R values and do not
-grant access, approval, or execution authority.
+A \code{VocabularyRelease} describes one verified vocabulary publication. Its
+selection identifies the immutable release in the artifact store.
+\code{\link[=graft_read_vocabulary]{graft_read_vocabulary()}} reads the other properties from that selection.
+These properties are ordinary R values; they do not grant access, approval,
+or execution authority.
 }

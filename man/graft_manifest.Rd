@@ -32,16 +32,16 @@ kind, key, size and the SHA-256 digest of its exact stored bytes.
 \description{
 Enumerate and verify every committed artifact object in a local or
 transaction-scoped PostgreSQL store. The returned manifest is a deterministic
-digest of the stored object keys, sizes and bytes. The marker identifying the
-store format is checked but is not included in the manifest object list.
+digest over the stored object keys, sizes, and bytes. The function checks the
+store-format marker but excludes it from the manifest's object list.
 }
 \details{
-This is a strict, bounded inspection of a closed candidate. Unknown object
-kinds, unexpected paths, staging files, symbolic links, nonregular files,
-malformed metadata, missing dependencies, corrupt bytes and incomplete
-decision streams are rejected. Valid content objects that are not referenced
-by a revision are retained in the inventory so a replacement planner can
-omit them explicitly.
+The function performs a strict, bounded inspection of a closed candidate.
+Unknown object kinds, unexpected paths, staging files, symbolic links,
+nonregular files, malformed metadata, missing dependencies, corrupt bytes,
+and incomplete decision streams are rejected. Valid content objects that are
+not referenced by a revision are retained in the inventory so a replacement
+planner can omit them explicitly.
 
 The operation does not quiesce writers, remove source objects, authorize
 access, interpret a host Forget decision, or admit a generation for service.

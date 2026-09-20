@@ -17,19 +17,19 @@ graft_store_postgres(
 started through DBI at PostgreSQL's \verb{READ COMMITTED} isolation level.
 Pools must supply a checked-out connection.}
 
-\item{scope}{Host-selected isolation key, at most 1024 UTF-8 bytes. Every
-object read and write is restricted to this scope. This key is not an
-authentication credential; never let an agent choose it.}
+\item{scope}{Isolation key selected by the host application, at most 1024
+UTF-8 bytes. Every object read and write is restricted to this scope. This
+key is not an authentication credential; never let an agent choose it.}
 
-\item{create}{Ensure the storage table and scope exist? Defaults to \code{FALSE}.
+\item{create}{Whether to ensure the storage table and scope exist. Defaults
+to \code{FALSE}.
 Unlike local directory creation, \code{TRUE} can reopen an existing scope.}
 
 \item{max_bytes}{Maximum payload bytes per artifact to save or read in this
 handle. Dependency traversal also applies this limit to aggregate payloads.}
 
 \item{max_revision_bytes}{Maximum encoded metadata bytes per revision to save
-or
-read through this handle, a positive whole number. Defaults to 1 MiB
+or read through this handle, a positive whole number. Defaults to 1 MiB
 (\code{1024^2}), independently of payload and dependency-count bounds. Increase
 it for large dependency lists, including when reopening the store.}
 }
@@ -38,9 +38,9 @@ A Graft artifact store handle bound to the supplied connection and
 scope. The host remains responsible for closing the connection.
 }
 \description{
-Use the same immutable artifact, selection, decision, and vocabulary APIs
-with PostgreSQL persistence. The host owns the connection, transaction,
-authentication, and choice of scope.
+Use the immutable artifact, selection, decision, and vocabulary APIs with
+PostgreSQL persistence. The host application controls the connection,
+transaction, authentication, and scope.
 }
 \details{
 The current PostgreSQL schema contains \code{graft_artifact_objects}, owned by
@@ -57,12 +57,13 @@ Handles contain a live connection and must not be serialized or sent to
 models. After the transaction ends, artifact operations require another
 active transaction and acquire the scope lock again.
 
-This is isolation between host-selected scopes, not database-role or
-arbitrary-code isolation. The database role can access other scopes directly.
-The host must authorize every operation, including historical inspection,
-and keep connections away from untrusted code. PostgreSQL owns durability
-configuration and backups. This interface supplies no permanent Forget or
-backup admission protocol.
+The scope isolates data between scopes chosen by the host application. It
+does not isolate database roles or arbitrary code: the database role can
+access other scopes directly. The host must authorize every operation,
+including historical inspection, and keep connections away from untrusted
+code.
+PostgreSQL controls durability configuration and backups. This interface
+supplies no permanent Forget or backup admission protocol.
 }
 \examples{
 \dontshow{if (identical(Sys.getenv("GRAFT_TEST_POSTGRES"), "true")) withAutoprint(\{ # examplesIf}

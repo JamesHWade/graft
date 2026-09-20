@@ -19,23 +19,24 @@ graft_withdraw(
 \item{store}{A store returned by \code{\link[=graft_store]{graft_store()}} or
 \code{\link[=graft_store_postgres]{graft_store_postgres()}}.}
 
-\item{stream}{Host-chosen decision stream.}
+\item{stream}{A decision stream chosen and controlled by the host
+application.}
 
 \item{expected}{Required current predecessor: a \link{Decision} or exact digest.}
 
-\item{key}{Required stable host request key.}
+\item{key}{Required stable request key supplied by the host application.}
 
-\item{actor}{Host-supplied actor identity.}
+\item{actor}{Actor identity supplied by the host application.}
 
-\item{reason}{Host-supplied withdrawal reason.}
+\item{reason}{Withdrawal reason supplied by the host application.}
 
 \item{max_decisions}{Maximum decision records to inspect.}
 
 \item{max_metadata_bytes}{Maximum aggregate decision metadata bytes.}
 }
 \value{
-A recorded withdrawal \link{Decision}. The host transaction governs
-durability.
+A recorded withdrawal \link{Decision}. For PostgreSQL stores, the
+application controls the surrounding transaction and commit.
 }
 \description{
 Withdraw the current acceptance for a decision stream
