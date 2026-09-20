@@ -1,124 +1,100 @@
 # graft
 
 <div class="graft-hero">
-<p class="graft-eyebrow">Persistent artifacts and shared vocabulary for R</p>
-<h2 data-toc-skip>Keep what you learn.<br>Return to the exact evidence.</h2>
+<p class="graft-eyebrow">Project memory for R apps and agents</p>
+<h2 data-toc-skip>Keep what your project learns.<br>Use it in the next conversation.</h2>
 <p class="graft-hero-copy">
-Retain reports, evidence and shared concepts after the workflow ends. Record
-what a host accepted, preserve earlier revisions, and give a later task the
-exact artifacts behind an answer.
+Save reviewed findings, definitions, and decisions with their evidence. Give a
+later agent or workflow the current knowledge and a way to inspect its history.
 </p>
 <div class="graft-actions">
-<a class="btn btn-primary" href="articles/getting-started.html">Retain your first artifact</a>
-<a class="btn btn-outline-secondary" href="articles/shared-vocabulary.html">Share concepts across workflows</a>
+<a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a>
+<a class="btn btn-outline-secondary" href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory">Get the runnable Shiny example</a>
 </div>
 </div>
 
-## From a result to persistent memory
+## Your assistant should remember what the team agreed on
 
-A workflow produces a conclusion. A person reviews it. A later task needs both
-the original answer and the evidence behind it. Graft keeps immutable artifact
-revisions and exact dependency selections so a correction can coexist with the
-history it replaces.
+You're building an analytics assistant with ellmer and shinychat. The team agrees
+that an active customer has a paid account and used the product in the last
+30 days. Next week, someone opens a fresh conversation and asks how to count
+active customers.
+
+With Graft, your app can retrieve the reviewed definition and the exact source
+behind it. If the team changes the window to 60 days, you can review that
+correction, use it in later conversations, and still inspect the earlier version.
 
 <table class="table graft-workflow">
-<thead><tr><th>Retain</th><th>Review</th><th>Reuse</th></tr></thead>
+<thead><tr><th>Review once</th><th>Reuse later</th><th>Correct with history</th></tr></thead>
 <tbody><tr>
-<td>Save artifact bytes and select exact dependencies.</td>
-<td>Record the host's acceptance or withdrawal for a stated purpose.</td>
-<td>Verify the selected bytes and check current host eligibility.</td>
+<td>Save the agreed definition and its handbook excerpt.</td>
+<td>Let a fresh chat retrieve the current reviewed note through an ellmer tool.</td>
+<td>Review the updated definition while preserving the original evidence.</td>
 </tr></tbody>
 </table>
 
-Saving or selecting an artifact does not approve it. Historical inspection
-preserves evidence of an earlier decision; a new task still needs current
-permission. Applications decide access, scientific validity, review and retention.
+## Try it in a Shiny app
 
-## Start in R
+The included project notebook puts review controls beside a shinychat conversation.
+The default scripted preview uses real Graft files without model calls.
 
 ```r
-pak::pak("JamesHWade/graft")
-
-library(graft)
-store <- graft_artifact_store("research-artifacts", create = TRUE)
-report <- graft_artifact_save(
-  store, "report:pilot", charToRaw("Pilot evidence and conclusions"), "text/plain"
-)
-selection <- graft_artifact_select(store, list(report))
-rawToChar(graft_artifact_read(store, report)$bytes)
+pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
+Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
+shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
 
-The [quickstart](articles/getting-started.html) runs offline and introduces exact
-revisions, selections and host decisions. The core artifact workflow requires
-neither a schema compiler nor model credentials.
+Review and save the proposed definition, then ask **“How do we count an active
+customer?”** Start a new conversation and ask again. Stop and restart the app to
+reopen the same notebook. The [getting-started guide](articles/getting-started.html)
+walks through the storage calls, connects the memory tool to ellmer, and explains
+how to enable the live agent.
 
-## Choose your next workflow
+## What could your project keep?
 
 <div class="graft-paths">
 <section>
-<h3>Preserve a reviewed result</h3>
-<p>Retain a report with its evidence and record acceptance or withdrawal without
-rewriting its earlier bytes.</p>
-<p><a href="articles/persistent-artifacts.html">Use artifacts and decisions</a></p>
+<h3>Project knowledge for an agent</h3>
+<p>Reviewed definitions, decisions, and findings that another conversation needs.
+Your app chooses what to keep and who can use it.</p>
+<p><a href="articles/getting-started.html">Give a chat agent project memory</a></p>
 </section>
 <section>
-<h3>Share concepts and relationships</h3>
-<p>Bind vocabulary to exact data-dict dictionary releases. Reopen the retained
-source and rendered context without the original files.</p>
-<p><a href="articles/shared-vocabulary.html">Build a shared vocabulary</a></p>
+<h3>A report with its evidence</h3>
+<p>A conclusion, table, or figure linked to the exact inputs behind it. Revisit
+what was used when the result was produced.</p>
+<p><a href="articles/persistent-artifacts.html">Keep artifacts and review history</a></p>
 </section>
 <section>
-<h3>Verify a replacement store</h3>
-<p>Preview exclusions and verify exact survivors in a separate store. Keep
-Forget approval and backup admission with the application.</p>
-<p><a href="articles/artifact-recovery.html">Build a verified replacement</a></p>
-</section>
-<section>
-<h3>Back up a complete store</h3>
-<p>Retain every artifact and decision, then verify the closed bundle against the
-identity receipt kept by your application before restoring into quarantine.</p>
-<p><a href="articles/artifact-backups.html">Back up and restore artifacts</a></p>
-</section>
-<section>
-<h3>Understand the package boundaries</h3>
-<p>Compose Commons analysis, data-dict contracts and Graft persistence while
-keeping application policy with the consuming product.</p>
-<p><a href="articles/architecture.html">Read the architecture</a></p>
-</section>
-<section>
-<h3>Check integration contracts</h3>
-<p>Inspect the supported formats, optional dependencies and tested scope before
-connecting a workflow.</p>
-<p><a href="articles/compatibility.html">Read integration requirements</a></p>
+<h3>Shared concepts across workflows</h3>
+<p>Definitions and relationships bound to a data-dict release. Different agents
+and applications can recover the same retained vocabulary.</p>
+<p><a href="articles/shared-vocabulary.html">Publish shared vocabulary</a></p>
 </section>
 </div>
 
-## What works together
+## Add Graft to an existing application
 
-Commons supplies live analytical capabilities. Data-dict describes data. Graft
-retains artifacts, exact selections, decision history and shared meaning.
-Tempest and Rill consume this infrastructure as applications; their scientific
-or Reader-specific policies remain theirs. Vocabulary relationships describe
-meaning and do not execute reasoning, authorize joins or select agent tools.
+Keep ellmer for the model and tool calls, shinychat for the conversation, and your
+application's review and access controls. Add Graft where a useful result should
+outlive the current chat or R process.
 
-Tempest's public artifact workflow publishes completed research and retains its
-reports and evidence. New research and resume require fresh host admission.
-See the [persistent artifact guide](articles/persistent-artifacts.html) for the
-application handoff and its tested scope. Rill now retains opt-in Reader Memory
-through scoped PostgreSQL artifacts. Permanent Forget and durable restore remain
-rollout gates.
+Start with one kind of note and a read-only tool that retrieves its current
+reviewed version. A larger app can use its own catalog or search index to choose
+relevant notes, then ask Graft to verify the retained selections and evidence.
 
-## Scope and status
+## Storage and operational guides
 
 Graft supports trusted local files with one writer and PostgreSQL scopes inside
-host-owned transactions. Complete manifests and non-destructive replacement
-plans verify retained objects; closed bundles retain complete images and check
-restore identity against external receipts. Power-loss recovery, authenticated access, restore
-admission and permanent erasure remain separate work. No interchangeable
-backend API is promised today.
+application-owned transactions. This pre-production example is for one trusted
+local user. Shared deployment needs user/project authorization and retention
+controls supplied by the application.
 
-Consumer contract **3.2.0** adds closed backup bundles and verified restore.
-Contract 3 removes the native graph store, LinkML compiler,
-commit plans, graph snapshots, managed OKF tree and graph-specific agent tools.
-There are no compatibility wrappers. Retained artifact, selection, decision and
-vocabulary formats keep their exact identities.
+- [Back up and restore an artifact store](articles/artifact-backups.html)
+- [Build a verified replacement store](articles/artifact-recovery.html)
+- [Understand the architecture](articles/architecture.html)
+- [Check integration requirements](articles/compatibility.html)
+
+Permanent Forget and recovery from retired backups remain active work. Saving or
+reviewing material records your application's decision; it does not establish
+that a claim is true.

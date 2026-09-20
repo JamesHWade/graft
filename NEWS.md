@@ -1,5 +1,7 @@
 # graft 0.0.0.9000
 
+* The getting-started guide and runnable project-memory example show how to give an ellmer agent in shinychat a reviewed notebook that survives new conversations and app restarts, including corrections with retained evidence (#41).
+
 * Graft now contains persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers. The website describes the supported artifact architecture (#74).
 * `graft_artifact_backup()`, `graft_artifact_backup_verify()`, and `graft_artifact_restore()` create and verify bounded complete store bundles bound to a host-supplied scope and generation. Restores require an externally retained receipt and an empty quarantine target; applications still authorize restore using independent current registry state (#86).
 * `graft_artifact_decide()`, `graft_artifact_read_decision()`, and `graft_artifact_reuse()` retain explicit host acceptance and withdrawal, guard predecessors and identical retries, and separate historical inspection from current purpose-bound consultation (#73).

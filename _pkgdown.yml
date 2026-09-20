@@ -8,9 +8,9 @@ template:
 development:
   mode: auto
 home:
-  title: "graft: Persistent artifacts and shared vocabulary"
+  title: "graft: Project memory for R apps and agents"
   description: >
-    Retain exact evidence, reports, shared concepts, and host decisions across workflows.
+    Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
 navbar:
   structure:
     left: [intro, articles, reference, news]

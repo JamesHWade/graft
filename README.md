@@ -1,82 +1,90 @@
 # graft <img src="man/figures/logo.png" align="right" height="138" alt="Graft logo" />
 
-Graft retains **persistent artifacts and shared vocabulary** for R workflows and
-agents. Reports, evidence, dictionary releases, and other outputs remain readable
-at exact revisions after the process that produced them has ended.
+**Give your R apps and agents project memory.** Keep useful findings, agreed
+definitions, and reviewed decisions together with the evidence behind them, so a
+later conversation or workflow can use them again.
 
-## What belongs here
+Suppose you're building an analytics assistant with **ellmer and shinychat**.
+Your team agrees that an “active customer” has a paid account and used the product
+in the last 30 days. With Graft, your app can save that definition and its source,
+record your review, and let a fresh chat look it up. When the team changes the
+window to 60 days, you can review the correction while preserving the earlier
+version and its evidence.
 
-- **Artifacts:** immutable bytes and descriptive metadata, with verified reads.
-- **Selections:** explicit roots and their complete exact dependency closure.
-- **Decisions:** host acceptance and withdrawal, purpose, history, and safe retries.
-- **Vocabulary:** shared concepts and relationships bound to pinned data-dict
-  dictionaries, with retained source bytes and rendered context.
+The model answers questions. Your application chooses what to retain and who may
+use it. Graft keeps the knowledge and its history available across sessions.
 
-Commons supplies live analysis capabilities. Data-dict describes data. Graft
-retains their inputs, shared meaning, and outputs. Tempest and Rill are consuming
-applications: they own research validation, user access, review, and retention
-policy. Graft does not decide which claims are true or which tools an agent may use.
+## Try a project assistant
 
-## Retain and reuse a report
+The package includes a small Shiny app with a project notebook beside the chat.
+It starts in a **scripted preview** that exercises real Graft storage without
+calling a model.
 
 ```r
-library(graft)
-store <- graft_artifact_store("research-artifacts", create = TRUE)
-report <- graft_artifact_save(
-  store, "report:pilot", charToRaw("Pilot evidence and conclusions"), "text/plain"
-)
-selection <- graft_artifact_select(store, list(report))
-accepted <- graft_artifact_decide(
-  store, "pilot", "review-1", expected = NULL,
-  selection = selection, action = "accept", actor = "reviewer",
-  reason = "Evidence reviewed", purpose = "briefing"
-)
+pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
 
-# Reopen in a later process. The host supplies current eligibility.
-store <- graft_artifact_store("research-artifacts")
-graft_artifact_reuse(store, "pilot", accepted$id, "briefing", eligible = TRUE)
-rawToChar(graft_artifact_read(store, report)$bytes)
+# Keep the notebook in your project, including after the app stops.
+Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
+shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
 
-Saving or selecting an artifact does not approve it. A later correction changes
-current eligibility while preserving the earlier bytes and decision history.
-Applications recheck admission before starting or resuming work.
+1. Read the proposed definition and source, then **Review and save**.
+2. Ask **“How do we count an active customer?”**
+3. Start a **New conversation** and ask again. The saved knowledge is still there.
+4. Change the definition and source to use **60 days**, review the correction,
+   and ask again. The next conversation retrieves the updated definition.
+5. Stop and restart the app with the same store path to reopen the notebook.
 
-## Shared meaning across workflows
+For a live ellmer agent, configure `OPENAI_API_KEY`, set
+`Sys.setenv(GRAFT_DEMO_LIVE = "true")`, and relaunch. The agent gets a read-only
+memory tool; the notebook's review controls decide what it may remember.
+Live mode sends prompts and retrieved memory to the configured model provider.
 
-[`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.html)
-pins vocabulary, field bindings, and dictionary releases in one selection.
-[`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.html)
-restores them without the original files or data-dict CLI. Relationships describe
-meaning; they do not authorize joins, convert units, or execute reasoning.
+[**Build this step by step →**](https://jameshwade.github.io/graft/articles/getting-started.html)
+The guide shows the Graft calls, the ellmer tool, and the shinychat connection.
+The [complete example source](inst/examples/project-memory/) is included for you
+to copy and adapt.
 
-## Scope and status
+## Where you could use it
 
-This pre-production package supports trusted local files with one writer and
-PostgreSQL scopes inside host-owned transactions. Power-loss recovery,
-authenticated access, and permanent erasure remain separate work. The artifact
-contract allows future persistence implementations; no interchangeable backend
-API is promised today.
+| Your project | Knowledge worth keeping | What a later task can recover |
+|---|---|---|
+| A project chat assistant | Reviewed metric definitions and team decisions | The current definition and the exact source it was based on |
+| An analysis or research workflow | A conclusion, report, table, or figure with its inputs | The original output and its retained dependencies |
+| Several agents working on the same domain | Shared concepts and field meanings bound to a data-dict release | The same vocabulary, even after the original dictionary changes |
 
-Consumer contract **3.2.0** adds closed backup bundles and verified restore.
-Contract 3 removes the native graph store, LinkML compiler,
-commit plans, graph snapshots, managed OKF tree, and graph-specific agent tools.
-There are no compatibility wrappers. Existing artifact, selection, and decision
-formats keep their exact identities.
+You choose the payload: plain text, JSON, a rendered report, or other bytes.
+Declare the evidence dependencies when you save it. Graft preserves exact
+revisions, groups related artifacts into selections, and records acceptance or
+withdrawal for a stated purpose. Reading a current accepted selection checks both
+its recorded decision and its stored contents.
 
-Read [getting started](https://jameshwade.github.io/graft/articles/getting-started.html),
-[persistent artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.html),
-and [shared vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.html).
+This lets you answer two different questions: **“What should this task use
+now?”** and **“What did we use when we reached that earlier conclusion?”**
 
-## Verified replacement stores
+## Apply it to your app
 
-Preview exclusions and verify exact survivors in a separate store with artifact
-manifests and replacement plans. See the [replacement guide](https://jameshwade.github.io/graft/articles/artifact-recovery.html).
-Applications still own permanent Forget authorization, generation retirement,
-backup admission, and disposal; these operations never delete source content.
+Start with one kind of knowledge your users repeatedly need. For example, add a
+“Save to project memory” action to an existing assistant, then expose a tool that
+retrieves the latest reviewed note with its source. Your app supplies the project
+or user scope, review action, and current access check. ellmer manages the model
+and tools; shinychat presents the conversation.
 
-Create a complete backup with `graft_artifact_backup()` and retain its identity
-receipt separately. `graft_artifact_restore()` verifies the closed bundle against
-that receipt before copying into an empty target. See the [backup guide](https://jameshwade.github.io/graft/articles/artifact-backups.html).
-A matching receipt proves the expected contents; the application still checks
-that the generation is currently eligible for restore.
+As your notebook grows, your application can keep a catalog or search index to
+choose relevant notes, then use Graft to verify the exact retained selection.
+For shared terminology, [publish a vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.html)
+bound to a data-dict dictionary.
+
+## Further reading and current scope
+
+- [Getting started: give a chat agent project memory](https://jameshwade.github.io/graft/articles/getting-started.html)
+- [Artifacts, evidence, and review history](https://jameshwade.github.io/graft/articles/persistent-artifacts.html)
+- [Shared concepts and vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.html)
+- [Back up and restore a notebook](https://jameshwade.github.io/graft/articles/artifact-backups.html)
+- [Architecture and integration requirements](https://jameshwade.github.io/graft/articles/compatibility.html)
+
+Graft is pre-production. Local stores support trusted files and one writer;
+PostgreSQL scopes work inside transactions owned by your application. The demo
+is for one trusted local user. Shared deployment requires application-owned
+identity, access, and retention controls. Permanent Forget and recovery from
+retired backups remain active work.
