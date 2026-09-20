@@ -234,7 +234,7 @@ graft_save_file <- function(
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param ref An exact [ArtifactRef].
-#' @returns A materialized [Artifact].
+#' @returns An [Artifact] containing the retained bytes and metadata.
 #' @export
 graft_read <- function(store, ref) {
   record <- artifact_ref_record(ref)
@@ -242,6 +242,10 @@ graft_read <- function(store, ref) {
 }
 
 #' Capture and verify an exact dependency selection
+#'
+#' Save the roots and their complete verified dependency set as one immutable
+#' selection. The selection records references to artifacts; it does not grant
+#' approval or access.
 #'
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
@@ -312,23 +316,29 @@ graft_read_selection <- function(
   ))
 }
 
-#' Record an acceptance of exact retained evidence
+#' Record acceptance of exact retained evidence
+#'
+#' Record the host application's acceptance of a selection for a decision
+#' stream and purpose. The returned decision records who made the decision and
+#' why; it does not itself grant access to the selected artifacts.
 #'
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param x One [ArtifactRef], a list of them, or an [ArtifactSelection].
-#' @param stream Host-chosen decision stream.
+#' @param stream A decision stream chosen and controlled by the host
+#'   application.
 #' @param expected Required predecessor: `NULL`, a [Decision], or an exact
 #'   external decision digest.
-#' @param key Required stable host request key.
-#' @param actor Host-supplied actor identity.
-#' @param reason Host-supplied review reason.
-#' @param purpose Host-supplied consultation purpose.
+#' @param key Required stable request key supplied by the host application.
+#' @param actor Actor identity supplied by the host application.
+#' @param reason Review reason supplied by the host application.
+#' @param purpose Purpose for which the host application records acceptance.
 #' @param max_decisions Maximum decision records to inspect.
 #' @param max_metadata_bytes Maximum aggregate decision metadata bytes.
-#' @param max_artifacts Maximum artifacts in the selected closure.
+#' @param max_artifacts Maximum artifacts in the selected dependency set.
 #' @param max_selection_bytes Maximum encoded selection metadata bytes.
-#' @returns A recorded [Decision]. The host transaction governs durability.
+#' @returns A recorded [Decision]. For PostgreSQL stores, the application
+#'   controls the surrounding transaction and commit.
 #' @export
 graft_accept <- function(
   store,
@@ -382,15 +392,16 @@ graft_accept <- function(
 #'
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
-#' @param stream Host-chosen decision stream.
+#' @param stream A decision stream chosen and controlled by the host
+#'   application.
 #' @param expected Required current predecessor: a [Decision] or exact digest.
-#' @param key Required stable host request key.
-#' @param actor Host-supplied actor identity.
-#' @param reason Host-supplied withdrawal reason.
+#' @param key Required stable request key supplied by the host application.
+#' @param actor Actor identity supplied by the host application.
+#' @param reason Withdrawal reason supplied by the host application.
 #' @param max_decisions Maximum decision records to inspect.
 #' @param max_metadata_bytes Maximum aggregate decision metadata bytes.
-#' @returns A recorded withdrawal [Decision]. The host transaction governs
-#'   durability.
+#' @returns A recorded withdrawal [Decision]. For PostgreSQL stores, the
+#'   application controls the surrounding transaction and commit.
 #' @export
 graft_withdraw <- function(
   store,
@@ -440,16 +451,25 @@ graft_withdraw <- function(
   artifact_decision_value(current)
 }
 
-#' Recall the current accepted evidence for a stream
+#' Read the evidence currently accepted for a stream
+#'
+#' Check the host application's current eligibility decision and the stream's
+#' current decision. When the current decision accepts evidence for the
+#' requested purpose, return its selection and verified artifacts. The function
+#' checks the decision head again after reading the artifacts; if it changed,
+#' it errors instead of returning a mixed result. The result is a point-in-time
+#' check, not an access token.
 #'
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
-#' @param stream Host-chosen decision stream.
-#' @param purpose Required consultation purpose.
-#' @param eligible Fresh explicit host eligibility decision.
+#' @param stream A decision stream chosen and controlled by the host
+#'   application.
+#' @param purpose Purpose for which consultation is requested.
+#' @param eligible Fresh boolean supplied by the host application indicating
+#'   whether consultation is currently allowed.
 #' @param max_decisions Maximum decision records to inspect.
 #' @param max_metadata_bytes Maximum aggregate decision metadata bytes.
-#' @param max_artifacts Maximum artifacts in the selected closure.
+#' @param max_artifacts Maximum artifacts in the selected dependency set.
 #' @param max_selection_bytes Maximum encoded selection metadata bytes.
 #' @returns A point-in-time [Recall].
 #' @export
@@ -557,7 +577,8 @@ graft_recall <- function(
 #'
 #' @param store A store returned by [graft_store()] or
 #'   [graft_store_postgres()].
-#' @param stream Host-chosen decision stream.
+#' @param stream A decision stream chosen and controlled by the host
+#'   application.
 #' @param max_decisions Maximum decision records to inspect.
 #' @param max_metadata_bytes Maximum aggregate decision metadata bytes.
 #' @returns A chronological list of [Decision] values, oldest first.

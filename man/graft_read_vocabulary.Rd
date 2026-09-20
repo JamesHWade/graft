@@ -14,11 +14,11 @@ graft_read_vocabulary(store, release)
 selection digest returned by \code{\link[=graft_publish_vocabulary]{graft_publish_vocabulary()}}.}
 }
 \value{
-A freshly materialized \link{VocabularyRelease}.
+A freshly reconstructed \link{VocabularyRelease}.
 }
 \description{
 Resolve an exact release selection, verify it against the live artifact
-store, and reconstruct every release field from retained bytes. A supplied
-\link{VocabularyRelease} is treated as a selection descriptor; its cached
-vocabulary fields are never trusted.
+store, and reconstruct every release field from retained bytes. The function
+treats a supplied \link{VocabularyRelease} as a selection descriptor. It never
+trusts the cached vocabulary fields.
 }

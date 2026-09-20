@@ -1,9 +1,9 @@
 #' Publish a validated shared vocabulary release
 #'
 #' The source companion and its pinned dictionary files are validated by the
-#' upstream data-dict CLI and retained as one immutable artifact selection.
-#' The returned value is a typed release re-read from the store after
-#' publication.
+#' upstream data-dict CLI and retained in one immutable artifact selection.
+#' After publication, the function reads the typed release back from the store
+#' and returns it.
 #'
 #' @param store An [ArtifactStore] returned by [graft_store()] or
 #'   [graft_store_postgres()].
@@ -23,16 +23,16 @@ graft_publish_vocabulary <- function(store, path) {
 #' Read a retained vocabulary release
 #'
 #' Resolve an exact release selection, verify it against the live artifact
-#' store, and reconstruct every release field from retained bytes. A supplied
-#' [VocabularyRelease] is treated as a selection descriptor; its cached
-#' vocabulary fields are never trusted.
+#' store, and reconstruct every release field from retained bytes. The function
+#' treats a supplied [VocabularyRelease] as a selection descriptor. It never
+#' trusts the cached vocabulary fields.
 #'
 #' @param store An [ArtifactStore] returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param release A [VocabularyRelease], [ArtifactSelection], or exact
 #'   selection digest returned by [graft_publish_vocabulary()].
 #'
-#' @return A freshly materialized [VocabularyRelease].
+#' @return A freshly reconstructed [VocabularyRelease].
 #' @export
 graft_read_vocabulary <- function(store, release) {
   selection <- vocabulary_selection(store, release)

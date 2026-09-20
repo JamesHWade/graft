@@ -1,16 +1,17 @@
 #' Open a transaction-scoped PostgreSQL artifact store
 #'
-#' Use the same immutable artifact, selection, decision, and vocabulary APIs
-#' with PostgreSQL persistence. The host owns the connection, transaction,
-#' authentication, and choice of scope.
+#' Use the immutable artifact, selection, decision, and vocabulary APIs with
+#' PostgreSQL persistence. The host application controls the connection,
+#' transaction, authentication, and scope.
 #'
 #' @param connection An open `RPostgres::PqConnection` in an active transaction
 #'   started through DBI at PostgreSQL's `READ COMMITTED` isolation level.
 #'   Pools must supply a checked-out connection.
-#' @param scope Host-selected isolation key, at most 1024 UTF-8 bytes. Every
-#'   object read and write is restricted to this scope. This key is not an
-#'   authentication credential; never let an agent choose it.
-#' @param create Ensure the storage table and scope exist? Defaults to `FALSE`.
+#' @param scope Isolation key selected by the host application, at most 1024
+#'   UTF-8 bytes. Every object read and write is restricted to this scope. This
+#'   key is not an authentication credential; never let an agent choose it.
+#' @param create Whether to ensure the storage table and scope exist. Defaults
+#'   to `FALSE`.
 #'   Unlike local directory creation, `TRUE` can reopen an existing scope.
 #' @inheritParams graft_store
 #'
@@ -29,12 +30,13 @@
 #' models. After the transaction ends, artifact operations require another
 #' active transaction and acquire the scope lock again.
 #'
-#' This is isolation between host-selected scopes, not database-role or
-#' arbitrary-code isolation. The database role can access other scopes directly.
-#' The host must authorize every operation, including historical inspection,
-#' and keep connections away from untrusted code. PostgreSQL owns durability
-#' configuration and backups. This interface supplies no permanent Forget or
-#' backup admission protocol.
+#' The scope isolates data between scopes chosen by the host application. It
+#' does not isolate database roles or arbitrary code: the database role can
+#' access other scopes directly. The host must authorize every operation,
+#' including historical inspection, and keep connections away from untrusted
+#' code.
+#' PostgreSQL controls durability configuration and backups. This interface
+#' supplies no permanent Forget or backup admission protocol.
 #'
 #' @returns A Graft artifact store handle bound to the supplied connection and
 #'   scope. The host remains responsible for closing the connection.

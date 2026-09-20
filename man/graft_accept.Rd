@@ -2,7 +2,7 @@
 % Please edit documentation in R/workflow.R
 \name{graft_accept}
 \alias{graft_accept}
-\title{Record an acceptance of exact retained evidence}
+\title{Record acceptance of exact retained evidence}
 \usage{
 graft_accept(
   store,
@@ -25,30 +25,34 @@ graft_accept(
 
 \item{x}{One \link{ArtifactRef}, a list of them, or an \link{ArtifactSelection}.}
 
-\item{stream}{Host-chosen decision stream.}
+\item{stream}{A decision stream chosen and controlled by the host
+application.}
 
 \item{expected}{Required predecessor: \code{NULL}, a \link{Decision}, or an exact
 external decision digest.}
 
-\item{key}{Required stable host request key.}
+\item{key}{Required stable request key supplied by the host application.}
 
-\item{actor}{Host-supplied actor identity.}
+\item{actor}{Actor identity supplied by the host application.}
 
-\item{reason}{Host-supplied review reason.}
+\item{reason}{Review reason supplied by the host application.}
 
-\item{purpose}{Host-supplied consultation purpose.}
+\item{purpose}{Purpose for which the host application records acceptance.}
 
 \item{max_decisions}{Maximum decision records to inspect.}
 
 \item{max_metadata_bytes}{Maximum aggregate decision metadata bytes.}
 
-\item{max_artifacts}{Maximum artifacts in the selected closure.}
+\item{max_artifacts}{Maximum artifacts in the selected dependency set.}
 
 \item{max_selection_bytes}{Maximum encoded selection metadata bytes.}
 }
 \value{
-A recorded \link{Decision}. The host transaction governs durability.
+A recorded \link{Decision}. For PostgreSQL stores, the application
+controls the surrounding transaction and commit.
 }
 \description{
-Record an acceptance of exact retained evidence
+Record the host application's acceptance of a selection for a decision
+stream and purpose. The returned decision records who made the decision and
+why; it does not itself grant access to the selected artifacts.
 }

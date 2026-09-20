@@ -7,7 +7,8 @@
 ArtifactStore(max_bytes = integer(0), max_revision_bytes = integer(0))
 }
 \arguments{
-\item{max_bytes}{Maximum payload bytes per artifact and dependency closure.}
+\item{max_bytes}{Maximum payload bytes for one artifact and the complete
+dependency set it references.}
 
 \item{max_revision_bytes}{Maximum encoded revision metadata bytes.}
 }

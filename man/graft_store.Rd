@@ -2,7 +2,7 @@
 % Please edit documentation in R/artifact-store.R
 \name{graft_store}
 \alias{graft_store}
-\title{Preserve immutable artifact content}
+\title{Create or reopen a local artifact store}
 \usage{
 graft_store(
   path,
@@ -16,14 +16,14 @@ graft_store(
 graph store. Creation requires a missing or empty directory. Filesystem
 paths follow platform limits, independently of artifact identity byte limits.}
 
-\item{create}{Create a new store? Defaults to \code{FALSE} for safe reopening.}
+\item{create}{Whether to create a new store. Defaults to \code{FALSE}, which
+reopens an existing store.}
 
 \item{max_bytes}{Maximum payload bytes per artifact to save or read in this
 handle. Dependency traversal also applies this limit to aggregate payloads.}
 
 \item{max_revision_bytes}{Maximum encoded metadata bytes per revision to save
-or
-read through this handle, a positive whole number. Defaults to 1 MiB
+or read through this handle, a positive whole number. Defaults to 1 MiB
 (\code{1024^2}), independently of payload and dependency-count bounds. Increase
 it for large dependency lists, including when reopening the store.}
 }
@@ -32,25 +32,26 @@ it for large dependency lists, including when reopening the store.}
 }
 \description{
 Create or reopen a local artifact store, save opaque bytes, and resolve an
-exact revision. Saving grants no approval, access or execution authority.
+exact revision. Saving grants no approval, access, or execution authority.
 }
 \details{
-Identity, media-type and reference strings are normalized to plain UTF-8
+Identity, media type, and reference strings are normalized to plain UTF-8
 character values without R attributes.
 
 Local stores support trusted files with one writer. SHA-256 digests
-identify content and metadata. Identical saves return the same reference;
-corrections retain earlier revisions. There is no mutable latest pointer.
+identify content and metadata. Repeating an identical save returns the same
+reference, while corrections retain earlier revisions. There is no mutable
+latest pointer.
 
 Payloads are published before immutable revision metadata, using staged files
 in the destination directory. A failed save can leave unreferenced bytes;
 retries reuse verified content. Orphans are retained rather than deleted
-automatically. Successful reads verify metadata, payload size and digest.
-Interrupted writes cannot yield a successful incomplete reference, but this
+automatically. Successful reads verify metadata, payload size, and digest.
+Interrupted writes cannot produce a successful incomplete reference. The
 interface does not promise power-loss durability, concurrent publication,
-authorization, erasure or backup recovery. Applications own access and
+authorization, erasure, or backup recovery. Applications control access and
 policy.
-Local handles contain no open connections and need no closing.
+Local handles have no open connections, so callers do not need to close them.
 For transaction-scoped database persistence, use
 \code{\link[=graft_store_postgres]{graft_store_postgres()}} with the same artifact APIs.
 }

@@ -21,7 +21,7 @@ bounded manifests and replacement plans. These operations do not authorize
 Forget or backup restore.
 Consumer contract 3 removes the native graph store, schema compiler, commit
 plans, snapshots, and managed working tree. Artifacts and selections retain
-format 1; the cut does not change their bytes or digest identities.
+format 1; this change does not alter their bytes or digest identities.
 Applications interpret payloads and decide whether evidence is eligible for
 use. Graft verifies exact retention and records explicit host decisions.
 }

@@ -2,30 +2,31 @@
 % Please edit documentation in R/memory-tool.R
 \name{graft_tool}
 \alias{graft_tool}
-\title{Expose reviewed content through a fixed read-only ellmer tool}
+\title{Create a fixed read-only ellmer tool for reviewed content}
 \usage{
 graft_tool(store, stream, purpose, eligible, name = "recall_project_memory")
 }
 \arguments{
 \item{store}{A store returned by \code{\link[=graft_store]{graft_store()}} or
-\code{\link[=graft_store_postgres]{graft_store_postgres()}}. The handle remains private to the tool closure.}
+\code{\link[=graft_store_postgres]{graft_store_postgres()}}. The handle remains private inside the tool.}
 
-\item{stream}{A fixed host-owned decision stream.}
+\item{stream}{A decision stream chosen and controlled by the host
+application.}
 
-\item{purpose}{The fixed consultation purpose.}
+\item{purpose}{The consultation purpose to use for every invocation.}
 
-\item{eligible}{A required no-argument function supplied by the host. It
-must return the current consultation decision when called.}
+\item{eligible}{A required host-supplied function with no arguments. It must
+return whether the current consultation is allowed when called.}
 
 \item{name}{The ellmer tool name. Defaults to \code{"recall_project_memory"}.}
 }
 \value{
-An \link[ellmer:ToolDef]{ellmer::ToolDef}. Calling the tool returns a native
+An \link[ellmer:ToolDef]{ellmer::ToolDef}. Calling the tool returns an
 \link[ellmer:ContentToolResult]{ellmer::ContentToolResult} whose value is a JSON string.
 }
 \description{
-Create an \link[ellmer:ToolDef]{ellmer::ToolDef} that consults one host-selected stream and
-purpose. The tool has no model-controlled arguments and never writes to the
-store. \code{eligible} is evaluated for every invocation, before any retained
-content is looked up.
+Create an \link[ellmer:ToolDef]{ellmer::ToolDef} that reads content accepted for one decision
+stream and purpose chosen by the host application. The tool has no
+model-controlled arguments and never writes to the store. It evaluates
+\code{eligible} on every invocation before it looks up retained content.
 }

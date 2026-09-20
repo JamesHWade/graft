@@ -13,7 +13,7 @@ graft_read(store, ref)
 \item{ref}{An exact \link{ArtifactRef}.}
 }
 \value{
-A materialized \link{Artifact}.
+An \link{Artifact} containing the retained bytes and metadata.
 }
 \description{
 Read one exact immutable artifact

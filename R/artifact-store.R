@@ -1,36 +1,37 @@
-#' Preserve immutable artifact content
+#' Create or reopen a local artifact store
 #'
 #' Create or reopen a local artifact store, save opaque bytes, and resolve an
-#' exact revision. Saving grants no approval, access or execution authority.
+#' exact revision. Saving grants no approval, access, or execution authority.
 #'
 #' @param path Directory for a Graft artifact store, distinct from a native
 #'   graph store. Creation requires a missing or empty directory. Filesystem
 #'   paths follow platform limits, independently of artifact identity byte limits.
-#' @param create Create a new store? Defaults to `FALSE` for safe reopening.
+#' @param create Whether to create a new store. Defaults to `FALSE`, which
+#'   reopens an existing store.
 #' @param max_bytes Maximum payload bytes per artifact to save or read in this
 #'   handle. Dependency traversal also applies this limit to aggregate payloads.
 #' @param max_revision_bytes Maximum encoded metadata bytes per revision to save
-#'   or
-#'   read through this handle, a positive whole number. Defaults to 1 MiB
+#'   or read through this handle, a positive whole number. Defaults to 1 MiB
 #'   (`1024^2`), independently of payload and dependency-count bounds. Increase
 #'   it for large dependency lists, including when reopening the store.
 #' @details
-#' Identity, media-type and reference strings are normalized to plain UTF-8
+#' Identity, media type, and reference strings are normalized to plain UTF-8
 #' character values without R attributes.
 #'
 #' Local stores support trusted files with one writer. SHA-256 digests
-#' identify content and metadata. Identical saves return the same reference;
-#' corrections retain earlier revisions. There is no mutable latest pointer.
+#' identify content and metadata. Repeating an identical save returns the same
+#' reference, while corrections retain earlier revisions. There is no mutable
+#' latest pointer.
 #'
 #' Payloads are published before immutable revision metadata, using staged files
 #' in the destination directory. A failed save can leave unreferenced bytes;
 #' retries reuse verified content. Orphans are retained rather than deleted
-#' automatically. Successful reads verify metadata, payload size and digest.
-#' Interrupted writes cannot yield a successful incomplete reference, but this
+#' automatically. Successful reads verify metadata, payload size, and digest.
+#' Interrupted writes cannot produce a successful incomplete reference. The
 #' interface does not promise power-loss durability, concurrent publication,
-#' authorization, erasure or backup recovery. Applications own access and
+#' authorization, erasure, or backup recovery. Applications control access and
 #' policy.
-#' Local handles contain no open connections and need no closing.
+#' Local handles have no open connections, so callers do not need to close them.
 #' For transaction-scoped database persistence, use
 #' [graft_store_postgres()] with the same artifact APIs.
 #'

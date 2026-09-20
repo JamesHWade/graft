@@ -15,7 +15,8 @@ graft_history(
 \item{store}{A store returned by \code{\link[=graft_store]{graft_store()}} or
 \code{\link[=graft_store_postgres]{graft_store_postgres()}}.}
 
-\item{stream}{Host-chosen decision stream.}
+\item{stream}{A decision stream chosen and controlled by the host
+application.}
 
 \item{max_decisions}{Maximum decision records to inspect.}
 

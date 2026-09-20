@@ -3,7 +3,8 @@
 #' `ArtifactStore` is the common S7 type for bounded local and PostgreSQL
 #' artifact stores. It cannot be instantiated directly.
 #'
-#' @param max_bytes Maximum payload bytes per artifact and dependency closure.
+#' @param max_bytes Maximum payload bytes for one artifact and the complete
+#'   dependency set it references.
 #' @param max_revision_bytes Maximum encoded revision metadata bytes.
 #' @export
 ArtifactStore <- S7::new_class(
@@ -33,7 +34,8 @@ ArtifactStore <- S7::new_class(
 #' Local artifact store
 #'
 #' @param path Normalized local store directory.
-#' @param max_bytes Maximum payload bytes per artifact and dependency closure.
+#' @param max_bytes Maximum payload bytes for one artifact and the complete
+#'   dependency set it references.
 #' @param max_revision_bytes Maximum encoded revision metadata bytes.
 #' @export
 LocalArtifactStore <- S7::new_class(
@@ -56,7 +58,8 @@ LocalArtifactStore <- S7::new_class(
 #'
 #' @param connection An open transaction-scoped PostgreSQL connection.
 #' @param scope Host-selected scope key.
-#' @param max_bytes Maximum payload bytes per artifact and dependency closure.
+#' @param max_bytes Maximum payload bytes for one artifact and the complete
+#'   dependency set it references.
 #' @param max_revision_bytes Maximum encoded revision metadata bytes.
 #' @export
 PostgresArtifactStore <- S7::new_class(

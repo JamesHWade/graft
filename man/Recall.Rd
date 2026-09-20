@@ -2,7 +2,7 @@
 % Please edit documentation in R/aaa-value-types.R
 \name{Recall}
 \alias{Recall}
-\title{The result of a current reviewed-artifact lookup}
+\title{A result from a current reviewed-artifact lookup}
 \usage{
 Recall(
   status = character(0),
@@ -20,13 +20,15 @@ Recall(
 \item{selection}{Current verified selection, or \code{NULL} when missing or
 withdrawn.}
 
-\item{roots}{Materialized root artifacts for an accepted recall.}
+\item{roots}{Root artifacts with their retained bytes and metadata for an
+accepted recall.}
 
-\item{artifacts}{Complete materialized closure for an accepted recall.}
+\item{artifacts}{All artifacts in the accepted dependency closure, with
+their retained bytes and metadata.}
 }
 \description{
 \code{Recall} reports a point-in-time \code{status} of \code{missing}, \code{withdrawn}, or
-\code{accepted}. Missing and withdrawn results contain no materialized payload.
-Accepted results contain the current verified decision, selection, roots,
-and complete materialized dependency closure.
+\code{accepted}. Missing and withdrawn results contain no artifact content.
+Accepted results contain the current verified decision, selection, root
+artifacts, and every artifact in the verified dependency closure.
 }

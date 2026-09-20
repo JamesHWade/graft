@@ -23,9 +23,11 @@ graft_backup(
 paths, including dangling symbolic links, are rejected. The parent directory
 must already exist; paths must not contain \code{..} components.}
 
-\item{scope}{An opaque, nonempty host scope association.}
+\item{scope}{An opaque, nonempty identifier that the host application
+associates with this scope.}
 
-\item{generation}{An opaque, nonempty host generation association.}
+\item{generation}{An opaque, nonempty identifier that the host application
+associates with this generation.}
 
 \item{max_objects}{Maximum number of stored artifact objects to inspect.}
 
@@ -42,20 +44,21 @@ A receipt containing the backup format, descriptor digest, scope,
 generation, and complete manifest digest.
 }
 \description{
-Copy a complete, verified artifact store into a versioned local directory
-bundle. The bundle contains a canonical descriptor and the exact local
-artifact-store image. The returned receipt is intentionally small so an
-application can retain it separately from the bundle.
+Copy a complete, verified artifact store into a versioned local backup
+bundle. The bundle contains a canonical descriptor and an exact image of
+the local artifact store. The receipt is small enough for an application to
+retain separately from the bundle.
 }
 \details{
 The source is never changed. A backup includes valid orphan content and all
-historical decision records. Local source stores require a trusted,
-quiescent single-writer directory. PostgreSQL callers retain transaction and
-commit ownership; a successful receipt does not prove that a transaction has
-committed. The destination is built in a sibling staging directory and is
-renamed only after the complete image is verified. Ordinary failures clean
-up the operation's own staging directory, while an interrupted process can
-leave staging behind for host inventory and disposal.
+historical decision records. Local source stores require a trusted directory
+with a single writer and no concurrent writes. PostgreSQL callers retain
+transaction and commit ownership; a successful receipt does not prove that a
+transaction has committed. The destination is built in a sibling staging
+directory and is renamed only after the complete image is verified. On an
+ordinary failure, the operation removes its staging directory. An
+interrupted process can leave staging behind for host inventory and
+disposal.
 The destination's parent must already be a readable directory, and paths
 cannot contain parent traversal components.
 

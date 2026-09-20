@@ -1,17 +1,19 @@
 #' Create a closed artifact-store backup
 #'
-#' Copy a complete, verified artifact store into a versioned local directory
-#' bundle. The bundle contains a canonical descriptor and the exact local
-#' artifact-store image. The returned receipt is intentionally small so an
-#' application can retain it separately from the bundle.
+#' Copy a complete, verified artifact store into a versioned local backup
+#' bundle. The bundle contains a canonical descriptor and an exact image of
+#' the local artifact store. The receipt is small enough for an application to
+#' retain separately from the bundle.
 #'
 #' @param store A handle returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param path An absent local directory path for the backup bundle. Existing
 #'   paths, including dangling symbolic links, are rejected. The parent directory
 #'   must already exist; paths must not contain `..` components.
-#' @param scope An opaque, nonempty host scope association.
-#' @param generation An opaque, nonempty host generation association.
+#' @param scope An opaque, nonempty identifier that the host application
+#'   associates with this scope.
+#' @param generation An opaque, nonempty identifier that the host application
+#'   associates with this generation.
 #' @param max_objects Maximum number of stored artifact objects to inspect.
 #' @param max_total_bytes Maximum total bytes across stored artifact objects.
 #' @param max_metadata_bytes Maximum bytes for one selection or decision object
@@ -24,13 +26,14 @@
 #'
 #' @details
 #' The source is never changed. A backup includes valid orphan content and all
-#' historical decision records. Local source stores require a trusted,
-#' quiescent single-writer directory. PostgreSQL callers retain transaction and
-#' commit ownership; a successful receipt does not prove that a transaction has
-#' committed. The destination is built in a sibling staging directory and is
-#' renamed only after the complete image is verified. Ordinary failures clean
-#' up the operation's own staging directory, while an interrupted process can
-#' leave staging behind for host inventory and disposal.
+#' historical decision records. Local source stores require a trusted directory
+#' with a single writer and no concurrent writes. PostgreSQL callers retain
+#' transaction and commit ownership; a successful receipt does not prove that a
+#' transaction has committed. The destination is built in a sibling staging
+#' directory and is renamed only after the complete image is verified. On an
+#' ordinary failure, the operation removes its staging directory. An
+#' interrupted process can leave staging behind for host inventory and
+#' disposal.
 #' The destination's parent must already be a readable directory, and paths
 #' cannot contain parent traversal components.
 #'
@@ -186,9 +189,9 @@ graft_verify_backup <- function(
 
 #' Restore a verified backup into an empty artifact store
 #'
-#' Verify a closed backup and copy its exact objects into an empty local or
-#' transaction-scoped PostgreSQL artifact store. The target is verified again
-#' before its manifest is returned.
+#' Verify a closed backup, then copy its exact objects into an empty local or
+#' transaction-scoped PostgreSQL artifact store. Verify the target again before
+#' returning its manifest.
 #'
 #' @param path A local backup bundle path without `..` components.
 #' @param target An empty handle returned by [graft_store()] or
@@ -206,7 +209,7 @@ graft_verify_backup <- function(
 #' @details
 #' The bundle is verified before any target object is written, then verified
 #' again after copying. The target must be empty and outside the bundle. A
-#' failed copy can leave a partial target; quarantine it and retry in a fresh
+#' failed copy can leave a partial target. Quarantine it and retry in a fresh
 #' empty target. The source bundle is never changed. PostgreSQL callers own the
 #' surrounding transaction and commit.
 #'

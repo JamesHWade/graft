@@ -20,5 +20,7 @@ graft_select(store, roots, max_artifacts = 1000L, max_metadata_bytes = 1024^2)
 A verified \link{ArtifactSelection}.
 }
 \description{
-Capture and verify an exact dependency selection
+Save the roots and their complete verified dependency set as one immutable
+selection. The selection records references to artifacts; it does not grant
+approval or access.
 }

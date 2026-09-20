@@ -2,7 +2,7 @@
 % Please edit documentation in R/workflow.R
 \name{graft_recall}
 \alias{graft_recall}
-\title{Recall the current accepted evidence for a stream}
+\title{Read the evidence currently accepted for a stream}
 \usage{
 graft_recall(
   store,
@@ -19,17 +19,19 @@ graft_recall(
 \item{store}{A store returned by \code{\link[=graft_store]{graft_store()}} or
 \code{\link[=graft_store_postgres]{graft_store_postgres()}}.}
 
-\item{stream}{Host-chosen decision stream.}
+\item{stream}{A decision stream chosen and controlled by the host
+application.}
 
-\item{purpose}{Required consultation purpose.}
+\item{purpose}{Purpose for which consultation is requested.}
 
-\item{eligible}{Fresh explicit host eligibility decision.}
+\item{eligible}{Fresh boolean supplied by the host application indicating
+whether consultation is currently allowed.}
 
 \item{max_decisions}{Maximum decision records to inspect.}
 
 \item{max_metadata_bytes}{Maximum aggregate decision metadata bytes.}
 
-\item{max_artifacts}{Maximum artifacts in the selected closure.}
+\item{max_artifacts}{Maximum artifacts in the selected dependency set.}
 
 \item{max_selection_bytes}{Maximum encoded selection metadata bytes.}
 }
@@ -37,5 +39,10 @@ graft_recall(
 A point-in-time \link{Recall}.
 }
 \description{
-Recall the current accepted evidence for a stream
+Check the host application's current eligibility decision and the stream's
+current decision. When the current decision accepts evidence for the
+requested purpose, return its selection and verified artifacts. The function
+checks the decision head again after reading the artifacts; if it changed,
+it errors instead of returning a mixed result. The result is a point-in-time
+check, not an access token.
 }

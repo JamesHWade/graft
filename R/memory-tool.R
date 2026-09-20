@@ -1,19 +1,20 @@
-#' Expose reviewed content through a fixed read-only ellmer tool
+#' Create a fixed read-only ellmer tool for reviewed content
 #'
-#' Create an [ellmer::ToolDef] that consults one host-selected stream and
-#' purpose. The tool has no model-controlled arguments and never writes to the
-#' store. `eligible` is evaluated for every invocation, before any retained
-#' content is looked up.
+#' Create an [ellmer::ToolDef] that reads content accepted for one decision
+#' stream and purpose chosen by the host application. The tool has no
+#' model-controlled arguments and never writes to the store. It evaluates
+#' `eligible` on every invocation before it looks up retained content.
 #'
 #' @param store A store returned by [graft_store()] or
-#'   [graft_store_postgres()]. The handle remains private to the tool closure.
-#' @param stream A fixed host-owned decision stream.
-#' @param purpose The fixed consultation purpose.
-#' @param eligible A required no-argument function supplied by the host. It
-#'   must return the current consultation decision when called.
+#'   [graft_store_postgres()]. The handle remains private inside the tool.
+#' @param stream A decision stream chosen and controlled by the host
+#'   application.
+#' @param purpose The consultation purpose to use for every invocation.
+#' @param eligible A required host-supplied function with no arguments. It must
+#'   return whether the current consultation is allowed when called.
 #' @param name The ellmer tool name. Defaults to `"recall_project_memory"`.
 #'
-#' @returns An [ellmer::ToolDef]. Calling the tool returns a native
+#' @returns An [ellmer::ToolDef]. Calling the tool returns an
 #' [ellmer::ContentToolResult] whose value is a JSON string.
 #' @export
 graft_tool <- function(
