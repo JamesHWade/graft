@@ -17,10 +17,11 @@ identity scope, grain, and condition.
 
 library(graft)
 path <- system.file("examples", "vocabulary", "v1", "bindings.json", package = "graft")
-store <- graft_artifact_store("lab-vocabulary", create = TRUE)
-selection <- graft_vocabulary_publish(store, path)
-release <- graft_vocabulary_read(store, selection)
-cat(paste(release$context, collapse = "\n"))
+store <- graft_store("lab-vocabulary", create = TRUE)
+release <- graft_publish_vocabulary(store, path)
+reopened <- graft_read_vocabulary(store, release)
+release@selection@id
+cat(paste(reopened@context, collapse = "\n"))
 ```
 
 Publishing requires `datadict` and its data-dict binary. Graft calls the
@@ -41,6 +42,14 @@ installed data-dict binary. This is content integrity, not a signature
 or independent proof of the publisher’s identity or claims. Stores
 retain the trusted local, single-writer limits described in [persistent
 artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
+
+[`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
+returns a `VocabularyRelease`. Its `@selection` property is an
+`ArtifactSelection`, so applications can retain the exact release
+selection without handling a bare digest.
+[`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md)
+accepts that release, an `ArtifactSelection`, or the exact selection
+digest when reopening it.
 
 ## Companion format
 
@@ -84,12 +93,13 @@ publication.
 ## Use the same release in R and Commons
 
 Plain R can inspect a binding and select its local field without
-guessing a join:
+guessing a join. `@bindings` is the retained companion record; its
+`bindings` member is ordinary wire data:
 
 ``` r
 
 bindings <- Filter(function(x) x$kind == "concept" &&
-  x$term == "urn:example:temperature", release$bindings$bindings)
+  x$term == "urn:example:temperature", release@bindings$bindings)
 lapply(bindings, function(x) x[c("dictionary", "table", "field", "scope", "grain", "condition")])
 ```
 
@@ -99,14 +109,14 @@ dictionary:
 ``` r
 
 context_file <- tempfile(fileext = ".md")
-writeLines(release$context, context_file)
+writeLines(release@context, context_file)
 context <- commons::context_layer(files = context_file)
 source <- commons::data_source(
   readings = data.frame(reading_id = "r1", sample_id = "s1", temperature_c = 20),
   dictionary = file.path(dirname(path), "lab-a.yaml")
 )
-# Supply context and source to the Commons host; retain release$references
-# and selection with resulting artifacts.
+# Supply context and source to the Commons host; retain release@references
+# and release@selection with resulting artifacts.
 ```
 
 The integration test constructs a real Commons object with the published
@@ -128,7 +138,7 @@ eligibility are needed.
 ``` r
 
 next_path <- system.file("examples", "vocabulary", "v2", "bindings.json", package = "graft")
-next_selection <- graft_vocabulary_publish(store, next_path)
-original <- graft_vocabulary_read(store, selection)
-updated <- graft_vocabulary_read(store, next_selection)
+next_release <- graft_publish_vocabulary(store, next_path)
+original <- graft_read_vocabulary(store, release)
+updated <- graft_read_vocabulary(store, next_release)
 ```

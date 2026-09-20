@@ -2,8 +2,8 @@
 
 ### Learn graft
 
-- [Getting
-  started](https://jameshwade.github.io/graft/articles/getting-started.md):
+- [Give a chat agent project
+  memory](https://jameshwade.github.io/graft/articles/getting-started.md):
 
 - [Persistent artifacts and selected
   memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):

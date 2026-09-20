@@ -96,6 +96,14 @@
 <td>Data description and dictionary semantics</td>
 </tr>
 <tr class="odd">
+<td>ellmer</td>
+<td>Model conversations and tool execution</td>
+</tr>
+<tr class="even">
+<td>shinychat</td>
+<td>Chat interface and tool-result presentation</td>
+</tr>
+<tr class="odd">
 <td>Graft</td>
 <td>Exact artifacts, selections, decision history, vocabulary
 releases</td>
@@ -116,14 +124,18 @@ admission</td>
 <h2 id="stored-contracts">Stored contracts<a class="anchor" aria-label="anchor" href="#stored-contracts"></a>
 </h2>
 <p>An artifact revision binds its identity, media type, bytes, and exact
-dependencies. A selection binds explicit roots to the verified
-dependency closure. A decision stream records explicit host accepts and
-withdrawals for one subject and purpose. An unchanged review can add a
-decision without changing the selection.</p>
+dependencies. <code>ArtifactRef</code>, <code>Artifact</code>, and
+<code>ArtifactSelection</code> make those values explicit; their S7
+properties describe retained data, not authorization. A decision stream
+records explicit host accepts and withdrawals for one subject and
+purpose. <code>Decision</code> and <code>Recall</code> values make the
+predecessor, current head, purpose, and materialized artifacts
+inspectable. An unchanged review can add a decision without changing the
+selection.</p>
 <p>Historical inspection and current consultation are separate.
-Inspection can read an old accepted selection after correction.
-Consultation also requires the exact current accepted event, purpose
-match, and current host eligibility.</p>
+<code><a href="../reference/graft_read.html">graft_read()</a></code> can read an exact old artifact after
+correction. <code><a href="../reference/graft_recall.html">graft_recall()</a></code> also requires the exact current
+accepted event, purpose match, and current host eligibility.</p>
 <p>Vocabulary releases are artifacts: concepts, relationships, field
 bindings, dictionary source bytes, canonical exports, and literal
 context are retained together. They provide a shared vocabulary, not an
@@ -132,11 +144,13 @@ executable ontology reasoner.</p>
 <div class="section level2">
 <h2 id="persistence-boundary">Persistence boundary<a class="anchor" aria-label="anchor" href="#persistence-boundary"></a>
 </h2>
-<p>Graft supports bounded immutable local files with one writer and
-PostgreSQL scopes inside host-owned transactions. Normal reads verify
-digests and predecessor identity, ignore abandoned staging, and support
-identical retries. Complete manifests require every entry to be
-accounted for, rejecting abandoned staging and unknown objects.
+<p>The public <code>ArtifactStore</code> S7 class has
+<code>LocalArtifactStore</code> and <code>PostgresArtifactStore</code>
+implementations. Graft supports bounded immutable local files with one
+writer and PostgreSQL scopes inside host-owned transactions. Normal
+reads verify digests and predecessor identity, ignore abandoned staging,
+and support identical retries. Complete manifests require every entry to
+be accounted for, rejecting abandoned staging and unknown objects.
 Replacement plans copy exact survivors to empty quarantine stores and
 verify the whole image. They do not provide distributed transactions,
 power-loss guarantees, authentication, or permanent deletion.</p>
@@ -158,12 +172,13 @@ interface exists today.</p>
 <div class="section level2">
 <h2 id="native-graph-retirement">Native graph retirement<a class="anchor" aria-label="anchor" href="#native-graph-retirement"></a>
 </h2>
-<p>Consumer contract 3 removes graph/compiler APIs and their DuckDB,
-Python, LinkML, S7, and graph-adapter dependencies. There is no
+<p>The graph/compiler APIs and their DuckDB, Python, LinkML, and
+graph-adapter dependencies remain retired. Consumer contract 4 adds S7
+stores and values with a task-oriented public API. There is no
 compatibility layer. The retained artifact formats are unchanged. The
 source history, earlier ADRs, and experiment observations record the
-previous architecture; their native examples are not supported recipes
-for current Graft.</p>
+previous architecture; their native examples are historical context, not
+supported recipes for current Graft.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -93,32 +93,37 @@ not interpret them or authenticate that Reader. Keep the returned
 receipt in the application’s independent registry, with the authority
 needed to decide whether it is still eligible for restore.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
-<span><span class="va">source_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"source-"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## Attaching package: 'graft'</span></span></code></pre>
+<pre><code><span><span class="co">## The following object is masked from 'package:base':</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">##     Recall</span></span></code></pre>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">source_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"source-"</span><span class="op">)</span></span>
 <span><span class="va">backup_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"backup-"</span><span class="op">)</span></span>
-<span><span class="va">source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">source_path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
-<span>  <span class="va">source</span>, <span class="st">"evidence"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Synthetic observation"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
+<span><span class="va">source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">source_path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">evidence</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">source</span>, <span class="st">"Synthetic observation"</span>, id <span class="op">=</span> <span class="st">"evidence"</span>, media_type <span class="op">=</span> <span class="st">"text/plain"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
-<span>  <span class="va">source</span>, <span class="st">"report"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"An interpretation"</span><span class="op">)</span>, <span class="st">"text/plain"</span>,</span>
-<span>  dependencies <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">evidence</span><span class="op">)</span></span>
+<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">source</span>, <span class="st">"An interpretation"</span>, id <span class="op">=</span> <span class="st">"report"</span>, media_type <span class="op">=</span> <span class="st">"text/plain"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="va">evidence</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">source</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">accepted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_decide</a></span><span class="op">(</span></span>
-<span>  <span class="va">source</span>, <span class="st">"report-review"</span>, <span class="st">"review-1"</span>, expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  selection <span class="op">=</span> <span class="va">selection</span>, action <span class="op">=</span> <span class="st">"accept"</span>, actor <span class="op">=</span> <span class="st">"synthetic-reviewer"</span>,</span>
+<span><span class="va">accepted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_accept.html">graft_accept</a></span><span class="op">(</span></span>
+<span>  <span class="va">source</span>, <span class="va">report</span>, stream <span class="op">=</span> <span class="st">"report-review"</span>, key <span class="op">=</span> <span class="st">"review-1"</span>, expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"synthetic-reviewer"</span>,</span>
 <span>  reason <span class="op">=</span> <span class="st">"Evidence inspected"</span>, purpose <span class="op">=</span> <span class="st">"research"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">receipt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_backup.html">graft_artifact_backup</a></span><span class="op">(</span></span>
+<span><span class="va">receipt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_backup.html">graft_backup</a></span><span class="op">(</span></span>
 <span>  <span class="va">source</span>, <span class="va">backup_path</span>, scope <span class="op">=</span> <span class="st">"synthetic-reader"</span>, generation <span class="op">=</span> <span class="st">"generation-1"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">receipt</span><span class="op">$</span><span class="va">format</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "graft-artifact-backup/1"</span></span></code></pre>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">receipt</span><span class="op">$</span><span class="va">scope</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "synthetic-reader"</span></span></code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">receipt</span><span class="op">$</span><span class="va">generation</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "generation-1"</span></span></code></pre>
 <p>The receipt binds the exact descriptor digest, scope, generation, and
@@ -136,20 +141,20 @@ check that the requested generation is eligible for the authenticated
 caller. Only then supply its stored receipt to verification or restore.
 This synthetic example keeps the receipt in memory; it does not
 implement a durable registry.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_backup_verify.html">graft_artifact_backup_verify</a></span><span class="op">(</span><span class="va">backup_path</span>, expected <span class="op">=</span> <span class="va">receipt</span><span class="op">)</span>, <span class="va">receipt</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_verify_backup.html">graft_verify_backup</a></span><span class="op">(</span><span class="va">backup_path</span>, expected <span class="op">=</span> <span class="va">receipt</span><span class="op">)</span>, <span class="va">receipt</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">restore_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"restored-"</span><span class="op">)</span></span>
-<span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="va">restore_path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">manifest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_artifact_restore.html">graft_artifact_restore</a></span><span class="op">(</span><span class="va">backup_path</span>, <span class="va">restored</span>, expected <span class="op">=</span> <span class="va">receipt</span><span class="op">)</span></span>
+<span><span class="va">restored</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">restore_path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">manifest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_restore.html">graft_restore</a></span><span class="op">(</span><span class="va">backup_path</span>, <span class="va">restored</span>, expected <span class="op">=</span> <span class="va">receipt</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">manifest</span><span class="op">$</span><span class="va">id</span>, <span class="va">receipt</span><span class="op">$</span><span class="va">manifest</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_store.html">graft_artifact_read</a></span><span class="op">(</span><span class="va">restored</span>, <span class="va">report</span><span class="op">)</span><span class="op">$</span><span class="va">bytes</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">restored</span>, <span class="va">report</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "An interpretation"</span></span></code></pre>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_artifact_decide.html">graft_artifact_read_decision</a></span><span class="op">(</span><span class="va">restored</span>, <span class="st">"report-review"</span><span class="op">)</span>, <span class="va">accepted</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/graft_history.html">graft_history</a></span><span class="op">(</span><span class="va">restored</span>, <span class="st">"report-review"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>, <span class="va">accepted</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] TRUE</span></span></code></pre>
 <p>Verification rejects unsupported formats, altered descriptors,
 unexpected files, symbolic links, nonregular files, invalid histories,

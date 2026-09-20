@@ -18,26 +18,36 @@ revision does not select other revisions with the same artifact ID.
 ``` r
 
 library(graft)
+```
+
+    ## 
+    ## Attaching package: 'graft'
+
+    ## The following object is masked from 'package:base':
+    ## 
+    ##     Recall
+
+``` r
+
 source_path <- tempfile("source-")
 target_path <- tempfile("replacement-")
-source <- graft_artifact_store(source_path, create = TRUE)
-private <- graft_artifact_save(
-  source, "note", charToRaw("Synthetic private observation"), "text/plain"
+source <- graft_store(source_path, create = TRUE)
+private <- graft_save(
+  source, "Synthetic private observation", id = "note", media_type = "text/plain"
 )
-report <- graft_artifact_save(
-  source, "report", charToRaw("Interpretation of the observation"), "text/plain",
-  dependencies = list(private)
+report <- graft_save(
+  source, "Interpretation of the observation", id = "report",
+  media_type = "text/plain", dependencies = private
 )
-survivor <- graft_artifact_save(
-  source, "note", charToRaw("Independent corrected observation"), "text/plain"
+survivor <- graft_save(
+  source, "Independent corrected observation", id = "note", media_type = "text/plain"
 )
-selected <- graft_artifact_select(source, list(report))
-accepted <- graft_artifact_decide(
-  source, "review", "review-1", expected = NULL,
-  selection = selected, action = "accept", actor = "synthetic-reviewer",
+accepted <- graft_accept(
+  source, report, stream = "review", key = "review-1", expected = NULL,
+  actor = "synthetic-reviewer",
   reason = "Example review", purpose = "research"
 )
-plan <- graft_artifact_replacement_plan(source, forget = list(private))
+plan <- graft_plan_replacement(source, forget = list(private))
 vapply(plan$removed$artifacts, function(ref) ref$id, character(1))
 ```
 
@@ -79,8 +89,8 @@ rechecks the source.
 
 ``` r
 
-target <- graft_artifact_store(target_path, create = TRUE)
-verified <- graft_artifact_replace(source, target, plan)
+target <- graft_store(target_path, create = TRUE)
+verified <- graft_replace(source, target, plan)
 identical(verified, plan$target)
 ```
 
@@ -88,7 +98,7 @@ identical(verified, plan$target)
 
 ``` r
 
-rawToChar(graft_artifact_read(target, survivor)$bytes)
+graft_read(target, survivor)@data
 ```
 
     ## [1] "Independent corrected observation"
@@ -96,7 +106,7 @@ rawToChar(graft_artifact_read(target, survivor)$bytes)
 ``` r
 
 # The source is deliberately unchanged by replacement.
-rawToChar(graft_artifact_read(source, private)$bytes)
+graft_read(source, private)@data
 ```
 
     ## [1] "Synthetic private observation"
@@ -117,7 +127,7 @@ as retained.
 
 ``` r
 
-manifest <- graft_artifact_manifest(target)
+manifest <- graft_manifest(target)
 manifest$format
 ```
 

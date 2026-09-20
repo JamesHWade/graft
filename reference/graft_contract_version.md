@@ -1,15 +1,18 @@
 # Report Graft's artifact and vocabulary contracts
 
-Consumer contract 3.2 adds closed artifact backup bundles with
-externally supplied identity receipts and strict restore verification.
-Contract 3.1 adds bounded manifests and replacement plans. These
-operations do not authorize Forget or backup restore. Consumer contract
-3 removes the native graph store, schema compiler, commit plans,
-snapshots, and managed working tree. Artifacts and selections retain
-format 1; the cut does not change their bytes or digest identities.
-Applications interpret payloads and decide whether evidence is eligible
-for use. Graft verifies exact retention and records explicit host
-decisions.
+Consumer contract 4 replaces the public artifact-prefixed interface with
+task-oriented verbs and S7 stores and values, without compatibility
+aliases. Stored wire formats and exact content identities remain
+unchanged. Consumer contract 3.2 adds closed artifact backup bundles
+with externally supplied identity receipts and strict restore
+verification. Contract 3.1 adds bounded manifests and replacement plans.
+These operations do not authorize Forget or backup restore. Consumer
+contract 3 removes the native graph store, schema compiler, commit
+plans, snapshots, and managed working tree. Artifacts and selections
+retain format 1; the cut does not change their bytes or digest
+identities. Applications interpret payloads and decide whether evidence
+is eligible for use. Graft verifies exact retention and records explicit
+host decisions.
 
 ## Usage
 
@@ -28,7 +31,7 @@ vocabulary, and binding formats.
 ``` r
 graft_contract_version()
 #> $contract
-#> [1] "3.2.0"
+#> [1] "4.0.0"
 #> 
 #> $artifact
 #> [1] "1"

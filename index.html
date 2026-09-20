@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>graft: Persistent artifacts and shared vocabulary • graft</title>
+<title>graft: Project memory for R apps and agents • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -17,10 +17,10 @@
 <link href="deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Persistent artifacts and shared vocabulary">
-<meta name="description" content="Retain exact evidence, reports, shared concepts, and host decisions across workflows.
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Project memory for R apps and agents">
+<meta name="description" content="Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
 ">
-<meta property="og:description" content="Retain exact evidence, reports, shared concepts, and host decisions across workflows.
+<meta property="og:description" content="Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
@@ -72,135 +72,124 @@
 </div>
 <div class="graft-hero">
 <p class="graft-eyebrow">
-Persistent artifacts and shared vocabulary for R
+Project memory for R apps and agents
 </p>
 <h2 data-toc-skip>
-Keep what you learn.<br>Return to the exact evidence.
+Keep what your project learns.<br>Use it in the next conversation.
 </h2>
 <p class="graft-hero-copy">
-Retain reports, evidence and shared concepts after the workflow ends. Record what a host accepted, preserve earlier revisions, and give a later task the exact artifacts behind an answer.
+Save reviewed findings, definitions, and decisions with their evidence. Give a later agent or workflow the current reviewed knowledge, its exact sources, and its history.
 </p>
 <div class="graft-actions">
-<p><a class="btn btn-primary" href="articles/getting-started.html">Retain your first artifact</a> <a class="btn btn-outline-secondary" href="articles/shared-vocabulary.html">Share concepts across workflows</a></p>
+<p><a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a> <a class="external-link btn btn-outline-secondary" href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory">Get the runnable Shiny example</a></p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="from-a-result-to-persistent-memory">From a result to persistent memory<a class="anchor" aria-label="anchor" href="#from-a-result-to-persistent-memory"></a>
+<h2 id="your-assistant-should-remember-what-the-team-agreed-on">Your assistant should remember what the team agreed on<a class="anchor" aria-label="anchor" href="#your-assistant-should-remember-what-the-team-agreed-on"></a>
 </h2>
-<p>A workflow produces a conclusion. A person reviews it. A later task needs both the original answer and the evidence behind it. Graft keeps immutable artifact revisions and exact dependency selections so a correction can coexist with the history it replaces.</p>
+<p>You’re building an analytics assistant with ellmer and shinychat. The team agrees that an active customer has a paid account and used the product in the last 30 days. Next week, someone opens a fresh conversation and asks how to count active customers.</p>
+<p>With Graft, your app can retrieve the reviewed definition and the exact source behind it. If the team changes the window to 60 days, you can review that correction, use it in later conversations, and still inspect the earlier version.</p>
 <table class="table table graft-workflow">
 <thead><tr>
 <th>
-Retain
+Review once
 </th>
 <th>
-Review
+Reuse later
 </th>
 <th>
-Reuse
+Correct with history
 </th>
 </tr></thead>
 <tbody><tr>
 <td>
-Save artifact bytes and select exact dependencies.
+Save the agreed definition and its handbook excerpt.
 </td>
 <td>
-Record the host’s acceptance or withdrawal for a stated purpose.
+Let a fresh chat retrieve the current reviewed note through <code><a href="reference/graft_tool.html">graft_tool()</a></code>.
 </td>
 <td>
-Verify the selected bytes and check current host eligibility.
+Review the updated definition while preserving the original evidence.
 </td>
 </tr></tbody>
 </table>
-<p>Saving or selecting an artifact does not approve it. Historical inspection preserves evidence of an earlier decision; a new task still needs current permission. Applications decide access, scientific validity, review and retention.</p>
 </div>
 <div class="section level2">
-<h2 id="start-in-r">Start in R<a class="anchor" aria-label="anchor" href="#start-in-r"></a>
+<h2 id="try-it-in-a-shiny-app">Try it in a Shiny app<a class="anchor" aria-label="anchor" href="#try-it-in-a-shiny-app"></a>
 </h2>
+<p>The included project notebook puts review controls beside a shinychat conversation. The default scripted preview uses real Graft files without model calls.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
-<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_store</a></span><span class="op">(</span><span class="st">"research-artifacts"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_save</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>, <span class="st">"report:pilot"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"Pilot evidence and conclusions"</span><span class="op">)</span>, <span class="st">"text/plain"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_artifact_select.html">graft_artifact_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="reference/graft_artifact_store.html">graft_artifact_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">report</span><span class="op">)</span><span class="op">$</span><span class="va">bytes</span><span class="op">)</span></span></code></pre></div>
-<p>The <a href="articles/getting-started.html">quickstart</a> runs offline and introduces exact revisions, selections and host decisions. The core artifact workflow requires neither a schema compiler nor model credentials.</p>
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span>, <span class="st">"ellmer"</span>, <span class="st">"shinychat"</span>, <span class="st">"shiny"</span>, <span class="st">"bslib"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>GRAFT_DEMO_STORE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"project-memory"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"project-memory"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Review and save the proposed definition, then ask <strong>“How do we count an active customer?”</strong> Start a new conversation and ask again. Stop and restart the app to reopen the same notebook. The <a href="articles/getting-started.html">getting-started guide</a> walks through the storage calls, connects <code><a href="reference/graft_tool.html">graft_tool()</a></code> to ellmer, and explains how to enable the live agent.</p>
 </div>
 <div class="section level2">
-<h2 id="choose-your-next-workflow">Choose your next workflow<a class="anchor" aria-label="anchor" href="#choose-your-next-workflow"></a>
+<h2 id="what-could-your-project-keep">What could your project keep?<a class="anchor" aria-label="anchor" href="#what-could-your-project-keep"></a>
 </h2>
 <div class="graft-paths">
 <section><h3>
-Preserve a reviewed result
+Project knowledge for an agent
 </h3>
 <p>
-Retain a report with its evidence and record acceptance or withdrawal without rewriting its earlier bytes.
+Reviewed definitions, decisions, and findings that another conversation needs. Your app chooses what to keep and who can use it.
 </p>
 <p>
-<a href="articles/persistent-artifacts.html">Use artifacts and decisions</a>
+<a href="articles/getting-started.html">Give a chat agent project memory</a>
 </p>
 </section><section><h3>
-Share concepts and relationships
+A report with its evidence
 </h3>
 <p>
-Bind vocabulary to exact data-dict dictionary releases. Reopen the retained source and rendered context without the original files.
+A conclusion, table, or figure linked to the exact inputs behind it. Revisit what was used when the result was produced.
 </p>
 <p>
-<a href="articles/shared-vocabulary.html">Build a shared vocabulary</a>
+<a href="articles/persistent-artifacts.html">Keep artifacts and review history</a>
 </p>
 </section><section><h3>
-Verify a replacement store
+Shared concepts across workflows
 </h3>
 <p>
-Preview exclusions and verify exact survivors in a separate store. Keep Forget approval and backup admission with the application.
+Definitions and relationships bound to a data-dict release. Different agents and applications can recover the same retained vocabulary.
 </p>
 <p>
-<a href="articles/artifact-recovery.html">Build a verified replacement</a>
-</p>
-</section><section><h3>
-Back up a complete store
-</h3>
-<p>
-Retain every artifact and decision, then verify the closed bundle against the identity receipt kept by your application before restoring into quarantine.
-</p>
-<p>
-<a href="articles/artifact-backups.html">Back up and restore artifacts</a>
-</p>
-</section><section><h3>
-Understand the package boundaries
-</h3>
-<p>
-Compose Commons analysis, data-dict contracts and Graft persistence while keeping application policy with the consuming product.
-</p>
-<p>
-<a href="articles/architecture.html">Read the architecture</a>
-</p>
-</section><section><h3>
-Check integration contracts
-</h3>
-<p>
-Inspect the supported formats, optional dependencies and tested scope before connecting a workflow.
-</p>
-<p>
-<a href="articles/compatibility.html">Read integration requirements</a>
+<a href="articles/shared-vocabulary.html">Publish shared vocabulary</a>
 </p>
 </section>
 </div>
 </div>
 <div class="section level2">
-<h2 id="what-works-together">What works together<a class="anchor" aria-label="anchor" href="#what-works-together"></a>
+<h2 id="save-a-result-with-its-evidence">Save a result with its evidence<a class="anchor" aria-label="anchor" href="#save-a-result-with-its-evidence"></a>
 </h2>
-<p>Commons supplies live analytical capabilities. Data-dict describes data. Graft retains artifacts, exact selections, decision history and shared meaning. Tempest and Rill consume this infrastructure as applications; their scientific or Reader-specific policies remain theirs. Vocabulary relationships describe meaning and do not execute reasoning, authorize joins or select agent tools.</p>
-<p>Tempest’s public artifact workflow publishes completed research and retains its reports and evidence. New research and resume require fresh host admission. See the <a href="articles/persistent-artifacts.html">persistent artifact guide</a> for the application handoff and its tested scope. Rill now retains opt-in Reader Memory through scoped PostgreSQL artifacts. Permanent Forget and durable restore remain rollout gates.</p>
+<p>Start with a fresh directory and ordinary text:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="st">"analysis-memory"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">source</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Handbook: use a 30-day activity window."</span>, <span class="st">"handbook"</span><span class="op">)</span></span>
+<span><span class="va">note</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="st">"An active customer used the product in the past 30 days."</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"active-customer"</span>, dependencies <span class="op">=</span> <span class="va">source</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
+<p>Reopen it later with <code>graft_store("analysis-memory")</code>. Saving a correction under the same ID creates a new revision; the original reference still reads the original content. Use <code><a href="reference/graft_accept.html">graft_accept()</a></code> to record a review and <code><a href="reference/graft_recall.html">graft_recall()</a></code> to retrieve the current accepted result, as shown in the getting-started guide.</p>
 </div>
 <div class="section level2">
-<h2 id="scope-and-status">Scope and status<a class="anchor" aria-label="anchor" href="#scope-and-status"></a>
+<h2 id="add-graft-to-an-existing-application">Add Graft to an existing application<a class="anchor" aria-label="anchor" href="#add-graft-to-an-existing-application"></a>
 </h2>
-<p>Graft supports trusted local files with one writer and PostgreSQL scopes inside host-owned transactions. Complete manifests and non-destructive replacement plans verify retained objects; closed bundles retain complete images and check restore identity against external receipts. Power-loss recovery, authenticated access, restore admission and permanent erasure remain separate work. No interchangeable backend API is promised today.</p>
-<p>Consumer contract <strong>3.2.0</strong> adds closed backup bundles and verified restore. Contract 3 removes the native graph store, LinkML compiler, commit plans, graph snapshots, managed OKF tree and graph-specific agent tools. There are no compatibility wrappers. Retained artifact, selection, decision and vocabulary formats keep their exact identities.</p>
+<p>Keep ellmer for the model and tool calls, shinychat for the conversation, and your application’s review and access controls. Add Graft where a useful result should outlive the current chat or R process.</p>
+<p>Start with one kind of note and a read-only <code><a href="reference/graft_tool.html">graft_tool()</a></code> fixed to its stream and purpose. A larger app can use its own catalog or search index to choose relevant notes, then ask Graft to verify the retained selections and evidence.</p>
+</div>
+<div class="section level2">
+<h2 id="storage-and-operational-guides">Storage and operational guides<a class="anchor" aria-label="anchor" href="#storage-and-operational-guides"></a>
+</h2>
+<p>Graft supports trusted local files with one writer and PostgreSQL scopes inside application-owned transactions. This pre-production example is for one trusted local user. Shared deployment needs user/project authorization and retention controls supplied by the application.</p>
+<ul>
+<li><a href="articles/artifact-backups.html">Back up and restore an artifact store</a></li>
+<li><a href="articles/artifact-recovery.html">Build a verified replacement store</a></li>
+<li><a href="articles/architecture.html">Understand the architecture</a></li>
+<li><a href="articles/compatibility.html">Check integration requirements</a></li>
+</ul>
+<p>Permanent Forget and recovery from retired backups remain active work. Saving or reviewing material records your application’s decision; it does not establish that a claim is true.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

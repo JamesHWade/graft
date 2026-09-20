@@ -2,62 +2,87 @@
 
 ## graft 0.0.0.9000
 
-- Graft now contains persistent artifacts, exact dependency selections,
-  host decision history, and shared vocabulary. Native graph stores,
-  LinkML compilation, commit plans, snapshots, calculations, managed OKF
-  trees, and graph agent adapters are removed without compatibility
-  wrappers. The website describes the supported artifact architecture
+- Graft provides persistent artifacts, exact dependency selections, host
+  decision history, and shared vocabulary. Native graph stores, LinkML
+  compilation, commit plans, snapshots, calculations, managed OKF trees,
+  and graph agent adapters are removed without compatibility wrappers
   ([\#74](https://github.com/JamesHWade/graft/issues/74)).
-- [`graft_artifact_backup()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup.md),
-  [`graft_artifact_backup_verify()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup_verify.md),
+- The public interface uses S7 store handles and typed references,
+  content, selections, decisions, recall results, and vocabulary
+  releases. The former artifact-prefixed functions are removed without
+  compatibility aliases
+  ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+- The getting-started guide and runnable project-memory example show how
+  to give an ellmer agent in shinychat a reviewed notebook that survives
+  new conversations and app restarts, including corrections with
+  retained evidence
+  ([\#41](https://github.com/JamesHWade/graft/issues/41)).
+- [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md),
+  [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md),
+  [`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md),
   and
-  [`graft_artifact_restore()`](https://jameshwade.github.io/graft/reference/graft_artifact_restore.md)
+  [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
+  support reviewed reuse with explicit predecessor and retry controls.
+  Current recall checks eligibility, purpose, retained evidence, and the
+  decision head; historical inspection stays separate
+  ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_backup()`](https://jameshwade.github.io/graft/reference/graft_backup.md),
+  [`graft_verify_backup()`](https://jameshwade.github.io/graft/reference/graft_verify_backup.md),
+  and
+  [`graft_restore()`](https://jameshwade.github.io/graft/reference/graft_restore.md)
   create and verify bounded complete store bundles bound to a
   host-supplied scope and generation. Restores require an externally
   retained receipt and an empty quarantine target; applications still
   authorize restore using independent current registry state
   ([\#86](https://github.com/JamesHWade/graft/issues/86)).
-- [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
-  [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
+- [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
+  reports consumer contract 4.0.0 and the artifact, manifest,
+  replacement, backup, selection, decision, vocabulary, binding, and
+  vocabulary-release formats. Existing artifact identities and wire
+  formats are unchanged
+  ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_manifest()`](https://jameshwade.github.io/graft/reference/graft_manifest.md),
+  [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md),
   and
-  [`graft_artifact_reuse()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md)
-  retain explicit host acceptance and withdrawal, guard predecessors and
-  identical retries, and separate historical inspection from current
-  purpose-bound consultation
-  ([\#73](https://github.com/JamesHWade/graft/issues/73)).
-- [`graft_artifact_manifest()`](https://jameshwade.github.io/graft/reference/graft_artifact_manifest.md),
-  [`graft_artifact_replacement_plan()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md),
-  and
-  [`graft_artifact_replace()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)
+  [`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
   verify complete bounded store inventories and copy exact survivors
   into an empty quarantine store. Plans exclude declared dependents,
   affected selections, and whole affected decision histories;
   applications still own Forget approval, generation retirement, restore
   admission, and disposal
   ([\#48](https://github.com/JamesHWade/graft/issues/48)).
-- [`graft_artifact_select()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
+- [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
   and
-  [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
-  retain and verify bounded exact dependency closures
-  ([\#72](https://github.com/JamesHWade/graft/issues/72)).
-- [`graft_artifact_store()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md),
-  [`graft_artifact_save()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md),
-  and
-  [`graft_artifact_read()`](https://jameshwade.github.io/graft/reference/graft_artifact_store.md)
-  retain bounded opaque bytes as immutable revisions with verified exact
-  reads ([\#71](https://github.com/JamesHWade/graft/issues/71)).
-- [`graft_artifact_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_artifact_store_postgres.md)
-  retains artifacts, selections, and decisions in host-selected
-  PostgreSQL scopes with transaction rollback and serialized scope
-  writes ([\#47](https://github.com/JamesHWade/graft/issues/47)).
-- [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
-  reports consumer contract 3.2.0 and the artifact, manifest,
-  replacement, backup, selection, decision, vocabulary, binding, and
-  vocabulary-release formats. Existing artifact identities are unchanged
-  ([\#74](https://github.com/JamesHWade/graft/issues/74)).
-- [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
-  and
-  [`graft_vocabulary_read()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)
+  [`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md)
   retain shared concepts, relationships, exact data-dict bindings,
-  source bytes, and literal context across dictionary corrections
-  ([\#76](https://github.com/JamesHWade/graft/issues/76)).
+  source bytes, and literal context across dictionary corrections. They
+  return a typed `VocabularyRelease`
+  ([\#76](https://github.com/JamesHWade/graft/issues/76),
+  [\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_save()`](https://jameshwade.github.io/graft/reference/graft_save.md)
+  accepts plain text or raw bytes and single dependency references;
+  [`graft_save_file()`](https://jameshwade.github.io/graft/reference/graft_save_file.md)
+  explicitly ingests a file.
+  [`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md)
+  returns exact retained content as an `Artifact`
+  ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_select()`](https://jameshwade.github.io/graft/reference/graft_select.md)
+  and
+  [`graft_read_selection()`](https://jameshwade.github.io/graft/reference/graft_read_selection.md)
+  retain and verify bounded exact dependency closures as an
+  `ArtifactSelection`
+  ([\#72](https://github.com/JamesHWade/graft/issues/72),
+  [\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
+  opens local stores with immutable revisions and verified exact reads.
+  [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
+  uses host-selected PostgreSQL scopes with transaction rollback and
+  serialized scope writes
+  ([\#47](https://github.com/JamesHWade/graft/issues/47),
+  [\#71](https://github.com/JamesHWade/graft/issues/71),
+  [\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+  exposes current reviewed memory through a native read-only ellmer tool
+  and optional shinychat result display, checking application
+  eligibility on every invocation
+  ([\#90](https://github.com/JamesHWade/graft/issues/90)).

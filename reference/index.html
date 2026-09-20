@@ -38,7 +38,7 @@
     </div>
 
     <div class="section level2">
-      <h2 id="retain-exact-artifacts">Retain exact artifacts<a class="anchor" aria-label="anchor" href="#retain-exact-artifacts"></a></h2>
+      <h2 id="everyday-workflow">Everyday workflow<a class="anchor" aria-label="anchor" href="#everyday-workflow"></a></h2>
 
 
 
@@ -49,26 +49,89 @@
 
       <dl><dt>
 
-          <code><a href="graft_artifact_store.html">graft_artifact_store()</a></code> <code><a href="graft_artifact_store.html">graft_artifact_save()</a></code> <code><a href="graft_artifact_store.html">graft_artifact_read()</a></code>
+          <code><a href="graft_store.html">graft_store()</a></code>
 
         </dt>
         <dd>Preserve immutable artifact content</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_store_postgres.html">graft_artifact_store_postgres()</a></code>
+          <code><a href="graft_store_postgres.html">graft_store_postgres()</a></code>
 
         </dt>
         <dd>Open a transaction-scoped PostgreSQL artifact store</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_select.html">graft_artifact_select()</a></code> <code><a href="graft_artifact_select.html">graft_artifact_read_selection()</a></code>
+          <code><a href="graft_save.html">graft_save()</a></code>
 
         </dt>
-        <dd>Preserve an exact artifact selection</dd>
+        <dd>Save text or raw bytes as an immutable artifact</dd>
+
+        <dt>
+
+          <code><a href="graft_save_file.html">graft_save_file()</a></code>
+
+        </dt>
+        <dd>Save a bounded regular file as an immutable artifact</dd>
+
+        <dt>
+
+          <code><a href="graft_read.html">graft_read()</a></code>
+
+        </dt>
+        <dd>Read one exact immutable artifact</dd>
+
+        <dt>
+
+          <code><a href="graft_select.html">graft_select()</a></code>
+
+        </dt>
+        <dd>Capture and verify an exact dependency selection</dd>
+
+        <dt>
+
+          <code><a href="graft_read_selection.html">graft_read_selection()</a></code>
+
+        </dt>
+        <dd>Read one exact retained dependency selection</dd>
+
+        <dt>
+
+          <code><a href="graft_accept.html">graft_accept()</a></code>
+
+        </dt>
+        <dd>Record an acceptance of exact retained evidence</dd>
+
+        <dt>
+
+          <code><a href="graft_withdraw.html">graft_withdraw()</a></code>
+
+        </dt>
+        <dd>Withdraw the current acceptance for a decision stream</dd>
+
+        <dt>
+
+          <code><a href="graft_recall.html">graft_recall()</a></code>
+
+        </dt>
+        <dd>Recall the current accepted evidence for a stream</dd>
+
+        <dt>
+
+          <code><a href="graft_history.html">graft_history()</a></code>
+
+        </dt>
+        <dd>Read the chronological decision journal for one stream</dd>
+
+        <dt>
+
+          <code><a href="graft_tool.html">graft_tool()</a></code>
+
+        </dt>
+        <dd>Expose reviewed content through a fixed read-only ellmer tool</dd>
       </dl></div><div class="section level2">
-      <h2 id="verify-replacements-and-backups">Verify replacements and backups<a class="anchor" aria-label="anchor" href="#verify-replacements-and-backups"></a></h2>
+      <h2 id="vocabulary-and-operations">Vocabulary and operations<a class="anchor" aria-label="anchor" href="#vocabulary-and-operations"></a></h2>
 
 
 
@@ -79,40 +142,54 @@
 
       <dl><dt>
 
-          <code><a href="graft_artifact_backup.html">graft_artifact_backup()</a></code>
+          <code><a href="graft_publish_vocabulary.html">graft_publish_vocabulary()</a></code>
+
+        </dt>
+        <dd>Publish a validated shared vocabulary release</dd>
+
+        <dt>
+
+          <code><a href="graft_read_vocabulary.html">graft_read_vocabulary()</a></code>
+
+        </dt>
+        <dd>Read a retained vocabulary release</dd>
+
+        <dt>
+
+          <code><a href="graft_backup.html">graft_backup()</a></code>
 
         </dt>
         <dd>Create a closed artifact-store backup</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_backup_verify.html">graft_artifact_backup_verify()</a></code>
+          <code><a href="graft_verify_backup.html">graft_verify_backup()</a></code>
 
         </dt>
         <dd>Verify a closed artifact-store backup</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_restore.html">graft_artifact_restore()</a></code>
+          <code><a href="graft_restore.html">graft_restore()</a></code>
 
         </dt>
         <dd>Restore a verified backup into an empty artifact store</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_manifest.html">graft_artifact_manifest()</a></code>
+          <code><a href="graft_manifest.html">graft_manifest()</a></code>
 
         </dt>
         <dd>Inventory a complete artifact store</dd>
 
         <dt>
 
-          <code><a href="graft_artifact_replacement_plan.html">graft_artifact_replacement_plan()</a></code> <code><a href="graft_artifact_replacement_plan.html">graft_artifact_replace()</a></code>
+          <code><a href="graft_plan_replacement.html">graft_plan_replacement()</a></code> <code><a href="graft_plan_replacement.html">graft_replace()</a></code>
 
         </dt>
         <dd>Plan and build a bounded artifact-store replacement</dd>
       </dl></div><div class="section level2">
-      <h2 id="record-host-decisions">Record host decisions<a class="anchor" aria-label="anchor" href="#record-host-decisions"></a></h2>
+      <h2 id="public-s-classes">Public S7 classes<a class="anchor" aria-label="anchor" href="#public-s-classes"></a></h2>
 
 
 
@@ -123,28 +200,68 @@
 
       <dl><dt>
 
-          <code><a href="graft_artifact_decide.html">graft_artifact_decide()</a></code> <code><a href="graft_artifact_decide.html">graft_artifact_read_decision()</a></code> <code><a href="graft_artifact_decide.html">graft_artifact_reuse()</a></code>
+          <code><a href="ArtifactStore.html">ArtifactStore()</a></code>
 
         </dt>
-        <dd>Record host decisions about exact artifact selections</dd>
-      </dl></div><div class="section level2">
-      <h2 id="share-vocabulary">Share vocabulary<a class="anchor" aria-label="anchor" href="#share-vocabulary"></a></h2>
+        <dd>Abstract artifact store</dd>
 
+        <dt>
 
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="graft_vocabulary_publish.html">graft_vocabulary_publish()</a></code> <code><a href="graft_vocabulary_publish.html">graft_vocabulary_read()</a></code>
+          <code><a href="LocalArtifactStore.html">LocalArtifactStore()</a></code>
 
         </dt>
-        <dd>Publish and read a shared vocabulary release</dd>
+        <dd>Local artifact store</dd>
+
+        <dt>
+
+          <code><a href="PostgresArtifactStore.html">PostgresArtifactStore()</a></code>
+
+        </dt>
+        <dd>PostgreSQL artifact store</dd>
+
+        <dt>
+
+          <code><a href="ArtifactRef.html">ArtifactRef()</a></code>
+
+        </dt>
+        <dd>An exact immutable artifact reference</dd>
+
+        <dt>
+
+          <code><a href="Artifact.html">Artifact()</a></code>
+
+        </dt>
+        <dd>Materialized immutable artifact content</dd>
+
+        <dt>
+
+          <code><a href="ArtifactSelection.html">ArtifactSelection()</a></code>
+
+        </dt>
+        <dd>A verified artifact dependency selection</dd>
+
+        <dt>
+
+          <code><a href="Decision.html">Decision()</a></code>
+
+        </dt>
+        <dd>A host decision recorded in an artifact stream</dd>
+
+        <dt>
+
+          <code><a href="Recall.html">Recall()</a></code>
+
+        </dt>
+        <dd>The result of a current reviewed-artifact lookup</dd>
+
+        <dt>
+
+          <code><a href="VocabularyRelease.html">VocabularyRelease()</a></code>
+
+        </dt>
+        <dd>A retained shared vocabulary release</dd>
       </dl></div><div class="section level2">
-      <h2 id="consumer-contract">Consumer contract<a class="anchor" aria-label="anchor" href="#consumer-contract"></a></h2>
+      <h2 id="contract">Contract<a class="anchor" aria-label="anchor" href="#contract"></a></h2>
 
 
 
