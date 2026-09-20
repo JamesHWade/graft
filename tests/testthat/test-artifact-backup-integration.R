@@ -460,8 +460,7 @@ test_that("an interrupted backup leaves no requested bundle and can retry", {
               q(status = 17L, runLast = FALSE)
             }
             original_put(store, kind, key, bytes, limit)
-          },
-          .package = "graft"
+          }
         )
         graft::graft_artifact_backup(
           graft::graft_artifact_store(source_path),

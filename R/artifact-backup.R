@@ -381,7 +381,8 @@ artifact_backup_assert_disjoint_paths <- function(first, second, message) {
 }
 
 artifact_backup_path_contains <- function(root, path) {
-  identical(root, path) || startsWith(path, paste0(root, "/"))
+  prefix <- if (endsWith(root, "/")) root else paste0(root, "/")
+  identical(root, path) || startsWith(path, prefix)
 }
 
 artifact_backup_normalize_path <- function(path) {

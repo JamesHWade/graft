@@ -382,3 +382,11 @@ test_that("existing parent aliases resolve before source-overlap checks", {
   )
   expect_identical(graft_artifact_manifest(source), before)
 })
+
+
+test_that("path containment handles filesystem roots and sibling prefixes", {
+  expect_identical(artifact_backup_path_contains("/", "/backup"), TRUE)
+  expect_identical(artifact_backup_path_contains("D:/", "D:/backup"), TRUE)
+  expect_identical(artifact_backup_path_contains("D:/", "E:/backup"), FALSE)
+  expect_identical(artifact_backup_path_contains("/store", "/store-2"), FALSE)
+})
