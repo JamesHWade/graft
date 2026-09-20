@@ -47,7 +47,14 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          # These macOS binaries use zstd, which pak cannot extract yet.
+          # Keep other packages/platforms on their normal install path.
+          extra-packages: |
+            any::rcmdcheck
+            ${{ runner.os == 'macOS' && 'knitr=?source' || '' }}
+            ${{ runner.os == 'macOS' && 'ragnar=?source' || '' }}
+            ${{ runner.os == 'macOS' && 'shinychat=?source' || '' }}
+            ${{ runner.os == 'macOS' && 'xfun=?source' || '' }}
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2

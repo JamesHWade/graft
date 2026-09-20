@@ -14,22 +14,6 @@
 #'   read through this handle, a positive whole number. Defaults to 1 MiB
 #'   (`1024^2`), independently of payload and dependency-count bounds. Increase
 #'   it for large dependency lists, including when reopening the store.
-#' @param store A handle returned by [graft_artifact_store()] or
-#'   [graft_artifact_store_postgres()].
-#' @param id Stable, nonempty artifact identity chosen by the caller, at most
-#'   1024 UTF-8 bytes, without padding or control characters.
-#' @param bytes Raw vector containing the complete payload. Attributes are
-#'   discarded; only the byte contents are retained. Content is never
-#'   deserialized or executed by these functions.
-#' @param media_type Nonempty media type describing the opaque payload, at most
-#'   1024 UTF-8 bytes, without padding or control characters.
-#' @param dependencies List of exact dependency references. The complete closure
-#'   is verified before saving. No relationships are inferred from payloads.
-#' @param max_artifacts Maximum distinct dependency references traversed before
-#'   saving. Their total payload size is also limited by `max_bytes`.
-#' @param ref Exact reference: a list with `id` and `revision` strings, as
-#'   returned by `graft_artifact_save()`.
-#'
 #' @details
 #' Identity, media-type and reference strings are normalized to plain UTF-8
 #' character values without R attributes.
@@ -48,24 +32,20 @@
 #' policy.
 #' Local handles contain no open connections and need no closing.
 #' For transaction-scoped database persistence, use
-#' [graft_artifact_store_postgres()] with the same artifact APIs.
+#' [graft_store_postgres()] with the same artifact APIs.
 #'
 #' @returns
-#' `graft_artifact_store()` returns a local store handle.
-#' `graft_artifact_save()` returns a list containing `id` and `revision`.
-#' `graft_artifact_read()` returns `ref`, `metadata` and verified raw `bytes`.
+#' `graft_store()` returns a [LocalArtifactStore].
 #'
 #' @examples
 #' path <- tempfile("artifacts-")
-#' store <- graft_artifact_store(path, create = TRUE)
-#' ref <- graft_artifact_save(
-#'   store, "report:daily", charToRaw("A retained report"), "text/plain"
-#' )
-#' reopened <- graft_artifact_store(path)
-#' rawToChar(graft_artifact_read(reopened, ref)$bytes)
+#' store <- graft_store(path, create = TRUE)
+#' ref <- graft_save(store, "A retained report", "report:daily")
+#' reopened <- graft_store(path)
+#' graft_read(reopened, ref)@data
 #' unlink(path, recursive = TRUE)
 #' @export
-graft_artifact_store <- function(
+graft_store <- function(
   path,
   create = FALSE,
   max_bytes = 64 * 1024^2,
@@ -103,19 +83,14 @@ graft_artifact_store <- function(
   if (!identical(artifact_bytes(file.path(path, "store.json"), 1024), marker)) {
     artifact_abort("Unsupported artifact store marker.")
   }
-  structure(
-    list(
-      path = normalizePath(path, winslash = "/"),
-      max_bytes = max_bytes,
-      max_revision_bytes = max_revision_bytes
-    ),
-    class = "graft_artifact_store"
+  LocalArtifactStore(
+    path = normalizePath(path, winslash = "/"),
+    max_bytes = max_bytes,
+    max_revision_bytes = max_revision_bytes
   )
 }
 
-#' @rdname graft_artifact_store
-#' @export
-graft_artifact_save <- function(
+artifact_save <- function(
   store,
   id,
   bytes,
@@ -130,7 +105,7 @@ graft_artifact_save <- function(
     artifact_abort("`bytes` must be a raw vector.")
   }
   attributes(bytes) <- NULL
-  if (length(bytes) > store$max_bytes) {
+  if (length(bytes) > store@max_bytes) {
     artifact_abort("`bytes` exceeds the store byte bound.")
   }
   artifact_check_limit(max_artifacts, "max_artifacts")
@@ -144,29 +119,27 @@ graft_artifact_save <- function(
     "content",
     metadata$payload,
     bytes,
-    store$max_bytes
+    store@max_bytes
   )
   artifact_storage_put(
     store,
     "revisions",
     ref$revision,
     manifest,
-    store$max_revision_bytes
+    store@max_revision_bytes
   )
-  graft_artifact_read(store, ref)
+  artifact_read(store, ref)
   ref
 }
 
-#' @rdname graft_artifact_store
-#' @export
-graft_artifact_read <- function(store, ref) {
+artifact_read <- function(store, ref) {
   artifact_check_store(store)
   ref <- artifact_check_ref(ref)
   manifest <- artifact_storage_read(
     store,
     "revisions",
     ref$revision,
-    store$max_revision_bytes
+    store@max_revision_bytes
   )
   if (!identical(artifact_sha(manifest), ref$revision)) {
     artifact_abort("Artifact revision digest mismatch.")
@@ -180,7 +153,7 @@ graft_artifact_read <- function(store, ref) {
     store,
     "content",
     metadata$payload,
-    store$max_bytes
+    store@max_bytes
   )
   if (
     length(bytes) != metadata$size ||
@@ -246,33 +219,28 @@ artifact_check_limit <- function(x, arg) {
 }
 
 artifact_check_store <- function(store) {
-  if (inherits(store, "graft_artifact_postgres_store")) {
-    if (
-      !identical(
-        names(store),
-        c("connection", "scope", "max_bytes", "max_revision_bytes")
-      )
-    ) {
-      artifact_abort("`store` must be a Graft artifact store handle.")
-    }
-    graft_artifact_store_postgres(
-      store$connection,
-      store$scope,
-      max_bytes = store$max_bytes,
-      max_revision_bytes = store$max_revision_bytes
+  if (!S7::S7_inherits(store, ArtifactStore)) {
+    artifact_abort("`store` must be a Graft artifact store handle.")
+  }
+  tryCatch(S7::validate(store), error = function(...) {
+    artifact_abort("`store` must be a valid Graft artifact store handle.")
+  })
+  if (S7::S7_inherits(store, PostgresArtifactStore)) {
+    graft_store_postgres(
+      store@connection,
+      store@scope,
+      max_bytes = store@max_bytes,
+      max_revision_bytes = store@max_revision_bytes
     )
     return(invisible(NULL))
   }
-  if (
-    !inherits(store, "graft_artifact_store") ||
-      !identical(names(store), c("path", "max_bytes", "max_revision_bytes"))
-  ) {
+  if (!S7::S7_inherits(store, LocalArtifactStore)) {
     artifact_abort("`store` must be a Graft artifact store handle.")
   }
-  graft_artifact_store(
-    store$path,
-    max_bytes = store$max_bytes,
-    max_revision_bytes = store$max_revision_bytes
+  graft_store(
+    store@path,
+    max_bytes = store@max_bytes,
+    max_revision_bytes = store@max_revision_bytes
   )
   invisible(NULL)
 }
@@ -290,6 +258,9 @@ artifact_check_digest <- function(x) {
 }
 
 artifact_check_ref <- function(ref) {
+  if (S7::S7_inherits(ref, ArtifactRef)) {
+    ref <- artifact_ref_record(ref)
+  }
   if (!is.list(ref) || !identical(names(ref), c("id", "revision"))) {
     artifact_abort(
       "An artifact reference must contain exactly `id` and `revision`."
@@ -365,7 +336,26 @@ artifact_decode <- function(bytes) {
 }
 
 artifact_path <- function(store, kind, digest) {
-  file.path(store$path, kind, digest)
+  file.path(store@path, kind, digest)
+}
+
+S7::method(artifact_storage_read, LocalArtifactStore) <- function(
+  store,
+  kind,
+  key,
+  limit
+) {
+  artifact_bytes(artifact_path(store, kind, key), limit)
+}
+
+S7::method(artifact_storage_put, LocalArtifactStore) <- function(
+  store,
+  kind,
+  key,
+  bytes,
+  limit
+) {
+  artifact_put(bytes, artifact_path(store, kind, key), limit)
 }
 
 artifact_bytes <- function(path, limit) {

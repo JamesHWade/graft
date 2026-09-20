@@ -25,23 +25,24 @@ separate requirements; saving these bytes grants no approval.
 ```{r}
 library(graft)
 path <- tempfile("artifacts-")
-store <- graft_artifact_store(path, create = TRUE)
-original <- graft_artifact_save(
-  store, "report:daily", charToRaw("Original report"), "text/plain"
+store <- graft_store(path, create = TRUE)
+original <- graft_save(
+  store, "Original report", id = "report:daily", media_type = "text/plain"
 )
-corrected <- graft_artifact_save(
-  store, "report:daily", charToRaw("Corrected report"), "text/plain"
+corrected <- graft_save(
+  store, "Corrected report", id = "report:daily", media_type = "text/plain"
 )
-reopened <- graft_artifact_store(path)
-rawToChar(graft_artifact_read(reopened, original)$bytes)
-rawToChar(graft_artifact_read(reopened, corrected)$bytes)
+reopened <- graft_store(path)
+graft_read(reopened, original)@data
+graft_read(reopened, corrected)@data
 unlink(path, recursive = TRUE)
 ```
 
-References contain an identity and immutable revision. Retain them with your
-workflow; the store deliberately has no automatic latest or approved selection.
-This project is pre-production. Consumer contract 3 removes the graph/compiler APIs.
-The experiments below remain comparative evidence, not the installed storage code.
+`ArtifactRef` values contain an identity and immutable revision. Retain them with
+your workflow; the store deliberately has no automatic latest or approved
+selection. This project is pre-production. Consumer contract 4 uses typed S7
+stores and values; the earlier graph/compiler experiments remain historical
+evidence, not installed storage code.
 
 ## Pin evidence and shared meaning
 
@@ -52,24 +53,27 @@ that two measurements are comparable.
 
 ```{r}
 path <- tempfile("artifact-selection-")
-store <- graft_artifact_store(path, create = TRUE)
-vocabulary <- graft_artifact_save(
-  store, "vocabulary:lab", charToRaw('{"concept":"sample"}'), "application/json"
+store <- graft_store(path, create = TRUE)
+vocabulary <- graft_save(
+  store, '{"concept":"sample"}',
+  id = "vocabulary:lab", media_type = "application/json"
 )
-dictionary <- graft_artifact_save(
-  store, "dictionary:assay", charToRaw("name: assay"), "application/yaml",
-  dependencies = list(vocabulary)
+dictionary <- graft_save(
+  store, "name: assay", id = "dictionary:assay", media_type = "application/yaml",
+  dependencies = vocabulary
 )
-report <- graft_artifact_save(
-  store, "report:assay", charToRaw("Assay interpretation"), "text/plain",
-  dependencies = list(dictionary)
+report <- graft_save(
+  store, "Assay interpretation", id = "report:assay", media_type = "text/plain",
+  dependencies = dictionary
 )
-selection <- graft_artifact_select(store, list(report))
-graft_artifact_read_selection(graft_artifact_store(path), selection)$artifacts
+selection <- graft_select(store, report)
+reopened_selection <- graft_read_selection(graft_store(path), selection@id)
+reopened_selection@artifacts
 unlink(path, recursive = TRUE)
 ```
 
-The returned list includes the report, dictionary and vocabulary revisions.
+The returned `ArtifactSelection` includes the report, dictionary and vocabulary
+revisions in its `@artifacts` list.
 `max_metadata_bytes` separately bounds encoded selection metadata (1 MiB by
 default). Increase it for many long artifact identities and pass that limit on
 both selection creation and reading. Similarly, open the store with a larger
@@ -92,36 +96,41 @@ selection is unchanged.
 
 ```{r}
 path <- tempfile("artifact-decisions-")
-store <- graft_artifact_store(path, create = TRUE)
-report <- graft_artifact_save(
-  store, "report", charToRaw("Reviewed report"), "text/plain"
+store <- graft_store(path, create = TRUE)
+report <- graft_save(
+  store, "Reviewed report", id = "report", media_type = "text/plain"
 )
-selection <- graft_artifact_select(store, list(report))
-accepted <- graft_artifact_decide(
-  store, "research:topic", "review-1", expected = NULL,
-  selection = selection, action = "accept", actor = "reviewer:alice",
+accepted <- graft_accept(
+  store, report, stream = "research:topic", key = "review-1", expected = NULL,
+  actor = "reviewer:alice",
   reason = "Supporting evidence reviewed", purpose = "research"
 )
-input <- graft_artifact_reuse(
-  store, "research:topic", accepted$id, "research", eligible = TRUE
+input <- graft_recall(
+  store, "research:topic", purpose = "research", eligible = TRUE
 )
-input$selection$artifacts
-withdrawn <- graft_artifact_decide(
-  store, "research:topic", "withdraw-1", expected = accepted$id,
-  selection = selection, action = "withdraw", actor = "reviewer:alice",
-  reason = "Evidence needs correction", purpose = "research"
+input@artifacts
+withdrawn <- graft_withdraw(
+  store, "research:topic", expected = accepted, key = "withdraw-1",
+  actor = "reviewer:alice", reason = "Evidence needs correction"
 )
-graft_artifact_read_decision(store, "research:topic", accepted$id)$action
-graft_artifact_read_decision(store, "research:topic")$action
+graft_history(store, "research:topic")[[1L]]@action
+graft_history(store, "research:topic")[[2L]]@action
 unlink(path, recursive = TRUE)
 ```
 
 The `eligible = TRUE` argument represents the application's current policy
-check; it is not an authentication mechanism. Reuse also requires the current
+check; it is not an authentication mechanism. Recall also requires the current
 accepted head, an exact purpose match and intact selected content. The earlier
-acceptance remains inspectable after withdrawal, but cannot pass current reuse.
-Low-level reads remain available for authorized historical inspection; applications
-must enforce access on every route.
+acceptance remains inspectable through `graft_history()` after withdrawal, but
+cannot pass current recall. Exact `graft_read()` calls remain available for
+authorized historical inspection; applications must enforce access on every
+route.
+
+Each `Decision@selection` is an exact selection digest. `Recall@selection` is the
+verified `ArtifactSelection`, while `Recall@roots` and `Recall@artifacts` contain
+materialized `Artifact` values. A withdrawal derives its purpose and selection
+from the verified predecessor, so callers cannot replace them with mutated
+properties.
 
 Always supply the predecessor observed during review. An identical retry returns
 its original historical record and never restores eligibility. A changed retry or
@@ -181,7 +190,7 @@ Graft does not yet expose a pluggable backend interface.
 
 The earlier composition experiments compared native graph storage with immutable
 manifests. Their source and observations remain in the repository as historical
-research. They motivated the artifact contract and the consumer contract 3 cut;
+research. They motivated the artifact contract and the earlier native-store cut;
 they are not current native-store usage instructions.
 
 Shared infrastructure remains in Graft. Tempest and Rill own product semantics,
@@ -193,7 +202,7 @@ access, approval, and retention. Publication recovery remains separate work in
 Tempest now maps validated completed research into this artifact contract. Its
 `tempest_publish_artifact_research()` retains the exact evidence closure, source
 bodies, program provenance and readable report. A host explicitly accepts that
-selection using `graft_artifact_decide()`.
+selection using `graft_accept()`.
 
 `tempest_reuse_artifact_research()` validates the scientific evidence and consults
 the current Graft decision using a host eligibility callback. New runs and
@@ -209,21 +218,20 @@ evidence. These synthetic fixtures do not establish production access or erasure
 
 ## PostgreSQL and host-selected scopes
 
-`graft_artifact_store_postgres()` uses the same artifact, selection, decision,
+`graft_store_postgres()` uses the same artifact, selection, decision,
 and vocabulary interfaces inside a host-owned DBI transaction. Its optional
 DBI and RPostgres dependencies are needed only for PostgreSQL stores.
 
 ```{r, eval=FALSE}
 DBI::dbWithTransaction(connection, {
   # The host derives this scope from authenticated identity and checks access.
-  store <- graft_artifact_store_postgres(
+  store <- graft_store_postgres(
     connection, scope = trusted_scope, create = TRUE
   )
-  ref <- graft_artifact_save(store, "note", charToRaw("Accepted text"), "text/plain")
-  selection <- graft_artifact_select(store, list(ref))
-  accepted <- graft_artifact_decide(
-    store, "note", "review-1", expected = NULL,
-    selection = selection, action = "accept", actor = trusted_actor,
+  ref <- graft_save(store, "Accepted text", id = "note", media_type = "text/plain")
+  accepted <- graft_accept(
+    store, ref, stream = "note", key = "review-1", expected = NULL,
+    actor = trusted_actor,
     reason = "Explicit review", purpose = "reader-context"
   )
   # Host catalog and receipt writes can use this same connection.
@@ -244,12 +252,12 @@ obligations before a broad memory rollout.
 
 ## Build a verified replacement
 
-A host can preview exclusions with `graft_artifact_replacement_plan()` and copy
-exact survivors into a separate empty store with `graft_artifact_replace()`.
-`graft_artifact_manifest()` verifies the complete logical object set, including
+A host can preview exclusions with `graft_plan_replacement()` and copy exact
+survivors into a separate empty store with `graft_replace()`.
+`graft_manifest()` verifies the complete logical object set, including
 historical decisions. See [Verify a replacement artifact store](artifact-recovery.html)
 for the runnable example and the separate Forget and restore obligations.
 
 For a complete copy that retains every object and historical decision, use
-`graft_artifact_backup()`. Verification and restore require the receipt retained
+`graft_backup()`. Verification and restore require the receipt retained
 by the host independently of the bundle. See [Back up and restore an artifact store](artifact-backups.html).

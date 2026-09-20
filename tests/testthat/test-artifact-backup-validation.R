@@ -1,8 +1,8 @@
 test_that("backup descriptors require canonical fields and bytes", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
-  graft_artifact_save(source, "report", charToRaw("report bytes"), "text/plain")
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
+  artifact_save(source, "report", charToRaw("report bytes"), "text/plain")
   backup_path <- file.path(withr::local_tempdir(), "closed-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -52,7 +52,7 @@ test_that("backup descriptors require canonical fields and bytes", {
       manifest = receipt$manifest
     )
     expect_error(
-      graft_artifact_backup_verify(variant_path, variant_receipt),
+      graft_verify_backup(variant_path, variant_receipt),
       class = "graft_artifact_error"
     )
   }
@@ -71,7 +71,7 @@ test_that("backup descriptors require canonical fields and bytes", {
     manifest = receipt$manifest
   )
   expect_error(
-    graft_artifact_backup_verify(reordered_path, reordered_receipt),
+    graft_verify_backup(reordered_path, reordered_receipt),
     class = "graft_artifact_error"
   )
 
@@ -94,21 +94,21 @@ test_that("backup descriptors require canonical fields and bytes", {
     bytes = whitespace_bytes
   )
   expect_error(
-    graft_artifact_backup_verify(whitespace_path, whitespace_receipt),
+    graft_verify_backup(whitespace_path, whitespace_receipt),
     class = "graft_artifact_error"
   )
 })
 
 test_that("manifest identity, duplicate entries, and object files are verified", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
-  ref <- graft_artifact_save(
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- artifact_save(
     source,
     "report",
     charToRaw("report bytes"),
     "text/plain"
   )
   backup_path <- file.path(withr::local_tempdir(), "closed-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -138,7 +138,7 @@ test_that("manifest identity, duplicate entries, and object files are verified",
     manifest = duplicate$manifest$id
   )
   expect_error(
-    graft_artifact_backup_verify(duplicate_path, duplicate_receipt),
+    graft_verify_backup(duplicate_path, duplicate_receipt),
     regexp = "duplicate",
     class = "graft_artifact_error"
   )
@@ -158,7 +158,7 @@ test_that("manifest identity, duplicate entries, and object files are verified",
     manifest = corrupt$manifest$id
   )
   expect_error(
-    graft_artifact_backup_verify(corrupt_path, corrupt_receipt),
+    graft_verify_backup(corrupt_path, corrupt_receipt),
     class = "graft_artifact_error"
   )
 
@@ -178,7 +178,7 @@ test_that("manifest identity, duplicate entries, and object files are verified",
     file.path(extra_path, "objects", "content", extra_key)
   )
   expect_error(
-    graft_artifact_backup_verify(extra_path, receipt),
+    graft_verify_backup(extra_path, receipt),
     class = "graft_artifact_error"
   )
 
@@ -196,27 +196,27 @@ test_that("manifest identity, duplicate entries, and object files are verified",
   )
   unlink(object_path)
   expect_error(
-    graft_artifact_backup_verify(missing_path, receipt),
+    graft_verify_backup(missing_path, receipt),
     class = "graft_artifact_error"
   )
 
-  target <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
   expect_error(
-    graft_artifact_restore(missing_path, target, receipt),
+    graft_restore(missing_path, target, receipt),
     class = "graft_artifact_error"
   )
-  expect_identical(graft_artifact_manifest(target)$objects, list())
+  expect_identical(graft_manifest(target)$objects, list())
   expect_identical(
-    graft_artifact_read(source, ref)$bytes,
+    artifact_read(source, ref)$bytes,
     charToRaw("report bytes")
   )
 })
 
 test_that("backup verification applies each independent caller limit", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
   backup_path <- file.path(withr::local_tempdir(), "closed-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -233,7 +233,7 @@ test_that("backup verification applies each independent caller limit", {
   for (name in names(limits)) {
     expect_error(
       do.call(
-        graft_artifact_backup_verify,
+        graft_verify_backup,
         c(
           list(path = backup_path, expected = receipt),
           setNames(list(limits[[name]]), name)
@@ -244,7 +244,7 @@ test_that("backup verification applies each independent caller limit", {
   }
 
   expect_identical(
-    graft_artifact_read_decision(source, "mixed-stream"),
+    artifact_read_decision(source, "mixed-stream"),
     fixture$mixed_second
   )
 })

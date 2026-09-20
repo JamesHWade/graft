@@ -12,6 +12,9 @@ artifact, manifest, replacement, backup, selection, decision, vocabulary, and
 binding formats.
 }
 \description{
+Consumer contract 4 replaces the public artifact-prefixed interface with
+task-oriented verbs and S7 stores and values, without compatibility aliases.
+Stored wire formats and exact content identities remain unchanged.
 Consumer contract 3.2 adds closed artifact backup bundles with externally
 supplied identity receipts and strict restore verification. Contract 3.1 adds
 bounded manifests and replacement plans. These operations do not authorize

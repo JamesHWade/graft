@@ -5,8 +5,8 @@
 #' artifact-store image. The returned receipt is intentionally small so an
 #' application can retain it separately from the bundle.
 #'
-#' @param store A handle returned by [graft_artifact_store()] or
-#'   [graft_artifact_store_postgres()].
+#' @param store A handle returned by [graft_store()] or
+#'   [graft_store_postgres()].
 #' @param path An absent local directory path for the backup bundle. Existing
 #'   paths, including dangling symbolic links, are rejected. The parent directory
 #'   must already exist; paths must not contain `..` components.
@@ -38,7 +38,7 @@
 #' authenticate a caller, grant access, or establish registry freshness.
 #'
 #' @export
-graft_artifact_backup <- function(
+graft_backup <- function(
   store,
   path,
   scope,
@@ -57,8 +57,8 @@ graft_artifact_backup <- function(
     max_total_bytes,
     max_metadata_bytes,
     max_bundle_metadata_bytes,
-    max_bytes = store$max_bytes,
-    max_revision_bytes = store$max_revision_bytes
+    max_bytes = store@max_bytes,
+    max_revision_bytes = store@max_revision_bytes
   )
   artifact_backup_check_destination(path, store)
 
@@ -93,11 +93,11 @@ graft_artifact_backup <- function(
     add = TRUE
   )
 
-  staging_store <- graft_artifact_store(
+  staging_store <- graft_store(
     file.path(staging, "objects"),
     create = TRUE,
-    max_bytes = store$max_bytes,
-    max_revision_bytes = store$max_revision_bytes
+    max_bytes = store@max_bytes,
+    max_revision_bytes = store@max_revision_bytes
   )
   artifact_backup_copy_objects(
     store,
@@ -162,7 +162,7 @@ graft_artifact_backup <- function(
 #' eligibility. Verification never changes the bundle.
 #'
 #' @export
-graft_artifact_backup_verify <- function(
+graft_verify_backup <- function(
   path,
   expected,
   max_objects = 10000L,
@@ -191,8 +191,8 @@ graft_artifact_backup_verify <- function(
 #' before its manifest is returned.
 #'
 #' @param path A local backup bundle path without `..` components.
-#' @param target An empty handle returned by [graft_artifact_store()] or
-#'   [graft_artifact_store_postgres()].
+#' @param target An empty handle returned by [graft_store()] or
+#'   [graft_store_postgres()].
 #' @param expected The independently retained receipt expected for this bundle.
 #' @param max_objects Maximum number of stored artifact objects to inspect.
 #' @param max_total_bytes Maximum total bytes across stored artifact objects.
@@ -211,7 +211,7 @@ graft_artifact_backup_verify <- function(
 #' surrounding transaction and commit.
 #'
 #' @export
-graft_artifact_restore <- function(
+graft_restore <- function(
   path,
   target,
   expected,
@@ -223,10 +223,10 @@ graft_artifact_restore <- function(
   path <- artifact_backup_clean_path(path)
   artifact_backup_check_target_store(target)
   artifact_backup_preflight_bundle_root(path)
-  if (!inherits(target, "graft_artifact_postgres_store")) {
+  if (!S7::S7_inherits(target, PostgresArtifactStore)) {
     artifact_backup_assert_disjoint_paths(
       path,
-      target$path,
+      target@path,
       "Backup bundle and restore target must be separate paths."
     )
   }
@@ -235,8 +235,8 @@ graft_artifact_restore <- function(
     max_total_bytes,
     max_metadata_bytes,
     max_bundle_metadata_bytes,
-    max_bytes = target$max_bytes,
-    max_revision_bytes = target$max_revision_bytes
+    max_bytes = target@max_bytes,
+    max_revision_bytes = target@max_revision_bytes
   )
   checked <- artifact_backup_verify_bundle(path, expected, limits)
 
@@ -274,14 +274,8 @@ graft_artifact_restore <- function(
 }
 
 artifact_backup_check_source_store <- function(store) {
-  if (
-    inherits(store, "graft_artifact_store") &&
-      !inherits(store, "graft_artifact_postgres_store") &&
-      is.list(store) &&
-      "path" %in% names(store) &&
-      rlang::is_string(store$path)
-  ) {
-    artifact_backup_preflight_local_root(store$path, "Artifact source store")
+  if (S7::S7_inherits(store, LocalArtifactStore)) {
+    artifact_backup_preflight_local_root(store@path, "Artifact source store")
   }
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
@@ -289,14 +283,8 @@ artifact_backup_check_source_store <- function(store) {
 }
 
 artifact_backup_check_target_store <- function(store) {
-  if (
-    inherits(store, "graft_artifact_store") &&
-      !inherits(store, "graft_artifact_postgres_store") &&
-      is.list(store) &&
-      "path" %in% names(store) &&
-      rlang::is_string(store$path)
-  ) {
-    artifact_backup_preflight_local_root(store$path, "Artifact restore target")
+  if (S7::S7_inherits(store, LocalArtifactStore)) {
+    artifact_backup_preflight_local_root(store@path, "Artifact restore target")
   }
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
@@ -358,9 +346,9 @@ artifact_backup_check_destination <- function(path, source) {
   if (artifact_backup_path_exists(path)) {
     artifact_abort("Backup destination already exists.")
   }
-  if (!inherits(source, "graft_artifact_postgres_store")) {
+  if (!S7::S7_inherits(source, PostgresArtifactStore)) {
     artifact_backup_assert_disjoint_paths(
-      source$path,
+      source@path,
       path,
       "Backup destination must be outside the source store."
     )
@@ -467,12 +455,28 @@ artifact_backup_limits <- function(
   )
 }
 
-artifact_backup_object_limit <- function(store, kind, max_metadata_bytes) {
+artifact_backup_object_limit <- function(
+  backend_or_limits,
+  kind,
+  max_metadata_bytes
+) {
   if (identical(kind, "content")) {
-    return(store$max_bytes)
+    return(
+      if (S7::S7_inherits(backend_or_limits, ArtifactStore)) {
+        backend_or_limits@max_bytes
+      } else {
+        backend_or_limits$max_bytes
+      }
+    )
   }
   if (identical(kind, "revisions")) {
-    return(store$max_revision_bytes)
+    return(
+      if (S7::S7_inherits(backend_or_limits, ArtifactStore)) {
+        backend_or_limits@max_revision_bytes
+      } else {
+        backend_or_limits$max_revision_bytes
+      }
+    )
   }
   if (identical(kind, "selections") || identical(kind, "decisions")) {
     return(max_metadata_bytes)
@@ -548,7 +552,7 @@ artifact_backup_verify_bundle <- function(path, expected, limits) {
 
   objects_path <- file.path(path, "objects")
   artifact_backup_preflight_local_root(objects_path, "Backup object image")
-  store <- graft_artifact_store(
+  store <- graft_store(
     objects_path,
     max_bytes = limits$max_bytes,
     max_revision_bytes = limits$max_revision_bytes

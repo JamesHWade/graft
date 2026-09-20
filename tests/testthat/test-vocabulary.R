@@ -1,9 +1,9 @@
 test_that("vocabulary releases preserve exact sources, exports and context", {
   fixture <- local_vocabulary()
-  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
-  released <- graft_vocabulary_read(fixture$store, selection)
+  selection <- vocabulary_publish(fixture$store, fixture$path)
+  released <- vocabulary_read(fixture$store, selection)
   expect_identical(
-    graft_vocabulary_publish(fixture$store, fixture$path),
+    vocabulary_publish(fixture$store, fixture$path),
     selection
   )
   expect_identical(released$bindings$release, "urn:example:bindings:v1")
@@ -23,9 +23,9 @@ test_that("vocabulary releases preserve exact sources, exports and context", {
     digest::digest(file = fixture$path, algo = "sha256")
   )
   revised <- local_vocabulary("v2")
-  correction <- graft_vocabulary_publish(fixture$store, revised$path)
+  correction <- vocabulary_publish(fixture$store, revised$path)
   expect_identical(identical(selection, correction), FALSE)
-  expect_identical(graft_vocabulary_read(fixture$store, selection), released)
+  expect_identical(vocabulary_read(fixture$store, selection), released)
   # Source files and the upstream CLI are unnecessary for historical reads.
   unlink(list.files(
     dirname(fixture$path),
@@ -33,17 +33,17 @@ test_that("vocabulary releases preserve exact sources, exports and context", {
     full.names = TRUE
   ))
   withr::local_envvar(DATA_DICT = "/missing/data-dict")
-  reopened <- graft_artifact_store(file.path(
+  reopened <- graft_store(file.path(
     dirname(fixture$path),
     "artifacts"
   ))
-  expect_identical(graft_vocabulary_read(reopened, selection), released)
+  expect_identical(vocabulary_read(reopened, selection), released)
   restored <- callr::r(
     function(checkout, path, selection) {
       if (!is.null(checkout)) {
         pkgload::load_all(checkout, quiet = TRUE)
       }
-      graft::graft_vocabulary_read(graft::graft_artifact_store(path), selection)
+      graft:::vocabulary_read(graft::graft_store(path), selection)
     },
     args = list(
       checkout = if (pkgload::is_dev_package("graft")) {
@@ -57,7 +57,7 @@ test_that("vocabulary releases preserve exact sources, exports and context", {
   )
   expect_identical(restored, released)
   expect_identical(
-    graft_vocabulary_read(reopened, correction)$bindings$release,
+    vocabulary_read(reopened, correction)$bindings$release,
     "urn:example:bindings:v2"
   )
 })
@@ -100,7 +100,7 @@ test_that("vocabulary publication rejects ambiguous and invalid bindings", {
   for (mutate in variants) {
     jsonlite::write_json(mutate(original), fixture$path, auto_unbox = TRUE)
     expect_error(
-      graft_vocabulary_publish(fixture$store, fixture$path),
+      vocabulary_publish(fixture$store, fixture$path),
       class = "graft_vocabulary_error"
     )
   }
@@ -108,26 +108,26 @@ test_that("vocabulary publication rejects ambiguous and invalid bindings", {
 
 test_that("vocabulary reads verify the source and generated context closure", {
   fixture <- local_vocabulary()
-  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
-  selected <- graft_artifact_read_selection(fixture$store, selection)
-  root <- graft_artifact_read(fixture$store, selected$roots[[1]])
+  selection <- vocabulary_publish(fixture$store, fixture$path)
+  selected <- artifact_read_selection(fixture$store, selection)
+  root <- artifact_read(fixture$store, selected$roots[[1]])
   value <- jsonlite::fromJSON(rawToChar(root$bytes), simplifyVector = FALSE)
-  value$references$context <- graft_artifact_save(
+  value$references$context <- artifact_save(
     fixture$store,
     "wrong-context",
     charToRaw("misleading"),
     "text/markdown"
   )
-  altered <- graft_artifact_save(
+  altered <- artifact_save(
     fixture$store,
     "altered-release",
     vocabulary_encode(value),
     "application/json",
     vocabulary_dependencies(value$references)
   )
-  altered <- graft_artifact_select(fixture$store, list(altered))
+  altered <- artifact_select(fixture$store, list(altered))
   expect_error(
-    graft_vocabulary_read(fixture$store, altered),
+    vocabulary_read(fixture$store, altered),
     "context differs",
     class = "graft_vocabulary_error"
   )
@@ -136,9 +136,9 @@ test_that("vocabulary reads verify the source and generated context closure", {
 test_that("plain R and Commons consume the same published release", {
   skip_if_not_installed("commons")
   fixture <- local_vocabulary()
-  release <- graft_vocabulary_read(
+  release <- vocabulary_read(
     fixture$store,
-    graft_vocabulary_publish(fixture$store, fixture$path)
+    vocabulary_publish(fixture$store, fixture$path)
   )
   bindings <- Filter(
     \(x) x$kind == "concept" && x$term == "urn:example:temperature",
@@ -180,7 +180,7 @@ test_that("invalid dictionary sources fail through public upstream validation", 
   )
   jsonlite::write_json(companion, fixture$path, auto_unbox = TRUE)
   expect_error(
-    graft_vocabulary_publish(fixture$store, fixture$path),
+    vocabulary_publish(fixture$store, fixture$path),
     "data-dict validation/export failed",
     class = "graft_vocabulary_error"
   )
@@ -211,7 +211,7 @@ test_that("malformed nested JSON fails with vocabulary errors", {
         null = "null"
       )
       expect_error(
-        graft_vocabulary_publish(fixture$store, fixture$path),
+        vocabulary_publish(fixture$store, fixture$path),
         class = "graft_vocabulary_error"
       )
     }
@@ -223,7 +223,7 @@ test_that("malformed nested JSON fails with vocabulary errors", {
     candidate$vocabulary$sha256 <- digest::digest(file = path, algo = "sha256")
     jsonlite::write_json(candidate, fixture$path, auto_unbox = TRUE)
     expect_error(
-      graft_vocabulary_publish(fixture$store, fixture$path),
+      vocabulary_publish(fixture$store, fixture$path),
       class = "graft_vocabulary_error"
     )
   }
@@ -231,9 +231,9 @@ test_that("malformed nested JSON fails with vocabulary errors", {
 
 test_that("historical vocabulary reads reject malformed artifact references", {
   fixture <- local_vocabulary()
-  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
-  selected <- graft_artifact_read_selection(fixture$store, selection)
-  root <- graft_artifact_read(fixture$store, selected$roots[[1L]])
+  selection <- vocabulary_publish(fixture$store, fixture$path)
+  selected <- artifact_read_selection(fixture$store, selection)
+  root <- artifact_read(fixture$store, selected$roots[[1L]])
   original <- jsonlite::fromJSON(rawToChar(root$bytes), simplifyVector = FALSE)
   for (field in c("bindings", "vocabulary", "context", "source", "export")) {
     for (bad in list("scalar", NULL, list())) {
@@ -243,16 +243,16 @@ test_that("historical vocabulary reads reject malformed artifact references", {
       } else {
         candidate$references[field] <- list(bad)
       }
-      ref <- graft_artifact_save(
+      ref <- artifact_save(
         fixture$store,
         "malformed-release",
         vocabulary_encode(candidate),
         "application/json",
         root$metadata$dependencies
       )
-      altered <- graft_artifact_select(fixture$store, list(ref))
+      altered <- artifact_select(fixture$store, list(ref))
       expect_error(
-        graft_vocabulary_read(fixture$store, altered),
+        vocabulary_read(fixture$store, altered),
         class = "graft_vocabulary_error"
       )
     }
@@ -286,12 +286,12 @@ test_that("dictionary commands reject executable changes after either command", 
 
 test_that("retained validation provenance requires a version and exact binary digest", {
   fixture <- local_vocabulary()
-  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
-  selected <- graft_artifact_read_selection(fixture$store, selection)
-  root <- graft_artifact_read(fixture$store, selected$roots[[1L]])
+  selection <- vocabulary_publish(fixture$store, fixture$path)
+  selected <- artifact_read_selection(fixture$store, selection)
+  root <- artifact_read(fixture$store, selected$roots[[1L]])
   original <- vocabulary_json(root$bytes)
   export <- vocabulary_json(
-    graft_artifact_read(
+    artifact_read(
       fixture$store,
       original$references$dictionaries[[1L]]$export
     )$bytes
@@ -301,13 +301,13 @@ test_that("retained validation provenance requires a version and exact binary di
       candidate <- export
       candidate[field] <- list(bad)
       value <- original
-      value$references$dictionaries[[1L]]$export <- graft_artifact_save(
+      value$references$dictionaries[[1L]]$export <- artifact_save(
         fixture$store,
         "invalid-export",
         vocabulary_encode(candidate),
         "application/json"
       )
-      ref <- graft_artifact_save(
+      ref <- artifact_save(
         fixture$store,
         "invalid-provenance",
         vocabulary_encode(value),
@@ -315,9 +315,9 @@ test_that("retained validation provenance requires a version and exact binary di
         vocabulary_dependencies(value$references)
       )
       expect_error(
-        graft_vocabulary_read(
+        vocabulary_read(
           fixture$store,
-          graft_artifact_select(fixture$store, list(ref))
+          artifact_select(fixture$store, list(ref))
         ),
         "data-dict",
         class = "graft_vocabulary_error"
@@ -328,9 +328,9 @@ test_that("retained validation provenance requires a version and exact binary di
 
 test_that("historical companion references require sibling paths", {
   fixture <- local_vocabulary()
-  selection <- graft_vocabulary_publish(fixture$store, fixture$path)
-  selected <- graft_artifact_read_selection(fixture$store, selection)
-  root <- graft_artifact_read(fixture$store, selected$roots[[1L]])
+  selection <- vocabulary_publish(fixture$store, fixture$path)
+  selected <- artifact_read_selection(fixture$store, selection)
+  root <- artifact_read(fixture$store, selected$roots[[1L]])
   original <- vocabulary_json(root$bytes)
   companion <- jsonlite::read_json(fixture$path)
   for (field in c("vocabulary", "dictionary")) {
@@ -341,13 +341,13 @@ test_that("historical companion references require sibling paths", {
       candidate$dictionaries[[1L]]$path <- "../lab-a.yaml"
     }
     value <- original
-    value$references$bindings <- graft_artifact_save(
+    value$references$bindings <- artifact_save(
       fixture$store,
       "invalid-companion",
       vocabulary_encode(candidate),
       "application/json"
     )
-    ref <- graft_artifact_save(
+    ref <- artifact_save(
       fixture$store,
       "invalid-path",
       vocabulary_encode(value),
@@ -355,9 +355,9 @@ test_that("historical companion references require sibling paths", {
       vocabulary_dependencies(value$references)
     )
     expect_error(
-      graft_vocabulary_read(
+      vocabulary_read(
         fixture$store,
-        graft_artifact_select(fixture$store, list(ref))
+        artifact_select(fixture$store, list(ref))
       ),
       "Pinned files must be siblings",
       class = "graft_vocabulary_error"
@@ -391,9 +391,9 @@ test_that("context renders release-controlled Markdown as literal data", {
   injected <- "```\n# Injected\n<script>bad()</script>\n![image](https://example.invalid/image)"
   companion$assertions[[1L]]$source <- injected
   jsonlite::write_json(companion, fixture$path, auto_unbox = TRUE)
-  release <- graft_vocabulary_read(
+  release <- vocabulary_read(
     fixture$store,
-    graft_vocabulary_publish(fixture$store, fixture$path)
+    vocabulary_publish(fixture$store, fixture$path)
   )
   html <- commonmark::markdown_html(paste(release$context, collapse = "\n"))
   expect_identical(grepl("<script|<img|<h1>Injected", html), FALSE)
@@ -407,8 +407,8 @@ test_that("impossible vocabulary releases fail before CLI work or artifact write
   file.copy(list.files(example, full.names = TRUE), path)
   companion_path <- file.path(path, "bindings.json")
   original <- jsonlite::read_json(companion_path)
-  store <- graft_artifact_store(file.path(path, "artifacts"), create = TRUE)
-  before <- list.files(store$path, recursive = TRUE, all.files = TRUE)
+  store <- graft_store(file.path(path, "artifacts"), create = TRUE)
+  before <- list.files(store@path, recursive = TRUE, all.files = TRUE)
   commands <- character()
   local_mocked_bindings(vocabulary_dictionary_command = function(
     command,
@@ -429,13 +429,13 @@ test_that("impossible vocabulary releases fail before CLI work or artifact write
   )
   jsonlite::write_json(oversized, companion_path, auto_unbox = TRUE)
   expect_error(
-    graft_vocabulary_publish(store, companion_path),
+    vocabulary_publish(store, companion_path),
     "at most 498 dictionaries",
     class = "graft_vocabulary_error"
   )
   expect_identical(commands, character())
   expect_identical(
-    list.files(store$path, recursive = TRUE, all.files = TRUE),
+    list.files(store@path, recursive = TRUE, all.files = TRUE),
     before
   )
 
@@ -448,18 +448,18 @@ test_that("impossible vocabulary releases fail before CLI work or artifact write
       vapply(original$dictionaries, \(ref) ref$path, character(1))
     )
   )
-  bounded <- graft_artifact_store(
-    store$path,
+  bounded <- graft_store(
+    store@path,
     max_bytes = sum(file.info(source_paths)$size) - 1L
   )
   expect_error(
-    graft_vocabulary_publish(bounded, companion_path),
+    vocabulary_publish(bounded, companion_path),
     "Source files exceed",
     class = "graft_vocabulary_error"
   )
   expect_identical(commands, character())
   expect_identical(
-    list.files(store$path, recursive = TRUE, all.files = TRUE),
+    list.files(store@path, recursive = TRUE, all.files = TRUE),
     before
   )
 })
@@ -467,20 +467,20 @@ test_that("impossible vocabulary releases fail before CLI work or artifact write
 
 test_that("generated vocabulary payloads are bounded before artifact writes", {
   x <- local_vocabulary()
-  selection <- graft_vocabulary_publish(x$store, x$path)
-  refs <- graft_artifact_read_selection(x$store, selection)$artifacts
+  selection <- vocabulary_publish(x$store, x$path)
+  refs <- artifact_read_selection(x$store, selection)$artifacts
   size <- sum(vapply(
     refs,
     function(ref) {
-      length(graft_artifact_read(x$store, ref)$bytes)
+      length(artifact_read(x$store, ref)$bytes)
     },
     integer(1)
   ))
   target <- file.path(withr::local_tempdir(), "bounded")
-  store <- graft_artifact_store(target, create = TRUE, max_bytes = size - 1L)
+  store <- graft_store(target, create = TRUE, max_bytes = size - 1L)
   before <- list.files(target, recursive = TRUE, all.files = TRUE)
   expect_error(
-    graft_vocabulary_publish(store, x$path),
+    vocabulary_publish(store, x$path),
     "Release exceeds the artifact store's aggregate byte limit",
     class = "graft_vocabulary_error"
   )
@@ -488,9 +488,9 @@ test_that("generated vocabulary payloads are bounded before artifact writes", {
     list.files(target, recursive = TRUE, all.files = TRUE),
     before
   )
-  small_metadata <- graft_artifact_store(target, max_revision_bytes = 1L)
+  small_metadata <- graft_store(target, max_revision_bytes = 1L)
   expect_error(
-    graft_vocabulary_publish(small_metadata, x$path),
+    vocabulary_publish(small_metadata, x$path),
     "Release exceeds the artifact revision byte limit",
     class = "graft_vocabulary_error"
   )
@@ -498,6 +498,6 @@ test_that("generated vocabulary payloads are bounded before artifact writes", {
     list.files(target, recursive = TRUE, all.files = TRUE),
     before
   )
-  exact <- graft_artifact_store(target, max_bytes = size)
-  expect_identical(graft_vocabulary_publish(exact, x$path), selection)
+  exact <- graft_store(target, max_bytes = size)
+  expect_identical(vocabulary_publish(exact, x$path), selection)
 })

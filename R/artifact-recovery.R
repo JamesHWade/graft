@@ -5,8 +5,8 @@
 #' digest of the stored object keys, sizes and bytes. The marker identifying the
 #' store format is checked but is not included in the manifest object list.
 #'
-#' @param store A handle returned by [graft_artifact_store()] or
-#'   [graft_artifact_store_postgres()].
+#' @param store A handle returned by [graft_store()] or
+#'   [graft_store_postgres()].
 #' @param max_objects Maximum number of committed artifact objects to inspect.
 #'   The store marker is not counted.
 #' @param max_total_bytes Maximum total bytes across committed artifact objects.
@@ -32,7 +32,7 @@
 #' kind, key, size and the SHA-256 digest of its exact stored bytes.
 #'
 #' @export
-graft_artifact_manifest <- function(
+graft_manifest <- function(
   store,
   max_objects = 10000L,
   max_total_bytes = 64 * 1024^2,
@@ -104,14 +104,8 @@ artifact_recovery_snapshot <- function(
 }
 
 artifact_recovery_preflight_store <- function(store) {
-  if (
-    inherits(store, "graft_artifact_store") &&
-      !inherits(store, "graft_artifact_postgres_store") &&
-      is.list(store) &&
-      "path" %in% names(store) &&
-      rlang::is_string(store$path)
-  ) {
-    marker <- file.path(store$path, "store.json")
+  if (S7::S7_inherits(store, LocalArtifactStore)) {
+    marker <- file.path(store@path, "store.json")
     if (
       file.exists(marker) ||
         dir.exists(marker) ||
@@ -238,7 +232,7 @@ artifact_recovery_enumerate <- function(
   max_total_bytes,
   max_metadata_bytes
 ) {
-  if (inherits(store, "graft_artifact_postgres_store")) {
+  if (S7::S7_inherits(store, PostgresArtifactStore)) {
     entries <- artifact_recovery_enumerate_postgres(store, max_objects)
   } else {
     entries <- artifact_recovery_enumerate_local(store)
@@ -261,7 +255,7 @@ artifact_recovery_enumerate <- function(
 }
 
 artifact_recovery_enumerate_local <- function(store) {
-  root <- store$path
+  root <- store@path
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   root_entries <- list.files(
     root,
@@ -374,12 +368,12 @@ artifact_recovery_enumerate_local <- function(store) {
 
 artifact_recovery_enumerate_postgres <- function(store, max_objects) {
   count <- artifact_postgres_query(
-    store$connection,
+    store@connection,
     paste(
       "SELECT count(*) AS count FROM graft_artifact_objects",
       "WHERE scope = $1"
     ),
-    params = list(store$scope)
+    params = list(store@scope)
   )$count[[1L]]
   count <- suppressWarnings(as.numeric(count))
   if (
@@ -397,13 +391,13 @@ artifact_recovery_enumerate_postgres <- function(store, max_objects) {
     artifact_abort("Artifact store exceeds the object-count bound.")
   }
   rows <- artifact_postgres_query(
-    store$connection,
+    store@connection,
     paste(
       "SELECT kind, object_key, octet_length(payload) AS size",
       "FROM graft_artifact_objects WHERE scope = $1",
       "ORDER BY kind, object_key LIMIT $2"
     ),
-    params = list(store$scope, as.numeric(max_objects) + 1)
+    params = list(store@scope, as.numeric(max_objects) + 1)
   )
   if (nrow(rows) != count) {
     artifact_abort("Artifact object listing changed during inspection.")
@@ -488,9 +482,9 @@ artifact_recovery_key_digest <- function(kind, key) {
 
 artifact_recovery_read_object <- function(store, entry, max_metadata_bytes) {
   limit <- if (entry$kind == "content") {
-    store$max_bytes
+    store@max_bytes
   } else if (entry$kind == "revisions") {
-    store$max_revision_bytes
+    store@max_revision_bytes
   } else {
     if (entry$size > max_metadata_bytes) {
       artifact_abort("Artifact metadata exceeds the metadata byte bound.")
@@ -520,7 +514,7 @@ artifact_recovery_read_revisions <- function(
     )
     metadata <- artifact_decode(bytes)
     artifact_check_metadata(metadata)
-    graft_artifact_read(
+    artifact_read(
       store,
       list(id = metadata$id, revision = entry$key)
     )
@@ -591,7 +585,7 @@ artifact_recovery_read_selections <- function(
   max_metadata_bytes
 ) {
   selections <- lapply(entries, function(entry) {
-    selection <- graft_artifact_read_selection(
+    selection <- artifact_read_selection(
       store,
       entry$key,
       max_artifacts = max_objects,

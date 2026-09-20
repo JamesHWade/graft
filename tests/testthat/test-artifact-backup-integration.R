@@ -1,53 +1,53 @@
 test_that("a local closed backup restores complete history and reopens in a new process", {
   source_path <- withr::local_tempdir()
-  source <- graft_artifact_store(source_path, create = TRUE)
+  source <- graft_store(source_path, create = TRUE)
   fixture <- artifact_recovery_fixture(source)
 
   orphan <- charToRaw("orphan bytes retained in the closed image")
   orphan_digest <- digest::digest(orphan, algo = "sha256", serialize = FALSE)
-  writeBin(orphan, file.path(source$path, "content", orphan_digest))
-  source_manifest <- graft_artifact_manifest(source)
+  writeBin(orphan, file.path(source@path, "content", orphan_digest))
+  source_manifest <- graft_manifest(source)
 
   backup_parent <- withr::local_tempdir()
   backup_path <- file.path(backup_parent, "closed-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
     generation = "reader-a-generation-1"
   )
   expect_identical(
-    graft_artifact_backup_verify(backup_path, receipt),
+    graft_verify_backup(backup_path, receipt),
     receipt
   )
   expect_identical(receipt$manifest, source_manifest$id)
 
   target_parent <- withr::local_tempdir()
   target_path <- file.path(target_parent, "restored")
-  target <- graft_artifact_store(target_path, create = TRUE)
-  restored_manifest <- graft_artifact_restore(
+  target <- graft_store(target_path, create = TRUE)
+  restored_manifest <- graft_restore(
     backup_path,
     target,
     receipt
   )
   expect_identical(restored_manifest, source_manifest)
 
-  reopened <- graft_artifact_store(target_path)
-  expect_identical(graft_artifact_manifest(reopened), source_manifest)
+  reopened <- graft_store(target_path)
+  expect_identical(graft_manifest(reopened), source_manifest)
   expect_identical(
-    graft_artifact_read(reopened, fixture$shared),
-    graft_artifact_read(source, fixture$shared)
+    artifact_read(reopened, fixture$shared),
+    artifact_read(source, fixture$shared)
   )
   expect_identical(
-    graft_artifact_read(reopened, fixture$forgotten),
-    graft_artifact_read(source, fixture$forgotten)
+    artifact_read(reopened, fixture$forgotten),
+    artifact_read(source, fixture$forgotten)
   )
   expect_identical(
-    graft_artifact_read_decision(reopened, "mixed-stream"),
+    artifact_read_decision(reopened, "mixed-stream"),
     fixture$mixed_second
   )
   expect_identical(
-    graft_artifact_read_decision(
+    artifact_read_decision(
       reopened,
       "mixed-stream",
       fixture$mixed_first$id
@@ -56,13 +56,13 @@ test_that("a local closed backup restores complete history and reopens in a new 
   )
   expect_identical(
     readBin(
-      file.path(reopened$path, "content", orphan_digest),
+      file.path(reopened@path, "content", orphan_digest),
       what = "raw",
       n = length(orphan)
     ),
     orphan
   )
-  expect_identical(graft_artifact_manifest(source), source_manifest)
+  expect_identical(graft_manifest(source), source_manifest)
 
   process_target <- file.path(
     withr::local_tempdir(),
@@ -73,15 +73,15 @@ test_that("a local closed backup restores complete history and reopens in a new 
       if (!is.null(checkout)) {
         pkgload::load_all(checkout, quiet = TRUE)
       }
-      checked <- graft::graft_artifact_backup_verify(path, expected)
-      target <- graft::graft_artifact_store(target_path, create = TRUE)
-      restored <- graft::graft_artifact_restore(path, target, expected)
-      reopened <- graft::graft_artifact_store(target_path)
+      checked <- graft::graft_verify_backup(path, expected)
+      target <- graft::graft_store(target_path, create = TRUE)
+      restored <- graft::graft_restore(path, target, expected)
+      reopened <- graft::graft_store(target_path)
       list(
         receipt = checked,
         restore = restored,
-        manifest = graft::graft_artifact_manifest(reopened),
-        decision = graft::graft_artifact_read_decision(
+        manifest = graft::graft_manifest(reopened),
+        decision = graft:::artifact_read_decision(
           reopened,
           "mixed-stream"
         )
@@ -105,11 +105,11 @@ test_that("a local closed backup restores complete history and reopens in a new 
 })
 
 test_that("a local backup restores into a committed PostgreSQL scope without crossing isolation", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
-  source_manifest <- graft_artifact_manifest(source)
+  source_manifest <- graft_manifest(source)
   backup_path <- file.path(withr::local_tempdir(), "local-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -118,44 +118,44 @@ test_that("a local backup restores into a committed PostgreSQL scope without cro
 
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    target <- graft_artifact_store_postgres(
+    target <- graft_store_postgres(
       connection,
       "local-to-postgres",
       create = TRUE
     )
     expect_identical(
-      graft_artifact_restore(backup_path, target, receipt),
+      graft_restore(backup_path, target, receipt),
       source_manifest
     )
   })
 
   DBI::dbWithTransaction(connection, {
-    reopened <- graft_artifact_store_postgres(
+    reopened <- graft_store_postgres(
       connection,
       "local-to-postgres"
     )
-    expect_identical(graft_artifact_manifest(reopened), source_manifest)
+    expect_identical(graft_manifest(reopened), source_manifest)
     expect_identical(
-      graft_artifact_read_decision(reopened, "mixed-stream"),
+      artifact_read_decision(reopened, "mixed-stream"),
       fixture$mixed_second
     )
 
-    isolated <- graft_artifact_store_postgres(
+    isolated <- graft_store_postgres(
       connection,
       "independent-scope",
       create = TRUE
     )
-    graft_artifact_save(
+    artifact_save(
       isolated,
       "independent",
       charToRaw("independent scope"),
       "text/plain"
     )
     expect_error(
-      graft_artifact_read(isolated, fixture$shared),
+      artifact_read(isolated, fixture$shared),
       class = "graft_artifact_error"
     )
-    expect_length(graft_artifact_manifest(isolated)$objects, 2L)
+    expect_length(graft_manifest(isolated)$objects, 2L)
   })
 })
 
@@ -165,56 +165,56 @@ test_that("a committed PostgreSQL backup restores into a reopened local store", 
   scope <- "postgres-source"
 
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(
+    source <- graft_store_postgres(
       connection,
       scope,
       create = TRUE
     )
     fixture <- artifact_recovery_fixture(source)
-    source_manifest <- graft_artifact_manifest(source)
+    source_manifest <- graft_manifest(source)
   })
 
   # Capture the bundle from a committed source transaction. The separate
   # rollback test below covers the intentionally different uncommitted case.
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(connection, scope)
-    receipt <- graft_artifact_backup(
+    source <- graft_store_postgres(connection, scope)
+    receipt <- graft_backup(
       source,
       backup_path,
       scope = "reader-a",
       generation = "reader-a-generation-2"
     )
     expect_identical(
-      graft_artifact_backup_verify(backup_path, receipt),
+      graft_verify_backup(backup_path, receipt),
       receipt
     )
   })
 
   target_path <- withr::local_tempdir()
-  target <- graft_artifact_store(target_path, create = TRUE)
+  target <- graft_store(target_path, create = TRUE)
   expect_identical(
-    graft_artifact_restore(backup_path, target, receipt),
+    graft_restore(backup_path, target, receipt),
     source_manifest
   )
-  reopened <- graft_artifact_store(target_path)
-  expect_identical(graft_artifact_manifest(reopened), source_manifest)
+  reopened <- graft_store(target_path)
+  expect_identical(graft_manifest(reopened), source_manifest)
   expect_identical(
-    graft_artifact_read_decision(reopened, "mixed-stream"),
+    artifact_read_decision(reopened, "mixed-stream"),
     fixture$mixed_second
   )
 
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(connection, scope)
-    expect_identical(graft_artifact_manifest(source), source_manifest)
+    source <- graft_store_postgres(connection, scope)
+    expect_identical(graft_manifest(source), source_manifest)
 
-    isolated <- graft_artifact_store_postgres(
+    isolated <- graft_store_postgres(
       connection,
       "other-postgres-scope",
       create = TRUE
     )
-    expect_length(graft_artifact_manifest(isolated)$objects, 0L)
+    expect_length(graft_manifest(isolated)$objects, 0L)
     expect_error(
-      graft_artifact_read(isolated, fixture$shared),
+      artifact_read(isolated, fixture$shared),
       class = "graft_artifact_error"
     )
   })
@@ -226,17 +226,17 @@ test_that("a PostgreSQL backup made before rollback remains a mechanically verif
   scope <- "rolled-back-source"
 
   DBI::dbBegin(connection)
-  source <- graft_artifact_store_postgres(connection, scope, create = TRUE)
+  source <- graft_store_postgres(connection, scope, create = TRUE)
   fixture <- artifact_recovery_fixture(source)
-  uncommitted_manifest <- graft_artifact_manifest(source)
-  receipt <- graft_artifact_backup(
+  uncommitted_manifest <- graft_manifest(source)
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
     generation = "reader-a-uncommitted"
   )
   expect_identical(
-    graft_artifact_backup_verify(backup_path, receipt),
+    graft_verify_backup(backup_path, receipt),
     receipt
   )
   DBI::dbRollback(connection)
@@ -244,7 +244,7 @@ test_that("a PostgreSQL backup made before rollback remains a mechanically verif
   # The bundle is a closed byte image, so it remains verifiable after the
   # source transaction is rolled back. This does not establish source commit.
   expect_identical(
-    graft_artifact_backup_verify(backup_path, receipt),
+    graft_verify_backup(backup_path, receipt),
     receipt
   )
   expect_identical(
@@ -253,25 +253,25 @@ test_that("a PostgreSQL backup made before rollback remains a mechanically verif
   )
 
   target_path <- withr::local_tempdir()
-  target <- graft_artifact_store(target_path, create = TRUE)
+  target <- graft_store(target_path, create = TRUE)
   expect_identical(
-    graft_artifact_restore(backup_path, target, receipt),
+    graft_restore(backup_path, target, receipt),
     uncommitted_manifest
   )
-  reopened <- graft_artifact_store(target_path)
-  expect_identical(graft_artifact_manifest(reopened), uncommitted_manifest)
+  reopened <- graft_store(target_path)
+  expect_identical(graft_manifest(reopened), uncommitted_manifest)
   expect_identical(
-    graft_artifact_read_decision(reopened, "mixed-stream"),
+    artifact_read_decision(reopened, "mixed-stream"),
     fixture$mixed_second
   )
 })
 
 test_that("restore rejects an external receipt mismatch before target writes", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
-  source_manifest <- graft_artifact_manifest(source)
+  source_manifest <- graft_manifest(source)
   backup_path <- file.path(withr::local_tempdir(), "receipt-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -281,25 +281,25 @@ test_that("restore rejects an external receipt mismatch before target writes", {
   wrong <- receipt
   wrong$generation <- "reader-a-generation-retired"
   expect_error(
-    graft_artifact_backup_verify(backup_path, wrong),
+    graft_verify_backup(backup_path, wrong),
     class = "graft_artifact_error"
   )
 
-  target <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
   expect_error(
-    graft_artifact_restore(backup_path, target, wrong),
+    graft_restore(backup_path, target, wrong),
     class = "graft_artifact_error"
   )
   expect_identical(
-    graft_artifact_manifest(target)$objects,
+    graft_manifest(target)$objects,
     list()
   )
 
   # A matching old receipt can still restore mechanically. The independent
   # host registry must deny using that generation afterwards.
-  old_target <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  old_target <- graft_store(withr::local_tempdir(), create = TRUE)
   expect_identical(
-    graft_artifact_restore(backup_path, old_target, receipt),
+    graft_restore(backup_path, old_target, receipt),
     source_manifest
   )
   journal_path <- file.path(withr::local_tempdir(), "host-journal.rds")
@@ -324,18 +324,18 @@ test_that("restore rejects an external receipt mismatch before target writes", {
 })
 
 test_that("a failed restore stays quarantined and a fresh local target can retry", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   artifact_recovery_fixture(source)
-  source_manifest <- graft_artifact_manifest(source)
+  source_manifest <- graft_manifest(source)
   backup_path <- file.path(withr::local_tempdir(), "retry-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
     generation = "reader-a-generation-1"
   )
 
-  failed <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  failed <- graft_store(withr::local_tempdir(), create = TRUE)
   writes <- 0L
   original_put <- artifact_storage_put
   local_mocked_bindings(
@@ -348,31 +348,31 @@ test_that("a failed restore stays quarantined and a fresh local target can retry
     }
   )
   expect_error(
-    graft_artifact_restore(backup_path, failed, receipt),
+    graft_restore(backup_path, failed, receipt),
     class = "graft_artifact_error"
   )
   expect_gt(writes, 1L)
-  expect_gt(length(graft_artifact_manifest(failed)$objects), 0L)
+  expect_gt(length(graft_manifest(failed)$objects), 0L)
   local_mocked_bindings(artifact_storage_put = original_put)
   expect_error(
-    graft_artifact_restore(backup_path, failed, receipt),
+    graft_restore(backup_path, failed, receipt),
     class = "graft_artifact_error"
   )
 
-  retry <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  retry <- graft_store(withr::local_tempdir(), create = TRUE)
   expect_identical(
-    graft_artifact_restore(backup_path, retry, receipt),
+    graft_restore(backup_path, retry, receipt),
     source_manifest
   )
-  expect_identical(graft_artifact_manifest(retry), source_manifest)
+  expect_identical(graft_manifest(retry), source_manifest)
 })
 
 test_that("a failed PostgreSQL restore rolls back and retries in a fresh scope", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   artifact_recovery_fixture(source)
-  source_manifest <- graft_artifact_manifest(source)
+  source_manifest <- graft_manifest(source)
   backup_path <- file.path(withr::local_tempdir(), "postgres-retry-backup")
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
@@ -382,11 +382,11 @@ test_that("a failed PostgreSQL restore rolls back and retries in a fresh scope",
   connection <- local_artifact_postgres()
   failed_scope <- "postgres-failed-target"
   DBI::dbWithTransaction(connection, {
-    graft_artifact_store_postgres(connection, failed_scope, create = TRUE)
+    graft_store_postgres(connection, failed_scope, create = TRUE)
   })
 
   DBI::dbBegin(connection)
-  failed <- graft_artifact_store_postgres(connection, failed_scope)
+  failed <- graft_store_postgres(connection, failed_scope)
   writes <- 0L
   original_put <- artifact_storage_put
   local_mocked_bindings(
@@ -399,7 +399,7 @@ test_that("a failed PostgreSQL restore rolls back and retries in a fresh scope",
     }
   )
   expect_error(
-    graft_artifact_restore(backup_path, failed, receipt),
+    graft_restore(backup_path, failed, receipt),
     class = "graft_artifact_error"
   )
   expect_gt(writes, 1L)
@@ -416,18 +416,18 @@ test_that("a failed PostgreSQL restore rolls back and retries in a fresh scope",
   DBI::dbRollback(connection)
 
   DBI::dbWithTransaction(connection, {
-    reopened <- graft_artifact_store_postgres(connection, failed_scope)
-    expect_identical(graft_artifact_manifest(reopened)$objects, list())
+    reopened <- graft_store_postgres(connection, failed_scope)
+    expect_identical(graft_manifest(reopened)$objects, list())
   })
 
   DBI::dbWithTransaction(connection, {
-    retry <- graft_artifact_store_postgres(
+    retry <- graft_store_postgres(
       connection,
       "postgres-fresh-target",
       create = TRUE
     )
     expect_identical(
-      graft_artifact_restore(backup_path, retry, receipt),
+      graft_restore(backup_path, retry, receipt),
       source_manifest
     )
   })
@@ -435,7 +435,7 @@ test_that("a failed PostgreSQL restore rolls back and retries in a fresh scope",
 
 test_that("an interrupted backup leaves no requested bundle and can retry", {
   source_path <- withr::local_tempdir()
-  source <- graft_artifact_store(source_path, create = TRUE)
+  source <- graft_store(source_path, create = TRUE)
   artifact_recovery_fixture(source)
   backup_parent <- withr::local_tempdir()
   backup_path <- file.path(backup_parent, "interrupted-backup")
@@ -462,8 +462,8 @@ test_that("an interrupted backup leaves no requested bundle and can retry", {
             original_put(store, kind, key, bytes, limit)
           }
         )
-        graft::graft_artifact_backup(
-          graft::graft_artifact_store(source_path),
+        graft::graft_backup(
+          graft::graft_store(source_path),
           backup_path,
           scope = "reader-a",
           generation = "reader-a-interrupted"
@@ -498,22 +498,22 @@ test_that("an interrupted backup leaves no requested bundle and can retry", {
   ))
   expect_gt(length(staged_entries), 1L)
 
-  receipt <- graft_artifact_backup(
+  receipt <- graft_backup(
     source,
     backup_path,
     scope = "reader-a",
     generation = "reader-a-retry"
   )
   expect_identical(
-    graft_artifact_backup_verify(backup_path, receipt),
+    graft_verify_backup(backup_path, receipt),
     receipt
   )
   expect_identical(
-    graft_artifact_backup_verify(
+    graft_verify_backup(
       backup_path,
       receipt
     )$manifest,
-    graft_artifact_manifest(source)$id
+    graft_manifest(source)$id
   )
 
   staging_after <- list.files(
@@ -530,18 +530,18 @@ test_that("backups retain both vocabulary releases across a correction", {
   first <- local_vocabulary("v1")
   second <- local_vocabulary("v2")
   source <- first$store
-  selection_v1 <- graft_vocabulary_publish(source, first$path)
-  selection_v2 <- graft_vocabulary_publish(source, second$path)
-  expected_v1 <- graft_vocabulary_read(source, selection_v1)
-  expected_v2 <- graft_vocabulary_read(source, selection_v2)
+  selection_v1 <- vocabulary_publish(source, first$path)
+  selection_v2 <- vocabulary_publish(source, second$path)
+  expected_v1 <- vocabulary_read(source, selection_v1)
+  expected_v2 <- vocabulary_read(source, selection_v2)
   path <- file.path(withr::local_tempdir(), "vocabulary-backup")
-  receipt <- graft_artifact_backup(source, path, "reader", "generation")
-  target <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  receipt <- graft_backup(source, path, "reader", "generation")
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
   expect_identical(
-    graft_artifact_restore(path, target, receipt),
-    graft_artifact_manifest(source)
+    graft_restore(path, target, receipt),
+    graft_manifest(source)
   )
-  reopened <- graft_artifact_store(target$path)
-  expect_identical(graft_vocabulary_read(reopened, selection_v1), expected_v1)
-  expect_identical(graft_vocabulary_read(reopened, selection_v2), expected_v2)
+  reopened <- graft_store(target@path)
+  expect_identical(vocabulary_read(reopened, selection_v1), expected_v1)
+  expect_identical(vocabulary_read(reopened, selection_v2), expected_v2)
 })

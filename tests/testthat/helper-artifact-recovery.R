@@ -19,43 +19,43 @@ artifact_recovery_removed_ref_keys <- function(plan) {
 }
 
 artifact_recovery_fixture <- function(store) {
-  shared <- graft_artifact_save(
+  shared <- artifact_save(
     store,
     "shared",
     charToRaw("shared bytes"),
     "text/plain"
   )
-  forgotten <- graft_artifact_save(
+  forgotten <- artifact_save(
     store,
     "forgotten",
     charToRaw("shared bytes"),
     "text/plain"
   )
-  leaf <- graft_artifact_save(
+  leaf <- artifact_save(
     store,
     "leaf",
     charToRaw("leaf bytes"),
     "text/plain"
   )
-  dependent <- graft_artifact_save(
+  dependent <- artifact_save(
     store,
     "dependent",
     charToRaw("dependent bytes"),
     "text/plain",
     dependencies = list(leaf)
   )
-  survivor <- graft_artifact_save(
+  survivor <- artifact_save(
     store,
     "survivor",
     charToRaw("survivor bytes"),
     "text/plain"
   )
-  removed_selection <- graft_artifact_select(store, list(dependent))
-  retained_selection <- graft_artifact_select(
+  removed_selection <- artifact_select(store, list(dependent))
+  retained_selection <- artifact_select(
     store,
     list(survivor, shared)
   )
-  removed_decision <- graft_artifact_decide(
+  removed_decision <- artifact_decide(
     store,
     "removed-stream",
     "accept-1",
@@ -66,7 +66,7 @@ artifact_recovery_fixture <- function(store) {
     "remove",
     "research"
   )
-  mixed_first <- graft_artifact_decide(
+  mixed_first <- artifact_decide(
     store,
     "mixed-stream",
     "accept-1",
@@ -77,7 +77,7 @@ artifact_recovery_fixture <- function(store) {
     "first basis",
     "research"
   )
-  mixed_second <- graft_artifact_decide(
+  mixed_second <- artifact_decide(
     store,
     "mixed-stream",
     "accept-2",
@@ -88,7 +88,7 @@ artifact_recovery_fixture <- function(store) {
     "corrected basis",
     "research"
   )
-  explicit_decision <- graft_artifact_decide(
+  explicit_decision <- artifact_decide(
     store,
     "explicit-stream",
     "accept-1",
@@ -99,7 +99,7 @@ artifact_recovery_fixture <- function(store) {
     "explicit stream",
     "research"
   )
-  retained_decision <- graft_artifact_decide(
+  retained_decision <- artifact_decide(
     store,
     "retained-stream",
     "accept-1",
@@ -127,7 +127,7 @@ artifact_recovery_fixture <- function(store) {
 }
 
 artifact_recovery_plan <- function(store, fixture) {
-  graft_artifact_replacement_plan(
+  graft_plan_replacement(
     store,
     forget = list(fixture$leaf, fixture$forgotten),
     forget_streams = "explicit-stream"
@@ -187,7 +187,7 @@ artifact_recovery_synthetic_admit <- function(
   }
   if (!is.null(store)) {
     manifest <- tryCatch(
-      graft_artifact_manifest(store),
+      graft_manifest(store),
       error = function(error) NULL
     )
     if (

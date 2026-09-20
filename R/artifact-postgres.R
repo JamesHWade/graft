@@ -12,7 +12,7 @@
 #'   authentication credential; never let an agent choose it.
 #' @param create Ensure the storage table and scope exist? Defaults to `FALSE`.
 #'   Unlike local directory creation, `TRUE` can reopen an existing scope.
-#' @inheritParams graft_artifact_store
+#' @inheritParams graft_store
 #'
 #' @details
 #' The current PostgreSQL schema contains `graft_artifact_objects`, owned by
@@ -42,11 +42,11 @@
 #' @examplesIf identical(Sys.getenv("GRAFT_TEST_POSTGRES"), "true")
 #' connection <- DBI::dbConnect(RPostgres::Postgres())
 #' DBI::dbWithTransaction(connection, {
-#'   store <- graft_artifact_store_postgres(connection, "example", create = TRUE)
-#'   ref <- graft_artifact_save(store, "note", charToRaw("Hello"), "text/plain")
+#'   store <- graft_store_postgres(connection, "example", create = TRUE)
+#'   ref <- graft_save(store, "Hello", "note")
 #' })
 #' DBI::dbDisconnect(connection)
-graft_artifact_store_postgres <- function(
+graft_store_postgres <- function(
   connection,
   scope,
   create = FALSE,
@@ -84,14 +84,11 @@ graft_artifact_store_postgres <- function(
       )
     )
   }
-  store <- structure(
-    list(
-      connection = connection,
-      scope = scope,
-      max_bytes = max_bytes,
-      max_revision_bytes = max_revision_bytes
-    ),
-    class = c("graft_artifact_postgres_store", "graft_artifact_store")
+  store <- PostgresArtifactStore(
+    connection = connection,
+    scope = scope,
+    max_bytes = max_bytes,
+    max_revision_bytes = max_revision_bytes
   )
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   if (create) {
@@ -138,13 +135,13 @@ artifact_postgres_lock <- function(connection, scope) {
 
 artifact_postgres_read <- function(store, kind, key, limit) {
   rows <- artifact_postgres_query(
-    store$connection,
+    store@connection,
     paste(
       "SELECT payload FROM graft_artifact_objects",
       "WHERE scope = $1 AND kind = $2 AND object_key = $3",
       "AND octet_length(payload) <= $4"
     ),
-    params = list(store$scope, kind, key, limit)
+    params = list(store@scope, kind, key, limit)
   )
   if (nrow(rows) != 1L) {
     artifact_abort(
@@ -159,12 +156,12 @@ artifact_postgres_put <- function(store, kind, key, bytes, limit) {
     artifact_abort("Artifact exceeds the byte bound.")
   }
   DBI::dbExecute(
-    store$connection,
+    store@connection,
     paste(
       "INSERT INTO graft_artifact_objects (scope, kind, object_key, payload)",
       "VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING"
     ),
-    params = list(store$scope, kind, key, list(bytes))
+    params = list(store@scope, kind, key, list(bytes))
   )
   if (!identical(artifact_postgres_read(store, kind, key, limit), bytes)) {
     artifact_abort("Immutable artifact key contains different bytes.")
@@ -172,37 +169,30 @@ artifact_postgres_put <- function(store, kind, key, bytes, limit) {
   invisible(NULL)
 }
 
-artifact_storage_read <- function(store, kind, key, limit) {
-  if (inherits(store, "graft_artifact_postgres_store")) {
-    return(artifact_postgres_read(store, kind, key, limit))
-  }
-  artifact_bytes(artifact_path(store, kind, key), limit)
+S7::method(artifact_storage_read, PostgresArtifactStore) <- function(
+  store,
+  kind,
+  key,
+  limit
+) {
+  artifact_postgres_read(store, kind, key, limit)
 }
 
-artifact_storage_put <- function(store, kind, key, bytes, limit) {
-  if (inherits(store, "graft_artifact_postgres_store")) {
-    return(artifact_postgres_put(store, kind, key, bytes, limit))
-  }
-  artifact_put(bytes, artifact_path(store, kind, key), limit)
+S7::method(artifact_storage_put, PostgresArtifactStore) <- function(
+  store,
+  kind,
+  key,
+  bytes,
+  limit
+) {
+  artifact_postgres_put(store, kind, key, bytes, limit)
 }
 
-artifact_decision_entries <- function(store, stream, max_decisions) {
-  if (inherits(store, "graft_artifact_postgres_store")) {
-    prefix <- paste0(artifact_sha(charToRaw(stream)), "/")
-    rows <- artifact_postgres_query(
-      store$connection,
-      paste(
-        "SELECT object_key, octet_length(payload) AS size",
-        "FROM graft_artifact_objects WHERE scope = $1 AND kind = 'decisions'",
-        "AND left(object_key, length($2)) = $2 ORDER BY object_key LIMIT $3"
-      ),
-      params = list(store$scope, prefix, max_decisions + 1)
-    )
-    return(data.frame(
-      name = substring(rows$object_key, nchar(prefix) + 1L),
-      size = rows$size
-    ))
-  }
+S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
+  store,
+  stream,
+  max_decisions
+) {
   path <- artifact_decision_path(store, stream)
   if (!file.exists(path)) {
     return(data.frame(name = character(), size = numeric()))
@@ -217,6 +207,27 @@ artifact_decision_entries <- function(store, stream, max_decisions) {
     artifact_abort("Decision journal has invalid entries.")
   }
   data.frame(name = files, size = file.info(paths)$size)
+}
+
+S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
+  store,
+  stream,
+  max_decisions
+) {
+  prefix <- paste0(artifact_sha(charToRaw(stream)), "/")
+  rows <- artifact_postgres_query(
+    store@connection,
+    paste(
+      "SELECT object_key, octet_length(payload) AS size",
+      "FROM graft_artifact_objects WHERE scope = $1 AND kind = 'decisions'",
+      "AND left(object_key, length($2)) = $2 ORDER BY object_key LIMIT $3"
+    ),
+    params = list(store@scope, prefix, max_decisions + 1)
+  )
+  data.frame(
+    name = substring(rows$object_key, nchar(prefix) + 1L),
+    size = rows$size
+  )
 }
 
 artifact_postgres_query <- function(connection, statement, params = list()) {
