@@ -67,7 +67,8 @@
 
 
 <dt id="arg-stream">stream<a class="anchor" aria-label="anchor" href="#arg-stream"></a></dt>
-<dd><p>Host-chosen decision stream.</p></dd>
+<dd><p>A decision stream chosen and controlled by the host
+application.</p></dd>
 
 
 <dt id="arg-expected">expected<a class="anchor" aria-label="anchor" href="#arg-expected"></a></dt>
@@ -75,15 +76,15 @@
 
 
 <dt id="arg-key">key<a class="anchor" aria-label="anchor" href="#arg-key"></a></dt>
-<dd><p>Required stable host request key.</p></dd>
+<dd><p>Required stable request key supplied by the host application.</p></dd>
 
 
 <dt id="arg-actor">actor<a class="anchor" aria-label="anchor" href="#arg-actor"></a></dt>
-<dd><p>Host-supplied actor identity.</p></dd>
+<dd><p>Actor identity supplied by the host application.</p></dd>
 
 
 <dt id="arg-reason">reason<a class="anchor" aria-label="anchor" href="#arg-reason"></a></dt>
-<dd><p>Host-supplied withdrawal reason.</p></dd>
+<dd><p>Withdrawal reason supplied by the host application.</p></dd>
 
 
 <dt id="arg-max-decisions">max_decisions<a class="anchor" aria-label="anchor" href="#arg-max-decisions"></a></dt>
@@ -96,8 +97,8 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A recorded withdrawal <a href="Decision.html">Decision</a>. The host transaction governs
-durability.</p>
+    <p>A recorded withdrawal <a href="Decision.html">Decision</a>. For PostgreSQL stores, the
+application controls the surrounding transaction and commit.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

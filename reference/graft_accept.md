@@ -1,6 +1,8 @@
-# Record an acceptance of exact retained evidence
+# Record acceptance of exact retained evidence
 
-Record an acceptance of exact retained evidence
+Record the host application's acceptance of a selection for a decision
+stream and purpose. The returned decision records who made the decision
+and why; it does not itself grant access to the selected artifacts.
 
 ## Usage
 
@@ -39,7 +41,7 @@ graft_accept(
 
 - stream:
 
-  Host-chosen decision stream.
+  A decision stream chosen and controlled by the host application.
 
 - expected:
 
@@ -49,19 +51,19 @@ graft_accept(
 
 - key:
 
-  Required stable host request key.
+  Required stable request key supplied by the host application.
 
 - actor:
 
-  Host-supplied actor identity.
+  Actor identity supplied by the host application.
 
 - reason:
 
-  Host-supplied review reason.
+  Review reason supplied by the host application.
 
 - purpose:
 
-  Host-supplied consultation purpose.
+  Purpose for which the host application records acceptance.
 
 - max_decisions:
 
@@ -73,7 +75,7 @@ graft_accept(
 
 - max_artifacts:
 
-  Maximum artifacts in the selected closure.
+  Maximum artifacts in the selected dependency set.
 
 - max_selection_bytes:
 
@@ -83,4 +85,5 @@ graft_accept(
 
 A recorded
 [Decision](https://jameshwade.github.io/graft/reference/Decision.md).
-The host transaction governs durability.
+For PostgreSQL stores, the application controls the surrounding
+transaction and commit.

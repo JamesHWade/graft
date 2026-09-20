@@ -24,5 +24,5 @@ graft_read(store, ref)
 
 ## Value
 
-A materialized
-[Artifact](https://jameshwade.github.io/graft/reference/Artifact.md).
+An [Artifact](https://jameshwade.github.io/graft/reference/Artifact.md)
+containing the retained bytes and metadata.

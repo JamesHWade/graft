@@ -1,11 +1,10 @@
 # Read a retained vocabulary release
 
 Resolve an exact release selection, verify it against the live artifact
-store, and reconstruct every release field from retained bytes. A
-supplied
+store, and reconstruct every release field from retained bytes. The
+function treats a supplied
 [VocabularyRelease](https://jameshwade.github.io/graft/reference/VocabularyRelease.md)
-is treated as a selection descriptor; its cached vocabulary fields are
-never trusted.
+as a selection descriptor. It never trusts the cached vocabulary fields.
 
 ## Usage
 
@@ -34,5 +33,5 @@ graft_read_vocabulary(store, release)
 
 ## Value
 
-A freshly materialized
+A freshly reconstructed
 [VocabularyRelease](https://jameshwade.github.io/graft/reference/VocabularyRelease.md).

@@ -1,8 +1,8 @@
 # Restore a verified backup into an empty artifact store
 
-Verify a closed backup and copy its exact objects into an empty local or
-transaction-scoped PostgreSQL artifact store. The target is verified
-again before its manifest is returned.
+Verify a closed backup, then copy its exact objects into an empty local
+or transaction-scoped PostgreSQL artifact store. Verify the target again
+before returning its manifest.
 
 ## Usage
 
@@ -60,6 +60,6 @@ The complete manifest of the verified restored target.
 
 The bundle is verified before any target object is written, then
 verified again after copying. The target must be empty and outside the
-bundle. A failed copy can leave a partial target; quarantine it and
+bundle. A failed copy can leave a partial target. Quarantine it and
 retry in a fresh empty target. The source bundle is never changed.
 PostgreSQL callers own the surrounding transaction and commit.

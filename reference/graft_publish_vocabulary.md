@@ -1,9 +1,9 @@
 # Publish a validated shared vocabulary release
 
 The source companion and its pinned dictionary files are validated by
-the upstream data-dict CLI and retained as one immutable artifact
-selection. The returned value is a typed release re-read from the store
-after publication.
+the upstream data-dict CLI and retained in one immutable artifact
+selection. After publication, the function reads the typed release back
+from the store and returns it.
 
 ## Usage
 

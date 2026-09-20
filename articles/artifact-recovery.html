@@ -75,18 +75,18 @@
     
     
 <p>Graft can preview exclusions and verify the exact objects retained in
-a separate store. This supplies one part of a permanent Forget workflow.
-The application must still authorize Forget, retire the old generation,
-prevent old backup admission, and arrange disposal. The example uses
-synthetic content and leaves the source unchanged.</p>
+a separate store. This is one step in a permanent Forget workflow. The
+application must still authorize Forget, retire the old generation,
+prevent old backups from being admitted, and arrange disposal. The
+example uses synthetic content and leaves the source unchanged.</p>
 <div class="section level2">
 <h2 id="preview-the-full-effect">Preview the full effect<a class="anchor" aria-label="anchor" href="#preview-the-full-effect"></a>
 </h2>
-<p>A correction does not remove the earlier revision. Exclusion starts
-with exact references supplied by the host and follows every declared
-dependency backwards: reports derived from the excluded evidence must
-also be excluded. To forget a logical record completely, the host
-supplies every revision covered by that authorization; selecting one
+<p>A correction leaves the earlier revision in place. Exclusion begins
+with exact references from the application and follows every declared
+dependency backwards, so reports derived from excluded evidence are
+excluded too. To forget a logical record completely, the application
+must supply every revision covered by the authorization. Selecting one
 revision does not select other revisions with the same artifact ID.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span></code></pre></div>
@@ -124,25 +124,25 @@ revision does not select other revisions with the same artifact ID.</p>
 <code class="sourceCode R"><span><span class="va">plan</span><span class="op">$</span><span class="va">removed</span><span class="op">$</span><span class="va">streams</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "review"</span></span></code></pre>
 <p>The plan excludes the private revision, its report, the selection,
-and the entire review stream. If that stream had later accepted a
-correction, it would still be excluded: its earlier records retain the
-forgotten selection. Independent streams keep their original history.
-Fresh acceptance of surviving material from an excluded stream requires
-a new host review.</p>
-<p>A dependency must be declared when the artifact is saved. Graft
-cannot discover private passages copied into unrelated payloads, titles,
-IDs, or decision reasons. The host supplies those additional artifact
-roots and <code>forget_streams</code>. Shared content bytes remain if a
+and the entire review stream. The stream remains excluded even if it
+later accepted a correction, because its earlier records retain the
+forgotten selection. Independent streams keep their original history. A
+fresh acceptance of surviving material from an excluded stream requires
+a new application review.</p>
+<p>Declare dependencies when saving an artifact. Graft cannot discover
+private passages copied into unrelated payloads, titles, IDs, or
+decision reasons. The application supplies any additional artifact roots
+and <code>forget_streams</code>. Shared content bytes remain when a
 surviving revision still uses them. Vocabulary releases follow the same
 exact dependency rules, including dictionary sources and literal
 context.</p>
 </div>
 <div class="section level2">
-<h2 id="copy-and-verify-survivors">Copy and verify survivors<a class="anchor" aria-label="anchor" href="#copy-and-verify-survivors"></a>
+<h2 id="copy-and-verify-the-remaining-artifacts">Copy and verify the remaining artifacts<a class="anchor" aria-label="anchor" href="#copy-and-verify-the-remaining-artifacts"></a>
 </h2>
-<p>The target must be empty. An edited plan or a changed source fails
-before copying. After copying, Graft verifies every target object and
-rechecks the source.</p>
+<p>The target must be empty. Graft rejects an edited plan or changed
+source before copying. After copying, it verifies every target object
+and rechecks the source.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">target</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">target_path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">verified</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_plan_replacement.html">graft_replace</a></span><span class="op">(</span><span class="va">source</span>, <span class="va">target</span>, <span class="va">plan</span><span class="op">)</span></span>
@@ -156,14 +156,14 @@ rechecks the source.</p>
 <span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">source</span>, <span class="va">private</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Synthetic private observation"</span></span></code></pre>
 <p>Excluded references and selections cannot be read from the
-replacement. The application must also reject references to the retired
-generation; it must not silently resolve an old reference against the
-replacement, even if its content survived. Graft’s low-level reads do
-not check generation admission.</p>
-<p>On failure, a partial target may remain. Keep it quarantined and
+replacement. The application must reject references to the retired
+generation. It must not silently resolve an old reference against the
+replacement, even when its content survived. Graft’s low-level reads do
+not check whether the generation is admitted.</p>
+<p>A partial target may remain after failure. Keep it quarantined and
 retry with a fresh empty store. These functions never delete either
-store or make a candidate visible to application readers. With
-PostgreSQL, commit the host transaction successfully before treating a
+store or expose a candidate to application readers. With PostgreSQL,
+commit the application-owned transaction successfully before treating a
 verified candidate as retained.</p>
 </div>
 <div class="section level2">
@@ -182,50 +182,50 @@ verified candidate as retained.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">source_path</span>, <span class="va">target_path</span><span class="op">)</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>A manifest records each object’s kind, storage key, byte count, and
-digest. It includes historical revisions, selections, and decisions, not
-just current accepted heads. Well-formed orphan content is inventoried
-but omitted from a replacement. Unknown entries, staging files, symbolic
-links, corrupt bytes, incomplete dependencies, or invalid history
-prevent certification.</p>
+digest. It includes historical revisions, selections, and decisions,
+rather than only current accepted heads. Well-formed orphan content is
+inventoried but omitted from a replacement. Unknown entries, staging
+files, symbolic links, corrupt bytes, incomplete dependencies, or
+invalid history prevent certification.</p>
 <p>The manifest and plan can contain private identifiers and linkable
-hashes. Treat them as restricted operational material, not public audit
-logs. Their digests provide integrity; they provide neither authenticity
-nor freshness.</p>
-<p>The defaults bound the inventory to 10,000 objects and 64 MiB of
-total stored bytes. <code>max_metadata_bytes</code> bounds selection
-metadata and each complete decision journal; artifact payload and
-revision limits also come from the store handle. The host must quiesce
-writers for the entire operation. Local files retain their trusted,
-single-writer model. PostgreSQL scope locks operate inside host-owned
-transactions; copying between stores is not a distributed
-transaction.</p>
+hashes. Keep them as restricted operational material rather than public
+audit logs. Their digests provide integrity; they provide neither
+authenticity nor freshness.</p>
+<p>By default, the inventory is limited to 10,000 objects and 64 MiB of
+stored bytes. <code>max_metadata_bytes</code> limits selection metadata
+and each complete decision journal. Artifact payload and revision limits
+also come from the store handle. The application must quiesce writers
+for the entire operation. Local files keep their trusted, single-writer
+model. PostgreSQL scope locks run inside application-owned transactions;
+copying between stores is not a distributed transaction.</p>
 </div>
 <div class="section level2">
-<h2 id="keep-restore-admission-outside-the-backup">Keep restore admission outside the backup<a class="anchor" aria-label="anchor" href="#keep-restore-admission-outside-the-backup"></a>
+<h2 id="keep-the-restore-decision-outside-the-backup">Keep the restore decision outside the backup<a class="anchor" aria-label="anchor" href="#keep-the-restore-decision-outside-the-backup"></a>
 </h2>
 <p>Before replacing an affected Reader generation, the application must
-durably retire it in an independent Forget journal. That journal must
-remain available when an older content backup is restored. The host
-checks current admission on reads, background jobs, cache delivery,
-imports, and restore; missing or stale journal state denies access. A
-checksum-matching old backup remains retired.</p>
+retire it durably in an independent Forget journal. The journal must
+remain available when an older content backup is restored. The
+application checks whether access is currently allowed for reads,
+background jobs, cache delivery, imports, and restore. Missing or stale
+journal state denies access. A checksum-matching old backup remains
+retired.</p>
 <p>The application also inventories external exports, provider context,
 Commons working files, indexes, and reuse checkpoints. Deleting a
 Conversation does not silently delete a separately accepted Memory or
 Artifact. Each requires the appropriate preview and authorization.</p>
-<p>Generation retirement prevents application resurrection only when
-every access path enforces it. It does not destroy offline copies,
-invalidate available encryption keys, or prove physical secure erasure.
-Graft’s synthetic replacement and restore tests do not establish those
-production guarantees.</p>
+<p>Generation retirement prevents an application from resurrecting
+content only when every access path enforces it. It does not destroy
+offline copies, invalidate available encryption keys, or prove physical
+secure erasure. Graft’s synthetic replacement and restore tests do not
+establish those production guarantees.</p>
 <p>The <a href="https://github.com/JamesHWade/graft/issues/48" class="external-link">Forget
 and restore gate</a> remains open until Rill’s actual workflow,
 independent durable journal, closed backups, and failure recovery are
 verified.</p>
-<p>The next implementation tasks are <a href="https://github.com/JamesHWade/rill/issues/106" class="external-link">Rill Reader
+<p>Next implementation tasks are <a href="https://github.com/JamesHWade/rill/issues/106" class="external-link">Rill Reader
 Forget</a> and <a href="https://github.com/JamesHWade/graft/issues/86" class="external-link">publication and
 journal recovery</a>. Graft now supplies <a href="artifact-backups.html">closed backup bundles and strict restore
-verification</a>; these mechanics do not complete the application
+verification</a>. These mechanics do not complete the application
 recovery protocol.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

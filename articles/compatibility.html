@@ -109,56 +109,55 @@
 <span><span class="co">## $vocabulary_release</span></span>
 <span><span class="co">## [1] "graft-vocabulary-release/1"</span></span></code></pre>
 <p>Graft requires R 4.3 or later and imports S7, digest, fs, jsonlite,
-and rlang. Publishing vocabulary additionally requires the data-dict R
-package and CLI; reading a published release requires neither the CLI
-nor original dictionary files.</p>
+and rlang. Publishing vocabulary also requires the data-dict R package
+and CLI. Reading a published release requires neither the CLI nor the
+original dictionary files.</p>
 <p>The consumer contract is <strong>4.0.0</strong>. Everyday work uses
 the task verbs <code><a href="../reference/graft_store.html">graft_store()</a></code>, <code><a href="../reference/graft_save.html">graft_save()</a></code>,
 <code><a href="../reference/graft_read.html">graft_read()</a></code>, <code><a href="../reference/graft_accept.html">graft_accept()</a></code>,
 <code><a href="../reference/graft_withdraw.html">graft_withdraw()</a></code>, <code><a href="../reference/graft_recall.html">graft_recall()</a></code>, and
-<code><a href="../reference/graft_history.html">graft_history()</a></code>, with S7 store and value classes. The old
-artifact-prefixed exports are removed; there are no compatibility
-aliases. Artifact bytes, selection formats, and content identities
-remain unchanged.</p>
-<p>The dictionary integration is pinned in <code>DESCRIPTION</code> to
-the validated data-dict source revision. Commons is host-owned: pass
+<code><a href="../reference/graft_history.html">graft_history()</a></code>, along with the S7 store and value classes.
+The old artifact-prefixed exports have been removed, and no
+compatibility aliases exist. Artifact bytes, selection formats, and
+content identities remain unchanged.</p>
+<p><code>DESCRIPTION</code> pins the dictionary integration to the
+validated data-dict source revision. Commons is application-owned. Pass
 retained vocabulary context and validated data to its public source API.
 Graft does not maintain a Commons connection adapter or copy executable
 agent tools.</p>
 <p>Applications such as Tempest and Rill adopt this public API in their
-own integration layers. They choose the evidence to retain, validate
-their domain results, and authorize reuse. Their contract 4 migration is
-tracked in <a href="https://github.com/JamesHWade/graft/issues/91" class="external-link">issue
-#91</a>.</p>
+integration layers. They choose which evidence to retain, validate their
+domain results, and authorize reuse. <a href="https://github.com/JamesHWade/graft/issues/91" class="external-link">Issue #91</a>
+tracks their contract 4 migration.</p>
 </div>
 <div class="section level2">
 <h2 id="native-chat-classes">Native chat classes<a class="anchor" aria-label="anchor" href="#native-chat-classes"></a>
 </h2>
 <p><code><a href="../reference/graft_tool.html">graft_tool()</a></code> returns an ordinary
-<code><a href="https://ellmer.tidyverse.org/reference/ToolDef.html" class="external-link">ellmer::ToolDef</a></code>; register it with an ellmer chat using
+<code><a href="https://ellmer.tidyverse.org/reference/ToolDef.html" class="external-link">ellmer::ToolDef</a></code>. Register it with an ellmer chat using
 <code>chat$register_tool()</code>. Each invocation returns a native
-<code><a href="https://ellmer.tidyverse.org/reference/Content.html" class="external-link">ellmer::ContentToolResult</a></code>, with optional
+<code><a href="https://ellmer.tidyverse.org/reference/Content.html" class="external-link">ellmer::ContentToolResult</a></code> and may include
 <code><a href="https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html" class="external-link">shinychat::tool_result_display()</a></code> metadata. The tool fixes
-the store, stream, and purpose when constructed and calls the
+the store, stream, and purpose when it is constructed, then calls the
 application’s eligibility function on every invocation.</p>
-<p>Graft’s S7 store is a separate object passed into this adapter. It
+<p>The adapter receives Graft’s S7 store as a separate object. The store
 does not inherit from ellmer’s chat class or implement shinychat’s
-conversation store. Those packages keep control of model calls, tool
-execution, and conversation state. Only explicit artifact bytes and
-canonical records are persisted; live chats, tools, and database
-connections are never serialized into the store.</p>
+conversation store. Those packages retain control of model calls, tool
+execution, and conversation state. The store persists only explicit
+artifact bytes and canonical records. It never serializes live chats,
+tools, or database connections.</p>
 </div>
 <div class="section level2">
 <h2 id="hard-cut-from-native-graph-apis">Hard cut from native graph APIs<a class="anchor" aria-label="anchor" href="#hard-cut-from-native-graph-apis"></a>
 </h2>
 <p>The graph store, schema compiler, plans, receipts, snapshots,
-calculation engine, and managed OKF tree have been removed. Native graph
-stores and snapshots cannot be opened by this package. Consumer upgrades
-remove those paths together with old persisted product schemas. Graft
-artifact, selection, decision, and vocabulary formats retain their
-existing content identities. Historical ADRs and migration notes
-describe the earlier architecture; they are retained as history rather
-than supported recipes.</p>
+calculation engine, and managed OKF tree have been removed. This package
+cannot open native graph stores or snapshots. Consumer upgrades remove
+those paths and old persisted product schemas. Graft artifact,
+selection, decision, and vocabulary formats retain their existing
+content identities. Historical ADRs and migration notes describe the
+earlier architecture. They remain historical records and are not
+supported recipes.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

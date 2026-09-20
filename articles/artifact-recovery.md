@@ -1,18 +1,18 @@
 # Verify a replacement artifact store
 
 Graft can preview exclusions and verify the exact objects retained in a
-separate store. This supplies one part of a permanent Forget workflow.
-The application must still authorize Forget, retire the old generation,
-prevent old backup admission, and arrange disposal. The example uses
-synthetic content and leaves the source unchanged.
+separate store. This is one step in a permanent Forget workflow. The
+application must still authorize Forget, retire the old generation,
+prevent old backups from being admitted, and arrange disposal. The
+example uses synthetic content and leaves the source unchanged.
 
 ## Preview the full effect
 
-A correction does not remove the earlier revision. Exclusion starts with
-exact references supplied by the host and follows every declared
-dependency backwards: reports derived from the excluded evidence must
-also be excluded. To forget a logical record completely, the host
-supplies every revision covered by that authorization; selecting one
+A correction leaves the earlier revision in place. Exclusion begins with
+exact references from the application and follows every declared
+dependency backwards, so reports derived from excluded evidence are
+excluded too. To forget a logical record completely, the application
+must supply every revision covered by the authorization. Selecting one
 revision does not select other revisions with the same artifact ID.
 
 ``` r
@@ -68,23 +68,23 @@ plan$removed$streams
     ## [1] "review"
 
 The plan excludes the private revision, its report, the selection, and
-the entire review stream. If that stream had later accepted a
-correction, it would still be excluded: its earlier records retain the
-forgotten selection. Independent streams keep their original history.
-Fresh acceptance of surviving material from an excluded stream requires
-a new host review.
+the entire review stream. The stream remains excluded even if it later
+accepted a correction, because its earlier records retain the forgotten
+selection. Independent streams keep their original history. A fresh
+acceptance of surviving material from an excluded stream requires a new
+application review.
 
-A dependency must be declared when the artifact is saved. Graft cannot
-discover private passages copied into unrelated payloads, titles, IDs,
-or decision reasons. The host supplies those additional artifact roots
-and `forget_streams`. Shared content bytes remain if a surviving
+Declare dependencies when saving an artifact. Graft cannot discover
+private passages copied into unrelated payloads, titles, IDs, or
+decision reasons. The application supplies any additional artifact roots
+and `forget_streams`. Shared content bytes remain when a surviving
 revision still uses them. Vocabulary releases follow the same exact
 dependency rules, including dictionary sources and literal context.
 
-## Copy and verify survivors
+## Copy and verify the remaining artifacts
 
-The target must be empty. An edited plan or a changed source fails
-before copying. After copying, Graft verifies every target object and
+The target must be empty. Graft rejects an edited plan or changed source
+before copying. After copying, it verifies every target object and
 rechecks the source.
 
 ``` r
@@ -112,16 +112,16 @@ graft_read(source, private)@data
     ## [1] "Synthetic private observation"
 
 Excluded references and selections cannot be read from the replacement.
-The application must also reject references to the retired generation;
-it must not silently resolve an old reference against the replacement,
-even if its content survived. Graft’s low-level reads do not check
-generation admission.
+The application must reject references to the retired generation. It
+must not silently resolve an old reference against the replacement, even
+when its content survived. Graft’s low-level reads do not check whether
+the generation is admitted.
 
-On failure, a partial target may remain. Keep it quarantined and retry
+A partial target may remain after failure. Keep it quarantined and retry
 with a fresh empty store. These functions never delete either store or
-make a candidate visible to application readers. With PostgreSQL, commit
-the host transaction successfully before treating a verified candidate
-as retained.
+expose a candidate to application readers. With PostgreSQL, commit the
+application-owned transaction successfully before treating a verified
+candidate as retained.
 
 ## Inspect a complete logical image
 
@@ -153,53 +153,54 @@ unlink(c(source_path, target_path), recursive = TRUE)
 ```
 
 A manifest records each object’s kind, storage key, byte count, and
-digest. It includes historical revisions, selections, and decisions, not
-just current accepted heads. Well-formed orphan content is inventoried
-but omitted from a replacement. Unknown entries, staging files, symbolic
-links, corrupt bytes, incomplete dependencies, or invalid history
-prevent certification.
+digest. It includes historical revisions, selections, and decisions,
+rather than only current accepted heads. Well-formed orphan content is
+inventoried but omitted from a replacement. Unknown entries, staging
+files, symbolic links, corrupt bytes, incomplete dependencies, or
+invalid history prevent certification.
 
 The manifest and plan can contain private identifiers and linkable
-hashes. Treat them as restricted operational material, not public audit
-logs. Their digests provide integrity; they provide neither authenticity
-nor freshness.
+hashes. Keep them as restricted operational material rather than public
+audit logs. Their digests provide integrity; they provide neither
+authenticity nor freshness.
 
-The defaults bound the inventory to 10,000 objects and 64 MiB of total
-stored bytes. `max_metadata_bytes` bounds selection metadata and each
-complete decision journal; artifact payload and revision limits also
-come from the store handle. The host must quiesce writers for the entire
-operation. Local files retain their trusted, single-writer model.
-PostgreSQL scope locks operate inside host-owned transactions; copying
-between stores is not a distributed transaction.
+By default, the inventory is limited to 10,000 objects and 64 MiB of
+stored bytes. `max_metadata_bytes` limits selection metadata and each
+complete decision journal. Artifact payload and revision limits also
+come from the store handle. The application must quiesce writers for the
+entire operation. Local files keep their trusted, single-writer model.
+PostgreSQL scope locks run inside application-owned transactions;
+copying between stores is not a distributed transaction.
 
-## Keep restore admission outside the backup
+## Keep the restore decision outside the backup
 
 Before replacing an affected Reader generation, the application must
-durably retire it in an independent Forget journal. That journal must
-remain available when an older content backup is restored. The host
-checks current admission on reads, background jobs, cache delivery,
-imports, and restore; missing or stale journal state denies access. A
-checksum-matching old backup remains retired.
+retire it durably in an independent Forget journal. The journal must
+remain available when an older content backup is restored. The
+application checks whether access is currently allowed for reads,
+background jobs, cache delivery, imports, and restore. Missing or stale
+journal state denies access. A checksum-matching old backup remains
+retired.
 
 The application also inventories external exports, provider context,
 Commons working files, indexes, and reuse checkpoints. Deleting a
 Conversation does not silently delete a separately accepted Memory or
 Artifact. Each requires the appropriate preview and authorization.
 
-Generation retirement prevents application resurrection only when every
-access path enforces it. It does not destroy offline copies, invalidate
-available encryption keys, or prove physical secure erasure. Graft’s
-synthetic replacement and restore tests do not establish those
-production guarantees.
+Generation retirement prevents an application from resurrecting content
+only when every access path enforces it. It does not destroy offline
+copies, invalidate available encryption keys, or prove physical secure
+erasure. Graft’s synthetic replacement and restore tests do not
+establish those production guarantees.
 
 The [Forget and restore
 gate](https://github.com/JamesHWade/graft/issues/48) remains open until
 Rill’s actual workflow, independent durable journal, closed backups, and
 failure recovery are verified.
 
-The next implementation tasks are [Rill Reader
+Next implementation tasks are [Rill Reader
 Forget](https://github.com/JamesHWade/rill/issues/106) and [publication
 and journal recovery](https://github.com/JamesHWade/graft/issues/86).
 Graft now supplies [closed backup bundles and strict restore
-verification](https://jameshwade.github.io/graft/articles/artifact-backups.md);
-these mechanics do not complete the application recovery protocol.
+verification](https://jameshwade.github.io/graft/articles/artifact-backups.md).
+These mechanics do not complete the application recovery protocol.

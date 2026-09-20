@@ -24,7 +24,7 @@ graft_history(
 
 - stream:
 
-  Host-chosen decision stream.
+  A decision stream chosen and controlled by the host application.
 
 - max_decisions:
 

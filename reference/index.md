@@ -3,7 +3,7 @@
 ## Everyday workflow
 
 - [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
-  : Preserve immutable artifact content
+  : Create or reopen a local artifact store
 - [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
   : Open a transaction-scoped PostgreSQL artifact store
 - [`graft_save()`](https://jameshwade.github.io/graft/reference/graft_save.md)
@@ -17,15 +17,15 @@
 - [`graft_read_selection()`](https://jameshwade.github.io/graft/reference/graft_read_selection.md)
   : Read one exact retained dependency selection
 - [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
-  : Record an acceptance of exact retained evidence
+  : Record acceptance of exact retained evidence
 - [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md)
   : Withdraw the current acceptance for a decision stream
 - [`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
-  : Recall the current accepted evidence for a stream
+  : Read the evidence currently accepted for a stream
 - [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
   : Read the chronological decision journal for one stream
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
-  : Expose reviewed content through a fixed read-only ellmer tool
+  : Create a fixed read-only ellmer tool for reviewed content
 
 ## Vocabulary and operations
 
@@ -56,13 +56,13 @@
 - [`ArtifactRef()`](https://jameshwade.github.io/graft/reference/ArtifactRef.md)
   : An exact immutable artifact reference
 - [`Artifact()`](https://jameshwade.github.io/graft/reference/Artifact.md)
-  : Materialized immutable artifact content
+  : An immutable artifact with its content loaded
 - [`ArtifactSelection()`](https://jameshwade.github.io/graft/reference/ArtifactSelection.md)
   : A verified artifact dependency selection
 - [`Decision()`](https://jameshwade.github.io/graft/reference/Decision.md)
   : A host decision recorded in an artifact stream
 - [`Recall()`](https://jameshwade.github.io/graft/reference/Recall.md) :
-  The result of a current reviewed-artifact lookup
+  A result from a current reviewed-artifact lookup
 - [`VocabularyRelease()`](https://jameshwade.github.io/graft/reference/VocabularyRelease.md)
   : A retained shared vocabulary release
 

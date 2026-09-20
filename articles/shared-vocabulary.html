@@ -75,17 +75,17 @@
     
     
 <p>Graft publishes a shared vocabulary alongside persistent artifacts.
-Data-dict owns each workflow’s table contract; Commons can use the
-published context and local dictionaries when running a workflow. Plain
-R can consume the same release.</p>
+Data-dict owns each workflow’s table contract. Commons can use the
+published context with its local dictionaries, and plain R can read the
+same release.</p>
 <div class="section level2">
 <h2 id="publish-one-release">Publish one release<a class="anchor" aria-label="anchor" href="#publish-one-release"></a>
 </h2>
 <p>The bundled example describes two laboratories that use different
-names, units, and measurement conditions. Concepts identify what their
-fields describe. Relationships state a direction with explicit domain
-and range concepts. Qualified bindings preserve each workflow’s table,
-field, identity scope, grain, and condition.</p>
+names, units, and measurement conditions. Concepts say what fields
+describe. Relationships give a direction and name their domain and range
+concepts. Qualified bindings keep each workflow’s table, field, identity
+scope, grain, and condition.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
 <span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"vocabulary"</span>, <span class="st">"v1"</span>, <span class="st">"bindings.json"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span></span>
@@ -95,29 +95,28 @@ field, identity scope, grain, and condition.</p>
 <span><span class="va">release</span><span class="op">@</span><span class="va">selection</span><span class="op">@</span><span class="va">id</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">reopened</span><span class="op">@</span><span class="va">context</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Publishing requires <code>datadict</code> and its data-dict binary.
-Graft calls the public <code>validate-spec</code> and
+Graft runs the public <code>validate-spec</code> and
 <code>export-spec</code> commands against captured dictionary bytes. It
-preserves the exact companion JSON, vocabulary JSON, dictionary YAML,
+keeps the exact companion JSON, vocabulary JSON, dictionary YAML,
 resolved exports, validation provenance (including the binary digest),
-and generated Markdown in one artifact selection. Each source file is
-limited to 1 MiB and must be self-contained. A release can contain at
-most 498 dictionaries; its sources and generated outputs must fit the
+and generated Markdown in one artifact selection. Each source file must
+be self-contained and is limited to 1 MiB. A release can contain at most
+498 dictionaries, and its sources and generated outputs must fit the
 artifact store’s aggregate byte limit. Graft checks the dictionary count
-and source sizes before running data-dict, then the complete encoded
-release before writing any artifacts. It does not parse dictionary YAML
-or evaluate expressions.</p>
-<p>Reads verify the entire artifact closure and rebuild the context from
-the retained release. They need neither the original files nor an
-installed data-dict binary. This is content integrity, not a signature
+and source sizes before running data-dict, then checks the fully encoded
+release before writing artifacts. It does not parse dictionary YAML or
+evaluate expressions.</p>
+<p>Reads verify every artifact in the retained release and rebuild the
+context from it. They need neither the original files nor an installed
+data-dict binary. This checks content integrity. It is not a signature
 or independent proof of the publisher’s identity or claims. Stores
 retain the trusted local, single-writer limits described in <a href="persistent-artifacts.html">persistent artifacts</a>.</p>
 <p><code><a href="../reference/graft_publish_vocabulary.html">graft_publish_vocabulary()</a></code> returns a
 <code>VocabularyRelease</code>. Its <code>@selection</code> property is
 an <code>ArtifactSelection</code>, so applications can retain the exact
-release selection without handling a bare digest.
-<code><a href="../reference/graft_read_vocabulary.html">graft_read_vocabulary()</a></code> accepts that release, an
-<code>ArtifactSelection</code>, or the exact selection digest when
-reopening it.</p>
+release selection without handling a bare digest. When reopening the
+release, <code><a href="../reference/graft_read_vocabulary.html">graft_read_vocabulary()</a></code> accepts the release, an
+<code>ArtifactSelection</code>, or the exact selection digest.</p>
 </div>
 <div class="section level2">
 <h2 id="companion-format">Companion format<a class="anchor" aria-label="anchor" href="#companion-format"></a>
@@ -163,47 +162,48 @@ sibling <code>path</code>, and <code>sha256</code> references</td>
 </tbody>
 </table>
 <p>Vocabulary files use <code>graft-vocabulary/1</code>, a
-<code>release</code>, and an array of <code>terms</code>. Every term has
+<code>release</code>, and an array of <code>terms</code>. Each term has
 a stable <code>id</code>, <code>kind</code> (<code>concept</code> or
 <code>relationship</code>), <code>definition</code>, and an array of
-<code>aliases</code>. Relationships additionally name
-<code>domain</code> and <code>range</code> concept IDs. Aliases are
-descriptive labels; they do not create equivalence or resolution
-rules.</p>
-<p>Every binding has <code>id</code>, <code>kind</code>,
+<code>aliases</code>. A relationship also names <code>domain</code> and
+<code>range</code> concept IDs. Aliases are descriptive labels. They do
+not create equivalence or resolution rules.</p>
+<p>Each binding has <code>id</code>, <code>kind</code>,
 <code>dictionary</code>, <code>table</code>, <code>term</code>,
 <code>scope</code>, <code>grain</code>, and <code>condition</code>. A
 concept binding names one <code>field</code>; a relationship binding
 names <code>from</code> and <code>to</code> fields. Each endpoint must
-have a concept binding matching the relationship’s domain or range and
-its scope, grain, and condition. Multiple concepts for one
-dictionary/table/field are rejected, even if differently qualified.</p>
-<p>Every assertion has <code>id</code>, <code>subject</code>,
+have a concept binding that matches the relationship’s domain or range
+and its scope, grain, and condition. Graft rejects multiple concepts for
+one dictionary/table/field, even when they have different
+qualifications.</p>
+<p>Each assertion has <code>id</code>, <code>subject</code>,
 <code>predicate</code>, <code>object</code>, <code>source</code>,
 <code>status</code>, <code>negated</code>, <code>time</code>, and
 <code>scope</code>. The predicate must name a declared relationship.
 Status is <code>draft</code>, <code>accepted</code>, or
 <code>retracted</code>; negation is Boolean. Subjects and objects are
-opaque application identities: their actual membership in domain and
-range is not checked. These values are publisher statements, not Graft
-decisions. Time and condition are descriptive strings, not executable
-rules.</p>
+opaque application identities, and Graft does not check whether they
+belong to the domain and range. These values are publisher statements,
+not Graft decisions. Time and condition are descriptive strings, not
+executable rules.</p>
 <p>See the <a href="https://github.com/JamesHWade/graft/tree/main/inst/examples/vocabulary" class="external-link">complete
-example files</a> for every field. Missing, unknown, duplicate, or
-ambiguous bindings fail publication.</p>
+example files</a> for every field. Publication fails when bindings are
+missing, unknown, duplicate, or ambiguous.</p>
 </div>
 <div class="section level2">
 <h2 id="use-the-same-release-in-r-and-commons">Use the same release in R and Commons<a class="anchor" aria-label="anchor" href="#use-the-same-release-in-r-and-commons"></a>
 </h2>
 <p>Plain R can inspect a binding and select its local field without
 guessing a join. <code>@bindings</code> is the retained companion
-record; its <code>bindings</code> member is ordinary wire data:</p>
+record, and its <code>bindings</code> member contains the raw binding
+fields from the file:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bindings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">$</span><span class="va">kind</span> <span class="op">==</span> <span class="st">"concept"</span> <span class="op">&amp;&amp;</span></span>
 <span>  <span class="va">x</span><span class="op">$</span><span class="va">term</span> <span class="op">==</span> <span class="st">"urn:example:temperature"</span>, <span class="va">release</span><span class="op">@</span><span class="va">bindings</span><span class="op">$</span><span class="va">bindings</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">bindings</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dictionary"</span>, <span class="st">"table"</span>, <span class="st">"field"</span>, <span class="st">"scope"</span>, <span class="st">"grain"</span>, <span class="st">"condition"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<p>A Commons caller supplies the same generated context alongside its
-own dictionary:</p>
+<p>A Commons caller supplies the generated context alongside its own
+dictionary:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">context_file</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".md"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">release</span><span class="op">@</span><span class="va">context</span>, <span class="va">context_file</span><span class="op">)</span></span>
@@ -215,21 +215,22 @@ own dictionary:</p>
 <span><span class="co"># Supply context and source to the Commons host; retain release@references</span></span>
 <span><span class="co"># and release@selection with resulting artifacts.</span></span></code></pre></div>
 <p>The integration test constructs a real Commons object with the
-published context; this checks constructor consumption, not model
-retrieval quality or factual reasoning. Shared concepts do not establish
-safe joins, comparable units, access permission, or execution authority.
-Negated and retracted assertions remain qualified data. There is no
-ontology reasoner, unit converter, new expression compiler, or automatic
-procedure selection.</p>
+published context. It checks that Commons accepts and uses the context
+when constructing the object, not model retrieval quality or factual
+reasoning. Shared concepts do not establish safe joins, comparable
+units, access permission, or execution authority. Negated and retracted
+assertions keep those statuses and remain data; they do not become Graft
+decisions. There is no ontology reasoner, unit converter, new expression
+compiler, or automatic procedure selection.</p>
 </div>
 <div class="section level2">
 <h2 id="retain-earlier-releases">Retain earlier releases<a class="anchor" aria-label="anchor" href="#retain-earlier-releases"></a>
 </h2>
-<p>Publish changed dictionaries and bindings as a new release and keep
-both selection digests. A historical reader resolves exact bytes, never
-a mutable latest pointer. Publication itself does not accept the
-release: hosts can use Graft’s decision journal when review and current
-eligibility are needed.</p>
+<p>Publish changed dictionaries and bindings as a new release, and keep
+both selection digests. A reader of an older release resolves its exact
+bytes rather than a mutable latest pointer. Publication does not accept
+the release. A host can use Graft’s decision journal when review and a
+current use check are needed.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">next_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"vocabulary"</span>, <span class="st">"v2"</span>, <span class="st">"bindings.json"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span></span>
 <span><span class="va">next_release</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_publish_vocabulary.html">graft_publish_vocabulary</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">next_path</span><span class="op">)</span></span>

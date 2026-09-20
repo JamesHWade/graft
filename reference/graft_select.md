@@ -1,6 +1,8 @@
 # Capture and verify an exact dependency selection
 
-Capture and verify an exact dependency selection
+Save the roots and their complete verified dependency set as one
+immutable selection. The selection records references to artifacts; it
+does not grant approval or access.
 
 ## Usage
 

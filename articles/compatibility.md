@@ -38,9 +38,9 @@ graft::graft_contract_version()
     ## [1] "graft-vocabulary-release/1"
 
 Graft requires R 4.3 or later and imports S7, digest, fs, jsonlite, and
-rlang. Publishing vocabulary additionally requires the data-dict R
-package and CLI; reading a published release requires neither the CLI
-nor original dictionary files.
+rlang. Publishing vocabulary also requires the data-dict R package and
+CLI. Reading a published release requires neither the CLI nor the
+original dictionary files.
 
 The consumer contract is **4.0.0**. Everyday work uses the task verbs
 [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md),
@@ -51,48 +51,49 @@ The consumer contract is **4.0.0**. Everyday work uses the task verbs
 [`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md),
 and
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md),
-with S7 store and value classes. The old artifact-prefixed exports are
-removed; there are no compatibility aliases. Artifact bytes, selection
-formats, and content identities remain unchanged.
+along with the S7 store and value classes. The old artifact-prefixed
+exports have been removed, and no compatibility aliases exist. Artifact
+bytes, selection formats, and content identities remain unchanged.
 
-The dictionary integration is pinned in `DESCRIPTION` to the validated
-data-dict source revision. Commons is host-owned: pass retained
-vocabulary context and validated data to its public source API. Graft
-does not maintain a Commons connection adapter or copy executable agent
-tools.
+`DESCRIPTION` pins the dictionary integration to the validated data-dict
+source revision. Commons is application-owned. Pass retained vocabulary
+context and validated data to its public source API. Graft does not
+maintain a Commons connection adapter or copy executable agent tools.
 
-Applications such as Tempest and Rill adopt this public API in their own
-integration layers. They choose the evidence to retain, validate their
-domain results, and authorize reuse. Their contract 4 migration is
-tracked in [issue \#91](https://github.com/JamesHWade/graft/issues/91).
+Applications such as Tempest and Rill adopt this public API in their
+integration layers. They choose which evidence to retain, validate their
+domain results, and authorize reuse. [Issue
+\#91](https://github.com/JamesHWade/graft/issues/91) tracks their
+contract 4 migration.
 
 ## Native chat classes
 
 [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
 returns an ordinary
-[`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/ToolDef.html);
-register it with an ellmer chat using `chat$register_tool()`. Each
+[`ellmer::ToolDef`](https://ellmer.tidyverse.org/reference/ToolDef.html).
+Register it with an ellmer chat using `chat$register_tool()`. Each
 invocation returns a native
-[`ellmer::ContentToolResult`](https://ellmer.tidyverse.org/reference/Content.html),
-with optional
+[`ellmer::ContentToolResult`](https://ellmer.tidyverse.org/reference/Content.html)
+and may include
 [`shinychat::tool_result_display()`](https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html)
-metadata. The tool fixes the store, stream, and purpose when constructed
-and calls the application’s eligibility function on every invocation.
+metadata. The tool fixes the store, stream, and purpose when it is
+constructed, then calls the application’s eligibility function on every
+invocation.
 
-Graft’s S7 store is a separate object passed into this adapter. It does
-not inherit from ellmer’s chat class or implement shinychat’s
-conversation store. Those packages keep control of model calls, tool
-execution, and conversation state. Only explicit artifact bytes and
-canonical records are persisted; live chats, tools, and database
-connections are never serialized into the store.
+The adapter receives Graft’s S7 store as a separate object. The store
+does not inherit from ellmer’s chat class or implement shinychat’s
+conversation store. Those packages retain control of model calls, tool
+execution, and conversation state. The store persists only explicit
+artifact bytes and canonical records. It never serializes live chats,
+tools, or database connections.
 
 ## Hard cut from native graph APIs
 
 The graph store, schema compiler, plans, receipts, snapshots,
-calculation engine, and managed OKF tree have been removed. Native graph
-stores and snapshots cannot be opened by this package. Consumer upgrades
-remove those paths together with old persisted product schemas. Graft
-artifact, selection, decision, and vocabulary formats retain their
-existing content identities. Historical ADRs and migration notes
-describe the earlier architecture; they are retained as history rather
-than supported recipes.
+calculation engine, and managed OKF tree have been removed. This package
+cannot open native graph stores or snapshots. Consumer upgrades remove
+those paths and old persisted product schemas. Graft artifact,
+selection, decision, and vocabulary formats retain their existing
+content identities. Historical ADRs and migration notes describe the
+earlier architecture. They remain historical records and are not
+supported recipes.

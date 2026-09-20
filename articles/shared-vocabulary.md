@@ -1,17 +1,17 @@
 # Shared concepts across workflows
 
 Graft publishes a shared vocabulary alongside persistent artifacts.
-Data-dict owns each workflow’s table contract; Commons can use the
-published context and local dictionaries when running a workflow. Plain
-R can consume the same release.
+Data-dict owns each workflow’s table contract. Commons can use the
+published context with its local dictionaries, and plain R can read the
+same release.
 
 ## Publish one release
 
 The bundled example describes two laboratories that use different names,
-units, and measurement conditions. Concepts identify what their fields
-describe. Relationships state a direction with explicit domain and range
-concepts. Qualified bindings preserve each workflow’s table, field,
-identity scope, grain, and condition.
+units, and measurement conditions. Concepts say what fields describe.
+Relationships give a direction and name their domain and range concepts.
+Qualified bindings keep each workflow’s table, field, identity scope,
+grain, and condition.
 
 ``` r
 
@@ -24,21 +24,21 @@ release@selection@id
 cat(paste(reopened@context, collapse = "\n"))
 ```
 
-Publishing requires `datadict` and its data-dict binary. Graft calls the
+Publishing requires `datadict` and its data-dict binary. Graft runs the
 public `validate-spec` and `export-spec` commands against captured
-dictionary bytes. It preserves the exact companion JSON, vocabulary
-JSON, dictionary YAML, resolved exports, validation provenance
-(including the binary digest), and generated Markdown in one artifact
-selection. Each source file is limited to 1 MiB and must be
-self-contained. A release can contain at most 498 dictionaries; its
-sources and generated outputs must fit the artifact store’s aggregate
-byte limit. Graft checks the dictionary count and source sizes before
-running data-dict, then the complete encoded release before writing any
-artifacts. It does not parse dictionary YAML or evaluate expressions.
+dictionary bytes. It keeps the exact companion JSON, vocabulary JSON,
+dictionary YAML, resolved exports, validation provenance (including the
+binary digest), and generated Markdown in one artifact selection. Each
+source file must be self-contained and is limited to 1 MiB. A release
+can contain at most 498 dictionaries, and its sources and generated
+outputs must fit the artifact store’s aggregate byte limit. Graft checks
+the dictionary count and source sizes before running data-dict, then
+checks the fully encoded release before writing artifacts. It does not
+parse dictionary YAML or evaluate expressions.
 
-Reads verify the entire artifact closure and rebuild the context from
-the retained release. They need neither the original files nor an
-installed data-dict binary. This is content integrity, not a signature
+Reads verify every artifact in the retained release and rebuild the
+context from it. They need neither the original files nor an installed
+data-dict binary. This checks content integrity. It is not a signature
 or independent proof of the publisher’s identity or claims. Stores
 retain the trusted local, single-writer limits described in [persistent
 artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
@@ -46,10 +46,10 @@ artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
 [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
 returns a `VocabularyRelease`. Its `@selection` property is an
 `ArtifactSelection`, so applications can retain the exact release
-selection without handling a bare digest.
+selection without handling a bare digest. When reopening the release,
 [`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md)
-accepts that release, an `ArtifactSelection`, or the exact selection
-digest when reopening it.
+accepts the release, an `ArtifactSelection`, or the exact selection
+digest.
 
 ## Companion format
 
@@ -65,36 +65,37 @@ A `graft-bindings/1` JSON file has six fields:
 | `assertions` | Array of explicitly qualified assertions, which may be empty |
 
 Vocabulary files use `graft-vocabulary/1`, a `release`, and an array of
-`terms`. Every term has a stable `id`, `kind` (`concept` or
-`relationship`), `definition`, and an array of `aliases`. Relationships
-additionally name `domain` and `range` concept IDs. Aliases are
-descriptive labels; they do not create equivalence or resolution rules.
+`terms`. Each term has a stable `id`, `kind` (`concept` or
+`relationship`), `definition`, and an array of `aliases`. A relationship
+also names `domain` and `range` concept IDs. Aliases are descriptive
+labels. They do not create equivalence or resolution rules.
 
-Every binding has `id`, `kind`, `dictionary`, `table`, `term`, `scope`,
+Each binding has `id`, `kind`, `dictionary`, `table`, `term`, `scope`,
 `grain`, and `condition`. A concept binding names one `field`; a
 relationship binding names `from` and `to` fields. Each endpoint must
-have a concept binding matching the relationship’s domain or range and
-its scope, grain, and condition. Multiple concepts for one
-dictionary/table/field are rejected, even if differently qualified.
+have a concept binding that matches the relationship’s domain or range
+and its scope, grain, and condition. Graft rejects multiple concepts for
+one dictionary/table/field, even when they have different
+qualifications.
 
-Every assertion has `id`, `subject`, `predicate`, `object`, `source`,
+Each assertion has `id`, `subject`, `predicate`, `object`, `source`,
 `status`, `negated`, `time`, and `scope`. The predicate must name a
 declared relationship. Status is `draft`, `accepted`, or `retracted`;
 negation is Boolean. Subjects and objects are opaque application
-identities: their actual membership in domain and range is not checked.
-These values are publisher statements, not Graft decisions. Time and
-condition are descriptive strings, not executable rules.
+identities, and Graft does not check whether they belong to the domain
+and range. These values are publisher statements, not Graft decisions.
+Time and condition are descriptive strings, not executable rules.
 
 See the [complete example
 files](https://github.com/JamesHWade/graft/tree/main/inst/examples/vocabulary)
-for every field. Missing, unknown, duplicate, or ambiguous bindings fail
-publication.
+for every field. Publication fails when bindings are missing, unknown,
+duplicate, or ambiguous.
 
 ## Use the same release in R and Commons
 
 Plain R can inspect a binding and select its local field without
-guessing a join. `@bindings` is the retained companion record; its
-`bindings` member is ordinary wire data:
+guessing a join. `@bindings` is the retained companion record, and its
+`bindings` member contains the raw binding fields from the file:
 
 ``` r
 
@@ -103,7 +104,7 @@ bindings <- Filter(function(x) x$kind == "concept" &&
 lapply(bindings, function(x) x[c("dictionary", "table", "field", "scope", "grain", "condition")])
 ```
 
-A Commons caller supplies the same generated context alongside its own
+A Commons caller supplies the generated context alongside its own
 dictionary:
 
 ``` r
@@ -120,20 +121,21 @@ source <- commons::data_source(
 ```
 
 The integration test constructs a real Commons object with the published
-context; this checks constructor consumption, not model retrieval
-quality or factual reasoning. Shared concepts do not establish safe
-joins, comparable units, access permission, or execution authority.
-Negated and retracted assertions remain qualified data. There is no
-ontology reasoner, unit converter, new expression compiler, or automatic
-procedure selection.
+context. It checks that Commons accepts and uses the context when
+constructing the object, not model retrieval quality or factual
+reasoning. Shared concepts do not establish safe joins, comparable
+units, access permission, or execution authority. Negated and retracted
+assertions keep those statuses and remain data; they do not become Graft
+decisions. There is no ontology reasoner, unit converter, new expression
+compiler, or automatic procedure selection.
 
 ## Retain earlier releases
 
-Publish changed dictionaries and bindings as a new release and keep both
-selection digests. A historical reader resolves exact bytes, never a
-mutable latest pointer. Publication itself does not accept the release:
-hosts can use Graft’s decision journal when review and current
-eligibility are needed.
+Publish changed dictionaries and bindings as a new release, and keep
+both selection digests. A reader of an older release resolves its exact
+bytes rather than a mutable latest pointer. Publication does not accept
+the release. A host can use Graft’s decision journal when review and a
+current use check are needed.
 
 ``` r
 

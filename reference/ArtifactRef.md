@@ -1,8 +1,8 @@
 # An exact immutable artifact reference
 
 `ArtifactRef` identifies one logical artifact identity and one immutable
-revision. It is a value descriptor; it does not grant access to the
-artifact.
+revision. It only identifies the artifact; it does not grant access to
+it.
 
 ## Usage
 

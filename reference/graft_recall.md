@@ -1,6 +1,11 @@
-# Recall the current accepted evidence for a stream
+# Read the evidence currently accepted for a stream
 
-Recall the current accepted evidence for a stream
+Check the host application's current eligibility decision and the
+stream's current decision. When the current decision accepts evidence
+for the requested purpose, return its selection and verified artifacts.
+The function checks the decision head again after reading the artifacts;
+if it changed, it errors instead of returning a mixed result. The result
+is a point-in-time check, not an access token.
 
 ## Usage
 
@@ -28,15 +33,16 @@ graft_recall(
 
 - stream:
 
-  Host-chosen decision stream.
+  A decision stream chosen and controlled by the host application.
 
 - purpose:
 
-  Required consultation purpose.
+  Purpose for which consultation is requested.
 
 - eligible:
 
-  Fresh explicit host eligibility decision.
+  Fresh boolean supplied by the host application indicating whether
+  consultation is currently allowed.
 
 - max_decisions:
 
@@ -48,7 +54,7 @@ graft_recall(
 
 - max_artifacts:
 
-  Maximum artifacts in the selected closure.
+  Maximum artifacts in the selected dependency set.
 
 - max_selection_bytes:
 

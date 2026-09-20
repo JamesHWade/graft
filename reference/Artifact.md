@@ -1,8 +1,8 @@
-# Materialized immutable artifact content
+# An immutable artifact with its content loaded
 
-An `Artifact` contains exact bytes together with the media type and
-exact dependency references recorded with those bytes. `data` is decoded
-text for `text/*` media types and raw bytes for all other media types.
+An `Artifact` contains exact bytes, their media type, and the exact
+dependency references recorded with them. `data` is decoded text for
+`text/*` media types and raw bytes for all other media types.
 
 ## Usage
 

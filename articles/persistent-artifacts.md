@@ -1,18 +1,18 @@
 # Persistent artifacts and selected memory
 
-Your saved work should survive both the end of an R session and a change
-in the software that stores it. Graft preserves reports, tables, figures
+Saved work should remain available after an R session ends and after the
+software that stores it changes. Graft keeps reports, tables, figures,
 and the exact evidence selected for later workflows. Its decision
-journal records host reviews and separates historical inspection from
-current reuse.
+journal records host reviews and distinguishes historical inspection
+from current reuse.
 
 ## Save and reopen exact content
 
-The shared local artifact interface preserves opaque bytes and verifies
-them when read. It supports trusted local files with a single writer.
-Application approval, access, concurrent publication, power-loss
-durability and permanent erasure remain separate requirements; saving
-these bytes grants no approval.
+The shared local artifact interface preserves opaque bytes and checks
+them when they are read. It supports trusted local files with one
+writer. Applications still need their own rules for approval, access,
+concurrent publication, power-loss durability, and permanent erasure.
+Saving bytes does not approve them for use.
 
 ``` r
 
@@ -54,18 +54,18 @@ graft_read(reopened, corrected)@data
 unlink(path, recursive = TRUE)
 ```
 
-`ArtifactRef` values contain an identity and immutable revision. Retain
-them with your workflow; the store deliberately has no automatic latest
+`ArtifactRef` values contain an identity and immutable revision. Keep
+them with the workflow that uses them. The store has no automatic latest
 or approved selection. This project is pre-production. Consumer contract
-4 uses typed S7 stores and values; the earlier graph/compiler
+4 uses typed S7 stores and values. The earlier graph/compiler
 experiments remain historical evidence, not installed storage code.
 
 ## Pin evidence and shared meaning
 
-A dependency is an exact artifact reference. Store dictionary and
+A dependency is an exact artifact reference. Save dictionary and
 vocabulary releases as content, then reference them alongside the
-evidence used in a report. The selection preserves their bytes; it does
-not evaluate expressions or infer that two measurements are comparable.
+evidence for a report. The selection preserves their bytes. It does not
+evaluate expressions or infer that two measurements are comparable.
 
 ``` r
 
@@ -102,28 +102,29 @@ reopened_selection@artifacts
 unlink(path, recursive = TRUE)
 ```
 
-The returned `ArtifactSelection` includes the report, dictionary and
-vocabulary revisions in its `@artifacts` list. `max_metadata_bytes`
-separately bounds encoded selection metadata (1 MiB by default).
-Increase it for many long artifact identities and pass that limit on
-both selection creation and reading. Similarly, open the store with a
-larger `max_revision_bytes` (default 1 MiB) when saving or reading
-artifacts whose dependency lists produce large revision manifests.
+The returned `ArtifactSelection` includes the report, dictionary, and
+vocabulary revisions in `@artifacts`. `max_metadata_bytes` separately
+limits encoded selection metadata (1 MiB by default). Increase it when
+artifact identities are numerous or long, and pass the same limit when
+creating and reading the selection. Likewise, open the store with a
+larger `max_revision_bytes` (default 1 MiB) when dependency lists create
+large revision manifests.
 
-`max_artifacts` bounds traversal and the store’s `max_bytes` bounds
-total selected payload bytes. Reading rechecks the entire closure. Save
-the selection identifier with the application workflow, then apply its
-own access and reuse decisions. The decision functions below record host
-acceptance; a selection alone is not accepted memory. The tiny
-dictionary above illustrates opaque preservation, not a validated
-data-dict contract.
+`max_artifacts` limits traversal, and the store’s `max_bytes` limits the
+total selected payload bytes. Reading checks the full dependency chain
+again. Save the selection identifier with the application workflow, then
+apply the application’s access and reuse decisions. The decision
+functions below record application approval; a selection alone is not
+accepted memory. The small dictionary above shows that Graft keeps
+supplied bytes without interpreting them. It does not demonstrate a
+validated data-dict contract.
 
 ## Record acceptance and withdrawal
 
 Applications decide whether a candidate is acceptable and who may use
-it. Graft records those decisions against exact selections. A stream
-names one independently reviewed subject; a new operation key represents
-a new review, even when its selection is unchanged.
+it. Graft records each decision against an exact selection. A stream
+names one independently reviewed subject. A new operation key starts a
+new review even when the selection has not changed.
 
 ``` r
 
@@ -169,42 +170,43 @@ graft_history(store, "research:topic")[[2L]]@action
 unlink(path, recursive = TRUE)
 ```
 
-The `eligible = TRUE` argument represents the application’s current
-policy check; it is not an authentication mechanism. Recall also
-requires the current accepted head, an exact purpose match and intact
-selected content. The earlier acceptance remains inspectable through
+The `eligible = TRUE` argument stands in for the application’s current
+check that the material may be used; it does not authenticate anyone.
+Recall also requires the current accepted head, an exact purpose match,
+and intact selected content. The earlier acceptance remains available
+through
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
-after withdrawal, but cannot pass current recall. Exact
+after withdrawal, but it cannot pass current recall. Authorized
+historical inspection can still use exact
 [`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md)
-calls remain available for authorized historical inspection;
-applications must enforce access on every route.
+calls. Applications must enforce access on every route.
 
 Each `Decision@selection` is an exact selection digest.
 `Recall@selection` is the verified `ArtifactSelection`, while
 `Recall@roots` and `Recall@artifacts` contain materialized `Artifact`
 values. A withdrawal derives its purpose and selection from the verified
-predecessor, so callers cannot replace them with mutated properties.
+predecessor, so callers cannot replace them with changed properties.
 
 Always supply the predecessor observed during review. An identical retry
-returns its original historical record and never restores eligibility. A
-changed retry or stale new request fails. Withdrawal needs intact
-decision history but remains possible when selected payloads are corrupt
-or unavailable.
+returns its original historical record and does not restore eligibility.
+A changed retry or a stale new request fails. Withdrawal needs intact
+decision history, but it can still proceed when selected payloads are
+corrupt or unavailable.
 
-Each stream uses a bounded, append-only journal. Defaults allow 1,000
-decisions and 1 MiB of aggregate journal metadata; selection bounds are
-independent. Staging is not a committed decision. A complete immutable
-record is the commit point, so an interrupted request can be retried
-without duplicating acceptance. Concurrent writers, power-loss
-durability and backup recovery remain separate operational work.
+Each stream uses a bounded, append-only journal. The defaults allow
+1,000 decisions and 1 MiB of aggregate journal metadata; selection
+bounds are independent. Staging is not a committed decision. A complete
+immutable record is the commit point, so an interrupted request can be
+retried without duplicating acceptance. Concurrent writers, power-loss
+durability, and backup recovery are separate operational work.
 
 ## From analysis to later reuse
 
-Suppose Commons produces a report, table, and figure. A useful artifact
-layer preserves their contents, stable identities, revisions, and
-references to the exact inputs and meaning used to produce them. A
-correction creates a new result while the original remains available for
-historical inspection.
+Suppose Commons produces a report, table, and figure. The artifact layer
+can keep their contents, stable identities, revisions, and references to
+the exact inputs and meaning used to produce them. A correction creates
+a new result while the original remains available for historical
+inspection.
 
 | Concern | Proposed owner |
 |----|----|
@@ -215,61 +217,63 @@ historical inspection.
 | Approval, access, reuse purpose, withdrawal, and active task lifetime | The application |
 
 The vocabulary publisher connects domain concepts across workflows. A
-binding can associate two local fields with the same concept while
-retaining their source dictionaries and units. It does not by itself
-establish that their values can be joined or compared.
+binding can associate two local fields with one concept while retaining
+their source dictionaries and units. It does not establish that their
+values can be joined or compared.
 
 ## Persistent artifacts provide material for memory
 
 A later workflow might select an approved interpretation, a dictionary
 release, and three earlier results. The saved selection records those
-exact revisions and their dependencies. An unchanged day retains the
-full selection even when there is no new acceptance receipt.
+exact revisions and dependencies. The full selection remains available
+even when no new acceptance receipt is recorded.
 
-Saving a draft and approving its reuse are separate actions. The
-application checks current eligibility when it starts a new workflow.
-Corrections and returning to an earlier input revision do not
-automatically reapprove a withdrawn selection. The prototype permits the
-application to explicitly approve it again; the application owns who may
-do that and for what purpose. Historical access does not imply
-permission to use that evidence in a new task.
+Saving a draft and approving reuse are separate actions. When a new
+workflow starts, the application checks current eligibility. A
+correction or a return to an earlier input revision does not reapprove a
+withdrawn selection. The prototype lets the application approve it again
+explicitly. The application decides who may do that and for what
+purpose. Historical access does not grant permission to use the evidence
+in a new task.
 
 The application also owns cancellation of active work, Reader identity,
 and permanent Forget. A stored selection cannot erase copies already
 given to a model.
 
-## What “replaceable” means
+## What replaceable means
 
-Applications retain exact artifacts, dependency selections, and host
-decisions. They do not depend on graph tables, a schema compiler, or
-native store objects. A future storage implementation must preserve
-those identities and history; Graft does not yet expose a pluggable
+Applications retain exact artifacts, dependency selections, and
+application decisions. They do not depend on graph tables, a schema
+compiler, or native store objects. A future storage implementation must
+keep those identities and history. Graft does not yet expose a pluggable
 backend interface.
 
-The earlier composition experiments compared native graph storage with
+Earlier composition experiments compared native graph storage with
 immutable manifests. Their source and observations remain in the
-repository as historical research. They motivated the artifact contract
-and the earlier native-store cut; they are not current native-store
-usage instructions.
+repository as historical research. They led to the artifact contract and
+the retirement of the native store. Their examples document that earlier
+architecture and are not instructions for the current store.
 
-Shared infrastructure remains in Graft. Tempest and Rill own product
+Graft keeps the shared infrastructure. Tempest and Rill own product
 semantics, access, approval, and retention. Publication recovery remains
 separate work in [\#49](https://github.com/JamesHWade/graft/issues/49).
 
 ## Use retained research in Tempest
 
-Tempest now maps validated completed research into this artifact
-contract. Its `tempest_publish_artifact_research()` retains the exact
-evidence closure, source bodies, program provenance and readable report.
-A host explicitly accepts that selection using
+Tempest maps validated completed research into this artifact contract.
+Its `tempest_publish_artifact_research()` retains the exact evidence and
+all of its dependencies, along with source bodies, program provenance,
+and a readable report. The application explicitly accepts that selection
+with
 [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md).
 
 `tempest_reuse_artifact_research()` validates the scientific evidence
-and consults the current Graft decision using a host eligibility
-callback. New runs and session resume recheck admission. The callback is
-transient; session bundles retain content and decision provenance, never
-a saved permission. Historical inspection uses
-`tempest_read_artifact_research()` and does not grant reuse.
+and checks the current Graft decision through an application-provided
+eligibility callback. New runs and resumed sessions check permission to
+reuse the evidence again. The callback is transient. Session bundles
+retain content and decision provenance, never a saved permission.
+Historical inspection uses `tempest_read_artifact_research()` and does
+not grant reuse.
 
 The [Tempest artifact
 guide](https://jameshwade.github.io/tempest/articles/artifact-knowledge.html)
@@ -279,12 +283,13 @@ admission through these public interfaces. The earlier pinned experiment
 suite remains historical evidence. These synthetic fixtures do not
 establish production access or erasure.
 
-## PostgreSQL and host-selected scopes
+## PostgreSQL and application scopes
 
 [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
-uses the same artifact, selection, decision, and vocabulary interfaces
-inside a host-owned DBI transaction. Its optional DBI and RPostgres
-dependencies are needed only for PostgreSQL stores.
+provides the same artifact, selection, decision, and vocabulary
+interfaces inside a DBI transaction controlled by the application. Its
+optional DBI and RPostgres dependencies are needed only for PostgreSQL
+stores.
 
 ``` r
 
@@ -305,23 +310,25 @@ DBI::dbWithTransaction(connection, {
 ```
 
 Every retained row belongs to one scope. Graft serializes operations
-within a scope until commit or rollback; the host can atomically retain
-its own records in the same transaction. A scope key is not
-authentication, and the database role can still access other scopes
+within a scope until commit or rollback, and the application can retain
+its own records atomically in the same transaction. A scope key does not
+authenticate anyone; the database role can still access other scopes
 directly. Applications must check access before every operation and
-supply scope from trusted identity, including in background workers.
+derive the scope from trusted identity, including in background workers.
 Connections and store handles are process-local.
 
-This boundary does not implement permanent Forget or prevent an old
-database backup from restoring deleted content. Those remain explicit
-host and storage obligations before a broad memory rollout.
+This interface does not implement permanent Forget or stop an old
+database backup from restoring deleted content. The application and
+storage system must handle those obligations before a broad memory
+rollout.
 
 ## Build a verified replacement
 
-A host can preview exclusions with
+An application can preview exclusions with
 [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
-and copy exact survivors into a separate empty store with
-[`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md).
+and copy the remaining artifacts into a separate empty store with
+[`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md),
+preserving their exact contents.
 [`graft_manifest()`](https://jameshwade.github.io/graft/reference/graft_manifest.md)
 verifies the complete logical object set, including historical
 decisions. See [Verify a replacement artifact
@@ -332,6 +339,6 @@ obligations.
 For a complete copy that retains every object and historical decision,
 use
 [`graft_backup()`](https://jameshwade.github.io/graft/reference/graft_backup.md).
-Verification and restore require the receipt retained by the host
-independently of the bundle. See [Back up and restore an artifact
+Verification and restore require the receipt that the application keeps
+separately from the bundle. See [Back up and restore an artifact
 store](https://jameshwade.github.io/graft/articles/artifact-backups.md).

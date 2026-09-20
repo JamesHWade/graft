@@ -1,8 +1,9 @@
 # A verified artifact dependency selection
 
 An `ArtifactSelection` records one exact selection digest, its roots,
-and the complete verified dependency closure. It does not grant approval
-or access to the selected artifacts.
+and the complete verified dependency closure: the roots and all of their
+dependencies. It does not grant approval or access to the selected
+artifacts.
 
 ## Usage
 
@@ -22,4 +23,5 @@ ArtifactSelection(id = character(0), roots = NULL, artifacts = NULL)
 
 - artifacts:
 
-  Complete breadth-first dependency closure.
+  Complete breadth-first dependency closure, including the roots and
+  their dependencies.

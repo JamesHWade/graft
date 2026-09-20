@@ -74,19 +74,18 @@
 
     
     
-<p>Your analytics assistant should be able to answer “How do we count an
-active customer?” using the definition your team agreed on last week. It
-should also be able to show where that definition came from and use a
-correction after you review it.</p>
-<p>Graft gives your R application a place to keep that knowledge. An
+<p>An analytics assistant should answer “How do we count an active
+customer?” with the definition your team agreed on last week. It should
+show the source for that definition and use a correction after someone
+reviews it.</p>
+<p>Graft gives an R application a place to keep this knowledge. An
 ellmer agent can retrieve it through an ordinary R tool, and shinychat
-can provide the chat interface. The same saved knowledge can also serve
-a report, another agent, or a later R session.</p>
-<p>This guide builds a small <strong>project notebook</strong>. You
-will:</p>
+can provide the chat interface. A report, another agent, or a later R
+session can use the same saved knowledge.</p>
+<p>This guide builds a small project notebook. It shows how to:</p>
 <ol style="list-style-type: decimal">
-<li>Save a definition together with its source.</li>
-<li>Record that a person reviewed it for use in project assistance.</li>
+<li>Save a definition with its source.</li>
+<li>Record a person’s review for project assistance.</li>
 <li>Reopen the notebook and retrieve the current reviewed
 definition.</li>
 <li>Connect that retrieval to an ellmer agent in shinychat.</li>
@@ -94,8 +93,8 @@ definition.</li>
 available.</li>
 </ol>
 <p>The storage walkthrough runs without a model or API key. The complete
-app also has a scripted preview, so you can try the interaction before
-enabling a model.</p>
+app also includes a scripted preview, so you can try the interaction
+before enabling a model.</p>
 <div class="section level2">
 <h2 id="try-the-complete-app-first">Try the complete app first<a class="anchor" aria-label="anchor" href="#try-the-complete-app-first"></a>
 </h2>
@@ -104,23 +103,22 @@ enabling a model.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>GRAFT_DEMO_STORE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"project-memory"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"project-memory"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Read the proposed definition and source in the notebook, choose
-<strong>Review and save</strong>, then ask <strong>“How do we count an
-active customer?”</strong> Start a <strong>New conversation</strong> and
-ask again. Finally, change the definition and source from 30 days to 60
-days and review the correction. You should see the new definition used
-in the next conversation. The prefilled handbook excerpt is fictional
-sample data; replace it with your own project evidence when adapting the
-app.</p>
+Review and save, and ask “How do we count an active customer?” Start a
+New conversation and ask the same question. Then change the definition
+and source from 30 days to 60 days and review the correction. The next
+conversation should use the new definition. The prefilled handbook
+excerpt is fictional sample data. Replace it with your own project
+evidence when you adapt the app.</p>
 <p>The default preview uses real Graft files and deterministic replies.
-It does not call ellmer or claim to generate model answers. To use the
-live agent, configure <code>OPENAI_API_KEY</code>, set
+It does not call ellmer or present its replies as model-generated
+answers. For the live agent, configure <code>OPENAI_API_KEY</code>, set
 <code>Sys.setenv(GRAFT_DEMO_LIVE = "true")</code>, and restart the app.
 Live mode sends prompts and retrieved notes to the configured model
 provider. The example uses <code><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">ellmer::chat_openai()</a></code>; you can
 substitute another ellmer provider in the app’s chat factory.</p>
 <p>Stop and restart the app with the same store path to see the notebook
-survive the R process. Chat messages are session state; the reviewed
-notebook is stored on disk. The <a href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory" class="external-link">example’s
+survive the R process. Chat messages live in the session, while the
+reviewed notebook is stored on disk. The <a href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory" class="external-link">example’s
 source and run instructions</a> are included in the installed
 package.</p>
 </div>
@@ -128,9 +126,9 @@ package.</p>
 <h2 id="keep-the-definition-and-its-source">1. Keep the definition and its source<a class="anchor" aria-label="anchor" href="#keep-the-definition-and-its-source"></a>
 </h2>
 <p>For this walkthrough, start with a fresh
-<code>graft-walkthrough</code> directory in your project. It will
-contain the notebook’s files; reopening that path reads the same
-retained artifacts.</p>
+<code>graft-walkthrough</code> directory in your project. The directory
+holds the notebook’s files. Reopening that path reads the same retained
+artifacts.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -154,28 +152,28 @@ retained artifacts.</p>
 <span>  media_type <span class="op">=</span> <span class="st">"text/plain"</span>,</span>
 <span>  dependencies <span class="op">=</span> <span class="va">source</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>An <strong>artifact</strong> is saved content at an exact revision.
-Here the note declares that it depends on the handbook excerpt. An
-updated <code>metrics.md</code> on your laptop will not change the
-source retained behind this note.</p>
-<p>A <strong>selection</strong> groups the note with all its declared
-evidence dependencies. A single <code>ArtifactRef</code> is enough when
-there is one root:</p>
+<p>An <strong>artifact</strong> is content saved at an exact revision.
+The note declares a dependency on the handbook excerpt, so an updated
+<code>metrics.md</code> on your laptop does not change the source
+retained behind this note.</p>
+<p>A <strong>selection</strong> groups the note with every evidence
+dependency it declares. One root needs only a single
+<code>ArtifactRef</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">selection</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_select.html">graft_select</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">selection</span><span class="op">@</span><span class="va">artifacts</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] 2</span></span></code></pre>
-<p>That result is two artifacts: the note and its source. You could use
-the same pattern for a report and its inputs, a plot and its data, or a
+<p>The result contains two artifacts: the note and its source. The same
+pattern works for a report and its inputs, a plot and its data, or a
 finding and the source material supporting it. Graft stores the bytes
-you supply; your application chooses what counts as supporting
+you supply. Your application decides what counts as supporting
 evidence.</p>
 </div>
 <div class="section level2">
 <h2 id="review-what-the-assistant-may-reuse">2. Review what the assistant may reuse<a class="anchor" aria-label="anchor" href="#review-what-the-assistant-may-reuse"></a>
 </h2>
-<p>Suppose you inspect the definition and its source and approve them
-for project assistance. Record that explicit action:</p>
+<p>Suppose you inspect the definition and its source, then approve them
+for project assistance. Record that action explicitly:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">accepted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_accept.html">graft_accept</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
@@ -187,31 +185,31 @@ for project assistance. Record that explicit action:</p>
 <span>  reason <span class="op">=</span> <span class="st">"Checked against the team's metrics handbook"</span>,</span>
 <span>  purpose <span class="op">=</span> <span class="st">"project-assistance"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The <strong>stream</strong> names the subject being reviewed.
-<code>expected = NULL</code> means there must be no earlier decision in
-this stream. <code>key</code> identifies this review request, so an
-identical retry does not create a second decision. The purpose records
-what you reviewed the material for. Passing the <code>ArtifactRef</code>
-directly lets <code><a href="../reference/graft_accept.html">graft_accept()</a></code> build and verify the
-selection; pass an <code>ArtifactSelection</code> when a review has more
-than one root.</p>
+<p>The <strong>stream</strong> names the subject under review.
+<code>expected = NULL</code> requires that the stream have no earlier
+decision. <code>key</code> identifies this review request, so an
+identical retry with the same key does not create another decision. The
+purpose says what the review covers. Passing the
+<code>ArtifactRef</code> directly lets <code><a href="../reference/graft_accept.html">graft_accept()</a></code> build
+and verify the selection. Pass an <code>ArtifactSelection</code> when a
+review has more than one root.</p>
 <p>The returned <code>Decision</code> stores the exact selection digest
-in <code>@selection</code>. <code><a href="../reference/graft_recall.html">graft_recall()</a></code> re-reads that
+in <code>@selection</code>. <code><a href="../reference/graft_recall.html">graft_recall()</a></code> reads that
 digest and returns a <code>Recall</code> whose <code>@selection</code>
-is the verified <code>ArtifactSelection</code>; its <code>@roots</code>
-and <code>@artifacts</code> contain the materialized
+holds the verified <code>ArtifactSelection</code>. Its
+<code>@roots</code> and <code>@artifacts</code> contain the materialized
 <code>Artifact</code> values that the application can display.</p>
-<p>In a real app, this call belongs behind your review action. Saving an
-agent’s answer alone does not mean a person approved it. Graft records
-your decision; it does not determine whether the definition is factually
-correct.</p>
+<p>In an application, put this call behind the review action. Saving an
+agent’s answer does not by itself record a person’s approval. Graft
+records the decision; it does not decide whether the definition is
+factually correct.</p>
 </div>
 <div class="section level2">
 <h2 id="retrieve-it-in-a-later-session">3. Retrieve it in a later session<a class="anchor" aria-label="anchor" href="#retrieve-it-in-a-later-session"></a>
 </h2>
-<p>A later R process can reopen the directory. The code below derives
-the current accepted decision from disk and verifies its complete
-selection before returning the definition and its source.</p>
+<p>A later R process can reopen the directory. The function below finds
+the current accepted decision on disk and verifies its complete
+selection before returning the definition and source.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="st">"graft-walkthrough"</span><span class="op">)</span></span>
 <span></span>
@@ -242,31 +240,30 @@ selection before returning the definition and its source.</p>
 <span></span>
 <span><span class="fu">recall_project_memory</span><span class="op">(</span><span class="op">)</span><span class="op">[[</span><span class="st">"definition"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 30 days, excluding staff and test accounts."</span></span></code></pre>
-<p>This function is application code you can adapt. It knows there is
-one reviewed metric note, so it selects one fixed stream.
-<code>eligible = TRUE</code> is an explicit choice for this trusted,
-single-user example. A shared app must replace it with a current access
-and retention decision bound to the authenticated user and project, and
-apply those checks to every read path. In this direct example,
-<code><a href="../reference/graft_recall.html">graft_recall()</a></code> receives the explicit
+<p>This is application code that you can adapt. It assumes one reviewed
+metric note, so it uses one fixed stream. <code>eligible = TRUE</code>
+is an explicit choice for this trusted, single-user example. A shared
+app must replace it with a current access and retention decision tied to
+the authenticated user and project, then apply those checks to every
+read path. Here, <code><a href="../reference/graft_recall.html">graft_recall()</a></code> receives the explicit
 <code>eligible = TRUE</code> decision. The <code><a href="../reference/graft_tool.html">graft_tool()</a></code>
-adapter invokes the host callback before looking up any retained
-payload.</p>
-<p>The returned source explains the basis of the definition. The review
-digest identifies the exact recorded decision. Graft also checks the
-retained bytes; missing or corrupt evidence causes the read to fail
-instead of silently substituting a different source.</p>
+adapter calls the application’s eligibility callback before it reads
+saved content.</p>
+<p>The returned source shows the basis for the definition, and the
+review digest identifies the exact recorded decision. Graft also checks
+the retained bytes. A missing or corrupt piece of evidence makes the
+read fail instead of silently using another source.</p>
 </div>
 <div class="section level2">
 <h2 id="make-it-an-ellmer-and-shinychat-tool">4. Make it an ellmer and shinychat tool<a class="anchor" aria-label="anchor" href="#make-it-an-ellmer-and-shinychat-tool"></a>
 </h2>
 <p><code><a href="../reference/graft_tool.html">graft_tool()</a></code> creates an ordinary ellmer
 <code>ToolDef</code> with the stream and purpose fixed by the
-application. It calls the eligibility callback afresh on every
-invocation, then returns an ellmer <code>ContentToolResult</code>
-containing the recall status, exact content references, and decision ID.
-When shinychat is installed, the result also carries its
-<code>tool_result_display</code> metadata for the chat UI:</p>
+application. On every invocation it calls the eligibility callback, then
+returns an ellmer <code>ContentToolResult</code> with the recall status,
+exact content references, and decision ID. When shinychat is installed,
+the result also carries <code>tool_result_display</code> metadata for
+the chat UI:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">memory_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tool.html">graft_tool</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
@@ -286,14 +283,14 @@ When shinychat is installed, the result also carries its
 <span><span class="op">)</span></span>
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">register_tool</span><span class="op">(</span><span class="va">memory_tool</span><span class="op">)</span></span>
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"How do we count an active customer?"</span><span class="op">)</span></span></code></pre></div>
-<p>The tool is read-only; the application’s review controls write. This
-keeps the choice to retain an answer visible to the user. You can add a
-draft step where an agent proposes a note, then let a person edit and
-review it before saving. The model never chooses the store, stream,
-purpose, or eligibility callback. The optional display is the ordinary
-<code><a href="https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html" class="external-link">shinychat::tool_result_display()</a></code> payload; the app still
-uses shinychat’s public <code><a href="https://posit-dev.github.io/shinychat/r/reference/chat_append.html" class="external-link">chat_append()</a></code> and ellmer’s public
-<code>Chat$register_tool()</code> interfaces.</p>
+<p>The tool is read-only. The application’s review controls perform
+writes, so the choice to retain an answer stays visible to the user. You
+can add a draft step in which an agent proposes a note and a person
+edits and reviews it before saving. The model never chooses the store,
+stream, purpose, or eligibility callback. The optional display is the
+ordinary <code><a href="https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html" class="external-link">shinychat::tool_result_display()</a></code> payload. The app
+still uses shinychat’s public <code><a href="https://posit-dev.github.io/shinychat/r/reference/chat_append.html" class="external-link">chat_append()</a></code> and ellmer’s
+public <code>Chat$register_tool()</code> interfaces.</p>
 <div class="section level3">
 <h3 id="put-the-agent-in-shinychat">Put the agent in shinychat<a class="anchor" aria-label="anchor" href="#put-the-agent-in-shinychat"></a>
 </h3>
@@ -327,11 +324,11 @@ control:</p>
 <span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
 <p>Run this after defining <code>store</code> and
-<code>memory_tool</code> above, with your provider credentials
-configured. The complete packaged app adds review controls, a
+<code>memory_tool</code> above and configuring your provider
+credentials. The complete packaged app adds review controls, a
 new-conversation button, persistence status, and the scripted preview.
-It resets both ellmer’s conversation and the displayed chat when the
-reviewed note changes, so previously retrieved content is not carried
+When the reviewed note changes, it resets ellmer’s conversation and the
+displayed chat; previously retrieved content therefore does not carry
 into the next conversation as current knowledge.</p>
 <p>These examples use the public <a href="https://ellmer.tidyverse.org/articles/tool-calling.html" class="external-link">ellmer
 tool interface</a> and shinychat’s <a href="https://posit-dev.github.io/shinychat/r/reference/chat_append.html" class="external-link">streaming
@@ -343,8 +340,8 @@ whether and how it uses the tool.</p>
 <div class="section level2">
 <h2 id="review-a-correction-and-keep-the-history">5. Review a correction and keep the history<a class="anchor" aria-label="anchor" href="#review-a-correction-and-keep-the-history"></a>
 </h2>
-<p>Now the team changes the activity window to 60 days. Save the new
-source and note under the same logical IDs; they get new exact
+<p>The team now changes the activity window to 60 days. Save the new
+source and note under the same logical IDs to create new exact
 revisions. Accept the corrected selection with the previous decision as
 its expected predecessor:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
@@ -372,18 +369,17 @@ its expected predecessor:</p>
 <span><span class="op">)</span></span>
 <span><span class="fu">recall_project_memory</span><span class="op">(</span><span class="op">)</span><span class="op">[[</span><span class="st">"definition"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 60 days, excluding staff and test accounts."</span></span></code></pre>
-<p>A fresh conversation now retrieves the 60-day definition. The
-original note and its original source are still inspectable at their
-exact references:</p>
+<p>A fresh conversation retrieves the 60-day definition. The original
+note and its source remain available at their exact references:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 30 days, excluding staff and test accounts."</span></span></code></pre>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">source</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Metrics handbook: active customers have a paid account and activity in the past 30 days. Exclude staff and test accounts."</span></span></code></pre>
-<p>The old acceptance is no longer the current acceptance for reuse. If
-the note should stop being used entirely, record a withdrawal; the
-packaged app exposes that as <strong>Stop using this note</strong>:</p>
+<p>The old acceptance is no longer current for reuse. If the note should
+no longer be used, record a withdrawal. The packaged app exposes that
+action as Stop using this note:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">withdrawn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_withdraw.html">graft_withdraw</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
@@ -402,13 +398,13 @@ packaged app exposes that as <strong>Stop using this note</strong>:</p>
 <span><span class="co">## </span></span>
 <span><span class="co">## [[3]]</span></span>
 <span><span class="co">## &lt;Decision withdraw stream=metric:active-customer sequence=3 id=5bd286071d93890bad6b54375a603289b1edfefb68b12d2e52d5e22f2f830754&gt;</span></span></code></pre>
-<p>Withdrawal retains history. Permanent deletion and retirement of
-backups require a separate retention workflow.</p>
+<p>Withdrawal retains history. Permanent deletion and backup retirement
+require a separate retention workflow.</p>
 </div>
 <div class="section level2">
 <h2 id="make-it-yours">Make it yours<a class="anchor" aria-label="anchor" href="#make-it-yours"></a>
 </h2>
-<p>Change these parts to fit your project:</p>
+<p>Adapt these choices to your project:</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -456,12 +452,10 @@ current authorization on every access path</td>
 </tr>
 </tbody>
 </table>
-<p>For several agents sharing terminology, <a href="shared-vocabulary.html">publish shared vocabulary</a> from a
-data-dict dictionary. For reports and review histories, continue with <a href="persistent-artifacts.html">persistent artifacts</a>. When you need
-to move the notebook, use <a href="artifact-backups.html">verified
-backups</a>.</p>
-<p>Start with one useful result worth retaining and one later task that
-needs it. That is enough to add Graft to an existing application.</p>
+<p>If several agents need the same terminology, see <a href="shared-vocabulary.html">publish shared vocabulary</a>, which
+starts from a data-dict dictionary. For reports and review histories,
+read <a href="persistent-artifacts.html">persistent artifacts</a>. When
+you need to move the notebook, use <a href="artifact-backups.html">verified backups</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -1,7 +1,7 @@
-# Preserve immutable artifact content
+# Create or reopen a local artifact store
 
 Create or reopen a local artifact store, save opaque bytes, and resolve
-an exact revision. Saving grants no approval, access or execution
+an exact revision. Saving grants no approval, access, or execution
 authority.
 
 ## Usage
@@ -26,7 +26,8 @@ graft_store(
 
 - create:
 
-  Create a new store? Defaults to `FALSE` for safe reopening.
+  Whether to create a new store. Defaults to `FALSE`, which reopens an
+  existing store.
 
 - max_bytes:
 
@@ -47,24 +48,24 @@ graft_store(
 
 ## Details
 
-Identity, media-type and reference strings are normalized to plain UTF-8
-character values without R attributes.
+Identity, media type, and reference strings are normalized to plain
+UTF-8 character values without R attributes.
 
 Local stores support trusted files with one writer. SHA-256 digests
-identify content and metadata. Identical saves return the same
-reference; corrections retain earlier revisions. There is no mutable
-latest pointer.
+identify content and metadata. Repeating an identical save returns the
+same reference, while corrections retain earlier revisions. There is no
+mutable latest pointer.
 
 Payloads are published before immutable revision metadata, using staged
 files in the destination directory. A failed save can leave unreferenced
 bytes; retries reuse verified content. Orphans are retained rather than
-deleted automatically. Successful reads verify metadata, payload size
-and digest. Interrupted writes cannot yield a successful incomplete
-reference, but this interface does not promise power-loss durability,
-concurrent publication, authorization, erasure or backup recovery.
-Applications own access and policy. Local handles contain no open
-connections and need no closing. For transaction-scoped database
-persistence, use
+deleted automatically. Successful reads verify metadata, payload size,
+and digest. Interrupted writes cannot produce a successful incomplete
+reference. The interface does not promise power-loss durability,
+concurrent publication, authorization, erasure, or backup recovery.
+Applications control access and policy. Local handles have no open
+connections, so callers do not need to close them. For
+transaction-scoped database persistence, use
 [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
 with the same artifact APIs.
 

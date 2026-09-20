@@ -1,9 +1,9 @@
-# The result of a current reviewed-artifact lookup
+# A result from a current reviewed-artifact lookup
 
 `Recall` reports a point-in-time `status` of `missing`, `withdrawn`, or
-`accepted`. Missing and withdrawn results contain no materialized
-payload. Accepted results contain the current verified decision,
-selection, roots, and complete materialized dependency closure.
+`accepted`. Missing and withdrawn results contain no artifact content.
+Accepted results contain the current verified decision, selection, root
+artifacts, and every artifact in the verified dependency closure.
 
 ## Usage
 
@@ -33,8 +33,10 @@ Recall(
 
 - roots:
 
-  Materialized root artifacts for an accepted recall.
+  Root artifacts with their retained bytes and metadata for an accepted
+  recall.
 
 - artifacts:
 
-  Complete materialized closure for an accepted recall.
+  All artifacts in the accepted dependency closure, with their retained
+  bytes and metadata.

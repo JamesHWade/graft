@@ -16,7 +16,8 @@ LocalArtifactStore(
 
 - max_bytes:
 
-  Maximum payload bytes per artifact and dependency closure.
+  Maximum payload bytes for one artifact and the complete dependency set
+  it references.
 
 - max_revision_bytes:
 

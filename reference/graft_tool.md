@@ -1,11 +1,11 @@
-# Expose reviewed content through a fixed read-only ellmer tool
+# Create a fixed read-only ellmer tool for reviewed content
 
 Create an
 [ellmer::ToolDef](https://ellmer.tidyverse.org/reference/ToolDef.html)
-that consults one host-selected stream and purpose. The tool has no
-model-controlled arguments and never writes to the store. `eligible` is
-evaluated for every invocation, before any retained content is looked
-up.
+that reads content accepted for one decision stream and purpose chosen
+by the host application. The tool has no model-controlled arguments and
+never writes to the store. It evaluates `eligible` on every invocation
+before it looks up retained content.
 
 ## Usage
 
@@ -21,20 +21,20 @@ graft_tool(store, stream, purpose, eligible, name = "recall_project_memory")
   [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
   or
   [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md).
-  The handle remains private to the tool closure.
+  The handle remains private inside the tool.
 
 - stream:
 
-  A fixed host-owned decision stream.
+  A decision stream chosen and controlled by the host application.
 
 - purpose:
 
-  The fixed consultation purpose.
+  The consultation purpose to use for every invocation.
 
 - eligible:
 
-  A required no-argument function supplied by the host. It must return
-  the current consultation decision when called.
+  A required host-supplied function with no arguments. It must return
+  whether the current consultation is allowed when called.
 
 - name:
 
@@ -44,6 +44,6 @@ graft_tool(store, stream, purpose, eligible, name = "recall_project_memory")
 
 An
 [ellmer::ToolDef](https://ellmer.tidyverse.org/reference/ToolDef.html).
-Calling the tool returns a native
+Calling the tool returns an
 [ellmer::ContentToolResult](https://ellmer.tidyverse.org/reference/Content.html)
 whose value is a JSON string.

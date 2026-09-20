@@ -1,9 +1,9 @@
 # A host decision recorded in an artifact stream
 
-`Decision` is a journal value describing one acceptance or withdrawal.
-Its `selection` property is the exact selection digest, not a
-materialized selection. It is a descriptor and does not authenticate its
-actor or grant current consultation access.
+`Decision` is a retained journal record describing one acceptance or
+withdrawal. Its `selection` property stores the exact selection digest,
+not the selected artifacts themselves. The record does not authenticate
+its actor or grant current consultation access.
 
 ## Usage
 
@@ -34,11 +34,11 @@ Decision(
 
 - stream:
 
-  Host-chosen decision stream.
+  Decision stream chosen and controlled by the host application.
 
 - key:
 
-  Stable host idempotency key.
+  Stable request key supplied by the host application.
 
 - previous:
 
@@ -54,12 +54,12 @@ Decision(
 
 - actor:
 
-  Host-supplied actor identity.
+  Actor identity supplied by the host application.
 
 - reason:
 
-  Host-supplied review or withdrawal reason.
+  Review or withdrawal reason supplied by the host application.
 
 - purpose:
 
-  Host-supplied consultation purpose.
+  Consultation purpose supplied by the host application.

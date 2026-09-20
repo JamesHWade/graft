@@ -28,7 +28,7 @@ graft_withdraw(
 
 - stream:
 
-  Host-chosen decision stream.
+  A decision stream chosen and controlled by the host application.
 
 - expected:
 
@@ -38,15 +38,15 @@ graft_withdraw(
 
 - key:
 
-  Required stable host request key.
+  Required stable request key supplied by the host application.
 
 - actor:
 
-  Host-supplied actor identity.
+  Actor identity supplied by the host application.
 
 - reason:
 
-  Host-supplied withdrawal reason.
+  Withdrawal reason supplied by the host application.
 
 - max_decisions:
 
@@ -60,4 +60,5 @@ graft_withdraw(
 
 A recorded withdrawal
 [Decision](https://jameshwade.github.io/graft/reference/Decision.md).
-The host transaction governs durability.
+For PostgreSQL stores, the application controls the surrounding
+transaction and commit.

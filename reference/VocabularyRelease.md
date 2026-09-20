@@ -1,12 +1,11 @@
 # A retained shared vocabulary release
 
-`VocabularyRelease` is a typed descriptor for one verified vocabulary
-publication. Its selection identifies the immutable release in the
-artifact store; the other properties are materialized from that
-selection by
-[`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md).
-The properties are ordinary R values and do not grant access, approval,
-or execution authority.
+A `VocabularyRelease` describes one verified vocabulary publication. Its
+selection identifies the immutable release in the artifact store.
+[`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md)
+reads the other properties from that selection. These properties are
+ordinary R values; they do not grant access, approval, or execution
+authority.
 
 ## Usage
 
@@ -26,7 +25,8 @@ VocabularyRelease(
 - selection:
 
   Exact retained
-  [ArtifactSelection](https://jameshwade.github.io/graft/reference/ArtifactSelection.md).
+  [ArtifactSelection](https://jameshwade.github.io/graft/reference/ArtifactSelection.md)
+  for this release.
 
 - vocabulary:
 
@@ -46,4 +46,4 @@ VocabularyRelease(
 
 - context:
 
-  Literal context materialized from the release.
+  Literal context stored with the release.
