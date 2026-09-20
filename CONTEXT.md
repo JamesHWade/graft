@@ -74,3 +74,12 @@ Hosts supply additional private-copy and metadata roots, authorize Forget, retir
 generations in an independent durable journal, reject old backups, invalidate
 contexts/caches, and arrange disposal. No source deletion or production restore
 admission ships with these mechanics. Graft #48 remains the rollout gate.
+
+Consumer contract 3.2 adds versioned directory backups containing a complete
+artifact image and canonical descriptor. An independently retained receipt binds
+scope, generation, descriptor digest, and manifest digest. Verification and
+restore enforce caller limits and require exact identity; they do not establish
+registry freshness or admission. Backup staging is renamed only after complete
+verification. Local power-loss durability, PostgreSQL commit, atomic generation
+publication, and independent journal recovery remain open under #86 and #48.
+See ADR 0013 and the artifact-backups guide.

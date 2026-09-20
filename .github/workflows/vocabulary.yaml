@@ -33,4 +33,4 @@ jobs:
           printf 'DATA_DICT=%s\n' "$RUNNER_TEMP/data-dict/target/release/data-dict" >> "$GITHUB_ENV"
       - name: Verify vocabulary publication and offline reads
         shell: Rscript {0}
-        run: testthat::test_local(filter = "^(vocabulary|artifact-replacement-integration)$", stop_on_failure = TRUE)
+        run: testthat::test_local(filter = "^(vocabulary|artifact-replacement-integration|artifact-backup-integration)$", stop_on_failure = TRUE)

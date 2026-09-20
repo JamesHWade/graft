@@ -58,7 +58,8 @@ authenticated access, and permanent erasure remain separate work. The artifact
 contract allows future persistence implementations; no interchangeable backend
 API is promised today.
 
-Consumer contract **3.1.0** adds verified replacement mechanics. Contract 3 removes the native graph store, LinkML compiler,
+Consumer contract **3.2.0** adds closed backup bundles and verified restore.
+Contract 3 removes the native graph store, LinkML compiler,
 commit plans, graph snapshots, managed OKF tree, and graph-specific agent tools.
 There are no compatibility wrappers. Existing artifact, selection, and decision
 formats keep their exact identities.
@@ -73,3 +74,9 @@ Preview exclusions and verify exact survivors in a separate store with artifact
 manifests and replacement plans. See the [replacement guide](https://jameshwade.github.io/graft/articles/artifact-recovery.html).
 Applications still own permanent Forget authorization, generation retirement,
 backup admission, and disposal; these operations never delete source content.
+
+Create a complete backup with `graft_artifact_backup()` and retain its identity
+receipt separately. `graft_artifact_restore()` verifies the closed bundle against
+that receipt before copying into an empty target. See the [backup guide](https://jameshwade.github.io/graft/articles/artifact-backups.html).
+A matching receipt proves the expected contents; the application still checks
+that the generation is currently eligible for restore.

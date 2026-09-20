@@ -1,10 +1,11 @@
 # graft 0.0.0.9000
 
 * Graft now contains persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers. The website describes the supported artifact architecture (#74).
+* `graft_artifact_backup()`, `graft_artifact_backup_verify()`, and `graft_artifact_restore()` create and verify bounded complete store bundles bound to a host-supplied scope and generation. Restores require an externally retained receipt and an empty quarantine target; applications still authorize restore using independent current registry state (#86).
 * `graft_artifact_decide()`, `graft_artifact_read_decision()`, and `graft_artifact_reuse()` retain explicit host acceptance and withdrawal, guard predecessors and identical retries, and separate historical inspection from current purpose-bound consultation (#73).
 * `graft_artifact_manifest()`, `graft_artifact_replacement_plan()`, and `graft_artifact_replace()` verify complete bounded store inventories and copy exact survivors into an empty quarantine store. Plans exclude declared dependents, affected selections, and whole affected decision histories; applications still own Forget approval, generation retirement, restore admission, and disposal (#48).
 * `graft_artifact_select()` and `graft_artifact_read_selection()` retain and verify bounded exact dependency closures (#72).
 * `graft_artifact_store()`, `graft_artifact_save()`, and `graft_artifact_read()` retain bounded opaque bytes as immutable revisions with verified exact reads (#71).
 * `graft_artifact_store_postgres()` retains artifacts, selections, and decisions in host-selected PostgreSQL scopes with transaction rollback and serialized scope writes (#47).
-* `graft_contract_version()` reports consumer contract 3.1.0 and the artifact, manifest, replacement, selection, decision, vocabulary, binding, and vocabulary-release formats. Existing artifact identities are unchanged (#74).
+* `graft_contract_version()` reports consumer contract 3.2.0 and the artifact, manifest, replacement, backup, selection, decision, vocabulary, binding, and vocabulary-release formats. Existing artifact identities are unchanged (#74).
 * `graft_vocabulary_publish()` and `graft_vocabulary_read()` retain shared concepts, relationships, exact data-dict bindings, source bytes, and literal context across dictionary corrections (#76).
