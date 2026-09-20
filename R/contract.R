@@ -1,5 +1,8 @@
 #' Report Graft's artifact and vocabulary contracts
 #'
+#' Consumer contract 4 replaces the public artifact-prefixed interface with
+#' task-oriented verbs and S7 stores and values, without compatibility aliases.
+#' Stored wire formats and exact content identities remain unchanged.
 #' Consumer contract 3.2 adds closed artifact backup bundles with externally
 #' supplied identity receipts and strict restore verification. Contract 3.1 adds
 #' bounded manifests and replacement plans. These operations do not authorize
@@ -18,7 +21,7 @@
 #' graft_contract_version()
 graft_contract_version <- function() {
   list(
-    contract = "3.2.0",
+    contract = "4.0.0",
     artifact = "1",
     manifest = "graft-artifact-manifest/1",
     replacement = "graft-artifact-replacement/1",

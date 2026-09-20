@@ -26,24 +26,41 @@ articles:
       - architecture
       - compatibility
 reference:
-  - title: Retain exact artifacts
+  - title: Everyday workflow
     contents:
-      - graft_artifact_store
-      - graft_artifact_store_postgres
-      - graft_artifact_select
-  - title: Verify replacements and backups
+      - graft_store
+      - graft_store_postgres
+      - graft_save
+      - graft_save_file
+      - graft_read
+      - graft_select
+      - graft_read_selection
+      - graft_accept
+      - graft_withdraw
+      - graft_recall
+      - graft_history
+      - graft_tool
+  - title: Vocabulary and operations
     contents:
-      - graft_artifact_backup
-      - graft_artifact_backup_verify
-      - graft_artifact_restore
-      - graft_artifact_manifest
-      - graft_artifact_replacement_plan
-  - title: Record host decisions
+      - graft_publish_vocabulary
+      - graft_read_vocabulary
+      - graft_backup
+      - graft_verify_backup
+      - graft_restore
+      - graft_manifest
+      - graft_plan_replacement
+      - graft_replace
+  - title: Public S7 classes
     contents:
-      - graft_artifact_decide
-  - title: Share vocabulary
-    contents:
-      - graft_vocabulary_publish
-  - title: Consumer contract
+      - ArtifactStore
+      - LocalArtifactStore
+      - PostgresArtifactStore
+      - ArtifactRef
+      - Artifact
+      - ArtifactSelection
+      - Decision
+      - Recall
+      - VocabularyRelease
+  - title: Contract
     contents:
       - graft_contract_version

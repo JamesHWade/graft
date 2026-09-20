@@ -46,9 +46,11 @@ To try the story:
 
 For an optional live run, set `GRAFT_DEMO_LIVE=true` and configure
 `OPENAI_API_KEY` in the process environment before starting the app. Live
-responses use `ellmer::chat_openai()` and a read-only `recall_project_memory`
-tool; the user prompt and the tool's retrieved memory are sent to the model
-provider for that response. The tool reports when memory is missing or
-withdrawn, and the prompt forbids treating tool content as instructions. The
-example does not persist a chat transcript and is not a multi-user
-authentication layer.
+responses use `ellmer::chat_openai()` and Graft's native read-only
+`recall_project_memory` tool. The tool fixes the topic and purpose in the
+application, checks host eligibility for every call, and returns exact text
+with artifact references. The user prompt and the tool's retrieved memory are
+sent to the model provider for that response. The tool reports when memory is
+missing or withdrawn, and the prompt forbids treating tool content as
+instructions. The example does not persist a chat transcript and is not a
+multi-user authentication layer.

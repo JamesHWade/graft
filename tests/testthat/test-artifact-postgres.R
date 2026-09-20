@@ -1,11 +1,11 @@
 test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    first <- graft_artifact_store_postgres(connection, "first", create = TRUE)
-    second <- graft_artifact_store_postgres(connection, "second", create = TRUE)
-    local <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+    first <- graft_store_postgres(connection, "first", create = TRUE)
+    second <- graft_store_postgres(connection, "second", create = TRUE)
+    local <- graft_store(withr::local_tempdir(), create = TRUE)
     bytes <- as.raw(c(0, 255, 13))
-    ref <- graft_artifact_save(
+    ref <- artifact_save(
       first,
       "source",
       bytes,
@@ -13,14 +13,14 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
     )
     expect_identical(
       ref,
-      graft_artifact_save(local, "source", bytes, "application/octet-stream")
+      artifact_save(local, "source", bytes, "application/octet-stream")
     )
     expect_error(
-      graft_artifact_read(second, ref),
+      artifact_read(second, ref),
       class = "graft_artifact_error"
     )
     expect_error(
-      graft_artifact_save(
+      artifact_save(
         second,
         "derived",
         charToRaw("text"),
@@ -29,19 +29,19 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
       ),
       class = "graft_artifact_error"
     )
-    derived <- graft_artifact_save(
+    derived <- artifact_save(
       first,
       "derived",
       charToRaw("text"),
       "text/plain",
       dependencies = list(ref)
     )
-    selection <- graft_artifact_select(first, list(derived))
+    selection <- artifact_select(first, list(derived))
     expect_error(
-      graft_artifact_read_selection(second, selection),
+      artifact_read_selection(second, selection),
       class = "graft_artifact_error"
     )
-    decision <- graft_artifact_decide(
+    decision <- artifact_decide(
       first,
       "subject",
       "review",
@@ -52,13 +52,13 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
       "explicit approval",
       "context"
     )
-    expect_null(graft_artifact_read_decision(second, "subject"))
+    expect_null(artifact_read_decision(second, "subject"))
     expect_error(
-      graft_artifact_read_decision(second, "subject", decision$id),
+      artifact_read_decision(second, "subject", decision$id),
       class = "graft_artifact_error"
     )
     expect_length(
-      graft_artifact_reuse(
+      artifact_reuse(
         first,
         "subject",
         decision$id,
@@ -67,18 +67,18 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
       )$selection$artifacts,
       2L
     )
-    expect_identical(graft_artifact_read(first, ref)$bytes, bytes)
+    expect_identical(artifact_read(first, ref)$bytes, bytes)
   })
   DBI::dbWithTransaction(connection, {
-    reopened <- graft_artifact_store_postgres(connection, "first")
-    expect_identical(graft_artifact_read(reopened, ref)$bytes, bytes)
+    reopened <- graft_store_postgres(connection, "first")
+    expect_identical(artifact_read(reopened, ref)$bytes, bytes)
     expect_identical(
-      graft_artifact_read_decision(reopened, "subject"),
+      artifact_read_decision(reopened, "subject"),
       decision
     )
   })
   expect_error(
-    graft_artifact_read(reopened, ref),
+    artifact_read(reopened, ref),
     class = "graft_artifact_error"
   )
 })
@@ -86,15 +86,15 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
 test_that("PostgreSQL acceptance is atomic and retries retain historical identity", {
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    store <- graft_artifact_store_postgres(connection, "reader", create = TRUE)
-    ref <- graft_artifact_save(
+    store <- graft_store_postgres(connection, "reader", create = TRUE)
+    ref <- artifact_save(
       store,
       "memory",
       charToRaw("first"),
       "text/plain"
     )
-    selected <- graft_artifact_select(store, list(ref))
-    first <- graft_artifact_decide(
+    selected <- artifact_select(store, list(ref))
+    first <- artifact_decide(
       store,
       "memory",
       "a",
@@ -107,15 +107,15 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
     )
   })
   DBI::dbBegin(connection)
-  store <- graft_artifact_store_postgres(connection, "reader")
-  other <- graft_artifact_save(
+  store <- graft_store_postgres(connection, "reader")
+  other <- artifact_save(
     store,
     "memory",
     charToRaw("correction"),
     "text/plain"
   )
-  other_selection <- graft_artifact_select(store, list(other))
-  correction <- graft_artifact_decide(
+  other_selection <- artifact_select(store, list(other))
+  correction <- artifact_decide(
     store,
     "memory",
     "b",
@@ -128,14 +128,14 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
   )
   DBI::dbRollback(connection)
   DBI::dbWithTransaction(connection, {
-    store <- graft_artifact_store_postgres(connection, "reader")
+    store <- graft_store_postgres(connection, "reader")
     expect_error(
-      graft_artifact_read(store, other),
+      artifact_read(store, other),
       class = "graft_artifact_error"
     )
-    expect_identical(graft_artifact_read_decision(store, "memory"), first)
+    expect_identical(artifact_read_decision(store, "memory"), first)
     expect_error(
-      graft_artifact_decide(
+      artifact_decide(
         store,
         "memory",
         "stale",
@@ -148,7 +148,7 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
       ),
       class = "graft_artifact_error"
     )
-    withdrawal <- graft_artifact_decide(
+    withdrawal <- artifact_decide(
       store,
       "memory",
       "withdraw",
@@ -160,7 +160,7 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
       "context"
     )
     expect_identical(
-      graft_artifact_decide(
+      artifact_decide(
         store,
         "memory",
         "a",
@@ -174,11 +174,11 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
       first
     )
     expect_error(
-      graft_artifact_reuse(store, "memory", first$id, "context", TRUE),
+      artifact_reuse(store, "memory", first$id, "context", TRUE),
       class = "graft_artifact_error"
     )
-    expect_identical(graft_artifact_read_decision(store, "memory"), withdrawal)
-    expect_identical(graft_artifact_read(store, ref)$bytes, charToRaw("first"))
+    expect_identical(artifact_read_decision(store, "memory"), withdrawal)
+    expect_identical(artifact_read(store, ref)$bytes, charToRaw("first"))
   })
 })
 
@@ -192,22 +192,22 @@ test_that("PostgreSQL scope locks reject a competing writer until commit", {
     paste("SET search_path TO", DBI::dbQuoteIdentifier(second, schema))
   )
   DBI::dbWithTransaction(connection, {
-    graft_artifact_store_postgres(connection, "reader", create = TRUE)
+    graft_store_postgres(connection, "reader", create = TRUE)
   })
   DBI::dbBegin(connection)
-  graft_artifact_store_postgres(connection, "reader")
+  graft_store_postgres(connection, "reader")
   DBI::dbBegin(second)
   DBI::dbExecute(second, "SET LOCAL lock_timeout = '100ms'")
   expect_error(
-    graft_artifact_store_postgres(second, "reader"),
+    graft_store_postgres(second, "reader"),
     class = "simpleError"
   )
   DBI::dbRollback(second)
   DBI::dbCommit(connection)
   DBI::dbWithTransaction(second, {
-    expect_s3_class(
-      graft_artifact_store_postgres(second, "reader"),
-      "graft_artifact_store"
+    expect_s7_class(
+      graft_store_postgres(second, "reader"),
+      PostgresArtifactStore
     )
   })
 })
@@ -215,20 +215,20 @@ test_that("PostgreSQL scope locks reject a competing writer until commit", {
 test_that("PostgreSQL reads enforce byte bounds and reject corrupt metadata", {
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    store <- graft_artifact_store_postgres(connection, "reader", create = TRUE)
-    ref <- graft_artifact_save(
+    store <- graft_store_postgres(connection, "reader", create = TRUE)
+    ref <- artifact_save(
       store,
       "text",
       charToRaw("bounded"),
       "text/plain"
     )
-    bounded <- graft_artifact_store_postgres(
+    bounded <- graft_store_postgres(
       connection,
       "reader",
       max_bytes = 1
     )
     expect_error(
-      graft_artifact_read(bounded, ref),
+      artifact_read(bounded, ref),
       class = "graft_artifact_error"
     )
     DBI::dbExecute(
@@ -237,7 +237,7 @@ test_that("PostgreSQL reads enforce byte bounds and reject corrupt metadata", {
       params = list(list(charToRaw("{}")))
     )
     expect_error(
-      graft_artifact_read(store, ref),
+      artifact_read(store, ref),
       class = "graft_artifact_error"
     )
   })
@@ -247,23 +247,23 @@ test_that("PostgreSQL vocabulary releases stay within their host scope", {
   fixture <- local_vocabulary()
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    first <- graft_artifact_store_postgres(connection, "first", create = TRUE)
-    second <- graft_artifact_store_postgres(connection, "second", create = TRUE)
-    selection <- graft_vocabulary_publish(first, fixture$path)
-    retained <- graft_vocabulary_read(first, selection)
+    first <- graft_store_postgres(connection, "first", create = TRUE)
+    second <- graft_store_postgres(connection, "second", create = TRUE)
+    selection <- vocabulary_publish(first, fixture$path)
+    retained <- vocabulary_read(first, selection)
     expect_identical(
       selection,
-      graft_vocabulary_publish(fixture$store, fixture$path)
+      vocabulary_publish(fixture$store, fixture$path)
     )
     expect_error(
-      graft_vocabulary_read(second, selection),
+      vocabulary_read(second, selection),
       class = "graft_artifact_error"
     )
   })
   withr::local_envvar(DATA_DICT = "/missing/data-dict")
   DBI::dbWithTransaction(connection, {
-    reopened <- graft_artifact_store_postgres(connection, "first")
-    expect_identical(graft_vocabulary_read(reopened, selection), retained)
+    reopened <- graft_store_postgres(connection, "first")
+    expect_identical(vocabulary_read(reopened, selection), retained)
   })
 })
 
@@ -277,7 +277,7 @@ test_that("PostgreSQL rejects transaction snapshots that can hide committed deci
       paste("SET TRANSACTION ISOLATION LEVEL", isolation)
     )
     expect_error(
-      graft_artifact_store_postgres(connection, "reader", create = TRUE),
+      graft_store_postgres(connection, "reader", create = TRUE),
       class = "graft_artifact_error"
     )
     DBI::dbRollback(connection)

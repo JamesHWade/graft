@@ -1,5 +1,5 @@
 test_that("local replacement removes a complete forgotten closure", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
 
   orphan <- charToRaw("orphan content")
@@ -11,14 +11,14 @@ test_that("local replacement removes a complete forgotten closure", {
     file.rename(from, to)
   })
   expect_error(
-    graft_artifact_save(source, "failed-publication", orphan, "text/plain"),
+    artifact_save(source, "failed-publication", orphan, "text/plain"),
     class = "graft_artifact_error"
   )
   local_mocked_bindings(artifact_rename_file = function(from, to) {
     file.rename(from, to)
   })
 
-  before <- graft_artifact_manifest(source)
+  before <- graft_manifest(source)
   orphan_objects <- Filter(
     \(object) {
       identical(object$kind, "content") &&
@@ -54,47 +54,47 @@ test_that("local replacement removes a complete forgotten closure", {
   )
 
   target_path <- withr::local_tempdir()
-  target <- graft_artifact_store(target_path, create = TRUE)
-  result <- graft_artifact_replace(source, target, plan)
+  target <- graft_store(target_path, create = TRUE)
+  result <- graft_replace(source, target, plan)
   expect_identical(result, plan$target)
-  expect_identical(graft_artifact_manifest(target), plan$target)
+  expect_identical(graft_manifest(target), plan$target)
   expect_identical(
-    graft_artifact_manifest(graft_artifact_store(target_path)),
+    graft_manifest(graft_store(target_path)),
     plan$target
   )
 
   expect_identical(
-    graft_artifact_read(target, fixture$survivor)$bytes,
+    artifact_read(target, fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
   expect_identical(
-    graft_artifact_read(target, fixture$shared)$bytes,
+    artifact_read(target, fixture$shared)$bytes,
     charToRaw("shared bytes")
   )
   expect_error(
-    graft_artifact_read(target, fixture$leaf),
+    artifact_read(target, fixture$leaf),
     class = "graft_artifact_error"
   )
   expect_error(
-    graft_artifact_read(target, fixture$dependent),
+    artifact_read(target, fixture$dependent),
     class = "graft_artifact_error"
   )
   expect_error(
-    graft_artifact_read(target, fixture$forgotten),
+    artifact_read(target, fixture$forgotten),
     class = "graft_artifact_error"
   )
   expect_error(
-    graft_artifact_read_selection(target, fixture$removed_selection),
+    artifact_read_selection(target, fixture$removed_selection),
     class = "graft_artifact_error"
   )
-  expect_null(graft_artifact_read_decision(target, "removed-stream"))
-  expect_null(graft_artifact_read_decision(target, "mixed-stream"))
-  expect_null(graft_artifact_read_decision(target, "explicit-stream"))
+  expect_null(artifact_read_decision(target, "removed-stream"))
+  expect_null(artifact_read_decision(target, "mixed-stream"))
+  expect_null(artifact_read_decision(target, "explicit-stream"))
   expect_identical(
-    graft_artifact_read_decision(target, "retained-stream"),
+    artifact_read_decision(target, "retained-stream"),
     fixture$retained_decision
   )
-  expect_identical(graft_artifact_manifest(source), before)
+  expect_identical(graft_manifest(source), before)
 
   target_objects <- artifact_recovery_manifest_keys(plan$target)
   expect_identical(
@@ -117,35 +117,35 @@ test_that("local replacement removes a complete forgotten closure", {
 })
 
 test_that("local replacement failure leaves a quarantine that requires a new target", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
   plan <- artifact_recovery_plan(source, fixture)
 
   partial_path <- withr::local_tempdir()
-  partial <- graft_artifact_store(
+  partial <- graft_store(
     partial_path,
     create = TRUE,
     max_revision_bytes = 1
   )
   expect_error(
-    graft_artifact_replace(source, partial, plan),
+    graft_replace(source, partial, plan),
     class = "graft_artifact_error"
   )
   expect_gt(length(list.files(partial_path, recursive = TRUE)), 1L)
   expect_error(
-    graft_artifact_replace(source, partial, plan),
+    graft_replace(source, partial, plan),
     class = "graft_artifact_error"
   )
 
-  retry <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
-  expect_identical(graft_artifact_replace(source, retry, plan), plan$target)
-  expect_identical(graft_artifact_manifest(retry), plan$target)
+  retry <- graft_store(withr::local_tempdir(), create = TRUE)
+  expect_identical(graft_replace(source, retry, plan), plan$target)
+  expect_identical(graft_manifest(retry), plan$target)
 })
 
 test_that("local replacement copies exact survivors into isolated PostgreSQL scopes", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
-  before <- graft_artifact_manifest(source)
+  before <- graft_manifest(source)
   plan <- artifact_recovery_plan(source, fixture)
 
   connection <- local_artifact_postgres()
@@ -154,18 +154,18 @@ test_that("local replacement copies exact survivors into isolated PostgreSQL sco
     "SELECT current_schema() AS name"
   )$name
   DBI::dbWithTransaction(connection, {
-    target <- graft_artifact_store_postgres(
+    target <- graft_store_postgres(
       connection,
       "replacement-target",
       create = TRUE
     )
-    reader <- graft_artifact_store_postgres(
+    reader <- graft_store_postgres(
       connection,
       "independent-reader",
       create = TRUE
     )
     reader_fixture <- artifact_recovery_fixture(reader)
-    expect_identical(graft_artifact_replace(source, target, plan), plan$target)
+    expect_identical(graft_replace(source, target, plan), plan$target)
   })
 
   independent <- DBI::dbConnect(RPostgres::Postgres())
@@ -178,114 +178,114 @@ test_that("local replacement copies exact survivors into isolated PostgreSQL sco
     )
   )
   DBI::dbWithTransaction(independent, {
-    reader <- graft_artifact_store_postgres(
+    reader <- graft_store_postgres(
       independent,
       "independent-reader"
     )
-    expect_identical(graft_artifact_manifest(reader), before)
+    expect_identical(graft_manifest(reader), before)
     expect_identical(
-      graft_artifact_read(reader, reader_fixture$leaf)$bytes,
+      artifact_read(reader, reader_fixture$leaf)$bytes,
       charToRaw("leaf bytes")
     )
     expect_identical(
-      graft_artifact_read(reader, reader_fixture$dependent)$bytes,
+      artifact_read(reader, reader_fixture$dependent)$bytes,
       charToRaw("dependent bytes")
     )
   })
 
   DBI::dbWithTransaction(connection, {
-    target <- graft_artifact_store_postgres(connection, "replacement-target")
-    expect_identical(graft_artifact_manifest(target), plan$target)
+    target <- graft_store_postgres(connection, "replacement-target")
+    expect_identical(graft_manifest(target), plan$target)
     expect_identical(
-      graft_artifact_read(target, fixture$survivor)$bytes,
+      artifact_read(target, fixture$survivor)$bytes,
       charToRaw("survivor bytes")
     )
     expect_error(
-      graft_artifact_read(target, fixture$leaf),
+      artifact_read(target, fixture$leaf),
       class = "graft_artifact_error"
     )
   })
-  expect_identical(graft_artifact_manifest(source), before)
+  expect_identical(graft_manifest(source), before)
 })
 
 test_that("PostgreSQL replacement copies exact survivors into a reopened local store", {
   connection <- local_artifact_postgres()
   target_path <- withr::local_tempdir()
-  target <- graft_artifact_store(target_path, create = TRUE)
+  target <- graft_store(target_path, create = TRUE)
 
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(
+    source <- graft_store_postgres(
       connection,
       "postgres-source",
       create = TRUE
     )
     fixture <- artifact_recovery_fixture(source)
-    before <- graft_artifact_manifest(source)
+    before <- graft_manifest(source)
     plan <- artifact_recovery_plan(source, fixture)
-    expect_identical(graft_artifact_replace(source, target, plan), plan$target)
+    expect_identical(graft_replace(source, target, plan), plan$target)
   })
 
-  expect_identical(graft_artifact_manifest(target), plan$target)
-  reopened <- graft_artifact_store(target_path)
-  expect_identical(graft_artifact_manifest(reopened), plan$target)
+  expect_identical(graft_manifest(target), plan$target)
+  reopened <- graft_store(target_path)
+  expect_identical(graft_manifest(reopened), plan$target)
   expect_identical(
-    graft_artifact_read(reopened, fixture$survivor)$bytes,
+    artifact_read(reopened, fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
   expect_error(
-    graft_artifact_read(reopened, fixture$leaf),
+    artifact_read(reopened, fixture$leaf),
     class = "graft_artifact_error"
   )
 
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(connection, "postgres-source")
-    expect_identical(graft_artifact_manifest(source), before)
+    source <- graft_store_postgres(connection, "postgres-source")
+    expect_identical(graft_manifest(source), before)
     expect_identical(
-      graft_artifact_read(source, fixture$leaf)$bytes,
+      artifact_read(source, fixture$leaf)$bytes,
       charToRaw("leaf bytes")
     )
   })
 })
 
 test_that("a PostgreSQL host transaction rolls back a failed quarantine copy", {
-  source <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(source)
   plan <- artifact_recovery_plan(source, fixture)
   connection <- local_artifact_postgres()
   scope <- "rolled-back-target"
 
   DBI::dbWithTransaction(connection, {
-    graft_artifact_store_postgres(connection, scope, create = TRUE)
+    graft_store_postgres(connection, scope, create = TRUE)
   })
   DBI::dbBegin(connection)
-  target <- graft_artifact_store_postgres(
+  target <- graft_store_postgres(
     connection,
     scope,
     create = TRUE,
     max_revision_bytes = 1
   )
   expect_error(
-    graft_artifact_replace(source, target, plan),
+    graft_replace(source, target, plan),
     class = "graft_artifact_error"
   )
   DBI::dbRollback(connection)
 
   DBI::dbWithTransaction(connection, {
-    target <- graft_artifact_store_postgres(connection, scope)
-    expect_identical(graft_artifact_manifest(target)$objects, list())
+    target <- graft_store_postgres(connection, scope)
+    expect_identical(graft_manifest(target)$objects, list())
   })
 })
 
 test_that("PostgreSQL manifests reject unknown scoped objects and corruption", {
   connection <- local_artifact_postgres()
   DBI::dbWithTransaction(connection, {
-    source <- graft_artifact_store_postgres(
+    source <- graft_store_postgres(
       connection,
       "manifest-source",
       create = TRUE
     )
     fixture <- artifact_recovery_fixture(source)
-    before <- graft_artifact_manifest(source)
+    before <- graft_manifest(source)
   })
 
   DBI::dbBegin(connection)
@@ -302,16 +302,16 @@ test_that("PostgreSQL manifests reject unknown scoped objects and corruption", {
       list(charToRaw("unknown"))
     )
   )
-  unknown <- graft_artifact_store_postgres(connection, "manifest-source")
+  unknown <- graft_store_postgres(connection, "manifest-source")
   expect_error(
-    graft_artifact_manifest(unknown),
+    graft_manifest(unknown),
     class = "graft_artifact_error"
   )
   DBI::dbRollback(connection)
 
   DBI::dbBegin(connection)
-  payload <- graft_artifact_read(
-    graft_artifact_store_postgres(connection, "manifest-source"),
+  payload <- artifact_read(
+    graft_store_postgres(connection, "manifest-source"),
     fixture$survivor
   )$metadata$payload
   DBI::dbExecute(
@@ -326,16 +326,16 @@ test_that("PostgreSQL manifests reject unknown scoped objects and corruption", {
       payload
     )
   )
-  corrupt <- graft_artifact_store_postgres(connection, "manifest-source")
+  corrupt <- graft_store_postgres(connection, "manifest-source")
   expect_error(
-    graft_artifact_manifest(corrupt),
+    graft_manifest(corrupt),
     class = "graft_artifact_error"
   )
   DBI::dbRollback(connection)
 
   DBI::dbWithTransaction(connection, {
-    reopened <- graft_artifact_store_postgres(connection, "manifest-source")
-    expect_identical(graft_artifact_manifest(reopened), before)
+    reopened <- graft_store_postgres(connection, "manifest-source")
+    expect_identical(graft_manifest(reopened), before)
   })
 })
 
@@ -343,26 +343,26 @@ test_that("a surviving vocabulary release is exact while its forgotten release d
   fixture_v1 <- local_vocabulary("v1")
   fixture_v2 <- local_vocabulary("v2")
   source <- fixture_v1$store
-  selection_v1 <- graft_vocabulary_publish(source, fixture_v1$path)
-  selection_v2 <- graft_vocabulary_publish(source, fixture_v2$path)
-  forgotten_release <- graft_vocabulary_read(source, selection_v1)
-  survivor <- graft_vocabulary_read(source, selection_v2)
-  selected_v1 <- graft_artifact_read_selection(source, selection_v1)
-  root_v1 <- graft_artifact_read(source, selected_v1$roots[[1L]])
+  selection_v1 <- vocabulary_publish(source, fixture_v1$path)
+  selection_v2 <- vocabulary_publish(source, fixture_v2$path)
+  forgotten_release <- vocabulary_read(source, selection_v1)
+  survivor <- vocabulary_read(source, selection_v2)
+  selected_v1 <- artifact_read_selection(source, selection_v1)
+  root_v1 <- artifact_read(source, selected_v1$roots[[1L]])
   forgotten <- root_v1$metadata$dependencies[[1L]]
-  plan <- graft_artifact_replacement_plan(source, forget = list(forgotten))
-  before <- graft_artifact_manifest(source)
+  plan <- graft_plan_replacement(source, forget = list(forgotten))
+  before <- graft_manifest(source)
 
-  target <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
-  expect_identical(graft_artifact_replace(source, target, plan), plan$target)
-  expect_identical(graft_vocabulary_read(target, selection_v2), survivor)
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
+  expect_identical(graft_replace(source, target, plan), plan$target)
+  expect_identical(vocabulary_read(target, selection_v2), survivor)
   expect_error(
-    graft_vocabulary_read(target, selection_v1),
+    vocabulary_read(target, selection_v1),
     class = "graft_artifact_error"
   )
-  expect_identical(graft_artifact_manifest(source), before)
+  expect_identical(graft_manifest(source), before)
   expect_identical(
-    graft_vocabulary_read(source, selection_v1),
+    vocabulary_read(source, selection_v1),
     forgotten_release
   )
 })
@@ -371,18 +371,18 @@ test_that("synthetic host admission retires an old backup across a failed retry"
   # Synthetic protocol proof only: the RDS journal stands in for an
   # independent host journal. This does not prove production durability,
   # secure erasure, or crash recovery.
-  producer <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  producer <- graft_store(withr::local_tempdir(), create = TRUE)
   fixture <- artifact_recovery_fixture(producer)
-  producer_manifest <- graft_artifact_manifest(producer)
-  reader <- graft_artifact_store(withr::local_tempdir(), create = TRUE)
+  producer_manifest <- graft_manifest(producer)
+  reader <- graft_store(withr::local_tempdir(), create = TRUE)
   reader_fixture <- artifact_recovery_fixture(reader)
-  reader_manifest <- graft_artifact_manifest(reader)
+  reader_manifest <- graft_manifest(reader)
 
   backup_parent <- withr::local_tempdir()
   backup_path <- file.path(backup_parent, "closed-backup")
   dir.create(backup_path)
   producer_entries <- list.files(
-    producer$path,
+    producer@path,
     all.files = TRUE,
     no.. = TRUE,
     full.names = TRUE
@@ -395,10 +395,10 @@ test_that("synthetic host admission retires an old backup across a failed retry"
     )),
     rep(TRUE, length(producer_entries))
   )
-  backup <- graft_artifact_store(backup_path)
-  expect_identical(graft_artifact_manifest(backup), producer_manifest)
+  backup <- graft_store(backup_path)
+  expect_identical(graft_manifest(backup), producer_manifest)
   expect_identical(
-    graft_artifact_read(backup, fixture$survivor)$bytes,
+    artifact_read(backup, fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
 
@@ -432,13 +432,13 @@ test_that("synthetic host admission retires an old backup across a failed retry"
   )
 
   plan <- artifact_recovery_plan(producer, fixture)
-  failed_target <- graft_artifact_store(
+  failed_target <- graft_store(
     withr::local_tempdir(),
     create = TRUE,
     max_revision_bytes = 1
   )
   expect_error(
-    graft_artifact_replace(producer, failed_target, plan),
+    graft_replace(producer, failed_target, plan),
     class = "graft_artifact_error"
   )
   reloaded <- artifact_recovery_synthetic_read_journal(journal_path)
@@ -452,28 +452,28 @@ test_that("synthetic host admission retires an old backup across a failed retry"
     )$admitted,
     FALSE
   )
-  expect_identical(graft_artifact_manifest(backup), producer_manifest)
+  expect_identical(graft_manifest(backup), producer_manifest)
   expect_identical(
-    graft_artifact_read(backup, fixture$survivor)$bytes,
+    artifact_read(backup, fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
 
-  replacement <- graft_artifact_store(
+  replacement <- graft_store(
     withr::local_tempdir(),
     create = TRUE
   )
-  replacement_manifest <- graft_artifact_replace(
+  replacement_manifest <- graft_replace(
     producer,
     replacement,
     plan
   )
   expect_identical(replacement_manifest, plan$target)
   expect_error(
-    graft_artifact_read(replacement, fixture$leaf),
+    artifact_read(replacement, fixture$leaf),
     class = "graft_artifact_error"
   )
   expect_identical(
-    graft_artifact_read(replacement, fixture$survivor)$bytes,
+    artifact_read(replacement, fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
 
@@ -519,9 +519,9 @@ test_that("synthetic host admission retires an old backup across a failed retry"
   )
   expect_identical(admitted$admitted, TRUE)
   expect_identical(admitted$ref, fixture$survivor)
-  expect_identical(graft_artifact_manifest(reader), reader_manifest)
+  expect_identical(graft_manifest(reader), reader_manifest)
   expect_identical(
-    graft_artifact_read(reader, reader_fixture$survivor)$bytes,
+    artifact_read(reader, reader_fixture$survivor)$bytes,
     charToRaw("survivor bytes")
   )
 })

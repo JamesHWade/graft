@@ -54,21 +54,42 @@ to copy and adapt.
 | Several agents working on the same domain | Shared concepts and field meanings bound to a data-dict release | The same vocabulary, even after the original dictionary changes |
 
 You choose the payload: plain text, JSON, a rendered report, or other bytes.
-Declare the evidence dependencies when you save it. Graft preserves exact
-revisions, groups related artifacts into selections, and records acceptance or
-withdrawal for a stated purpose. Reading a current accepted selection checks both
-its recorded decision and its stored contents.
+Save text as text or supply raw bytes, and declare evidence dependencies as exact
+references. Graft preserves immutable revisions, groups related artifacts into
+typed selections, and records acceptance or withdrawal for a stated purpose.
+Exact reads return typed `Artifact` values; current accepted recall separately
+checks its decision and stored contents.
 
 This lets you answer two different questions: **“What should this task use
 now?”** and **“What did we use when we reached that earlier conclusion?”**
 
+## Save a result with its evidence
+
+Start with a fresh directory and ordinary text:
+
+```r
+library(graft)
+store <- graft_store("analysis-memory", create = TRUE)
+source <- graft_save(store, "Handbook: use a 30-day activity window.", "handbook")
+note <- graft_save(
+  store, "An active customer used the product in the past 30 days.",
+  id = "active-customer", dependencies = source
+)
+graft_read(store, note)@data
+```
+
+Reopen it later with `graft_store("analysis-memory")`. Saving a correction under
+the same ID creates a new revision; the original reference still reads the
+original content. Use `graft_accept()` to record a review and `graft_recall()` to
+retrieve the current accepted result, as shown in the getting-started guide.
+
 ## Apply it to your app
 
 Start with one kind of knowledge your users repeatedly need. For example, add a
-“Save to project memory” action to an existing assistant, then expose a tool that
-retrieves the latest reviewed note with its source. Your app supplies the project
-or user scope, review action, and current access check. ellmer manages the model
-and tools; shinychat presents the conversation.
+“Save to project memory” action to an existing assistant, then expose
+`graft_tool()` for one fixed stream and purpose. Your app supplies the project or
+user scope, review action, and current access check. ellmer manages the model and
+tools; shinychat presents the conversation.
 
 As your notebook grows, your application can keep a catalog or search index to
 choose relevant notes, then use Graft to verify the exact retained selection.
@@ -85,6 +106,6 @@ bound to a data-dict dictionary.
 
 Graft is pre-production. Local stores support trusted files and one writer;
 PostgreSQL scopes work inside transactions owned by your application. The demo
-is for one trusted local user. Shared deployment requires application-owned
-identity, access, and retention controls. Permanent Forget and recovery from
-retired backups remain active work.
+uses `eligible = TRUE` for one trusted local user. Shared deployment requires
+application-owned identity, access, and retention controls. Permanent Forget and
+recovery from retired backups remain active work.

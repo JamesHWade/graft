@@ -8,10 +8,10 @@
 #' decision stream is removed when any historical record names a removed
 #' selection, or when the stream is explicitly requested.
 #'
-#' @param store A handle returned by [graft_artifact_store()] or
-#'   [graft_artifact_store_postgres()].
+#' @param store A handle returned by [graft_store()] or
+#'   [graft_store_postgres()].
 #' @param forget A list of exact artifact references returned by
-#'   [graft_artifact_save()]. It may be empty when `forget_streams` is
+#'   [graft_save()]. It may be empty when `forget_streams` is
 #'   nonempty.
 #' @param forget_streams Character vector of complete decision stream names to
 #'   remove. The names must already exist in the source inventory.
@@ -23,7 +23,7 @@
 #' @param source A source artifact-store handle for a replacement operation.
 #' @param target An empty artifact-store handle to receive the replacement.
 #' @param plan A plan returned by
-#'   [graft_artifact_replacement_plan()]. The plan is operational data; it is
+#'   [graft_plan_replacement()]. The plan is operational data; it is
 #'   not an authorization or approval record.
 #'
 #' @details
@@ -41,25 +41,24 @@
 #' the host transaction and scope lock for the operation.
 #'
 #' @returns
-#' `graft_artifact_replacement_plan()` returns a list with format
+#' `graft_plan_replacement()` returns a list with format
 #' `graft-artifact-replacement/1`, source and target manifests, canonical
 #' Forget roots and streams, limits, and removed artifact, selection, and
-#' stream identities. `graft_artifact_replace()` returns the verified target
+#' stream identities. `graft_replace()` returns the verified target
 #' manifest only after the source and target have been checked again.
 #'
 #' @examples
 #' path <- tempfile("artifacts-")
 #' replacement_path <- tempfile("replacement-")
-#' store <- graft_artifact_store(path, create = TRUE)
-#' target <- graft_artifact_store(replacement_path, create = TRUE)
-#' ref <- graft_artifact_save(store, "report", charToRaw("Evidence"),
-#'   "text/plain")
-#' plan <- graft_artifact_replacement_plan(store, list(ref))
-#' graft_artifact_replace(store, target, plan)
+#' store <- graft_store(path, create = TRUE)
+#' target <- graft_store(replacement_path, create = TRUE)
+#' ref <- graft_save(store, "Evidence", "report")
+#' plan <- graft_plan_replacement(store, list(ref))
+#' graft_replace(store, target, plan)
 #' unlink(path, recursive = TRUE)
 #' unlink(replacement_path, recursive = TRUE)
 #' @export
-graft_artifact_replacement_plan <- function(
+graft_plan_replacement <- function(
   store,
   forget,
   forget_streams = character(),
@@ -74,6 +73,14 @@ graft_artifact_replacement_plan <- function(
     max_total_bytes,
     max_metadata_bytes
   )
+  if (
+    S7::S7_inherits(forget, ArtifactRef) ||
+      (is.list(forget) &&
+        length(forget) &&
+        all(vapply(forget, S7::S7_inherits, logical(1), class = ArtifactRef)))
+  ) {
+    forget <- artifact_refs_records(forget)
+  }
   forget <- artifact_refs(forget, limits$max_objects)
   forget_streams <- artifact_replacement_stream_names(forget_streams)
   if (!length(forget) && !length(forget_streams)) {
@@ -95,15 +102,15 @@ graft_artifact_replacement_plan <- function(
   )
 }
 
-#' @rdname graft_artifact_replacement_plan
+#' @rdname graft_plan_replacement
 #' @export
-graft_artifact_replace <- function(source, target, plan) {
+graft_replace <- function(source, target, plan) {
   artifact_recovery_preflight_store(source)
   artifact_recovery_preflight_store(target)
   artifact_check_store(source)
   artifact_check_store(target)
   checked <- artifact_replacement_check_plan(plan)
-  recomputed <- graft_artifact_replacement_plan(
+  recomputed <- graft_plan_replacement(
     source,
     checked$forget,
     checked$forget_streams,
@@ -471,7 +478,7 @@ artifact_replacement_object_limit <- function(
   max_metadata_bytes
 ) {
   if (identical(kind, "content")) {
-    return(store$max_bytes)
+    return(store@max_bytes)
   }
   if (
     identical(kind, "selections") ||
@@ -479,7 +486,7 @@ artifact_replacement_object_limit <- function(
   ) {
     return(max_metadata_bytes)
   }
-  store$max_revision_bytes
+  store@max_revision_bytes
 }
 
 artifact_replacement_check_manifest <- function(manifest) {

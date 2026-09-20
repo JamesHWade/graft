@@ -1,42 +1,74 @@
-#' Publish and read a shared vocabulary release
+#' Publish a validated shared vocabulary release
 #'
-#' Validate explicit concepts, directed relationships and qualified dictionary
-#' bindings, then retain their exact source bytes and resolved dictionary exports
-#' in one artifact selection. Publication grants no approval or execution
-#' authority. Reading a historical release does not re-run data-dict.
+#' The source companion and its pinned dictionary files are validated by the
+#' upstream data-dict CLI and retained as one immutable artifact selection.
+#' The returned value is a typed release re-read from the store after
+#' publication.
 #'
-#' @param store A [graft_artifact_store()] handle.
+#' @param store An [ArtifactStore] returned by [graft_store()] or
+#'   [graft_store_postgres()].
 #' @param path Path to a `graft-bindings/1` JSON companion file. Referenced
-#'   vocabulary JSON and dictionary YAML files must be siblings pinned by SHA-256.
-#'   Each input file is limited to 1 MiB, with at most 498 dictionaries per
-#'   release. Sources and generated outputs must fit the store's aggregate byte
-#'   limit. Dictionaries must be self-contained;
-#'   validation/export runs against captured source bytes in a temporary file.
-#' @param selection Exact selection digest returned by
-#'   `graft_vocabulary_publish()`.
+#'   vocabulary JSON and dictionary YAML files must be siblings pinned by
+#'   SHA-256.
 #'
-#' @details
-#' The companion format records its release, vocabulary release, dictionary
-#' identities, workflows, source digests, bindings and qualified assertions.
-#' Concepts map to one qualified dictionary/table/field. Relationships require
-#' explicit domain and range concepts and matching endpoint bindings, including
-#' scope, grain and condition. Assertions retain their source, status, negation,
-#' time and scope; publication does not verify that an assertion is true.
-#'
-#' Matching concepts do not prove joins, comparable units, permissions or program
-#' authority. No expression evaluation, ontology inference or code loading occurs.
-#' See the shared vocabulary article for the complete companion format.
-#'
-#' Publishing requires the optional `datadict` package and an installed data-dict
-#' binary. Only its public `validate-spec` and `export-spec` commands are used.
-#' Graft preserves their resolved JSON and validation provenance; data-dict owns
-#' the local table contract. Historical reads require only Graft.
-#'
-#' @returns `graft_vocabulary_publish()` returns an immutable selection digest.
-#'   `graft_vocabulary_read()` returns `vocabulary`, `bindings`, `dictionaries`,
-#'   `references`, and `context` (Markdown generated from the same release).
+#' @return A [VocabularyRelease] containing the verified selection and the
+#'   complete retained vocabulary, bindings, dictionaries, references, and
+#'   context.
 #' @export
-graft_vocabulary_publish <- function(store, path) {
+graft_publish_vocabulary <- function(store, path) {
+  selection <- vocabulary_publish(store, path)
+  graft_read_vocabulary(store, selection)
+}
+
+#' Read a retained vocabulary release
+#'
+#' Resolve an exact release selection, verify it against the live artifact
+#' store, and reconstruct every release field from retained bytes. A supplied
+#' [VocabularyRelease] is treated as a selection descriptor; its cached
+#' vocabulary fields are never trusted.
+#'
+#' @param store An [ArtifactStore] returned by [graft_store()] or
+#'   [graft_store_postgres()].
+#' @param release A [VocabularyRelease], [ArtifactSelection], or exact
+#'   selection digest returned by [graft_publish_vocabulary()].
+#'
+#' @return A freshly materialized [VocabularyRelease].
+#' @export
+graft_read_vocabulary <- function(store, release) {
+  selection <- vocabulary_selection(store, release)
+  value <- vocabulary_read(store, selection@id)
+  VocabularyRelease(
+    selection = selection,
+    vocabulary = value$vocabulary,
+    bindings = value$bindings,
+    dictionaries = value$dictionaries,
+    references = value$references,
+    context = value$context
+  )
+}
+
+vocabulary_selection <- function(store, release) {
+  id <- if (S7::S7_inherits(release, VocabularyRelease)) {
+    selection <- release@selection
+    if (!S7::S7_inherits(selection, ArtifactSelection)) {
+      vocabulary_binding_error(
+        "A vocabulary release must contain an artifact selection"
+      )
+    }
+    selection@id
+  } else if (S7::S7_inherits(release, ArtifactSelection)) {
+    release@id
+  } else if (is.character(release) && length(release) == 1L) {
+    release
+  } else {
+    vocabulary_binding_error(
+      "`release` must be a VocabularyRelease, ArtifactSelection, or selection digest"
+    )
+  }
+  graft_read_selection(store, id)
+}
+
+vocabulary_publish <- function(store, path) {
   artifact_check_store(store)
   source <- vocabulary_source_bytes(path)
   b <- vocabulary_json(source)
@@ -50,14 +82,14 @@ graft_vocabulary_publish <- function(store, path) {
   ))
   sizes <- files$size
   sizes[files$isdir %in% TRUE] <- NA_real_
-  vocabulary_check_source_budget(c(length(source), sizes), store$max_bytes)
+  vocabulary_check_source_budget(c(length(source), sizes), store@max_bytes)
   vocabulary_bytes <- vocabulary_check_pinned_file(dirname(path), b$vocabulary)
   dictionary_bytes <- lapply(b$dictionaries, \(ref) {
     vocabulary_check_pinned_file(dirname(path), ref)
   })
   vocabulary_check_source_budget(
     c(length(source), length(vocabulary_bytes), lengths(dictionary_bytes)),
-    store$max_bytes
+    store@max_bytes
   )
   ids <- vapply(
     b$dictionaries,
@@ -82,7 +114,7 @@ graft_vocabulary_publish <- function(store, path) {
     id <- artifact_check_text(id, "id")
     metadata <- artifact_metadata(id, bytes, media_type, dependencies)
     manifest <- artifact_encode(metadata)
-    if (length(manifest) > store$max_revision_bytes) {
+    if (length(manifest) > store@max_revision_bytes) {
       vocabulary_binding_error(
         "Release exceeds the artifact revision byte limit"
       )
@@ -137,7 +169,7 @@ graft_vocabulary_publish <- function(store, path) {
   )
   if (
     sum(vapply(records, \(record) length(record$bytes), integer(1))) >
-      store$max_bytes
+      store@max_bytes
   ) {
     vocabulary_binding_error(
       "Release exceeds the artifact store's aggregate byte limit"
@@ -154,19 +186,17 @@ graft_vocabulary_publish <- function(store, path) {
     )
   }
   for (record in records) {
-    do.call(graft_artifact_save, c(list(store = store), record))
+    do.call(artifact_save, c(list(store = store), record))
   }
-  graft_artifact_select(store, list(root))
+  artifact_select(store, list(root))
 }
 
-#' @rdname graft_vocabulary_publish
-#' @export
-graft_vocabulary_read <- function(store, selection) {
-  selected <- graft_artifact_read_selection(store, selection)
+vocabulary_read <- function(store, selection) {
+  selected <- artifact_read_selection(store, selection)
   if (length(selected$roots) != 1L) {
     vocabulary_binding_error("A vocabulary selection requires one release root")
   }
-  root <- graft_artifact_read(store, selected$roots[[1L]])
+  root <- artifact_read(store, selected$roots[[1L]])
   value <- vocabulary_json(root$bytes)
   vocabulary_check_record(value, c("format", "references"), "release")
   if (!identical(value$format, "graft-vocabulary-release/1")) {
@@ -206,7 +236,7 @@ graft_vocabulary_read <- function(store, selection) {
       "Vocabulary root dependencies differ from its contents"
     )
   }
-  read <- function(ref) graft_artifact_read(store, ref)$bytes
+  read <- function(ref) artifact_read(store, ref)$bytes
   bindings_bytes <- read(refs$bindings)
   vocabulary_bytes <- read(refs$vocabulary)
   b <- vocabulary_json(bindings_bytes)

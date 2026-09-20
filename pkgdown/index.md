@@ -5,7 +5,8 @@
 <h2 data-toc-skip>Keep what your project learns.<br>Use it in the next conversation.</h2>
 <p class="graft-hero-copy">
 Save reviewed findings, definitions, and decisions with their evidence. Give a
-later agent or workflow the current knowledge and a way to inspect its history.
+later agent or workflow the current reviewed knowledge, its exact sources, and
+its history.
 </p>
 <div class="graft-actions">
 <a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a>
@@ -28,7 +29,7 @@ correction, use it in later conversations, and still inspect the earlier version
 <thead><tr><th>Review once</th><th>Reuse later</th><th>Correct with history</th></tr></thead>
 <tbody><tr>
 <td>Save the agreed definition and its handbook excerpt.</td>
-<td>Let a fresh chat retrieve the current reviewed note through an ellmer tool.</td>
+<td>Let a fresh chat retrieve the current reviewed note through <code>graft_tool()</code>.</td>
 <td>Review the updated definition while preserving the original evidence.</td>
 </tr></tbody>
 </table>
@@ -47,7 +48,7 @@ shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 Review and save the proposed definition, then ask **“How do we count an active
 customer?”** Start a new conversation and ask again. Stop and restart the app to
 reopen the same notebook. The [getting-started guide](articles/getting-started.html)
-walks through the storage calls, connects the memory tool to ellmer, and explains
+walks through the storage calls, connects `graft_tool()` to ellmer, and explains
 how to enable the live agent.
 
 ## What could your project keep?
@@ -73,15 +74,35 @@ and applications can recover the same retained vocabulary.</p>
 </section>
 </div>
 
+## Save a result with its evidence
+
+Start with a fresh directory and ordinary text:
+
+```r
+library(graft)
+store <- graft_store("analysis-memory", create = TRUE)
+source <- graft_save(store, "Handbook: use a 30-day activity window.", "handbook")
+note <- graft_save(
+  store, "An active customer used the product in the past 30 days.",
+  id = "active-customer", dependencies = source
+)
+graft_read(store, note)@data
+```
+
+Reopen it later with `graft_store("analysis-memory")`. Saving a correction under
+the same ID creates a new revision; the original reference still reads the
+original content. Use `graft_accept()` to record a review and `graft_recall()` to
+retrieve the current accepted result, as shown in the getting-started guide.
+
 ## Add Graft to an existing application
 
 Keep ellmer for the model and tool calls, shinychat for the conversation, and your
 application's review and access controls. Add Graft where a useful result should
 outlive the current chat or R process.
 
-Start with one kind of note and a read-only tool that retrieves its current
-reviewed version. A larger app can use its own catalog or search index to choose
-relevant notes, then ask Graft to verify the retained selections and evidence.
+Start with one kind of note and a read-only `graft_tool()` fixed to its stream and
+purpose. A larger app can use its own catalog or search index to choose relevant
+notes, then ask Graft to verify the retained selections and evidence.
 
 ## Storage and operational guides
 

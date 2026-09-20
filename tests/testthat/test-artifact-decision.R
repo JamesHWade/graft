@@ -1,11 +1,11 @@
 test_that("decisions separate reviews, corrections, withdrawal and consultation", {
   f <- local_decision_fixture()
-  expect_null(graft_artifact_read_decision(f$store, "topic"))
+  expect_null(artifact_read_decision(f$store, "topic"))
   accepted <- decision_submit(f$request)
   expect_identical(accepted$sequence, 1L)
   expect_null(accepted$previous)
   expect_identical(decision_submit(f$request), accepted)
-  current <- graft_artifact_reuse(
+  current <- artifact_reuse(
     f$store,
     "topic",
     accepted$id,
@@ -32,11 +32,11 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
   expect_identical(corrected$previous, reviewed$id)
   expect_identical(corrected$selection, f$correction)
   expect_identical(
-    graft_artifact_read_decision(f$store, "topic", accepted$id),
+    artifact_read_decision(f$store, "topic", accepted$id),
     accepted
   )
   expect_error(
-    graft_artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
+    artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
     class = "graft_artifact_error"
   )
   withdrawn <- decision_submit(
@@ -49,13 +49,13 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
   )
   expect_identical(withdrawn$action, "withdraw")
   expect_identical(decision_submit(f$request), accepted)
-  expect_identical(graft_artifact_read_decision(f$store, "topic"), withdrawn)
+  expect_identical(artifact_read_decision(f$store, "topic"), withdrawn)
   expect_error(
-    graft_artifact_reuse(f$store, "topic", corrected$id, "research", TRUE),
+    artifact_reuse(f$store, "topic", corrected$id, "research", TRUE),
     class = "graft_artifact_error"
   )
   expect_error(
-    graft_artifact_reuse(f$store, "topic", withdrawn$id, "research", TRUE),
+    artifact_reuse(f$store, "topic", withdrawn$id, "research", TRUE),
     class = "graft_artifact_error"
   )
   reaccepted <- decision_submit(
@@ -64,7 +64,7 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
     expected = withdrawn$id
   )
   expect_identical(
-    graft_artifact_reuse(
+    artifact_reuse(
       f$store,
       "topic",
       reaccepted$id,
@@ -97,7 +97,7 @@ test_that("changed retries and stale predecessors cannot publish decisions", {
     class = "graft_artifact_error"
   )
   expect_identical(decision_journal_files(f$store), before)
-  expect_identical(graft_artifact_read_decision(f$store, "topic"), accepted)
+  expect_identical(artifact_read_decision(f$store, "topic"), accepted)
 })
 
 test_that("input normalization and stream isolation preserve decision identity", {
@@ -116,13 +116,13 @@ test_that("input normalization and stream isolation preserve decision identity",
   accepted <- decision_submit(attributed)
   expect_identical(decision_submit(f$request), accepted)
   expect_identical(
-    graft_artifact_read_decision(f$store, I("topic"), c(id = accepted$id)),
+    artifact_read_decision(f$store, I("topic"), c(id = accepted$id)),
     accepted
   )
   other <- decision_submit(f$request, stream = "other")
   expect_length(unique(c(accepted$id, other$id)), 2L)
   expect_error(
-    graft_artifact_read_decision(f$store, "other", accepted$id),
+    artifact_read_decision(f$store, "other", accepted$id),
     class = "graft_artifact_error"
   )
 })
@@ -141,7 +141,7 @@ test_that("malformed decisions fail before publishing and eligibility is explici
       request <- f$request
       request[field] <- list(bad)
       expect_error(
-        do.call(graft_artifact_decide, request),
+        do.call(artifact_decide, request),
         class = "graft_artifact_error"
       )
     }
@@ -158,12 +158,12 @@ test_that("malformed decisions fail before publishing and eligibility is explici
   accepted <- decision_submit(f$request)
   for (eligible in list(FALSE, NA, NULL, 1, c(TRUE, TRUE))) {
     expect_error(
-      graft_artifact_reuse(f$store, "topic", accepted$id, "research", eligible),
+      artifact_reuse(f$store, "topic", accepted$id, "research", eligible),
       class = "graft_artifact_error"
     )
   }
   expect_error(
-    graft_artifact_reuse(f$store, "topic", accepted$id, "other", TRUE),
+    artifact_reuse(f$store, "topic", accepted$id, "other", TRUE),
     class = "graft_artifact_error"
   )
   expect_error(
@@ -192,18 +192,18 @@ test_that("malformed decisions fail before publishing and eligibility is explici
 test_that("corrupt content blocks acceptance and reuse but permits withdrawal", {
   f <- local_decision_fixture()
   accepted <- decision_submit(f$request)
-  payload <- graft_artifact_read(f$store, f$first)$metadata$payload
-  writeBin(charToRaw("changed"), file.path(f$store$path, "content", payload))
+  payload <- artifact_read(f$store, f$first)$metadata$payload
+  writeBin(charToRaw("changed"), file.path((f$store)@path, "content", payload))
   expect_error(
     decision_submit(f$request, key = "review-2", expected = accepted$id),
     class = "graft_artifact_error"
   )
   expect_error(
-    graft_artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
+    artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
     class = "graft_artifact_error"
   )
   expect_identical(
-    graft_artifact_read_decision(f$store, "topic", accepted$id),
+    artifact_read_decision(f$store, "topic", accepted$id),
     accepted
   )
   withdrawn <- decision_submit(
@@ -214,7 +214,7 @@ test_that("corrupt content blocks acceptance and reuse but permits withdrawal", 
   )
   expect_identical(withdrawn$previous, accepted$id)
   expect_identical(decision_submit(f$request), accepted)
-  expect_identical(graft_artifact_read_decision(f$store, "topic"), withdrawn)
+  expect_identical(artifact_read_decision(f$store, "topic"), withdrawn)
 })
 
 test_that("journal and selection limits are independent and enforced before writes", {
@@ -246,11 +246,11 @@ test_that("journal and selection limits are independent and enforced before writ
   expect_identical(decision_submit(f$request, max_decisions = 1), accepted)
   size <- file.info(decision_journal_files(f$store))$size
   expect_identical(
-    graft_artifact_read_decision(f$store, "topic", max_metadata_bytes = size),
+    artifact_read_decision(f$store, "topic", max_metadata_bytes = size),
     accepted
   )
   expect_error(
-    graft_artifact_read_decision(
+    artifact_read_decision(
       f$store,
       "topic",
       max_metadata_bytes = size - 1
@@ -279,7 +279,7 @@ test_that("journal and selection limits are independent and enforced before writ
   second <- decision_submit(f$request, key = "review-2", expected = accepted$id)
   expect_identical(second$sequence, 2L)
   expect_error(
-    graft_artifact_read_decision(f$store, "topic", max_decisions = 1),
+    artifact_read_decision(f$store, "topic", max_decisions = 1),
     class = "graft_artifact_error"
   )
 })
@@ -292,7 +292,7 @@ test_that("journal corruption, forks and gaps fail closed", {
   bytes <- readBin(paths[[1]], "raw", n = file.info(paths[[1]])$size)
   writeBin(charToRaw("corrupt"), paths[[1]])
   expect_error(
-    graft_artifact_read_decision(f$store, "topic"),
+    artifact_read_decision(f$store, "topic"),
     class = "graft_artifact_error"
   )
   writeBin(bytes, paths[[1]])
@@ -302,13 +302,13 @@ test_that("journal corruption, forks and gaps fail closed", {
   )
   file.copy(paths[[1]], fork)
   expect_error(
-    graft_artifact_read_decision(f$store, "topic"),
+    artifact_read_decision(f$store, "topic"),
     class = "graft_artifact_error"
   )
   unlink(fork)
   unlink(paths[[1]])
   expect_error(
-    graft_artifact_read_decision(f$store, "topic"),
+    artifact_read_decision(f$store, "topic"),
     class = "graft_artifact_error"
   )
 })
@@ -317,18 +317,18 @@ test_that("staging is never promoted and failed publication can be retried", {
   f <- local_decision_fixture()
   local_mocked_bindings(artifact_rename_file = function(from, to) FALSE)
   expect_error(decision_submit(f$request), class = "graft_artifact_error")
-  expect_null(graft_artifact_read_decision(f$store, "topic"))
+  expect_null(artifact_read_decision(f$store, "topic"))
   staging <- file.path(
     artifact_decision_path(f$store, "topic"),
     "staged-interrupted"
   )
   writeBin(charToRaw("incomplete"), staging)
-  expect_null(graft_artifact_read_decision(f$store, "topic"))
+  expect_null(artifact_read_decision(f$store, "topic"))
   local_mocked_bindings(artifact_rename_file = function(from, to) {
     file.rename(from, to)
   })
   accepted <- decision_submit(f$request)
-  expect_identical(graft_artifact_read_decision(f$store, "topic"), accepted)
+  expect_identical(artifact_read_decision(f$store, "topic"), accepted)
   expect_identical(readBin(staging, "raw", n = 10), charToRaw("incomplete"))
 })
 
@@ -339,8 +339,8 @@ test_that("lost replies after publication do not duplicate or reapprove decision
     artifact_abort("Simulated interruption after publication.")
   })
   expect_error(decision_submit(f$request), class = "graft_artifact_error")
-  reopened <- graft_artifact_store(f$store$path)
-  accepted <- graft_artifact_read_decision(reopened, "topic")
+  reopened <- graft_store((f$store)@path)
+  accepted <- artifact_read_decision(reopened, "topic")
   expect_identical(decision_submit(f$request), accepted)
   expect_length(decision_journal_files(f$store), 1L)
   local_mocked_bindings(artifact_rename_file = function(from, to) {
@@ -353,7 +353,7 @@ test_that("lost replies after publication do not duplicate or reapprove decision
     action = "withdraw"
   )
   expect_identical(decision_submit(f$request), accepted)
-  expect_identical(graft_artifact_read_decision(reopened, "topic"), withdrawn)
+  expect_identical(artifact_read_decision(reopened, "topic"), withdrawn)
 })
 
 test_that("decisions and guarded consultation survive a fresh R process", {
@@ -364,11 +364,11 @@ test_that("decisions and guarded consultation survive a fresh R process", {
       if (!is.null(checkout)) {
         pkgload::load_all(checkout, quiet = TRUE)
       }
-      store <- graft::graft_artifact_store(path)
-      graft::graft_artifact_reuse(store, "topic", id, "research", TRUE)
+      store <- graft::graft_store(path)
+      graft:::artifact_reuse(store, "topic", id, "research", TRUE)
     },
     list(
-      path = f$store$path,
+      path = (f$store)@path,
       id = accepted$id,
       checkout = if (pkgload::is_dev_package("graft")) {
         normalizePath("../..")
@@ -383,9 +383,9 @@ test_that("decisions and guarded consultation survive a fresh R process", {
 
 test_that("head changes during verification cannot silently authorize new work", {
   f <- local_decision_fixture()
-  original <- graft_artifact_read_selection
+  original <- artifact_read_selection
   intervened <- FALSE
-  local_mocked_bindings(graft_artifact_read_selection = function(...) {
+  local_mocked_bindings(artifact_read_selection = function(...) {
     result <- original(...)
     if (!intervened) {
       intervened <<- TRUE
@@ -394,9 +394,9 @@ test_that("head changes during verification cannot silently authorize new work",
     result
   })
   expect_error(decision_submit(f$request), class = "graft_artifact_error")
-  head <- graft_artifact_read_decision(f$store, "topic")
+  head <- artifact_read_decision(f$store, "topic")
   expect_identical(head$key, "intervening")
-  local_mocked_bindings(graft_artifact_read_selection = function(...) {
+  local_mocked_bindings(artifact_read_selection = function(...) {
     result <- original(...)
     decision_submit(
       f$request,
@@ -407,11 +407,11 @@ test_that("head changes during verification cannot silently authorize new work",
     result
   })
   expect_error(
-    graft_artifact_reuse(f$store, "topic", head$id, "research", TRUE),
+    artifact_reuse(f$store, "topic", head$id, "research", TRUE),
     class = "graft_artifact_error"
   )
   expect_identical(
-    graft_artifact_read_decision(f$store, "topic")$action,
+    artifact_read_decision(f$store, "topic")$action,
     "withdraw"
   )
 })

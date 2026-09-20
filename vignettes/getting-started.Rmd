@@ -69,18 +69,20 @@ same retained artifacts.
 
 ```{r}
 library(graft)
-store <- graft_artifact_store("graft-walkthrough", create = TRUE)
+store <- graft_store("graft-walkthrough", create = TRUE)
 
-source <- graft_artifact_save(
-  store, "metrics.md",
-  charToRaw("Metrics handbook: active customers have a paid account and activity in the past 30 days. Exclude staff and test accounts."),
-  "text/plain"
+source <- graft_save(
+  store,
+  "Metrics handbook: active customers have a paid account and activity in the past 30 days. Exclude staff and test accounts.",
+  id = "metrics.md",
+  media_type = "text/plain"
 )
-note <- graft_artifact_save(
-  store, "metric:active-customer",
-  charToRaw("Count paid customers active in the past 30 days, excluding staff and test accounts."),
-  "text/plain",
-  dependencies = list(source)
+note <- graft_save(
+  store,
+  "Count paid customers active in the past 30 days, excluding staff and test accounts.",
+  id = "metric:active-customer",
+  media_type = "text/plain",
+  dependencies = source
 )
 ```
 
@@ -88,11 +90,12 @@ An **artifact** is saved content at an exact revision. Here the note declares th
 it depends on the handbook excerpt. An updated `metrics.md` on your laptop will
 not change the source retained behind this note.
 
-A **selection** groups the note with all its declared evidence dependencies:
+A **selection** groups the note with all its declared evidence dependencies. A
+single `ArtifactRef` is enough when there is one root:
 
 ```{r}
-selection <- graft_artifact_select(store, list(note))
-length(graft_artifact_read_selection(store, selection)$artifacts)
+selection <- graft_select(store, note)
+length(selection@artifacts)
 ```
 
 That result is two artifacts: the note and its source. You could use the same
@@ -106,13 +109,12 @@ Suppose you inspect the definition and its source and approve them for project
 assistance. Record that explicit action:
 
 ```{r}
-accepted <- graft_artifact_decide(
+accepted <- graft_accept(
   store,
+  note,
   stream = "metric:active-customer",
-  key = "review-1",
   expected = NULL,
-  selection = selection,
-  action = "accept",
+  key = "review-1",
   actor = "local-reviewer",
   reason = "Checked against the team's metrics handbook",
   purpose = "project-assistance"
@@ -122,7 +124,14 @@ accepted <- graft_artifact_decide(
 The **stream** names the subject being reviewed. `expected = NULL` means there
 must be no earlier decision in this stream. `key` identifies this review request,
 so an identical retry does not create a second decision. The purpose records
-what you reviewed the material for.
+what you reviewed the material for. Passing the `ArtifactRef` directly lets
+`graft_accept()` build and verify the selection; pass an `ArtifactSelection`
+when a review has more than one root.
+
+The returned `Decision` stores the exact selection digest in `@selection`.
+`graft_recall()` re-reads that digest and returns a `Recall` whose `@selection`
+is the verified `ArtifactSelection`; its `@roots` and `@artifacts` contain the
+materialized `Artifact` values that the application can display.
 
 In a real app, this call belongs behind your review action. Saving an agent's
 answer alone does not mean a person approved it. Graft records your decision;
@@ -135,54 +144,65 @@ accepted decision from disk and verifies its complete selection before returning
 the definition and its source.
 
 ```{r}
-store <- graft_artifact_store("graft-walkthrough")
+store <- graft_store("graft-walkthrough")
 
 recall_project_memory <- function() {
-  head <- graft_artifact_read_decision(store, "metric:active-customer")
-  if (is.null(head) || head$action != "accept") {
+  recalled <- graft_recall(
+    store,
+    stream = "metric:active-customer",
+    purpose = "project-assistance",
+    eligible = TRUE
+  )
+  if (recalled@status != "accepted") {
     return(list(status = "No reviewed definition is available."))
   }
 
-  retained <- graft_artifact_reuse(
-    store, "metric:active-customer", head$id, "project-assistance",
-    eligible = TRUE
-  )
-  note <- graft_artifact_read(store, retained$selection$roots[[1]])
-  source <- graft_artifact_read(store, note$metadata$dependencies[[1]])
+  note <- recalled@roots[[1L]]
+  source_ref <- note@dependencies[[1L]]
+  source <- Filter(
+    \(artifact) identical(artifact@ref, source_ref),
+    recalled@artifacts
+  )[[1L]]
 
   list(
-    definition = rawToChar(note$bytes),
-    source = rawToChar(source$bytes),
-    review = retained$decision$id
+    definition = note@data,
+    source = source@data,
+    review = recalled@decision@id
   )
 }
 
-recall_project_memory()$definition
+recall_project_memory()[["definition"]]
 ```
 
 This function is application code you can adapt. It knows there is one reviewed
 metric note, so it selects one fixed stream. `eligible = TRUE` is an explicit
 choice for this trusted, single-user example. A shared app must replace it with
 a current access and retention decision bound to the authenticated user and
-project, and apply those checks to every read path.
+project, and apply those checks to every read path. In this direct example,
+`graft_recall()` receives the explicit `eligible = TRUE` decision. The
+`graft_tool()` adapter invokes the host callback before looking up any retained
+payload.
 
 The returned source explains the basis of the definition. The review digest
 identifies the exact recorded decision. Graft also checks the retained bytes;
 missing or corrupt evidence causes the read to fail instead of silently
 substituting a different source.
 
-## 4. Make it an ellmer tool
+## 4. Make it an ellmer and shinychat tool
 
-An ellmer tool can call the same retrieval function. The agent gets the current
-reviewed definition and evidence when it needs them:
+`graft_tool()` creates an ordinary ellmer `ToolDef` with the stream and purpose
+fixed by the application. It calls the eligibility callback afresh on every
+invocation, then returns an ellmer `ContentToolResult` containing the recall
+status, exact content references, and decision ID. When shinychat is installed,
+the result also carries its `tool_result_display` metadata for the chat UI:
 
 ```{r ellmer-tool, eval=FALSE}
-memory_tool <- ellmer::tool(
-  function() {
-    jsonlite::toJSON(recall_project_memory(), auto_unbox = TRUE, null = "null")
-  },
-  name = "recall_project_memory",
-  description = "Read the project's current reviewed active-customer definition and its source."
+memory_tool <- graft_tool(
+  store,
+  stream = "metric:active-customer",
+  purpose = "project-assistance",
+  eligible = function() TRUE,
+  name = "recall_project_memory"
 )
 chat <- ellmer::chat_openai(
   system_prompt = paste(
@@ -197,10 +217,13 @@ chat$register_tool(memory_tool)
 chat$chat("How do we count an active customer?")
 ```
 
-The tool returns JSON, a supported ellmer tool result. The memory tool reads;
-the application's review controls write. This makes the
-choice to retain an answer visible to the user. You can add a draft step where
-an agent proposes a note, then let a person edit and review it before saving.
+The tool is read-only; the application's review controls write. This keeps the
+choice to retain an answer visible to the user. You can add a draft step where an
+agent proposes a note, then let a person edit and review it before saving. The
+model never chooses the store, stream, purpose, or eligibility callback.
+The optional display is the ordinary `shinychat::tool_result_display()` payload;
+the app still uses shinychat's public `chat_append()` and ellmer's public
+`Chat$register_tool()` interfaces.
 
 ### Put the agent in shinychat
 
@@ -235,8 +258,8 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
-Run this after defining `store`, `recall_project_memory()`, and `memory_tool`
-above, with your provider credentials configured. The complete packaged app
+Run this after defining `store` and `memory_tool` above, with your provider
+credentials configured. The complete packaged app
 adds review controls, a new-conversation button, persistence status, and the
 scripted preview. It resets both ellmer's conversation and the displayed chat
 when the reviewed note changes, so previously retrieved content is not carried
@@ -254,38 +277,57 @@ under the same logical IDs; they get new exact revisions. Accept the corrected
 selection with the previous decision as its expected predecessor:
 
 ```{r}
-source_v2 <- graft_artifact_save(
-  store, "metrics.md",
-  charToRaw("Updated metrics handbook: active customers have a paid account and activity in the past 60 days. Exclude staff and test accounts."),
-  "text/plain"
+source_v2 <- graft_save(
+  store,
+  "Updated metrics handbook: active customers have a paid account and activity in the past 60 days. Exclude staff and test accounts.",
+  id = "metrics.md",
+  media_type = "text/plain"
 )
-note_v2 <- graft_artifact_save(
-  store, "metric:active-customer",
-  charToRaw("Count paid customers active in the past 60 days, excluding staff and test accounts."),
-  "text/plain", dependencies = list(source_v2)
+note_v2 <- graft_save(
+  store,
+  "Count paid customers active in the past 60 days, excluding staff and test accounts.",
+  id = "metric:active-customer",
+  media_type = "text/plain",
+  dependencies = source_v2
 )
-selection_v2 <- graft_artifact_select(store, list(note_v2))
-corrected <- graft_artifact_decide(
-  store, "metric:active-customer", "review-2",
-  expected = accepted$id, selection = selection_v2, action = "accept",
+corrected <- graft_accept(
+  store,
+  note_v2,
+  stream = "metric:active-customer",
+  key = "review-2",
+  expected = accepted,
   actor = "local-reviewer", reason = "Reviewed the updated metrics handbook",
   purpose = "project-assistance"
 )
-recall_project_memory()$definition
+recall_project_memory()[["definition"]]
 ```
 
 A fresh conversation now retrieves the 60-day definition. The original note and
 its original source are still inspectable at their exact references:
 
 ```{r}
-rawToChar(graft_artifact_read(store, note)$bytes)
-rawToChar(graft_artifact_read(store, source)$bytes)
+graft_read(store, note)@data
+graft_read(store, source)@data
 ```
 
 The old acceptance is no longer the current acceptance for reuse. If the note
 should stop being used entirely, record a withdrawal; the packaged app exposes
-that as **Stop using this note**. Withdrawal retains history. Permanent deletion
-and retirement of backups require a separate retention workflow.
+that as **Stop using this note**:
+
+```{r}
+withdrawn <- graft_withdraw(
+  store,
+  stream = "metric:active-customer",
+  expected = corrected,
+  key = "withdraw-1",
+  actor = "local-reviewer",
+  reason = "The definition needs another correction"
+)
+graft_history(store, "metric:active-customer")
+```
+
+Withdrawal retains history. Permanent deletion and retirement of backups require
+a separate retention workflow.
 
 ## Make it yours
 

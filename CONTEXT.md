@@ -32,8 +32,8 @@ reviews retain distinct event identities. Keys bind committed requests, not
 consultation eligibility.
 
 **Current artifact consultation**: The host currently permits the requested
-purpose, the requested event is still the stream's accepted head, and Graft has
-verified the complete selection. The result is a point-in-time check, not an
+purpose, the recorded acceptance is still the stream's current head, and Graft
+has verified and materialized the complete selection. The result is a point-in-time check, not an
 access token. History remains inspectable after correction or withdrawal.
 
 ## Shared vocabulary
@@ -45,7 +45,9 @@ of the publishing CLI. Relationship semantics do not grant executable authority.
 
 ## Current implementation
 
-Consumer contract 3 retains artifact formats 1 and vocabulary release format 1.
+Consumer contract 4 uses task-oriented verbs and S7 stores and values while
+retaining artifact formats 1 and vocabulary release format 1. Exact reading is
+separate from current accepted recall; see ADR 0014.
 Native graph stores, compiler manifests, commit plans, snapshots, calculations,
 and managed OKF working trees are retired. Earlier ADRs remain historical.
 See ADR 0010 for the current cut and consumer responsibilities.
@@ -64,7 +66,7 @@ See ADR 0011 for the PostgreSQL boundary.
 
 ## Artifact replacement and Forget
 
-Consumer contract 3.1 adds complete bounded artifact manifests and non-destructive
+Graft provides complete bounded artifact manifests and non-destructive
 replacement plans for local stores and PostgreSQL scopes. Exclusions follow exact
 reverse dependencies, affected selections, and whole historical decision streams.
 Survivors retain their exact bytes and identities. Failed targets remain quarantined;
@@ -75,7 +77,7 @@ generations in an independent durable journal, reject old backups, invalidate
 contexts/caches, and arrange disposal. No source deletion or production restore
 admission ships with these mechanics. Graft #48 remains the rollout gate.
 
-Consumer contract 3.2 adds versioned directory backups containing a complete
+Versioned directory backups contain a complete
 artifact image and canonical descriptor. An independently retained receipt binds
 scope, generation, descriptor digest, and manifest digest. Verification and
 restore enforce caller limits and require exact identity; they do not establish

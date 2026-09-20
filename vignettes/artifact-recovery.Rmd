@@ -26,24 +26,23 @@ same artifact ID.
 library(graft)
 source_path <- tempfile("source-")
 target_path <- tempfile("replacement-")
-source <- graft_artifact_store(source_path, create = TRUE)
-private <- graft_artifact_save(
-  source, "note", charToRaw("Synthetic private observation"), "text/plain"
+source <- graft_store(source_path, create = TRUE)
+private <- graft_save(
+  source, "Synthetic private observation", id = "note", media_type = "text/plain"
 )
-report <- graft_artifact_save(
-  source, "report", charToRaw("Interpretation of the observation"), "text/plain",
-  dependencies = list(private)
+report <- graft_save(
+  source, "Interpretation of the observation", id = "report",
+  media_type = "text/plain", dependencies = private
 )
-survivor <- graft_artifact_save(
-  source, "note", charToRaw("Independent corrected observation"), "text/plain"
+survivor <- graft_save(
+  source, "Independent corrected observation", id = "note", media_type = "text/plain"
 )
-selected <- graft_artifact_select(source, list(report))
-accepted <- graft_artifact_decide(
-  source, "review", "review-1", expected = NULL,
-  selection = selected, action = "accept", actor = "synthetic-reviewer",
+accepted <- graft_accept(
+  source, report, stream = "review", key = "review-1", expected = NULL,
+  actor = "synthetic-reviewer",
   reason = "Example review", purpose = "research"
 )
-plan <- graft_artifact_replacement_plan(source, forget = list(private))
+plan <- graft_plan_replacement(source, forget = list(private))
 vapply(plan$removed$artifacts, function(ref) ref$id, character(1))
 plan$removed$selections
 plan$removed$streams
@@ -68,12 +67,12 @@ The target must be empty. An edited plan or a changed source fails before copyin
 After copying, Graft verifies every target object and rechecks the source.
 
 ```{r}
-target <- graft_artifact_store(target_path, create = TRUE)
-verified <- graft_artifact_replace(source, target, plan)
+target <- graft_store(target_path, create = TRUE)
+verified <- graft_replace(source, target, plan)
 identical(verified, plan$target)
-rawToChar(graft_artifact_read(target, survivor)$bytes)
+graft_read(target, survivor)@data
 # The source is deliberately unchanged by replacement.
-rawToChar(graft_artifact_read(source, private)$bytes)
+graft_read(source, private)@data
 ```
 
 Excluded references and selections cannot be read from the replacement. The
@@ -89,7 +88,7 @@ successfully before treating a verified candidate as retained.
 ## Inspect a complete logical image
 
 ```{r}
-manifest <- graft_artifact_manifest(target)
+manifest <- graft_manifest(target)
 manifest$format
 length(manifest$objects)
 identical(manifest$id, verified$id)

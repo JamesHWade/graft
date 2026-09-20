@@ -29,21 +29,20 @@ eligible for restore.
 library(graft)
 source_path <- tempfile("source-")
 backup_path <- tempfile("backup-")
-source <- graft_artifact_store(source_path, create = TRUE)
-evidence <- graft_artifact_save(
-  source, "evidence", charToRaw("Synthetic observation"), "text/plain"
+source <- graft_store(source_path, create = TRUE)
+evidence <- graft_save(
+  source, "Synthetic observation", id = "evidence", media_type = "text/plain"
 )
-report <- graft_artifact_save(
-  source, "report", charToRaw("An interpretation"), "text/plain",
-  dependencies = list(evidence)
+report <- graft_save(
+  source, "An interpretation", id = "report", media_type = "text/plain",
+  dependencies = evidence
 )
-selection <- graft_artifact_select(source, list(report))
-accepted <- graft_artifact_decide(
-  source, "report-review", "review-1", expected = NULL,
-  selection = selection, action = "accept", actor = "synthetic-reviewer",
+accepted <- graft_accept(
+  source, report, stream = "report-review", key = "review-1", expected = NULL,
+  actor = "synthetic-reviewer",
   reason = "Evidence inspected", purpose = "research"
 )
-receipt <- graft_artifact_backup(
+receipt <- graft_backup(
   source, backup_path, scope = "synthetic-reader", generation = "generation-1"
 )
 receipt$format
@@ -65,13 +64,13 @@ its stored receipt to verification or restore. This synthetic example keeps the
 receipt in memory; it does not implement a durable registry.
 
 ```{r}
-identical(graft_artifact_backup_verify(backup_path, expected = receipt), receipt)
+identical(graft_verify_backup(backup_path, expected = receipt), receipt)
 restore_path <- tempfile("restored-")
-restored <- graft_artifact_store(restore_path, create = TRUE)
-manifest <- graft_artifact_restore(backup_path, restored, expected = receipt)
+restored <- graft_store(restore_path, create = TRUE)
+manifest <- graft_restore(backup_path, restored, expected = receipt)
 identical(manifest$id, receipt$manifest)
-rawToChar(graft_artifact_read(restored, report)$bytes)
-identical(graft_artifact_read_decision(restored, "report-review"), accepted)
+graft_read(restored, report)@data
+identical(graft_history(restored, "report-review")[[1L]], accepted)
 ```
 
 Verification rejects unsupported formats, altered descriptors, unexpected files,
