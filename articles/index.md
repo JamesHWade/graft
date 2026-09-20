@@ -15,6 +15,9 @@
 - [Verify a replacement artifact
   store](https://jameshwade.github.io/graft/articles/artifact-recovery.md):
 
+- [Back up and restore an artifact
+  store](https://jameshwade.github.io/graft/articles/artifact-backups.md):
+
 - [Shared concepts across
   workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
 

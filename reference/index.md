@@ -12,8 +12,14 @@
   [`graft_artifact_read_selection()`](https://jameshwade.github.io/graft/reference/graft_artifact_select.md)
   : Preserve an exact artifact selection
 
-## Verify replacement stores
+## Verify replacements and backups
 
+- [`graft_artifact_backup()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup.md)
+  : Create a closed artifact-store backup
+- [`graft_artifact_backup_verify()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup_verify.md)
+  : Verify a closed artifact-store backup
+- [`graft_artifact_restore()`](https://jameshwade.github.io/graft/reference/graft_artifact_restore.md)
+  : Restore a verified backup into an empty artifact store
 - [`graft_artifact_manifest()`](https://jameshwade.github.io/graft/reference/graft_artifact_manifest.md)
   : Inventory a complete artifact store
 - [`graft_artifact_replacement_plan()`](https://jameshwade.github.io/graft/reference/graft_artifact_replacement_plan.md)

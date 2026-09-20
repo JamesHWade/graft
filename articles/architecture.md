@@ -39,6 +39,14 @@ Replacement plans copy exact survivors to empty quarantine stores and
 verify the whole image. They do not provide distributed transactions,
 power-loss guarantees, authentication, or permanent deletion.
 
+Closed directory backups retain the complete logical image, including
+orphan content and every historical decision. Verification compares a
+canonical bundle descriptor and all stored objects to an externally
+retained identity receipt. Restore copies into an empty quarantine
+target and checks both images again. See [Back up and restore an
+artifact
+store](https://jameshwade.github.io/graft/articles/artifact-backups.md).
+
 Applications retire generations and enforce restore admission using an
 independent durable journal. A valid content checksum does not authorize
 an old backup. See [Verify a replacement artifact

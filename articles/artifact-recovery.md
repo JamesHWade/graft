@@ -188,6 +188,8 @@ Rill’s actual workflow, independent durable journal, closed backups, and
 failure recovery are verified.
 
 The next implementation tasks are [Rill Reader
-Forget](https://github.com/JamesHWade/rill/issues/106) and [closed
-backups and publication
-recovery](https://github.com/JamesHWade/graft/issues/86).
+Forget](https://github.com/JamesHWade/rill/issues/106) and [publication
+and journal recovery](https://github.com/JamesHWade/graft/issues/86).
+Graft now supplies [closed backup bundles and strict restore
+verification](https://jameshwade.github.io/graft/articles/artifact-backups.md);
+these mechanics do not complete the application recovery protocol.

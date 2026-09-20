@@ -8,6 +8,15 @@
   trees, and graph agent adapters are removed without compatibility
   wrappers. The website describes the supported artifact architecture
   ([\#74](https://github.com/JamesHWade/graft/issues/74)).
+- [`graft_artifact_backup()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup.md),
+  [`graft_artifact_backup_verify()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup_verify.md),
+  and
+  [`graft_artifact_restore()`](https://jameshwade.github.io/graft/reference/graft_artifact_restore.md)
+  create and verify bounded complete store bundles bound to a
+  host-supplied scope and generation. Restores require an externally
+  retained receipt and an empty quarantine target; applications still
+  authorize restore using independent current registry state
+  ([\#86](https://github.com/JamesHWade/graft/issues/86)).
 - [`graft_artifact_decide()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
   [`graft_artifact_read_decision()`](https://jameshwade.github.io/graft/reference/graft_artifact_decide.md),
   and
@@ -42,8 +51,8 @@
   PostgreSQL scopes with transaction rollback and serialized scope
   writes ([\#47](https://github.com/JamesHWade/graft/issues/47)).
 - [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
-  reports consumer contract 3.1.0 and the artifact, manifest,
-  replacement, selection, decision, vocabulary, binding, and
+  reports consumer contract 3.2.0 and the artifact, manifest,
+  replacement, backup, selection, decision, vocabulary, binding, and
   vocabulary-release formats. Existing artifact identities are unchanged
   ([\#74](https://github.com/JamesHWade/graft/issues/74)).
 - [`graft_vocabulary_publish()`](https://jameshwade.github.io/graft/reference/graft_vocabulary_publish.md)

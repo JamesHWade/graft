@@ -76,6 +76,15 @@ Forget approval and backup admission with the application.
 [Build a verified
 replacement](https://jameshwade.github.io/graft/articles/artifact-recovery.md)
 
+### Back up a complete store
+
+Retain every artifact and decision, then verify the closed bundle
+against the identity receipt kept by your application before restoring
+into quarantine.
+
+[Back up and restore
+artifacts](https://jameshwade.github.io/graft/articles/artifact-backups.md)
+
 ### Understand the package boundaries
 
 Compose Commons analysis, data-dict contracts and Graft persistence
@@ -113,12 +122,14 @@ Forget and durable restore remain rollout gates.
 
 Graft supports trusted local files with one writer and PostgreSQL scopes
 inside host-owned transactions. Complete manifests and non-destructive
-replacement plans verify retained objects. Power-loss recovery,
-authenticated access, restore admission and permanent erasure remain
-separate work. No interchangeable backend API is promised today.
+replacement plans verify retained objects; closed bundles retain
+complete images and check restore identity against external receipts.
+Power-loss recovery, authenticated access, restore admission and
+permanent erasure remain separate work. No interchangeable backend API
+is promised today.
 
-Consumer contract **3.1.0** adds verified replacement mechanics.
-Contract 3 removes the native graph store, LinkML compiler, commit
-plans, graph snapshots, managed OKF tree and graph-specific agent tools.
-There are no compatibility wrappers. Retained artifact, selection,
-decision and vocabulary formats keep their exact identities.
+Consumer contract **3.2.0** adds closed backup bundles and verified
+restore. Contract 3 removes the native graph store, LinkML compiler,
+commit plans, graph snapshots, managed OKF tree and graph-specific agent
+tools. There are no compatibility wrappers. Retained artifact,
+selection, decision and vocabulary formats keep their exact identities.

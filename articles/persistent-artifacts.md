@@ -328,3 +328,10 @@ decisions. See [Verify a replacement artifact
 store](https://jameshwade.github.io/graft/articles/artifact-recovery.md)
 for the runnable example and the separate Forget and restore
 obligations.
+
+For a complete copy that retains every object and historical decision,
+use
+[`graft_artifact_backup()`](https://jameshwade.github.io/graft/reference/graft_artifact_backup.md).
+Verification and restore require the receipt retained by the host
+independently of the bundle. See [Back up and restore an artifact
+store](https://jameshwade.github.io/graft/articles/artifact-backups.md).

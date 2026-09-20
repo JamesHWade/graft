@@ -161,6 +161,15 @@ Preview exclusions and verify exact survivors in a separate store. Keep Forget a
 <a href="articles/artifact-recovery.html">Build a verified replacement</a>
 </p>
 </section><section><h3>
+Back up a complete store
+</h3>
+<p>
+Retain every artifact and decision, then verify the closed bundle against the identity receipt kept by your application before restoring into quarantine.
+</p>
+<p>
+<a href="articles/artifact-backups.html">Back up and restore artifacts</a>
+</p>
+</section><section><h3>
 Understand the package boundaries
 </h3>
 <p>
@@ -190,8 +199,8 @@ Inspect the supported formats, optional dependencies and tested scope before con
 <div class="section level2">
 <h2 id="scope-and-status">Scope and status<a class="anchor" aria-label="anchor" href="#scope-and-status"></a>
 </h2>
-<p>Graft supports trusted local files with one writer and PostgreSQL scopes inside host-owned transactions. Complete manifests and non-destructive replacement plans verify retained objects. Power-loss recovery, authenticated access, restore admission and permanent erasure remain separate work. No interchangeable backend API is promised today.</p>
-<p>Consumer contract <strong>3.1.0</strong> adds verified replacement mechanics. Contract 3 removes the native graph store, LinkML compiler, commit plans, graph snapshots, managed OKF tree and graph-specific agent tools. There are no compatibility wrappers. Retained artifact, selection, decision and vocabulary formats keep their exact identities.</p>
+<p>Graft supports trusted local files with one writer and PostgreSQL scopes inside host-owned transactions. Complete manifests and non-destructive replacement plans verify retained objects; closed bundles retain complete images and check restore identity against external receipts. Power-loss recovery, authenticated access, restore admission and permanent erasure remain separate work. No interchangeable backend API is promised today.</p>
+<p>Consumer contract <strong>3.2.0</strong> adds closed backup bundles and verified restore. Contract 3 removes the native graph store, LinkML compiler, commit plans, graph snapshots, managed OKF tree and graph-specific agent tools. There are no compatibility wrappers. Retained artifact, selection, decision and vocabulary formats keep their exact identities.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
