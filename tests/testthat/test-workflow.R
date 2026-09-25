@@ -246,3 +246,84 @@ test_that("text decoding rejects invalid UTF-8 and embedded NUL bytes", {
   )
   expect_error(graft_read(store, nul), class = "graft_artifact_decode_error")
 })
+
+test_that("graft_streams() lists each stream's current decision", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  expect_identical(graft_streams(store), list())
+
+  report <- graft_save(store, "report", "report")
+  figure <- graft_save(store, "figure", "figure")
+  accept <- function(x, stream, purpose, key = stream) {
+    graft_accept(
+      store,
+      x,
+      stream,
+      expected = NULL,
+      key = key,
+      actor = "reviewer",
+      reason = "reviewed",
+      purpose = purpose
+    )
+  }
+  kept <- accept(report, "project:b", "kept")
+  accept(figure, "project:a", "kept")
+  accept(figure, "notes", "chat")
+  withdrawn <- graft_withdraw(
+    store,
+    "project:b",
+    expected = kept,
+    key = "remove",
+    actor = "reviewer",
+    reason = "removed"
+  )
+
+  listed <- graft_streams(graft_store(store@path))
+  expect_identical(
+    vapply(listed, \(x) x@stream, character(1)),
+    c("notes", "project:a", "project:b")
+  )
+  expect_identical(listed[[3L]], withdrawn)
+  expect_identical(
+    vapply(graft_streams(store, purpose = "kept"), \(x) x@action, character(1)),
+    c("accept", "withdraw")
+  )
+  expect_identical(graft_streams(store, purpose = "none"), list())
+})
+
+test_that("graft_streams() enforces its bounds and verifies journals", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "report", "report")
+  for (stream in c("one", "two")) {
+    graft_accept(
+      store,
+      ref,
+      stream,
+      expected = NULL,
+      key = stream,
+      actor = "reviewer",
+      reason = "reviewed",
+      purpose = "kept"
+    )
+  }
+  expect_length(graft_streams(store, max_streams = 2L), 2L)
+  expect_error(
+    graft_streams(store, max_streams = 1L),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_streams(store, max_metadata_bytes = 10L),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft_streams(store, purpose = ""),
+    class = "graft_value_error"
+  )
+
+  journal <- list.files(
+    file.path(store@path, "decisions"),
+    recursive = TRUE,
+    full.names = TRUE
+  )[[1L]]
+  writeBin(charToRaw("{}"), journal)
+  expect_error(graft_streams(store), class = "graft_artifact_error")
+})

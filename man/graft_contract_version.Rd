@@ -12,7 +12,8 @@ artifact, manifest, replacement, backup, selection, decision, vocabulary, and
 binding formats.
 }
 \description{
-Consumer contract 4 replaces the public artifact-prefixed interface with
+Consumer contract 4.1 adds \code{\link[=graft_streams]{graft_streams()}}, which lists decision streams
+and their current decisions. Consumer contract 4 replaces the public artifact-prefixed interface with
 task-oriented verbs and S7 stores and values, without compatibility aliases.
 Stored wire formats and exact content identities remain unchanged.
 Consumer contract 3.2 adds closed artifact backup bundles with externally

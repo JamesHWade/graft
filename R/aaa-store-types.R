@@ -127,3 +127,7 @@ artifact_decision_entries <- S7::new_generic(
   "artifact_decision_entries",
   "store"
 )
+artifact_decision_streams <- S7::new_generic(
+  "artifact_decision_streams",
+  "store"
+)

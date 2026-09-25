@@ -248,7 +248,11 @@ artifact_decisions <- function(
 ) {
   artifact_check_limit(max_decisions, "max_decisions")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
-  entries <- artifact_decision_entries(store, stream, max_decisions)
+  entries <- artifact_decision_entries(
+    store,
+    artifact_sha(charToRaw(stream)),
+    max_decisions
+  )
   files <- entries$name
   if (
     length(files) > max_decisions ||
@@ -319,4 +323,30 @@ artifact_decisions <- function(
     keys <- c(keys, request$key)
   }
   records
+}
+
+artifact_decision_stream_name <- function(store, hash, max_metadata_bytes) {
+  entries <- artifact_decision_entries(store, hash, 1L)
+  if (!nrow(entries)) {
+    return(NULL)
+  }
+  first <- entries$name[[1L]]
+  if (!grepl("^0000000001-[0-9a-f]{64}\\.json$", first)) {
+    artifact_abort("Decision journal has a sequence gap or invalid entries.")
+  }
+  bytes <- artifact_storage_read(
+    store,
+    "decisions",
+    paste0(hash, "/", first),
+    max_metadata_bytes
+  )
+  value <- artifact_decode(bytes)
+  stream <- if (is.list(value) && is.list(value$request)) {
+    value$request$stream
+  }
+  stream <- artifact_check_text(stream, "stream")
+  if (!identical(artifact_sha(charToRaw(stream)), hash)) {
+    artifact_abort("Decision journal is filed under a different stream.")
+  }
+  stream
 }

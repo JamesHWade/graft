@@ -192,10 +192,10 @@ S7::method(artifact_storage_put, PostgresArtifactStore) <- function(
 
 S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   store,
-  stream,
+  hash,
   max_decisions
 ) {
-  path <- artifact_decision_path(store, stream)
+  path <- artifact_path(store, "decisions", hash)
   if (!file.exists(path)) {
     return(data.frame(name = character(), size = numeric()))
   }
@@ -211,12 +211,36 @@ S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   data.frame(name = files, size = file.info(paths)$size)
 }
 
+S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
+  store,
+  max_streams
+) {
+  path <- file.path(store@path, "decisions")
+  if (!file.exists(path)) {
+    return(character())
+  }
+  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
+    artifact_abort("Decision directory is not readable.")
+  }
+  hashes <- sort(
+    list.files(path, all.files = TRUE, no.. = TRUE),
+    method = "radix"
+  )
+  if (
+    !all(grepl("^[0-9a-f]{64}$", hashes)) ||
+      !all(dir.exists(file.path(path, hashes)))
+  ) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  utils::head(hashes, max_streams + 1L)
+}
+
 S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
   store,
-  stream,
+  hash,
   max_decisions
 ) {
-  prefix <- paste0(artifact_sha(charToRaw(stream)), "/")
+  prefix <- paste0(hash, "/")
   rows <- artifact_postgres_query(
     store@connection,
     paste(
@@ -230,6 +254,26 @@ S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
     name = substring(rows$object_key, nchar(prefix) + 1L),
     size = rows$size
   )
+}
+
+S7::method(artifact_decision_streams, PostgresArtifactStore) <- function(
+  store,
+  max_streams
+) {
+  rows <- artifact_postgres_query(
+    store@connection,
+    paste(
+      "SELECT DISTINCT left(object_key, 64) COLLATE \"C\" AS stream",
+      "FROM graft_artifact_objects WHERE scope = $1 AND kind = 'decisions'",
+      "ORDER BY stream LIMIT $2"
+    ),
+    params = list(store@scope, max_streams + 1)
+  )
+  hashes <- as.character(rows$stream)
+  if (!all(grepl("^[0-9a-f]{64}$", hashes))) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  hashes
 }
 
 artifact_postgres_query <- function(connection, statement, params = list()) {
