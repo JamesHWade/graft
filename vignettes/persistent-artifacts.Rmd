@@ -134,6 +134,32 @@ materialized `Artifact` values. A withdrawal derives its purpose and selection
 from the verified predecessor, so callers cannot replace them with changed
 properties.
 
+## List what is kept
+
+`graft_streams()` returns each stream's current decision, so an application can
+show what it has kept without keeping a separate catalog. Pass `purpose` to list
+only the streams whose current decision was recorded for that purpose, and check
+`@action` to tell accepted streams from withdrawn ones.
+
+```{r}
+path <- tempfile("artifact-streams-")
+store <- graft_store(path, create = TRUE)
+report <- graft_save(store, "Reviewed report", id = "report")
+graft_accept(
+  store, report, stream = "project:reactor", key = "keep-1", expected = NULL,
+  actor = "reviewer:alice", reason = "Kept to the project", purpose = "kept"
+)
+kept <- graft_streams(store, purpose = "kept")
+vapply(kept, \(x) paste(x@stream, x@action), character(1))
+unlink(path, recursive = TRUE)
+```
+
+Listing reads decision records only, like `graft_history()`. It returns no
+artifact content and needs no eligibility decision; `graft_recall()` still
+decides whether the accepted evidence may be used. Stream names, actors, and
+reasons are visible in the result, so the application decides who may list a
+store. Decisions carry no timestamps, and streams are ordered by name.
+
 Always supply the predecessor observed during review. An identical retry returns
 its original historical record and does not restore eligibility. A changed retry
 or a stale new request fails. Withdrawal needs intact decision history, but it can

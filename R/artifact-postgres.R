@@ -192,10 +192,10 @@ S7::method(artifact_storage_put, PostgresArtifactStore) <- function(
 
 S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   store,
-  stream,
+  hash,
   max_decisions
 ) {
-  path <- artifact_decision_path(store, stream)
+  path <- artifact_path(store, "decisions", hash)
   if (!file.exists(path)) {
     return(data.frame(name = character(), size = numeric()))
   }
@@ -211,12 +211,49 @@ S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   data.frame(name = files, size = file.info(paths)$size)
 }
 
+S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
+  store,
+  max_streams
+) {
+  path <- file.path(store@path, "decisions")
+  if (!file.exists(path)) {
+    return(character())
+  }
+  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
+    artifact_abort("Decision directory is not readable.")
+  }
+  hashes <- sort(
+    list.files(path, all.files = TRUE, no.. = TRUE),
+    method = "radix"
+  )
+  if (
+    !all(grepl("^[0-9a-f]{64}$", hashes)) ||
+      !all(dir.exists(file.path(path, hashes)))
+  ) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  # A failed first publication can leave a journal with no committed record,
+  # which artifact_decision_entries() treats as empty; it is not a stream, so
+  # it does not count against the bound.
+  committed <- character()
+  for (hash in hashes) {
+    files <- list.files(file.path(path, hash), all.files = TRUE, no.. = TRUE)
+    if (!all(grepl("^staged-", files))) {
+      committed <- c(committed, hash)
+      if (length(committed) > max_streams) {
+        break
+      }
+    }
+  }
+  committed
+}
+
 S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
   store,
-  stream,
+  hash,
   max_decisions
 ) {
-  prefix <- paste0(artifact_sha(charToRaw(stream)), "/")
+  prefix <- paste0(hash, "/")
   rows <- artifact_postgres_query(
     store@connection,
     paste(
@@ -230,6 +267,41 @@ S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
     name = substring(rows$object_key, nchar(prefix) + 1L),
     size = rows$size
   )
+}
+
+S7::method(artifact_decision_streams, PostgresArtifactStore) <- function(
+  store,
+  max_streams
+) {
+  # Every decision key must be a stream hash and a journal entry name before
+  # stream hashes are taken from its prefix; a damaged key would otherwise be
+  # grouped under a stream and then skipped, leaving the list incomplete.
+  malformed <- artifact_postgres_query(
+    store@connection,
+    paste(
+      "SELECT 1 FROM graft_artifact_objects",
+      "WHERE scope = $1 AND kind = 'decisions'",
+      "AND object_key !~ '^[0-9a-f]{64}/[0-9]{10}-[0-9a-f]{64}[.]json$' LIMIT 1"
+    ),
+    params = list(store@scope)
+  )
+  if (nrow(malformed)) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  rows <- artifact_postgres_query(
+    store@connection,
+    paste(
+      "SELECT DISTINCT left(object_key, 64) COLLATE \"C\" AS stream",
+      "FROM graft_artifact_objects WHERE scope = $1 AND kind = 'decisions'",
+      "ORDER BY stream LIMIT $2"
+    ),
+    params = list(store@scope, max_streams + 1)
+  )
+  hashes <- as.character(rows$stream)
+  if (!all(grepl("^[0-9a-f]{64}$", hashes))) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  hashes
 }
 
 artifact_postgres_query <- function(connection, statement, params = list()) {

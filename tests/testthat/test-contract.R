@@ -2,7 +2,7 @@ test_that("consumer contract names only retained formats", {
   expect_identical(
     graft_contract_version(),
     list(
-      contract = "4.0.0",
+      contract = "4.1.0",
       artifact = "1",
       manifest = "graft-artifact-manifest/1",
       replacement = "graft-artifact-replacement/1",
@@ -38,6 +38,7 @@ test_that("consumer contract names only retained formats", {
       "graft_withdraw",
       "graft_recall",
       "graft_history",
+      "graft_streams",
       "graft_tool",
       "graft_publish_vocabulary",
       "graft_read_vocabulary",

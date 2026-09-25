@@ -39,6 +39,7 @@ reference:
       - graft_withdraw
       - graft_recall
       - graft_history
+      - graft_streams
       - graft_tool
   - title: Vocabulary and operations
     contents:

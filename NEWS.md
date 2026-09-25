@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* `graft_streams()` lists the decision streams in a store with each stream's current decision, so an application can show what it has kept without keeping its own catalog. It verifies every journal it reads, is bounded by stream count and aggregate metadata bytes, and works the same on local and PostgreSQL stores. It returns decisions only, never artifact content. Consumer contract 4.1.0 (#96).
 * Graft provides persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers (#74).
 * The public interface uses S7 store handles and typed references, content, selections, decisions, recall results, and vocabulary releases. The former artifact-prefixed functions are removed without compatibility aliases (#90).
 * The getting-started guide and runnable project-memory example show how to give an ellmer agent in shinychat a reviewed notebook that survives new conversations and app restarts, including corrections with retained evidence (#41).

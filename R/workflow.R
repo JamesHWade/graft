@@ -599,3 +599,77 @@ graft_history <- function(
   )
   lapply(records, artifact_decision_value)
 }
+
+#' List decision streams and their current decisions
+#'
+#' Find the decision streams in a store without keeping a separate catalog.
+#' Each stream's journal is read and verified the same way as
+#' [graft_history()], and its latest decision is returned. Like
+#' [graft_history()], this reads decision records only: it returns no artifact
+#' content and needs no eligibility decision. Use [graft_recall()] to read the
+#' accepted evidence. The host application still decides who may see stream
+#' names, actors, and reasons.
+#'
+#' Decisions carry no timestamps, so streams are ordered by name, compared
+#' bytewise.
+#'
+#' @param store A store returned by [graft_store()] or
+#'   [graft_store_postgres()].
+#' @param purpose Optional purpose. When supplied, only streams whose current
+#'   decision was recorded for this purpose are returned.
+#' @param max_streams Maximum decision streams to inspect.
+#' @param max_decisions Maximum decision records to inspect per stream.
+#' @param max_metadata_bytes Maximum aggregate decision metadata bytes across
+#'   all streams.
+#' @returns A list of [Decision] values, one per stream: each stream's current
+#'   decision, ordered by stream name. Check `@action` for `"accept"` or
+#'   `"withdraw"`.
+#' @export
+graft_streams <- function(
+  store,
+  purpose = NULL,
+  max_streams = 1000L,
+  max_decisions = 1000L,
+  max_metadata_bytes = 1024^2
+) {
+  artifact_check_store(store)
+  if (!is.null(purpose)) {
+    purpose <- tryCatch(
+      artifact_check_text(purpose, "purpose"),
+      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+    )
+  }
+  artifact_check_limit(max_streams, "max_streams")
+  artifact_check_limit(max_decisions, "max_decisions")
+  artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
+  hashes <- artifact_decision_streams(store, max_streams)
+  if (length(hashes) > max_streams) {
+    artifact_abort("Store has more decision streams than `max_streams`.")
+  }
+  used <- 0
+  heads <- list()
+  for (hash in hashes) {
+    remaining <- max_metadata_bytes - used
+    if (remaining < 1) {
+      artifact_abort(
+        "Decision streams exceed the aggregate metadata byte bound."
+      )
+    }
+    stream <- artifact_decision_stream_name(store, hash, remaining)
+    if (is.null(stream)) {
+      next
+    }
+    records <- artifact_decisions(store, stream, max_decisions, remaining)
+    used <- used + sum(vapply(records, artifact_decision_size, numeric(1)))
+    head <- artifact_decision_head(records)
+    if (
+      is.null(head) || (!is.null(purpose) && !identical(head$purpose, purpose))
+    ) {
+      next
+    }
+    heads[[length(heads) + 1L]] <- head
+  }
+  streams <- vapply(heads, \(x) x$stream, character(1))
+  heads <- heads[order(streams, method = "radix")]
+  lapply(heads, artifact_decision_value)
+}
