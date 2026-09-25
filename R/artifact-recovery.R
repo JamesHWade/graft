@@ -289,6 +289,23 @@ artifact_recovery_enumerate_local <- function(store) {
   ) {
     artifact_abort("Artifact store contains a non-directory lock path.")
   }
+  if ("locks" %in% root_entries) {
+    locks <- list.files(
+      file.path(root, "locks"),
+      all.files = TRUE,
+      no.. = TRUE,
+      recursive = FALSE,
+      include.dirs = TRUE
+    )
+    for (name in locks) {
+      if (
+        !grepl("^[0-9a-f]{64}[.]lock$", name) ||
+          !artifact_recovery_regular_file(file.path(root, "locks", name))
+      ) {
+        artifact_abort("Artifact store contains an unknown lock path.")
+      }
+    }
+  }
   for (kind in artifact_recovery_kinds()) {
     path <- file.path(root, kind)
     if (kind %in% root_entries) {

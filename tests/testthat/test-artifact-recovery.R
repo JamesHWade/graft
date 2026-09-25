@@ -267,3 +267,29 @@ test_that("the lock directory is not part of a store's manifest", {
   expect_identical(intersect(kinds, "locks"), character())
   expect_contains(kinds, "decisions")
 })
+
+test_that("the lock directory holds only stream lock files", {
+  f <- local_decision_fixture()
+  decision_submit(f$request)
+  locks <- file.path(f$store@path, "locks")
+
+  writeLines("stray", file.path(locks, "notes.txt"))
+  expect_error(graft_manifest(f$store), class = "graft_artifact_error")
+  unlink(file.path(locks, "notes.txt"))
+
+  nested <- file.path(locks, paste0(strrep("c", 64), ".lock"))
+  dir.create(nested)
+  expect_error(graft_manifest(f$store), class = "graft_artifact_error")
+  unlink(nested, recursive = TRUE)
+
+  expect_no_error(graft_manifest(f$store))
+})
+
+test_that("a linked lock file cannot pass as a stream lock", {
+  skip_on_os("windows")
+  f <- local_decision_fixture()
+  decision_submit(f$request)
+  linked <- file.path(f$store@path, "locks", paste0(strrep("d", 64), ".lock"))
+  expect_identical(file.symlink("missing-lock", linked), TRUE)
+  expect_error(graft_manifest(f$store), class = "graft_artifact_error")
+})
