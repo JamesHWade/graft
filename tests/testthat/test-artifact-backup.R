@@ -424,3 +424,21 @@ test_that("backups and their verification never write lock files", {
   Sys.chmod(unique(dirs), "0555")
   expect_identical(graft_verify_backup(backup_path, receipt), receipt)
 })
+
+test_that("a read-only source is backed up without a lock file", {
+  skip_on_os("windows")
+  skip_if(identical(Sys.info()[["user"]], "root"))
+  path <- withr::local_tempdir()
+  source <- graft_store(path, create = TRUE)
+  ref <- artifact_save(source, "kept", charToRaw("kept"), "text/plain")
+  unlink(file.path(path, "locks"), recursive = TRUE)
+  dirs <- list.dirs(path, recursive = TRUE, full.names = TRUE)
+  withr::defer(Sys.chmod(dirs, "0755"))
+  Sys.chmod(dirs, "0555")
+
+  backup_path <- file.path(withr::local_tempdir(), "closed-backup")
+  receipt <- graft_backup(source, backup_path, "reader-a", "generation-1")
+  expect_identical(graft_verify_backup(backup_path, receipt), receipt)
+  expect_identical(dir.exists(file.path(path, "locks")), FALSE)
+  expect_length(graft_manifest(source)$objects, 2L)
+})

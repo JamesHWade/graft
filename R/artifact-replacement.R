@@ -37,7 +37,8 @@
 #' Forget policy, including copies outside this artifact store.
 #'
 #' Planning does not authorize Forget and does not delete anything. Replacement
-#' copies verified objects into a new empty store. The source is never changed.
+#' copies verified objects into a new empty store. The source's objects are
+#' never changed; a writable source may gain its lock file under `locks/`.
 #' A copy or verification failure can leave a partial target. The host must
 #' quarantine and discard that target, then rebuild a new empty target.
 #' Planning and replacement hold the local source's and target's store locks

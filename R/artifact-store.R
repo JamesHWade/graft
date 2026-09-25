@@ -495,6 +495,9 @@ S7::method(artifact_with_store_lock, LocalArtifactStore) <- function(
     }
     return(code())
   }
+  if (artifact_store_read_only(store)) {
+    return(artifact_without_store_lock(store, code))
+  }
   lock <- artifact_lock(
     artifact_lock_path(store, "store.lock"),
     store@lock_timeout,
@@ -531,6 +534,14 @@ artifact_without_store_lock <- function(store, code) {
   assign(store@path, TRUE, envir = artifact_store_locks)
   on.exit(rm(list = store@path, envir = artifact_store_locks), add = TRUE)
   code()
+}
+
+# A store no one can write to has no writers to wait for, and reading it
+# (a manifest, a backup) must not fail for want of a lock file.
+artifact_store_read_only <- function(store) {
+  locks <- file.path(store@path, "locks")
+  target <- if (dir.exists(locks)) locks else store@path
+  !isTRUE(file.access(target, 2L) == 0L)
 }
 
 artifact_lock_path <- function(store, name) {
