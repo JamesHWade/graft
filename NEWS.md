@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* Opening a store that another process holds now signals `graft_store_busy` (a `graft_backend_error`) with retry guidance. DuckDB lets one process hold a file at a time, even for reading.
 * reticulate moved from Imports to Suggests: it is needed only to compile LinkML YAML, so stores opened from data-dict or compiled `.graft.json` contracts no longer install it.
 * Graft v0.1 replaces the pre-production `kg_*` API, bundled applications, Tempest adapter, physical migration subsystem, and dual authoritative record tables with a 15-function revision-first package boundary.
 * The pkgdown site now starts with ordinary tables and a shipped data-dict example, creates a blank store explicitly, demonstrates change history, and introduces LinkML when richer semantic graph modeling is needed.

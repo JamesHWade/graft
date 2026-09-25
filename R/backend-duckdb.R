@@ -6,6 +6,21 @@ duckdb_connect <- function(path, read_only) {
       read_only = read_only
     ),
     error = function(error) {
+      if (is_duckdb_lock_error(error)) {
+        abort_store_busy(
+          paste0(
+            "The store at `",
+            path,
+            "` is open in another process. DuckDB allows one process to ",
+            "hold a file at a time, even for reading, so open it for each ",
+            "operation, close it straight after, and retry after a short ",
+            "wait."
+          ),
+          store_path = path,
+          read_only = read_only,
+          parent = error
+        )
+      }
       abort_backend_error(
         paste0(
           "Could not connect to DuckDB at `",
@@ -18,6 +33,14 @@ duckdb_connect <- function(path, read_only) {
         parent = error
       )
     }
+  )
+}
+
+is_duckdb_lock_error <- function(error) {
+  grepl(
+    "Could not set lock|Conflicting lock",
+    conditionMessage(error),
+    ignore.case = TRUE
   )
 }
 

@@ -60,6 +60,25 @@ abort_backend_error <- function(
   )
 }
 
+abort_store_busy <- function(
+  message,
+  ...,
+  store_path = NULL,
+  parent = NULL,
+  call = rlang::caller_env()
+) {
+  graft_abort(
+    c("graft_store_busy", "graft_backend_error"),
+    message,
+    ...,
+    backend = "duckdb",
+    operation = "connect",
+    store_path = store_path,
+    parent = parent,
+    call = call
+  )
+}
+
 abort_limit_error <- function(
   message,
   ...,
