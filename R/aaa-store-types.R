@@ -38,7 +38,7 @@ ArtifactStore <- S7::new_class(
 #'   dependency set it references.
 #' @param max_revision_bytes Maximum encoded revision metadata bytes.
 #' @param lock_timeout Seconds to wait for another process's decision in the
-#'   same stream before giving up.
+#'   same stream, or for the store's lock, before giving up.
 #' @export
 LocalArtifactStore <- S7::new_class(
   "LocalArtifactStore",
@@ -138,6 +138,10 @@ artifact_storage_read <- S7::new_generic("artifact_storage_read", "store")
 artifact_storage_put <- S7::new_generic("artifact_storage_put", "store")
 artifact_with_stream_lock <- S7::new_generic(
   "artifact_with_stream_lock",
+  "store"
+)
+artifact_with_store_lock <- S7::new_generic(
+  "artifact_with_store_lock",
   "store"
 )
 artifact_decision_entries <- S7::new_generic(

@@ -55,6 +55,22 @@ artifact_recovery_snapshot <- function(
 ) {
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
+  artifact_with_store_lock(store, TRUE, function() {
+    artifact_recovery_read_snapshot(
+      store,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes
+    )
+  })
+}
+
+artifact_recovery_read_snapshot <- function(
+  store,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes
+) {
   artifact_check_limit(max_objects, "max_objects")
   artifact_check_limit(max_total_bytes, "max_total_bytes")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
@@ -299,7 +315,7 @@ artifact_recovery_enumerate_local <- function(store) {
     )
     for (name in locks) {
       if (
-        !grepl("^[0-9a-f]{64}[.]lock$", name) ||
+        !grepl("^([0-9a-f]{64}|store)[.]lock$", name) ||
           !artifact_recovery_regular_file(file.path(root, "locks", name))
       ) {
         artifact_abort("Artifact store contains an unknown lock path.")

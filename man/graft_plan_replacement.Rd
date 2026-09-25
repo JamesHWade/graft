@@ -7,7 +7,7 @@
 \usage{
 graft_plan_replacement(
   store,
-  forget,
+  forget = list(),
   forget_streams = character(),
   max_objects = 10000L,
   max_total_bytes = 64 * 1024^2,
@@ -21,7 +21,8 @@ graft_replace(source, target, plan)
 \code{\link[=graft_store_postgres]{graft_store_postgres()}}.}
 
 \item{forget}{A list of exact artifact references returned by
-\code{\link[=graft_save]{graft_save()}}. It may be empty if \code{forget_streams} is nonempty.}
+\code{\link[=graft_save]{graft_save()}}. With \code{forget_streams} also empty, the plan forgets
+nothing and only leaves out unreferenced content.}
 
 \item{forget_streams}{Character vector of complete decision stream names to
 remove. The names must already exist in the source inventory.}
@@ -51,7 +52,8 @@ manifest only after the source and target have been checked again.
 }
 \description{
 Compute an operational replacement plan after forgetting exact artifact
-revisions, complete decision streams, or both. The plan preserves every
+revisions, complete decision streams, or both, or with nothing to forget to
+clean up unreferenced content a failed save left behind. The plan preserves every
 revision that is neither forgotten nor a transitive reverse dependent, which
 is a revision that depends directly or indirectly on a forgotten revision.
 It then retains only content referenced by those revisions. It removes a
@@ -69,9 +71,12 @@ Forget policy, including copies outside this artifact store.
 Planning does not authorize Forget and does not delete anything. Replacement
 copies verified objects into a new empty store. The source is never changed.
 A copy or verification failure can leave a partial target. The host must
-quarantine and discard that target, then rebuild a new empty target. Local
-stores require a quiescent single writer. PostgreSQL callers must hold the
-host transaction and scope lock for the operation.
+quarantine and discard that target, then rebuild a new empty target.
+Planning and replacement hold the local source's and target's store locks
+exclusively, so writers from other processes wait until they finish. A host
+that switches to the replacement should hold the source's lock across the
+plan, the copy, and the switch; see \code{\link[=graft_with_store_lock]{graft_with_store_lock()}}. PostgreSQL
+callers must hold the host transaction and scope lock for the operation.
 }
 \examples{
 path <- tempfile("artifacts-")

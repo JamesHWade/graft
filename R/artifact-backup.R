@@ -26,8 +26,9 @@
 #'
 #' @details
 #' The source is never changed. A backup includes valid orphan content and all
-#' historical decision records. Local source stores require a trusted directory
-#' with a single writer and no concurrent writes. PostgreSQL callers retain
+#' historical decision records. Local source stores require a trusted directory;
+#' the backup holds the store's lock exclusively (see [graft_with_store_lock()]),
+#' so writers from other processes wait until it finishes. PostgreSQL callers retain
 #' transaction and commit ownership; a successful receipt does not prove that a
 #' transaction has committed. The destination is built in a sibling staging
 #' directory and is renamed only after the complete image is verified. On an
@@ -50,6 +51,31 @@ graft_backup <- function(
   max_total_bytes = 64 * 1024^2,
   max_metadata_bytes = 1024^2,
   max_bundle_metadata_bytes = 4 * 1024^2
+) {
+  artifact_backup_check_source_store(store)
+  artifact_with_store_lock(store, TRUE, function() {
+    artifact_backup_create(
+      store,
+      path,
+      scope,
+      generation,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes,
+      max_bundle_metadata_bytes
+    )
+  })
+}
+
+artifact_backup_create <- function(
+  store,
+  path,
+  scope,
+  generation,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes,
+  max_bundle_metadata_bytes
 ) {
   path <- artifact_backup_clean_path(path)
   scope <- artifact_check_text(scope, "scope")
@@ -222,6 +248,29 @@ graft_restore <- function(
   max_total_bytes = 64 * 1024^2,
   max_metadata_bytes = 1024^2,
   max_bundle_metadata_bytes = 4 * 1024^2
+) {
+  artifact_backup_check_target_store(target)
+  artifact_with_store_lock(target, TRUE, function() {
+    artifact_backup_restore(
+      path,
+      target,
+      expected,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes,
+      max_bundle_metadata_bytes
+    )
+  })
+}
+
+artifact_backup_restore <- function(
+  path,
+  target,
+  expected,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes,
+  max_bundle_metadata_bytes
 ) {
   path <- artifact_backup_clean_path(path)
   artifact_backup_check_target_store(target)

@@ -12,6 +12,11 @@ artifact, manifest, replacement, backup, selection, decision, vocabulary, and
 binding formats.
 }
 \description{
+Consumer contract 4.2 adds \code{\link[=graft_with_store_lock]{graft_with_store_lock()}}: local writes share a
+store lock that whole-store operations hold exclusively, so a manifest,
+backup, or replacement can run while an application is live, and
+\code{\link[=graft_plan_replacement]{graft_plan_replacement()}} accepts a plan with nothing to forget, which
+leaves out only unreferenced content.
 Consumer contract 4.1 adds \code{\link[=graft_streams]{graft_streams()}}, which lists decision streams
 and their current decisions. Consumer contract 4 replaces the public artifact-prefixed interface with
 task-oriented verbs and S7 stores and values, without compatibility aliases.
