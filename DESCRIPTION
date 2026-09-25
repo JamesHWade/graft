@@ -20,13 +20,13 @@ Imports:
     dplyr,
     duckdb,
     jsonlite,
-    reticulate,
     rlang,
     S7 (>= 0.2.2),
     yaml
 Suggests:
     ellmer (>= 0.3.0),
     knitr,
+    reticulate,
     rmarkdown,
     testthat (>= 3.0.0),
     withr

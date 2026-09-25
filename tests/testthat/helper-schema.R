@@ -149,6 +149,7 @@ stage_test_schema_core <- function(source, directory) {
 }
 
 skip_if_no_linkml_runtime <- function() {
+  skip_if_not_installed("reticulate")
   available <- suppressWarnings(
     tryCatch(
       {

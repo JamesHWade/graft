@@ -2,6 +2,7 @@ compile_schema_manifest <- function(schema, output = NULL) {
   error_call <- rlang::caller_call()
   schema <- normalize_schema_input(schema)
   output <- normalize_manifest_output(schema, output)
+  rlang::check_installed("reticulate", reason = "to compile a LinkML schema.")
   compiler <- graft_compiler_path()
   stage <- tempfile(
     pattern = paste0(".", basename(output), "-stage-"),
