@@ -360,16 +360,18 @@ graft_accept <- function(
     artifact_check_text(stream, "stream"),
     graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
   )
-  # The stream lock covers the selection as well as the decision, so a call
-  # that times out waiting for it has written nothing.
-  record <- artifact_with_stream_lock(store, locked_stream, function() {
+  # The stream lock covers the selection, the decision, and the check that
+  # the decision is the head, so a call that times out has written nothing
+  # and a successor recorded after the lock is released cannot make this
+  # call's own decision look stale.
+  current <- artifact_with_stream_lock(store, locked_stream, function() {
     selection <- artifact_selection_id(
       store,
       x,
       max_artifacts,
       max_selection_bytes
     )
-    artifact_decide(
+    record <- artifact_decide(
       store,
       stream = stream,
       key = key,
@@ -385,16 +387,16 @@ graft_accept <- function(
       max_selection_bytes = max_selection_bytes,
       locked = TRUE
     )
-  })
-  current <- artifact_retry_head(
-    store,
-    stream,
-    record,
-    list(
-      max_decisions = max_decisions,
-      max_metadata_bytes = max_metadata_bytes
+    artifact_retry_head(
+      store,
+      stream,
+      record,
+      list(
+        max_decisions = max_decisions,
+        max_metadata_bytes = max_metadata_bytes
+      )
     )
-  )
+  })
   artifact_decision_value(current)
 }
 
@@ -436,28 +438,36 @@ graft_withdraw <- function(
     max_decisions,
     max_metadata_bytes
   )
-  record <- artifact_decide(
-    store,
-    stream = stream,
-    key = key,
-    expected = expected_id,
-    selection = predecessor$selection,
-    action = "withdraw",
-    actor = actor,
-    reason = reason,
-    purpose = predecessor$purpose,
-    max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes
+  locked_stream <- tryCatch(
+    artifact_check_text(stream, "stream"),
+    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
   )
-  current <- artifact_retry_head(
-    store,
-    stream,
-    record,
-    list(
+  # As in graft_accept(), the head check runs inside the stream lock.
+  current <- artifact_with_stream_lock(store, locked_stream, function() {
+    record <- artifact_decide(
+      store,
+      stream = stream,
+      key = key,
+      expected = expected_id,
+      selection = predecessor$selection,
+      action = "withdraw",
+      actor = actor,
+      reason = reason,
+      purpose = predecessor$purpose,
       max_decisions = max_decisions,
-      max_metadata_bytes = max_metadata_bytes
+      max_metadata_bytes = max_metadata_bytes,
+      locked = TRUE
     )
-  )
+    artifact_retry_head(
+      store,
+      stream,
+      record,
+      list(
+        max_decisions = max_decisions,
+        max_metadata_bytes = max_metadata_bytes
+      )
+    )
+  })
   artifact_decision_value(current)
 }
 

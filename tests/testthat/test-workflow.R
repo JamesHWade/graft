@@ -358,3 +358,109 @@ test_that("graft_streams() bounds only streams with a committed decision", {
     class = "graft_artifact_error"
   )
 })
+
+test_that("a successor committed after the lock is released does not make a decision stale", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "finding", "note")
+  real_lock <- artifact_with_stream_lock
+  # Commit a successor in the moment after the caller's stream lock is
+  # released and before its call returns.
+  successor <- NULL
+  after_unlock <- function(record) NULL
+  local_mocked_bindings(
+    artifact_with_stream_lock = function(store, stream, code) {
+      out <- real_lock(store, stream, code)
+      if (is.null(successor)) {
+        successor <<- "pending"
+        successor <<- after_unlock(out)
+      }
+      out
+    }
+  )
+
+  after_unlock <- function(record) {
+    graft_withdraw(
+      store,
+      "memory",
+      expected = record$id,
+      key = "successor-withdraw",
+      actor = "other",
+      reason = "raced"
+    )
+  }
+  accepted <- graft_accept(
+    store,
+    ref,
+    "memory",
+    expected = NULL,
+    key = "accept-1",
+    actor = "reviewer",
+    reason = "reviewed",
+    purpose = "research"
+  )
+  expect_identical(accepted@action, "accept")
+  expect_identical(accepted@key, "accept-1")
+  expect_identical(successor@action, "withdraw")
+  expect_identical(successor@previous, accepted@id)
+
+  # No race for this acceptance; the withdrawal below races instead.
+  reaccepted <- graft_accept(
+    store,
+    ref,
+    "memory",
+    expected = successor,
+    key = "accept-2",
+    actor = "reviewer",
+    reason = "reviewed again",
+    purpose = "research"
+  )
+  successor <- NULL
+  after_unlock <- function(record) {
+    graft_accept(
+      store,
+      ref,
+      "memory",
+      expected = record$id,
+      key = "successor-accept",
+      actor = "other",
+      reason = "raced",
+      purpose = "research"
+    )
+  }
+  withdrawn <- graft_withdraw(
+    store,
+    "memory",
+    expected = reaccepted,
+    key = "withdraw-2",
+    actor = "reviewer",
+    reason = "changed"
+  )
+  expect_identical(withdrawn@action, "withdraw")
+  expect_identical(withdrawn@key, "withdraw-2")
+  expect_identical(successor@previous, withdrawn@id)
+
+  # A retry with the same key, while the decision is still the head,
+  # returns the same Decision.
+  successor <- "no race"
+  first <- graft_accept(
+    store,
+    ref,
+    "retried",
+    expected = NULL,
+    key = "retry-1",
+    actor = "reviewer",
+    reason = "reviewed",
+    purpose = "research"
+  )
+  again <- graft_accept(
+    store,
+    ref,
+    "retried",
+    expected = NULL,
+    key = "retry-1",
+    actor = "reviewer",
+    reason = "reviewed",
+    purpose = "research"
+  )
+  expect_identical(again, first)
+})
