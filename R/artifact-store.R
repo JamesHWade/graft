@@ -366,7 +366,14 @@ S7::method(artifact_storage_read, LocalArtifactStore) <- function(
   key,
   limit
 ) {
-  artifact_bytes(artifact_path(store, kind, key), limit)
+  path <- artifact_path(store, kind, key)
+  # On Windows another writer's same-byte rename replaces an existing object,
+  # which can leave it briefly unreadable to any reader. An object that is
+  # present is read with a short retry; an absent one fails at once.
+  if (file.exists(path)) {
+    return(artifact_settled_bytes(path, limit))
+  }
+  artifact_bytes(path, limit)
 }
 
 S7::method(artifact_storage_put, LocalArtifactStore) <- function(

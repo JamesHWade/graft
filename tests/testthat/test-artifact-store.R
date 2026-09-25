@@ -520,3 +520,40 @@ test_that("verifying a publication retries while another process replaces it", {
   expect_identical(failures, 0L)
   expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
 })
+
+test_that("a save survives a competing replacement during its own read-back", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  real_bytes <- artifact_bytes
+  # The revision cannot be opened once, after publication has verified it,
+  # as while another writer's rename replaces it on Windows. The first read
+  # of the revision is artifact_put()'s verification; the second is
+  # artifact_save()'s read-back.
+  reads <- 0L
+  blocked <- 0L
+  local_mocked_bindings(
+    artifact_bytes = function(path, limit) {
+      if (grepl("revisions", path, fixed = TRUE)) {
+        reads <<- reads + 1L
+        if (reads == 2L) {
+          blocked <<- blocked + 1L
+          artifact_abort("Could not read artifact bytes.")
+        }
+      }
+      real_bytes(path, limit)
+    }
+  )
+  ref <- graft_save(store, "finding", "note")
+  expect_identical(blocked, 1L)
+  expect_identical(graft_read(store, ref)@data, "finding")
+})
+
+test_that("reading an object that is absent fails without waiting", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  elapsed <- system.time(
+    expect_error(
+      artifact_storage_read(store, "revisions", strrep("a", 64L), 1024),
+      class = "graft_artifact_error"
+    )
+  )[["elapsed"]]
+  expect_lt(elapsed, 0.5)
+})
