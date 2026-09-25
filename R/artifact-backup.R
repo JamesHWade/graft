@@ -252,7 +252,18 @@ graft_restore <- function(
   max_metadata_bytes = 1024^2,
   max_bundle_metadata_bytes = 4 * 1024^2
 ) {
+  # The target's lock file is created only once the target is known not to
+  # overlap the bundle, which must never change.
+  path <- artifact_backup_clean_path(path)
   artifact_backup_check_target_store(target)
+  artifact_backup_preflight_bundle_root(path)
+  if (!S7::S7_inherits(target, PostgresArtifactStore)) {
+    artifact_backup_assert_disjoint_paths(
+      path,
+      target@path,
+      "Backup bundle and restore target must be separate paths."
+    )
+  }
   artifact_with_store_lock(target, TRUE, function() {
     artifact_backup_restore(
       path,
@@ -275,16 +286,6 @@ artifact_backup_restore <- function(
   max_metadata_bytes,
   max_bundle_metadata_bytes
 ) {
-  path <- artifact_backup_clean_path(path)
-  artifact_backup_check_target_store(target)
-  artifact_backup_preflight_bundle_root(path)
-  if (!S7::S7_inherits(target, PostgresArtifactStore)) {
-    artifact_backup_assert_disjoint_paths(
-      path,
-      target@path,
-      "Backup bundle and restore target must be separate paths."
-    )
-  }
   limits <- artifact_backup_limits(
     max_objects,
     max_total_bytes,

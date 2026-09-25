@@ -404,6 +404,13 @@ test_that("backups and their verification never write lock files", {
   graft_restore(backup_path, target, receipt)
   expect_identical(dir.exists(file.path(objects, "locks")), FALSE)
 
+  # A restore rejected for overlapping the bundle leaves it unchanged.
+  expect_error(
+    graft_restore(backup_path, graft_store(objects), receipt),
+    class = "graft_artifact_error"
+  )
+  expect_identical(dir.exists(file.path(objects, "locks")), FALSE)
+
   skip_on_os("windows")
   skip_if(identical(Sys.info()[["user"]], "root"))
   # A closed image on read-only storage still verifies.
