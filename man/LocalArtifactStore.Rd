@@ -7,6 +7,7 @@
 LocalArtifactStore(
   max_bytes = integer(0),
   max_revision_bytes = integer(0),
+  lock_timeout = 10,
   path = character(0)
 )
 }
@@ -15,6 +16,9 @@ LocalArtifactStore(
 dependency set it references.}
 
 \item{max_revision_bytes}{Maximum encoded revision metadata bytes.}
+
+\item{lock_timeout}{Seconds to wait for another process's decision in the
+same stream before giving up.}
 
 \item{path}{Normalized local store directory.}
 }

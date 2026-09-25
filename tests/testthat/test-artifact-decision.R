@@ -381,6 +381,69 @@ test_that("decisions and guarded consultation survive a fresh R process", {
   expect_identical(result$selection$artifacts, list(f$first, f$source))
 })
 
+test_that("decisions from two processes in one stream never fork the journal", {
+  f <- local_decision_fixture()
+  go <- file.path(dirname(f$store@path), "go")
+  args <- list(
+    path = f$store@path,
+    stream = "topic",
+    selection = f$selection,
+    rounds = 15L,
+    go = go,
+    checkout = graft_checkout()
+  )
+  workers <- lapply(c("a", "b"), function(prefix) {
+    callr::r_bg(decision_race_worker, c(args, prefix = prefix))
+  })
+  file.create(go)
+  for (worker in workers) {
+    worker$wait(60000)
+  }
+  done <- vapply(workers, \(worker) worker$get_result(), integer(1))
+  expect_identical(done, c(15L, 15L))
+  records <- artifact_decisions(f$store, "topic", 1000L, 1024^2)
+  expect_length(records, 30L)
+  expect_identical(
+    vapply(records, \(x) x$sequence, integer(1)),
+    seq_len(30L)
+  )
+})
+
+test_that("a decision waits for the stream lock, then fails as busy", {
+  f <- local_decision_fixture()
+  store <- graft_store(f$store@path, lock_timeout = 0.2)
+  lock_path <- file.path(
+    store@path,
+    "locks",
+    paste0(artifact_sha(charToRaw("topic")), ".lock")
+  )
+  dir.create(dirname(lock_path))
+  held <- file.path(dirname(store@path), "held")
+  holder <- callr::r_bg(
+    function(lock_path, held) {
+      lock <- filelock::lock(lock_path)
+      file.create(held)
+      Sys.sleep(5)
+      filelock::unlock(lock)
+    },
+    list(lock_path = lock_path, held = held)
+  )
+  withr::defer(holder$kill())
+  while (!file.exists(held)) {
+    Sys.sleep(0.01)
+  }
+  expect_error(
+    decision_submit(utils::modifyList(f$request, list(store = store))),
+    class = "graft_store_busy_error"
+  )
+  expect_null(artifact_read_decision(store, "topic"))
+  holder$kill()
+  expect_identical(
+    decision_submit(utils::modifyList(f$request, list(store = store)))$key,
+    "review-1"
+  )
+})
+
 test_that("head changes during verification cannot silently authorize new work", {
   f <- local_decision_fixture()
   original <- artifact_read_selection
@@ -414,4 +477,59 @@ test_that("head changes during verification cannot silently authorize new work",
     artifact_read_decision(f$store, "topic")$action,
     "withdraw"
   )
+})
+
+test_that("a lock directory another process created first is used", {
+  f <- local_decision_fixture()
+  unlink(file.path(f$store@path, "locks"), recursive = TRUE)
+  withr::local_options(warn = 2)
+  local_mocked_bindings(artifact_create_dir = function(path) {
+    dir.create(path, recursive = TRUE, showWarnings = FALSE)
+    FALSE
+  })
+  expect_identical(decision_submit(f$request)$key, "review-1")
+})
+
+test_that("an accept that times out on the lock writes no selection", {
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE, lock_timeout = 0.2)
+  ref <- graft_save(store, "kept", "note")
+  lock_path <- file.path(
+    path,
+    "locks",
+    paste0(artifact_sha(charToRaw("topic")), ".lock")
+  )
+  dir.create(dirname(lock_path))
+  held <- file.path(dirname(path), "held-accept")
+  holder <- callr::r_bg(
+    function(lock_path, held) {
+      lock <- filelock::lock(lock_path)
+      file.create(held)
+      Sys.sleep(5)
+      filelock::unlock(lock)
+    },
+    list(lock_path = lock_path, held = held)
+  )
+  withr::defer(holder$kill())
+  while (!file.exists(held)) {
+    Sys.sleep(0.01)
+  }
+  selections <- function() {
+    list.files(file.path(path, "selections"), recursive = TRUE)
+  }
+  before <- selections()
+  expect_error(
+    graft_accept(
+      store,
+      ref,
+      stream = "topic",
+      expected = NULL,
+      key = "keep-1",
+      actor = "reviewer",
+      reason = "kept",
+      purpose = "research"
+    ),
+    class = "graft_store_busy_error"
+  )
+  expect_identical(selections(), before)
 })

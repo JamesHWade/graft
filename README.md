@@ -105,8 +105,9 @@ bound to a data-dict dictionary.
 - [Back up and restore a notebook](https://jameshwade.github.io/graft/articles/artifact-backups.html)
 - [Architecture and integration requirements](https://jameshwade.github.io/graft/articles/compatibility.html)
 
-Graft is pre-production. A local store uses trusted files and supports one
-writer. For PostgreSQL, your application owns the transaction in which Graft
+Graft is pre-production. A local store uses trusted files, and several R
+processes can write to it on a file system that honours advisory locks (many
+network file systems do not). For PostgreSQL, your application owns the transaction in which Graft
 reads and writes. The demo uses `eligible = TRUE` for one trusted local user.
 Before deploying to several users, your app needs to identify them, check their
 access, and decide how long to keep their data. Permanent Forget and recovery

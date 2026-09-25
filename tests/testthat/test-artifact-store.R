@@ -404,3 +404,182 @@ test_that("opening a store rejects a FIFO marker without blocking", {
   )
   expect_identical(result, "graft_artifact_error")
 })
+
+test_that("two processes saving the same bytes into fresh stores both succeed", {
+  root <- withr::local_tempdir()
+  paths <- file.path(root, sprintf("store-%02d", seq_len(40)))
+  for (path in paths) {
+    graft_store(path, create = TRUE)
+  }
+  go <- file.path(root, "go")
+  worker <- function(paths, go, checkout) {
+    if (!is.null(checkout)) {
+      pkgload::load_all(checkout, quiet = TRUE)
+    }
+    while (!file.exists(go)) {
+      Sys.sleep(0.001)
+    }
+    vapply(
+      paths,
+      function(path) {
+        tryCatch(
+          {
+            graft::graft_save(graft::graft_store(path), "same bytes", "note")
+            ""
+          },
+          error = function(e) conditionMessage(e)
+        )
+      },
+      character(1)
+    )
+  }
+  args <- list(paths = paths, go = go, checkout = graft_checkout())
+  workers <- lapply(1:2, function(i) callr::r_bg(worker, args))
+  file.create(go)
+  for (w in workers) {
+    w$wait(60000)
+  }
+  failures <- unlist(lapply(workers, \(w) w$get_result()))
+  expect_identical(unique(failures), "")
+})
+
+test_that("a rename that loses to an identical publication still succeeds", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    # Another writer published the same digest first.
+    file.copy(from, to)
+    FALSE
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+  expect_length(list.files(store@path, "^staged-", recursive = TRUE), 0)
+})
+
+test_that("a failed rename with no or different bytes at the destination fails", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_rename_file = function(from, to) FALSE)
+  expect_error(
+    artifact_save(store, "note", charToRaw("same"), "text/plain"),
+    "no successful reference"
+  )
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    writeBin(charToRaw("other"), to)
+    FALSE
+  })
+  expect_error(
+    artifact_save(store, "note", charToRaw("same"), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_length(list.files(store@path, "^staged-", recursive = TRUE), 0)
+})
+
+test_that("a directory another process created first is used, not an error", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_create_dir = function(path) {
+    dir.create(path, recursive = TRUE)
+    FALSE
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+})
+
+test_that("a losing rename's warning does not escape, even under warn = 2", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  withr::local_options(warn = 2)
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    file.copy(from, to)
+    warning("cannot rename file, reason 'Access is denied'")
+    FALSE
+  })
+  ref <- expect_no_warning(
+    artifact_save(store, "note", charToRaw("same"), "text/plain")
+  )
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    warning("disk full")
+    FALSE
+  })
+  expect_error(
+    artifact_save(store, "other", charToRaw("new"), "text/plain"),
+    "no successful reference"
+  )
+})
+
+test_that("verifying a publication retries while another process replaces it", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  original <- artifact_bytes
+  failures <- 2L
+  local_mocked_bindings(artifact_bytes = function(path, limit) {
+    if (failures > 0L && grepl("[/\\\\]content[/\\\\]", path)) {
+      failures <<- failures - 1L
+      artifact_abort("Could not read artifact bytes.")
+    }
+    original(path, limit)
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(failures, 0L)
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+})
+
+test_that("a save survives a competing replacement during its own read-back", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  real_bytes <- artifact_bytes
+  # The revision cannot be opened once, after publication has verified it,
+  # as while another writer's rename replaces it on Windows. The first read
+  # of the revision is artifact_put()'s verification; the second is
+  # artifact_save()'s read-back.
+  reads <- 0L
+  blocked <- 0L
+  local_mocked_bindings(
+    artifact_bytes = function(path, limit) {
+      if (grepl("revisions", path, fixed = TRUE)) {
+        reads <<- reads + 1L
+        if (reads == 2L) {
+          blocked <<- blocked + 1L
+          artifact_abort("Could not read artifact bytes.")
+        }
+      }
+      real_bytes(path, limit)
+    }
+  )
+  ref <- graft_save(store, "finding", "note")
+  expect_identical(blocked, 1L)
+  expect_identical(graft_read(store, ref)@data, "finding")
+})
+
+test_that("reading an object that is absent fails without waiting", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  elapsed <- system.time(
+    expect_error(
+      artifact_storage_read(store, "revisions", strrep("a", 64L), 1024),
+      class = "graft_artifact_error"
+    )
+  )[["elapsed"]]
+  expect_lt(elapsed, 0.5)
+})
+
+test_that("a read survives an object that is briefly absent during a replacement", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "finding", "note")
+  real_exists <- artifact_object_exists
+  real_bytes <- artifact_bytes
+  # The revision looks absent once, as in the moment of a Windows
+  # replacement: the existence check says no and the read fails.
+  gone <- 1L
+  local_mocked_bindings(
+    artifact_object_exists = function(path) {
+      if (gone > 0L && grepl("revisions", path, fixed = TRUE)) {
+        return(FALSE)
+      }
+      real_exists(path)
+    },
+    artifact_bytes = function(path, limit) {
+      if (gone > 0L && grepl("revisions", path, fixed = TRUE)) {
+        gone <<- gone - 1L
+        artifact_abort("Artifact file is missing or exceeds the byte bound.")
+      }
+      real_bytes(path, limit)
+    }
+  )
+  expect_identical(graft_read(store, ref)@data, "finding")
+})

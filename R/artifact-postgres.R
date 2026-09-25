@@ -190,6 +190,14 @@ S7::method(artifact_storage_put, PostgresArtifactStore) <- function(
   artifact_postgres_put(store, kind, key, bytes, limit)
 }
 
+S7::method(artifact_with_stream_lock, PostgresArtifactStore) <- function(
+  store,
+  stream,
+  code
+) {
+  code()
+}
+
 S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   store,
   hash,

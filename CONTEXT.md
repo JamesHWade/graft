@@ -54,7 +54,11 @@ See ADR 0010 for the current cut and consumer responsibilities.
 
 ## Persistence scopes
 
-Local artifact stores support trusted files and one writer. PostgreSQL stores
+Local artifact stores support trusted files, and several R processes can write
+one store: a file lock per stream serializes decisions, and content objects are
+content-addressed, so same-byte writers agree. The lock needs a file system that
+honours advisory locks, which some network file systems do not. Backup and
+replacement still need a quiescent store. PostgreSQL stores
 use the same bytes and digests inside a host-owned transaction, with a host-bound
 scope and a transaction lock per scope. Every retained object belongs to its
 scope; equal content in different scopes does not share a retained row.

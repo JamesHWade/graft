@@ -43,7 +43,8 @@ ontology reasoner.
 
 The public `ArtifactStore` S7 class has `LocalArtifactStore` and
 `PostgresArtifactStore` implementations. Graft supports bounded immutable local
-files with one writer. Its PostgreSQL scopes run inside transactions owned by the
+files; a per-stream file lock serializes decisions from several processes, as an
+advisory lock does for a PostgreSQL scope. Its PostgreSQL scopes run inside transactions owned by the
 application. Normal reads verify digests and predecessor identity, ignore
 abandoned staging, and allow identical retries. A complete manifest must account
 for every entry, so abandoned staging and unknown objects are rejected.

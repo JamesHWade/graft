@@ -11,7 +11,8 @@ artifact_decide <- function(
   max_decisions = 1000L,
   max_metadata_bytes = 1024^2,
   max_artifacts = 1000L,
-  max_selection_bytes = 1024^2
+  max_selection_bytes = 1024^2,
+  locked = FALSE
 ) {
   artifact_check_store(store)
   request <- artifact_decision_request(
@@ -26,70 +27,84 @@ artifact_decide <- function(
   )
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_selection_bytes, "max_selection_bytes")
-  records <- artifact_decisions(
-    store,
-    request$stream,
-    max_decisions,
-    max_metadata_bytes
-  )
-  matched <- which(vapply(
-    records,
-    \(x) identical(x$key, request$key),
-    logical(1)
-  ))
-  if (length(matched)) {
-    previous <- records[[matched]]
-    if (!identical(previous[names(request)], request)) {
-      artifact_abort(
-        "Decision key was already committed for a different request."
+  decide <- function() {
+    records <- artifact_decisions(
+      store,
+      request$stream,
+      max_decisions,
+      max_metadata_bytes
+    )
+    matched <- which(vapply(
+      records,
+      \(x) identical(x$key, request$key),
+      logical(1)
+    ))
+    if (length(matched)) {
+      previous <- records[[matched]]
+      if (!identical(previous[names(request)], request)) {
+        artifact_abort(
+          "Decision key was already committed for a different request."
+        )
+      }
+      return(previous)
+    }
+    head <- artifact_decision_head(records)
+    artifact_decision_transition(request, head)
+    if (length(records) >= max_decisions) {
+      artifact_abort("Decision journal exceeds the record-count bound.")
+    }
+    if (request$action == "accept") {
+      artifact_read_selection(
+        store,
+        request$selection,
+        max_artifacts,
+        max_selection_bytes
       )
     }
-    return(previous)
-  }
-  head <- artifact_decision_head(records)
-  artifact_decision_transition(request, head)
-  if (length(records) >= max_decisions) {
-    artifact_abort("Decision journal exceeds the record-count bound.")
-  }
-  if (request$action == "accept") {
-    artifact_read_selection(
+    value <- list(
+      format = 1L,
+      sequence = length(records) + 1L,
+      request = request
+    )
+    bytes <- artifact_encode(value)
+    retained <- sum(vapply(records, artifact_decision_size, numeric(1)))
+    if (retained + length(bytes) > max_metadata_bytes) {
+      artifact_abort(
+        "Decision journal exceeds the aggregate metadata byte bound."
+      )
+    }
+    current <- artifact_decisions(
       store,
-      request$selection,
-      max_artifacts,
-      max_selection_bytes
+      request$stream,
+      max_decisions,
+      max_metadata_bytes
+    )
+    if (!identical(artifact_decision_head(current), head)) {
+      artifact_abort(
+        "Decision head changed before publication; review it again."
+      )
+    }
+    id <- artifact_sha(bytes)
+    key <- paste0(
+      artifact_sha(charToRaw(request$stream)),
+      "/",
+      sprintf("%010d-%s.json", value$sequence, id)
+    )
+    artifact_storage_put(store, "decisions", key, bytes, max_metadata_bytes)
+    artifact_read_decision(
+      store,
+      request$stream,
+      id,
+      max_decisions,
+      max_metadata_bytes
     )
   }
-  value <- list(format = 1L, sequence = length(records) + 1L, request = request)
-  bytes <- artifact_encode(value)
-  retained <- sum(vapply(records, artifact_decision_size, numeric(1)))
-  if (retained + length(bytes) > max_metadata_bytes) {
-    artifact_abort(
-      "Decision journal exceeds the aggregate metadata byte bound."
-    )
+  # graft_accept() takes the lock itself so the selection it creates is
+  # covered too.
+  if (isTRUE(locked)) {
+    return(decide())
   }
-  current <- artifact_decisions(
-    store,
-    request$stream,
-    max_decisions,
-    max_metadata_bytes
-  )
-  if (!identical(artifact_decision_head(current), head)) {
-    artifact_abort("Decision head changed before publication; review it again.")
-  }
-  id <- artifact_sha(bytes)
-  key <- paste0(
-    artifact_sha(charToRaw(request$stream)),
-    "/",
-    sprintf("%010d-%s.json", value$sequence, id)
-  )
-  artifact_storage_put(store, "decisions", key, bytes, max_metadata_bytes)
-  artifact_read_decision(
-    store,
-    request$stream,
-    id,
-    max_decisions,
-    max_metadata_bytes
-  )
+  artifact_with_stream_lock(store, request$stream, decide)
 }
 
 artifact_read_decision <- function(
