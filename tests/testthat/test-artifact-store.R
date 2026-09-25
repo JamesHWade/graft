@@ -557,3 +557,29 @@ test_that("reading an object that is absent fails without waiting", {
   )[["elapsed"]]
   expect_lt(elapsed, 0.5)
 })
+
+test_that("a read survives an object that is briefly absent during a replacement", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "finding", "note")
+  real_exists <- artifact_object_exists
+  real_bytes <- artifact_bytes
+  # The revision looks absent once, as in the moment of a Windows
+  # replacement: the existence check says no and the read fails.
+  gone <- 1L
+  local_mocked_bindings(
+    artifact_object_exists = function(path) {
+      if (gone > 0L && grepl("revisions", path, fixed = TRUE)) {
+        return(FALSE)
+      }
+      real_exists(path)
+    },
+    artifact_bytes = function(path, limit) {
+      if (gone > 0L && grepl("revisions", path, fixed = TRUE)) {
+        gone <<- gone - 1L
+        artifact_abort("Artifact file is missing or exceeds the byte bound.")
+      }
+      real_bytes(path, limit)
+    }
+  )
+  expect_identical(graft_read(store, ref)@data, "finding")
+})

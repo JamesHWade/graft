@@ -46,8 +46,7 @@ dictionary YAML or evaluate expressions.
 Reads verify every artifact in the retained release and rebuild the context from
 it. They need neither the original files nor an installed data-dict binary. This
 checks content integrity. It is not a signature or independent proof of the
-publisher's identity or claims. Stores retain the trusted local, single-writer
-limits described in [persistent artifacts](persistent-artifacts.html).
+publisher's identity or claims. Stores retain the trusted local storage limits described in [persistent artifacts](persistent-artifacts.html).
 
 `graft_publish_vocabulary()` returns a `VocabularyRelease`. Its `@selection`
 property is an `ArtifactSelection`, so applications can retain the exact release

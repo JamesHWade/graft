@@ -368,13 +368,17 @@ S7::method(artifact_storage_read, LocalArtifactStore) <- function(
 ) {
   path <- artifact_path(store, kind, key)
   # On Windows another writer's same-byte rename replaces an existing object,
-  # which can leave it briefly unreadable to any reader. An object that is
-  # present is read with a short retry; an absent one fails at once.
-  if (file.exists(path)) {
+  # which can leave it briefly unreadable, or briefly absent, to any reader.
+  # A present object is retried for up to about a second. An absent one is
+  # retried for about 0.2 seconds: a replacement's absent moment is far
+  # shorter than that, and a missing object should still fail quickly.
+  if (artifact_object_exists(path)) {
     return(artifact_settled_bytes(path, limit))
   }
-  artifact_bytes(path, limit)
+  artifact_settled_bytes(path, limit, attempts = 5L)
 }
+
+artifact_object_exists <- function(path) file.exists(path)
 
 S7::method(artifact_storage_put, LocalArtifactStore) <- function(
   store,
