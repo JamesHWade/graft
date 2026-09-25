@@ -11,6 +11,7 @@ open_store_backend <- function(
   }
   validate_read_only(read_only)
   okf <- rlang::arg_match(okf)
+  validate_blob_contract(schema$manifest)
 
   owns_connection <- is.null(connection)
   if (owns_connection) {
@@ -55,7 +56,8 @@ open_store_backend <- function(
     path = path,
     capabilities = capabilities,
     okf_mode = okf,
-    okf_path = okf_path
+    okf_path = okf_path,
+    blob_path = resolve_blob_path(path)
   )
   if (owns_connection) {
     reg.finalizer(

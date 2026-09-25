@@ -131,7 +131,7 @@
               "name": {"const": "graft-data-dict-adapter"},
               "version": {"const": "0.1.0"},
               "script_digest": {
-                "const": "sha256:5fc5ff6e87d4b41dc1a71759dbbeaf67db7b909025cbff8c2af9ef1c06447c88"
+                "const": "sha256:c71a2c899fad7f1600b9b87e15eb3060f2d0f30a00f5cc7d3cb8de21a780bcc2"
               }
             }
           },

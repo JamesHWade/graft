@@ -119,6 +119,13 @@ reference:
       - graft_plan
       - graft_commit
       - graft_ingest
+  - title: Store files
+    desc: >
+      Keep bytes such as images and documents beside the records that cite
+      them.
+    contents:
+      - graft_blob
+      - graft_blob_read
   - title: Retrieve and inspect
     desc: >
       Read current records, search results, fixed projections, and history.

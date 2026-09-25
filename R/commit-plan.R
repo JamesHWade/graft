@@ -224,6 +224,7 @@ commit_graft_plan <- function(store, plan) {
     )
   }
   validate_commit_plan_static_binding(store, plan)
+  verify_plan_blobs(store, execution$staged$records, plan@changes)
   batch <- commit_batch_from_provenance(plan@provenance, plan@plan_id)
   replay <- find_committed_replay(store$connection, batch)
   if (!is.null(replay)) {

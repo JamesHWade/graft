@@ -21,7 +21,8 @@ new_store_backend <- function(
   path,
   capabilities,
   okf_mode,
-  okf_path
+  okf_path,
+  blob_path = NULL
 ) {
   store <- new.env(parent = emptyenv())
   store$schema <- schema
@@ -33,6 +34,7 @@ new_store_backend <- function(
   store$capabilities <- capabilities
   store$okf_mode <- okf_mode
   store$okf_path <- okf_path
+  store$blob_path <- blob_path
   store$okf_expected <- NULL
   store$verification <- NULL
   store

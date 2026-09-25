@@ -60,6 +60,24 @@ abort_backend_error <- function(
   )
 }
 
+abort_blob_error <- function(
+  message,
+  ...,
+  record_id = NULL,
+  rule = NULL,
+  call = rlang::caller_env()
+) {
+  graft_abort(
+    "graft_blob_error",
+    message,
+    ...,
+    record_class = "graft_blob",
+    record_id = record_id,
+    rule = rule,
+    call = call
+  )
+}
+
 abort_store_busy <- function(
   message,
   ...,

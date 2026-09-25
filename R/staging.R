@@ -23,6 +23,14 @@ plan_candidate_records <- function(store, batch, records, metadata) {
     snapshot$current,
     snapshot$planned_at
   )
+  issues <- c(
+    issues,
+    candidate_blob_issues(
+      store,
+      lapply(planned$staged, \(.x) .x$data),
+      planned$changes
+    )
+  )
   issues <- bind_plan_issues(issues)
   list(
     records = lapply(planned$staged, \(.x) .x$data),
