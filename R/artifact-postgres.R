@@ -238,7 +238,7 @@ S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
   committed <- character()
   for (hash in hashes) {
     files <- list.files(file.path(path, hash), all.files = TRUE, no.. = TRUE)
-    if (any(!grepl("^staged-", files))) {
+    if (!all(grepl("^staged-", files))) {
       committed <- c(committed, hash)
       if (length(committed) > max_streams) {
         break
