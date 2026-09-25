@@ -1,0 +1,359 @@
+$version: 0.1.0
+$learn_more: https://data-dict.tidyverse.org/
+name: artifacts
+label: Kept artifacts
+description: >
+  Results a person kept from an assistant conversation: each artifact, its
+  versions and their bytes, how each version was made, and the citations,
+  evidence, and directions recorded with it.
+details: >
+  Shaped on Crucible's kept artifacts, provenance records, evidence table, and
+  directions log. Live conversation cards are not stored here; a card becomes
+  an artifact when someone keeps it.
+version:
+  number: 0.1.0
+
+tables:
+  - name: graft_blob
+    label: Blobs
+    description: Each row is one immutable byte sequence, named by its digest.
+    columns:
+      - name: id
+        label: Blob ID
+        description: SHA-256 digest of the bytes, as `sha256:<hex>`.
+        type: string
+        constraints: [primary_key]
+        examples: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+      - name: media_type
+        label: Media type
+        description: Media type of the bytes.
+        type: string
+        constraints: [required]
+        examples: ["image/png", "text/html"]
+      - name: size_bytes
+        label: Size
+        description: Length of the bytes.
+        type: number(quantity)
+        range: [0, .inf]
+        units: bytes
+        constraints: [required]
+        examples: [1024]
+
+  - name: artifact
+    label: Artifacts
+    description: Each row is one artifact a person kept to a project.
+    columns:
+      - name: id
+        label: Artifact ID
+        description: Stable identifier across versions.
+        type: string
+        constraints: [primary_key]
+        examples: ["artifact:polymer-cure:conv-7:card-12"]
+      - name: project_id
+        label: Project
+        description: Project the artifact was kept to.
+        type: string
+        constraints: [required]
+        examples: ["polymer-cure"]
+      - name: title
+        label: Title
+        description: Title shown on the card.
+        type: string
+        constraints: [required]
+        examples: ["Cure conversion by protocol"]
+      - name: kind
+        label: Kind
+        description: Whether a live app or a static result made the artifact.
+        type: enum
+        values: [app, result, note]
+        constraints: [required]
+      - name: tool
+        label: Tool
+        description: Tool whose call produced the artifact.
+        type: string
+        examples: ["run_r_code", "create_evidence_table"]
+      - name: label
+        label: Label
+        description: Label that groups a card's versions in its conversation.
+        type: string
+        examples: ["conversion-plot"]
+      - name: conversation_id
+        label: Conversation
+        description: Conversation the artifact was made in.
+        type: string
+        constraints: [required]
+        examples: ["conv-7"]
+      - name: conversation_title
+        label: Conversation title
+        description: Title of that conversation when the artifact was kept.
+        type: string
+        examples: ["Cure protocol comparison"]
+      - name: kept_by
+        label: Kept by
+        description: Person who kept the artifact.
+        type: string
+        constraints: [required]
+        examples: ["ua21849"]
+      - name: kept_at
+        label: Kept at
+        description: When the artifact was kept.
+        type: datetime
+        range: [2026-01-01T00:00:00, .inf]
+        time_zone: UTC
+        constraints: [required]
+
+  - name: artifact_provenance
+    label: Provenance
+    description: Each row records how one artifact version was made.
+    columns:
+      - name: id
+        label: Provenance ID
+        description: Stable identifier for the record.
+        type: string
+        constraints: [primary_key]
+        examples: ["provenance:conv-7:card-12:v2"]
+      - name: producer
+        label: Producer
+        description: Tool or app that made the version.
+        type: string
+        constraints: [required]
+        examples: ["run_r_code", "alloptr"]
+      - name: server
+        label: Server
+        description: MCP server that served the tool, when one did.
+        type: string
+        examples: ["alloptr", "dowchem"]
+      - name: runtime
+        label: Runtime
+        description: Language runtime that made the version.
+        type: enum
+        values: [r, python, node, dotnet]
+        constraints: [required]
+      - name: package
+        label: Package
+        description: Package that provided the producer.
+        type: string
+        examples: ["alloptr"]
+      - name: package_version
+        label: Package version
+        description: Version of that package.
+        type: string
+        examples: ["0.4.1"]
+      - name: capture
+        label: Capture
+        description: >
+          How much of the making is kept: `exact` when the code is kept,
+          `declared` when the assistant wrote the content, `partial` otherwise.
+        type: enum
+        values: [exact, declared, partial]
+        constraints: [required]
+      - name: code
+        label: Code
+        description: Code that ran, when capture is exact.
+        type: string
+        examples: ["ggplot(runs, aes(time, conversion)) + geom_line()"]
+      - name: model
+        label: Model
+        description: Model that made the call.
+        type: string
+        examples: ["gpt-5.6-sol"]
+      - name: conversation_id
+        label: Conversation
+        description: Conversation the call was made in.
+        type: string
+        examples: ["conv-7"]
+        constraints: [required]
+      - name: tool_call_id
+        label: Tool call
+        description: Identifier of the tool call within the conversation.
+        type: string
+        examples: ["call_8f2a"]
+      - name: recorded_at
+        label: Recorded at
+        description: When the record was made.
+        type: datetime
+        range: [2026-01-01T00:00:00, .inf]
+        time_zone: UTC
+        constraints: [required]
+
+  - name: artifact_version
+    label: Artifact versions
+    description: Each row is one version of an artifact and its bytes.
+    columns:
+      - name: id
+        label: Version ID
+        description: Stable identifier for the version.
+        type: string
+        constraints: [primary_key]
+        examples: ["artifact:polymer-cure:conv-7:card-12:v2"]
+      - name: artifact_id
+        label: Artifact
+        description: Artifact this is a version of.
+        type: string
+        examples: ["artifact:polymer-cure:conv-7:card-12"]
+        constraints: [required, foreign_key]
+      - name: version
+        label: Version
+        description: Version number within the artifact, from 1.
+        type: number(ordinal)
+        range: [1, .inf]
+        constraints: [required]
+      - name: blob_id
+        label: Content
+        description: Bytes of the version as shown.
+        type: string
+        examples: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+        constraints: [required, foreign_key]
+      - name: text
+        label: Text
+        description: Plain-text fallback for hosts that cannot show the bytes.
+        type: string
+        examples: ["Conversion reaches 0.92 at 60 min for the 80C protocol."]
+      - name: provenance_id
+        label: Provenance
+        description: How this version was made.
+        type: string
+        examples: ["provenance:conv-7:card-12:v2"]
+        constraints: [required, foreign_key]
+
+  - name: citation
+    label: Citations
+    description: Each row is one reference a result cited.
+    columns:
+      - name: id
+        label: Citation ID
+        description: Stable identifier for the reference.
+        type: string
+        constraints: [primary_key]
+        examples: ["citation:smith2024"]
+      - name: key
+        label: Key
+        description: Key the text cites it by, as `[@key]`.
+        type: string
+        constraints: [required]
+        examples: ["smith2024"]
+      - name: doi
+        label: DOI
+        description: DOI, when the reference has one.
+        type: string
+        examples: ["10.1021/acs.macromol.4c00123"]
+      - name: title
+        label: Title
+        description: Title of the work.
+        type: string
+        examples: ["Cure kinetics of epoxy-amine networks"]
+      - name: authors
+        label: Authors
+        description: Authors as written in the source, separated by semicolons.
+        type: string
+        examples: ["Smith, J.; Lee, K."]
+      - name: year
+        label: Year
+        description: Year of publication.
+        type: string
+        examples: ["2024"]
+      - name: url
+        label: URL
+        description: Where the work can be read.
+        type: string
+        examples: ["https://doi.org/10.1021/acs.macromol.4c00123"]
+
+  - name: evidence_claim
+    label: Evidence
+    description: Each row is one claim in an evidence table, with its support.
+    columns:
+      - name: id
+        label: Claim ID
+        description: Stable identifier for the claim.
+        type: string
+        examples: ["claim:conv-7:card-15:3"]
+        constraints: [primary_key]
+      - name: artifact_version_id
+        label: Evidence table
+        description: Artifact version whose evidence table holds the claim.
+        type: string
+        examples: ["artifact:polymer-cure:conv-7:card-15:v1"]
+        constraints: [required, foreign_key]
+      - name: claim
+        label: Claim
+        description: The claim as stated.
+        type: string
+        examples: ["Gel time falls with temperature"]
+        constraints: [required]
+      - name: value
+        label: Value
+        description: The value the claim reports, as written.
+        type: string
+        examples: ["12 min at 80C"]
+      - name: source
+        label: Source
+        description: The source as written, a `[@key]` or free text.
+        type: string
+        examples: ["[@smith2024]"]
+      - name: citation_id
+        label: Citation
+        description: The reference, when the source is a known key.
+        type: string
+        examples: ["citation:smith2024"]
+        constraints: [foreign_key]
+      - name: quote
+        label: Quote
+        description: Quote offered in support of the claim.
+        type: string
+        examples: ["gel time decreased from 31 to 12 min"]
+      - name: quote_checked
+        label: Quote checked
+        description: Whether the quote was found in what the tools read.
+        type: boolean
+        constraints: [required]
+
+  - name: direction
+    label: Directions
+    description: Each row is one line of work in a conversation's directions log.
+    columns:
+      - name: id
+        label: Direction ID
+        description: Stable identifier for the direction.
+        type: string
+        examples: ["direction:conv-7:cure-temperature"]
+        constraints: [primary_key]
+      - name: conversation_id
+        label: Conversation
+        description: Conversation whose log holds the direction.
+        type: string
+        examples: ["conv-7"]
+        constraints: [required]
+      - name: area
+        label: Direction
+        description: The line of work.
+        type: string
+        examples: ["Cure temperature"]
+        constraints: [required]
+      - name: status
+        label: Status
+        description: Where the line of work stands.
+        type: enum
+        values: [Explored, Partly explored, In progress, Blocked, Not pursued]
+        constraints: [required]
+      - name: notes
+        label: Notes
+        description: Notes on the direction, separated by semicolons.
+        type: string
+        examples: ["80C is fastest; lot 22B only"]
+
+relationships:
+  - join: artifact_version.artifact_id = artifact.id
+    cardinality: many-to-one
+    description: Resolves each version to its artifact.
+  - join: artifact_version.blob_id = graft_blob.id
+    cardinality: many-to-one
+    description: Resolves each version to its bytes.
+  - join: artifact_version.provenance_id = artifact_provenance.id
+    cardinality: many-to-one
+    description: Resolves each version to how it was made.
+  - join: evidence_claim.artifact_version_id = artifact_version.id
+    cardinality: many-to-one
+    description: Resolves each claim to its evidence table.
+  - join: evidence_claim.citation_id = citation.id
+    cardinality: many-to-one
+    description: Resolves each claim to its reference.
