@@ -232,7 +232,20 @@ S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
   ) {
     artifact_abort("Decision directory has invalid entries.")
   }
-  utils::head(hashes, max_streams + 1L)
+  # A failed first publication can leave a journal with no committed record,
+  # which artifact_decision_entries() treats as empty; it is not a stream, so
+  # it does not count against the bound.
+  committed <- character()
+  for (hash in hashes) {
+    files <- list.files(file.path(path, hash), all.files = TRUE, no.. = TRUE)
+    if (any(!grepl("^staged-", files))) {
+      committed <- c(committed, hash)
+      if (length(committed) > max_streams) {
+        break
+      }
+    }
+  }
+  committed
 }
 
 S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(
@@ -260,6 +273,21 @@ S7::method(artifact_decision_streams, PostgresArtifactStore) <- function(
   store,
   max_streams
 ) {
+  # Every decision key must be a stream hash and a journal entry name before
+  # stream hashes are taken from its prefix; a damaged key would otherwise be
+  # grouped under a stream and then skipped, leaving the list incomplete.
+  malformed <- artifact_postgres_query(
+    store@connection,
+    paste(
+      "SELECT 1 FROM graft_artifact_objects",
+      "WHERE scope = $1 AND kind = 'decisions'",
+      "AND object_key !~ '^[0-9a-f]{64}/[0-9]{10}-[0-9a-f]{64}[.]json$' LIMIT 1"
+    ),
+    params = list(store@scope)
+  )
+  if (nrow(malformed)) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
   rows <- artifact_postgres_query(
     store@connection,
     paste(

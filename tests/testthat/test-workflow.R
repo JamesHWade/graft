@@ -327,3 +327,34 @@ test_that("graft_streams() enforces its bounds and verifies journals", {
   writeBin(charToRaw("{}"), journal)
   expect_error(graft_streams(store), class = "graft_artifact_error")
 })
+
+test_that("graft_streams() bounds only streams with a committed decision", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "report", "report")
+  for (stream in c("one", "two")) {
+    graft_accept(
+      store,
+      ref,
+      stream,
+      expected = NULL,
+      key = stream,
+      actor = "reviewer",
+      reason = "reviewed",
+      purpose = "kept"
+    )
+  }
+  # A failed first publication leaves a journal directory with no committed
+  # record: empty, or holding only a staged file.
+  decisions <- file.path(store@path, "decisions")
+  empty <- file.path(decisions, strrep("0", 64L))
+  staged <- file.path(decisions, strrep("f", 64L))
+  dir.create(empty)
+  dir.create(staged)
+  writeBin(charToRaw("{}"), file.path(staged, "staged-1"))
+
+  expect_length(graft_streams(store, max_streams = 2L), 2L)
+  expect_error(
+    graft_streams(store, max_streams = 1L),
+    class = "graft_artifact_error"
+  )
+})

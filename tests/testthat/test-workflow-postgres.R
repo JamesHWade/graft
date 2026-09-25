@@ -126,3 +126,33 @@ test_that("graft_streams() lists PostgreSQL streams within one scope", {
     )
   })
 })
+
+test_that("graft_streams() rejects a malformed PostgreSQL decision key", {
+  connection <- local_artifact_postgres()
+  DBI::dbWithTransaction(connection, {
+    store <- graft_store_postgres(connection, "project", create = TRUE)
+    graft_accept(
+      store,
+      graft_save(store, "report", "report"),
+      "project:a",
+      expected = NULL,
+      key = "project:a",
+      actor = "reviewer",
+      reason = "reviewed",
+      purpose = "kept"
+    )
+    DBI::dbExecute(
+      connection,
+      paste(
+        "INSERT INTO graft_artifact_objects (scope, kind, object_key, payload)",
+        "VALUES ($1, 'decisions', $2, $3)"
+      ),
+      params = list(
+        "project",
+        paste0(strrep("a", 64L), "x"),
+        list(charToRaw("{}"))
+      )
+    )
+    expect_error(graft_streams(store), class = "graft_artifact_error")
+  })
+})
