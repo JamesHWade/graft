@@ -417,7 +417,7 @@ test_that("a decision waits for the stream lock, then fails as busy", {
     "locks",
     paste0(artifact_sha(charToRaw("topic")), ".lock")
   )
-  dir.create(dirname(lock_path))
+  dir.create(dirname(lock_path), showWarnings = FALSE)
   held <- file.path(dirname(store@path), "held")
   holder <- callr::r_bg(
     function(lock_path, held) {
@@ -499,7 +499,7 @@ test_that("an accept that times out on the lock writes no selection", {
     "locks",
     paste0(artifact_sha(charToRaw("topic")), ".lock")
   )
-  dir.create(dirname(lock_path))
+  dir.create(dirname(lock_path), showWarnings = FALSE)
   held <- file.path(dirname(path), "held-accept")
   holder <- callr::r_bg(
     function(lock_path, held) {

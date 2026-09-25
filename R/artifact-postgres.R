@@ -198,6 +198,14 @@ S7::method(artifact_with_stream_lock, PostgresArtifactStore) <- function(
   code()
 }
 
+S7::method(artifact_with_store_lock, PostgresArtifactStore) <- function(
+  store,
+  exclusive,
+  code
+) {
+  code()
+}
+
 S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
   store,
   hash,

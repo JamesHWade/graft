@@ -18,7 +18,7 @@ dependency set it references.}
 \item{max_revision_bytes}{Maximum encoded revision metadata bytes.}
 
 \item{lock_timeout}{Seconds to wait for another process's decision in the
-same stream before giving up.}
+same stream, or for the store's lock, before giving up.}
 
 \item{path}{Normalized local store directory.}
 }

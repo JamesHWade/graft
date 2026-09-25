@@ -35,11 +35,13 @@
 #' Payloads are published before immutable revision metadata, using staged files
 #' in the destination directory. A failed save can leave unreferenced bytes;
 #' retries reuse verified content. Orphans are retained rather than deleted
-#' automatically. Successful reads verify metadata, payload size, and digest.
-#' Interrupted writes cannot produce a successful incomplete reference. The
-#' interface does not promise power-loss durability, authorization, erasure, or
-#' backup recovery. Applications control access and
-#' policy.
+#' automatically; a replacement planned with nothing to forget
+#' ([graft_plan_replacement()]) copies everything but them. Every write also
+#' holds the store's lock shared; see [graft_with_store_lock()]. Successful
+#' reads verify metadata, payload size, and digest. Interrupted writes cannot
+#' produce a successful incomplete reference. The interface does not promise
+#' power-loss durability, authorization, erasure, or backup recovery.
+#' Applications control access and policy.
 #' Local handles have no open connections, so callers do not need to close them.
 #' For transaction-scoped database persistence, use
 #' [graft_store_postgres()] with the same artifact APIs.
@@ -109,6 +111,50 @@ graft_store <- function(
     max_revision_bytes = max_revision_bytes,
     lock_timeout = lock_timeout
   )
+}
+
+#' Hold a store's lock while an application changes it
+#'
+#' Run code while holding the store's lock, so an application can make a
+#' change that spans several Graft calls without another process writing in
+#' between. Every write to a local store holds this lock shared, and
+#' [graft_manifest()], [graft_plan_replacement()], [graft_replace()],
+#' [graft_backup()], and [graft_restore()] hold it exclusively.
+#'
+#' A host that forgets an artifact by building a replacement store holds the
+#' old store's lock exclusively while it plans, copies, and switches to the
+#' replacement, and wraps each of its writes in a shared hold that first checks
+#' the store is still current. A write that was waiting on the lock then sees
+#' the switch and goes to the new store instead of the retired one.
+#'
+#' Graft calls inside `code` run under the lock already held. An exclusive
+#' hold cannot be taken inside a shared one. PostgreSQL stores run `code`
+#' directly: the host's transaction and scope lock already serialize it.
+#'
+#' @param store A handle returned by [graft_store()] or
+#'   [graft_store_postgres()].
+#' @param code Code to run while the lock is held.
+#' @param exclusive `TRUE` to keep every other process out of the store,
+#'   `FALSE` to share the lock with other writers.
+#'
+#' @returns The value of `code`. If the lock is not free within the store's
+#'   `lock_timeout`, an error of class `graft_store_busy_error` is signalled
+#'   and `code` is not run. A store this process cannot write has no lock it
+#'   can take, so holding it is an error too.
+#'
+#' @examples
+#' path <- tempfile("artifacts-")
+#' store <- graft_store(path, create = TRUE)
+#' ref <- graft_with_store_lock(store, graft_save(store, "Evidence", "report"))
+#' graft_read(store, ref)@data
+#' unlink(path, recursive = TRUE)
+#' @export
+graft_with_store_lock <- function(store, code, exclusive = TRUE) {
+  artifact_check_store(store)
+  if (!rlang::is_bool(exclusive)) {
+    artifact_abort("`exclusive` must be TRUE or FALSE.")
+  }
+  artifact_with_store_lock(store, exclusive, function() code)
 }
 
 artifact_save <- function(
@@ -387,7 +433,9 @@ S7::method(artifact_storage_put, LocalArtifactStore) <- function(
   bytes,
   limit
 ) {
-  artifact_put(bytes, artifact_path(store, kind, key), limit)
+  artifact_with_store_lock(store, FALSE, function() {
+    artifact_put(bytes, artifact_path(store, kind, key), limit)
+  })
 }
 
 # A decision reads the stream's head and publishes the next sequence number,
@@ -399,11 +447,18 @@ S7::method(artifact_with_stream_lock, LocalArtifactStore) <- function(
   stream,
   code
 ) {
-  dir <- file.path(store@path, "locks")
-  if (!dir.exists(dir) && !artifact_create_dir(dir) && !dir.exists(dir)) {
-    artifact_abort("Could not create the store's lock directory.")
-  }
-  path <- file.path(dir, paste0(artifact_sha(charToRaw(stream)), ".lock"))
+  # The store lock is taken first, as every holder takes it, so a decision
+  # never holds a stream lock while it waits for the store's.
+  artifact_with_store_lock(store, FALSE, function() {
+    artifact_with_stream_lock_held(store, stream, code)
+  })
+}
+
+artifact_with_stream_lock_held <- function(store, stream, code) {
+  path <- artifact_lock_path(
+    store,
+    paste0(artifact_sha(charToRaw(stream)), ".lock")
+  )
   lock <- artifact_lock(path, store@lock_timeout)
   if (is.null(lock)) {
     graft_abort(
@@ -419,8 +474,100 @@ S7::method(artifact_with_stream_lock, LocalArtifactStore) <- function(
   code()
 }
 
-artifact_lock <- function(path, timeout) {
-  filelock::lock(path, exclusive = TRUE, timeout = timeout * 1000)
+# Every write holds the store's lock shared, and operations on the whole
+# store (manifests, replacement plans and copies, backups, restores) hold it
+# exclusively, so they never see a write half done and no write lands while
+# they run. A process that already holds the lock runs nested work under it
+# rather than locking again: filelock would lock the same file twice, and on
+# POSIX releasing either lock releases both.
+artifact_store_locks <- new.env(parent = emptyenv())
+
+S7::method(artifact_with_store_lock, LocalArtifactStore) <- function(
+  store,
+  exclusive,
+  code
+) {
+  held <- artifact_store_locks[[store@path]]
+  if (!is.null(held)) {
+    if (exclusive && !held) {
+      artifact_abort(
+        "An operation on the whole store cannot run inside a write to it."
+      )
+    }
+    return(code())
+  }
+  lock <- artifact_lock(
+    artifact_lock_path(store, "store.lock"),
+    store@lock_timeout,
+    exclusive = exclusive
+  )
+  if (is.null(lock)) {
+    graft_abort(
+      c("graft_store_busy_error", "graft_artifact_error"),
+      paste0(
+        "Another process is using this store; waited ",
+        format(store@lock_timeout),
+        " seconds. Retry later."
+      )
+    )
+  }
+  assign(store@path, exclusive, envir = artifact_store_locks)
+  on.exit(
+    {
+      rm(list = store@path, envir = artifact_store_locks)
+      filelock::unlock(lock)
+    },
+    add = TRUE
+  )
+  code()
+}
+
+# A backup's staging image is private to the process building it, and a closed
+# backup image must not change, so neither takes a lock file: their work runs
+# as if the lock were already held.
+artifact_without_store_lock <- function(store, code) {
+  if (!is.null(artifact_store_locks[[store@path]])) {
+    return(code())
+  }
+  assign(store@path, TRUE, envir = artifact_store_locks)
+  on.exit(rm(list = store@path, envir = artifact_store_locks), add = TRUE)
+  code()
+}
+
+# An inventory or a backup only reads the store. When this process cannot
+# write to it, it cannot create the lock file either, so the read runs
+# without the lock rather than failing. That does not prove no one else
+# writes: a backup rechecks its source after copying and fails if it changed,
+# and a manifest is a point-in-time inspection. Anything that writes, or that
+# a host relies on to fence writers (graft_with_store_lock(), replacement,
+# restore), always takes the lock.
+artifact_with_store_read_lock <- function(store, code) {
+  if (
+    S7::S7_inherits(store, LocalArtifactStore) &&
+      is.null(artifact_store_locks[[store@path]]) &&
+      artifact_store_read_only(store)
+  ) {
+    return(artifact_without_store_lock(store, code))
+  }
+  artifact_with_store_lock(store, TRUE, code)
+}
+
+artifact_store_read_only <- function(store) {
+  locks <- file.path(store@path, "locks")
+  target <- if (dir.exists(locks)) locks else store@path
+  !isTRUE(file.access(target, 2L) == 0L)
+}
+
+artifact_lock_path <- function(store, name) {
+  dir <- file.path(store@path, "locks")
+  if (!dir.exists(dir) && !artifact_create_dir(dir) && !dir.exists(dir)) {
+    artifact_abort("Could not create the store's lock directory.")
+  }
+  file.path(dir, name)
+}
+
+artifact_lock <- function(path, timeout, exclusive = TRUE) {
+  filelock::lock(path, exclusive = exclusive, timeout = timeout * 1000)
 }
 
 artifact_bytes <- function(path, limit) {

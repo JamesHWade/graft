@@ -262,7 +262,10 @@ test_that("deep dependency chains validate without using the R call stack", {
 test_that("the lock directory is not part of a store's manifest", {
   f <- local_decision_fixture()
   decision_submit(f$request)
-  expect_length(list.files(file.path(f$store@path, "locks")), 1L)
+  expect_setequal(
+    list.files(file.path(f$store@path, "locks")),
+    c("store.lock", paste0(artifact_sha(charToRaw("topic")), ".lock"))
+  )
   kinds <- vapply(graft_manifest(f$store)$objects, \(x) x$kind, character(1))
   expect_identical(intersect(kinds, "locks"), character())
   expect_contains(kinds, "decisions")

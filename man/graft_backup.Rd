@@ -50,12 +50,18 @@ the local artifact store. The receipt is small enough for an application to
 retain separately from the bundle.
 }
 \details{
-The source is never changed. A backup includes valid orphan content and all
-historical decision records. Local source stores require a trusted directory
-with a single writer and no concurrent writes. PostgreSQL callers retain
-transaction and commit ownership; a successful receipt does not prove that a
-transaction has committed. The destination is built in a sibling staging
-directory and is renamed only after the complete image is verified. On an
+The source's objects are never changed; a writable source may gain the
+lock file under \verb{locks/} that every write uses, which is not part of its
+manifest. A backup includes valid orphan content and all
+historical decision records. Local source stores require a trusted
+directory; the backup holds the store's lock exclusively (see
+\code{\link[=graft_with_store_lock]{graft_with_store_lock()}}), so writers from other processes wait until it
+finishes. A store this process cannot write is read without the lock; the
+source is inventoried again after copying, and the backup fails if it
+changed. PostgreSQL callers retain transaction and commit ownership; a
+successful receipt does not prove that a transaction has committed. The
+destination is built in a sibling staging directory and is renamed only
+after the complete image is verified. On an
 ordinary failure, the operation removes its staging directory. An
 interrupted process can leave staging behind for host inventory and
 disposal.

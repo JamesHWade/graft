@@ -51,6 +51,7 @@ reference:
       - graft_manifest
       - graft_plan_replacement
       - graft_replace
+      - graft_with_store_lock
   - title: Public S7 classes
     contents:
       - ArtifactStore

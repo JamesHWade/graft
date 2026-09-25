@@ -137,10 +137,6 @@ test_that("replacement inputs require existing roots or streams within bounds", 
   fixture <- artifact_recovery_fixture(source)
 
   expect_error(
-    graft_plan_replacement(source, list()),
-    class = "graft_artifact_error"
-  )
-  expect_error(
     graft_plan_replacement(
       source,
       forget = list(),
@@ -359,5 +355,33 @@ test_that("replacement preflight rejects FIFO markers before store reads", {
   expect_error(
     graft_replace(source, target, plan),
     class = "graft_artifact_error"
+  )
+})
+
+test_that("a plan with nothing to forget leaves out only unreferenced content", {
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
+  fixture <- artifact_recovery_fixture(source)
+  orphan <- charToRaw("orphan bytes")
+  orphan_digest <- digest::digest(orphan, algo = "sha256", serialize = FALSE)
+  writeBin(orphan, file.path(source@path, "content", orphan_digest))
+
+  plan <- graft_plan_replacement(source)
+  expect_identical(plan$forget, list())
+  expect_identical(plan$removed$artifacts, list())
+  expect_identical(plan$removed$selections, character())
+  expect_identical(plan$removed$streams, character())
+
+  source_keys <- artifact_recovery_manifest_keys(graft_manifest(source))
+  target_keys <- artifact_recovery_manifest_keys(plan$target)
+  expect_identical(
+    setdiff(source_keys, target_keys),
+    paste0("content\n", orphan_digest)
+  )
+
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
+  expect_identical(graft_replace(source, target, plan), plan$target)
+  expect_identical(
+    artifact_read(target, fixture$leaf)$bytes,
+    artifact_read(source, fixture$leaf)$bytes
   )
 })

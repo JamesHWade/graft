@@ -1,8 +1,14 @@
 #' Report Graft's artifact and vocabulary contracts
 #'
+#' Consumer contract 4.2 adds [graft_with_store_lock()]: local writes share a
+#' store lock that whole-store operations hold exclusively, so a manifest,
+#' backup, or replacement can run while an application is live, and
+#' [graft_plan_replacement()] accepts a plan with nothing to forget, which
+#' leaves out only unreferenced content.
 #' Consumer contract 4.1 adds [graft_streams()], which lists decision streams
-#' and their current decisions. Consumer contract 4 replaces the public artifact-prefixed interface with
-#' task-oriented verbs and S7 stores and values, without compatibility aliases.
+#' and their current decisions. Consumer contract 4 replaces the public
+#' artifact-prefixed interface with task-oriented verbs and S7 stores and
+#' values, without compatibility aliases.
 #' Stored wire formats and exact content identities remain unchanged.
 #' Consumer contract 3.2 adds closed artifact backup bundles with externally
 #' supplied identity receipts and strict restore verification. Contract 3.1 adds
@@ -22,7 +28,7 @@
 #' graft_contract_version()
 graft_contract_version <- function() {
   list(
-    contract = "4.1.0",
+    contract = "4.2.0",
     artifact = "1",
     manifest = "graft-artifact-manifest/1",
     replacement = "graft-artifact-replacement/1",

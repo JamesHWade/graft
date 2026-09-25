@@ -1,9 +1,11 @@
 #' Plan and build a bounded artifact-store replacement
 #'
 #' Compute an operational replacement plan after forgetting exact artifact
-#' revisions, complete decision streams, or both. The plan preserves every
-#' revision that is neither forgotten nor a transitive reverse dependent, which
-#' is a revision that depends directly or indirectly on a forgotten revision.
+#' revisions, complete decision streams, or both, or with nothing to forget to
+#' clean up unreferenced content a failed save left behind. The plan preserves
+#' every revision that is neither forgotten nor a transitive reverse
+#' dependent, which is a revision that depends directly or indirectly on a
+#' forgotten revision.
 #' It then retains only content referenced by those revisions. It removes a
 #' selection when any exact reference in it is removed. It removes a whole
 #' decision stream when a historical record names a removed selection or when
@@ -12,7 +14,8 @@
 #' @param store A handle returned by [graft_store()] or
 #'   [graft_store_postgres()].
 #' @param forget A list of exact artifact references returned by
-#'   [graft_save()]. It may be empty if `forget_streams` is nonempty.
+#'   [graft_save()]. With `forget_streams` also empty, the plan forgets
+#'   nothing and only leaves out unreferenced content.
 #' @param forget_streams Character vector of complete decision stream names to
 #'   remove. The names must already exist in the source inventory.
 #' @param max_objects Maximum number of inventoried objects.
@@ -34,11 +37,15 @@
 #' Forget policy, including copies outside this artifact store.
 #'
 #' Planning does not authorize Forget and does not delete anything. Replacement
-#' copies verified objects into a new empty store. The source is never changed.
+#' copies verified objects into a new empty store. The source's objects are
+#' never changed; a writable source may gain its lock file under `locks/`.
 #' A copy or verification failure can leave a partial target. The host must
-#' quarantine and discard that target, then rebuild a new empty target. Local
-#' stores require a quiescent single writer. PostgreSQL callers must hold the
-#' host transaction and scope lock for the operation.
+#' quarantine and discard that target, then rebuild a new empty target.
+#' Planning and replacement hold the local source's and target's store locks
+#' exclusively, so writers from other processes wait until they finish. A host
+#' that switches to the replacement should hold the source's lock across the
+#' plan, the copy, and the switch; see [graft_with_store_lock()]. PostgreSQL
+#' callers must hold the host transaction and scope lock for the operation.
 #'
 #' @returns
 #' `graft_plan_replacement()` returns a list with format
@@ -60,7 +67,7 @@
 #' @export
 graft_plan_replacement <- function(
   store,
-  forget,
+  forget = list(),
   forget_streams = character(),
   max_objects = 10000L,
   max_total_bytes = 64 * 1024^2,
@@ -83,11 +90,6 @@ graft_plan_replacement <- function(
   }
   forget <- artifact_refs(forget, limits$max_objects)
   forget_streams <- artifact_replacement_stream_names(forget_streams)
-  if (!length(forget) && !length(forget_streams)) {
-    artifact_abort(
-      "At least one artifact reference or decision stream is required."
-    )
-  }
   snapshot <- artifact_recovery_snapshot(
     store,
     max_objects = limits$max_objects,
@@ -109,6 +111,14 @@ graft_replace <- function(source, target, plan) {
   artifact_recovery_preflight_store(target)
   artifact_check_store(source)
   artifact_check_store(target)
+  artifact_with_store_lock(source, TRUE, function() {
+    artifact_with_store_lock(target, TRUE, function() {
+      artifact_replace(source, target, plan)
+    })
+  })
+}
+
+artifact_replace <- function(source, target, plan) {
   checked <- artifact_replacement_check_plan(plan)
   recomputed <- graft_plan_replacement(
     source,
@@ -545,9 +555,6 @@ artifact_replacement_check_plan <- function(plan) {
   forget_streams <- artifact_replacement_stream_names(plan$forget_streams)
   if (!identical(forget_streams, plan$forget_streams)) {
     artifact_abort("Artifact replacement plan has noncanonical Forget streams.")
-  }
-  if (!length(forget) && !length(forget_streams)) {
-    artifact_abort("Artifact replacement plan has no Forget roots or streams.")
   }
   removed <- plan$removed
   if (

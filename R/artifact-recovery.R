@@ -23,10 +23,13 @@
 #' not referenced by a revision are retained in the inventory so a replacement
 #' planner can omit them explicitly.
 #'
-#' The operation does not quiesce writers, remove source objects, authorize
-#' access, interpret a host Forget decision, or admit a generation for service.
-#' Hosts must quiesce the source and perform their own publication and restore
-#' checks around this point-in-time inspection.
+#' A local store's lock is held exclusively for the whole inventory, so writers
+#' in other processes wait rather than change the store midway; see
+#' [graft_with_store_lock()]. A store this process cannot write is inventoried
+#' without the lock, so a writer under another account does not wait. The operation does not remove source objects,
+#' authorize access, interpret a host Forget decision, or admit a generation
+#' for service. Hosts perform their own publication and restore checks around
+#' this point-in-time inspection.
 #'
 #' @returns A list with format, id and ordered objects. Each object has
 #' kind, key, size and the SHA-256 digest of its exact stored bytes.
@@ -55,6 +58,22 @@ artifact_recovery_snapshot <- function(
 ) {
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
+  artifact_with_store_read_lock(store, function() {
+    artifact_recovery_read_snapshot(
+      store,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes
+    )
+  })
+}
+
+artifact_recovery_read_snapshot <- function(
+  store,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes
+) {
   artifact_check_limit(max_objects, "max_objects")
   artifact_check_limit(max_total_bytes, "max_total_bytes")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
@@ -299,7 +318,7 @@ artifact_recovery_enumerate_local <- function(store) {
     )
     for (name in locks) {
       if (
-        !grepl("^[0-9a-f]{64}[.]lock$", name) ||
+        !grepl("^([0-9a-f]{64}|store)[.]lock$", name) ||
           !artifact_recovery_regular_file(file.path(root, "locks", name))
       ) {
         artifact_abort("Artifact store contains an unknown lock path.")

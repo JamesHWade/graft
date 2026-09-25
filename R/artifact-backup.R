@@ -25,12 +25,18 @@
 #'   generation, and complete manifest digest.
 #'
 #' @details
-#' The source is never changed. A backup includes valid orphan content and all
-#' historical decision records. Local source stores require a trusted directory
-#' with a single writer and no concurrent writes. PostgreSQL callers retain
-#' transaction and commit ownership; a successful receipt does not prove that a
-#' transaction has committed. The destination is built in a sibling staging
-#' directory and is renamed only after the complete image is verified. On an
+#' The source's objects are never changed; a writable source may gain the
+#' lock file under `locks/` that every write uses, which is not part of its
+#' manifest. A backup includes valid orphan content and all
+#' historical decision records. Local source stores require a trusted
+#' directory; the backup holds the store's lock exclusively (see
+#' [graft_with_store_lock()]), so writers from other processes wait until it
+#' finishes. A store this process cannot write is read without the lock; the
+#' source is inventoried again after copying, and the backup fails if it
+#' changed. PostgreSQL callers retain transaction and commit ownership; a
+#' successful receipt does not prove that a transaction has committed. The
+#' destination is built in a sibling staging directory and is renamed only
+#' after the complete image is verified. On an
 #' ordinary failure, the operation removes its staging directory. An
 #' interrupted process can leave staging behind for host inventory and
 #' disposal.
@@ -50,6 +56,31 @@ graft_backup <- function(
   max_total_bytes = 64 * 1024^2,
   max_metadata_bytes = 1024^2,
   max_bundle_metadata_bytes = 4 * 1024^2
+) {
+  artifact_backup_check_source_store(store)
+  artifact_with_store_read_lock(store, function() {
+    artifact_backup_create(
+      store,
+      path,
+      scope,
+      generation,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes,
+      max_bundle_metadata_bytes
+    )
+  })
+}
+
+artifact_backup_create <- function(
+  store,
+  path,
+  scope,
+  generation,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes,
+  max_bundle_metadata_bytes
 ) {
   path <- artifact_backup_clean_path(path)
   scope <- artifact_check_text(scope, "scope")
@@ -102,12 +133,14 @@ graft_backup <- function(
     max_bytes = store@max_bytes,
     max_revision_bytes = store@max_revision_bytes
   )
-  artifact_backup_copy_objects(
-    store,
-    staging_store,
-    snapshot$manifest$objects,
-    limits$max_metadata_bytes
-  )
+  artifact_without_store_lock(staging_store, function() {
+    artifact_backup_copy_objects(
+      store,
+      staging_store,
+      snapshot$manifest$objects,
+      limits$max_metadata_bytes
+    )
+  })
   artifact_put(
     descriptor_bytes,
     file.path(staging, "bundle.json"),
@@ -223,6 +256,8 @@ graft_restore <- function(
   max_metadata_bytes = 1024^2,
   max_bundle_metadata_bytes = 4 * 1024^2
 ) {
+  # The target's lock file is created only once the target is known not to
+  # overlap the bundle, which must never change.
   path <- artifact_backup_clean_path(path)
   artifact_backup_check_target_store(target)
   artifact_backup_preflight_bundle_root(path)
@@ -233,6 +268,28 @@ graft_restore <- function(
       "Backup bundle and restore target must be separate paths."
     )
   }
+  artifact_with_store_lock(target, TRUE, function() {
+    artifact_backup_restore(
+      path,
+      target,
+      expected,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes,
+      max_bundle_metadata_bytes
+    )
+  })
+}
+
+artifact_backup_restore <- function(
+  path,
+  target,
+  expected,
+  max_objects,
+  max_total_bytes,
+  max_metadata_bytes,
+  max_bundle_metadata_bytes
+) {
   limits <- artifact_backup_limits(
     max_objects,
     max_total_bytes,
@@ -560,12 +617,14 @@ artifact_backup_verify_bundle <- function(path, expected, limits) {
     max_bytes = limits$max_bytes,
     max_revision_bytes = limits$max_revision_bytes
   )
-  snapshot <- artifact_recovery_snapshot(
-    store,
-    max_objects = limits$max_objects,
-    max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
-  )
+  snapshot <- artifact_without_store_lock(store, function() {
+    artifact_recovery_snapshot(
+      store,
+      max_objects = limits$max_objects,
+      max_total_bytes = limits$max_total_bytes,
+      max_metadata_bytes = limits$max_metadata_bytes
+    )
+  })
   if (!identical(snapshot$manifest, descriptor$manifest)) {
     artifact_abort("Backup object image does not match its descriptor.")
   }
