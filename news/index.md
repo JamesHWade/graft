@@ -55,10 +55,11 @@
   and
   [`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
   verify complete bounded store inventories and copy exact survivors
-  into an empty quarantine store. Plans exclude declared dependents,
-  affected selections, and whole affected decision histories;
-  applications still own Forget approval, generation retirement, restore
-  admission, and disposal
+  into an empty quarantine store. An unexpected entry fails the
+  inventory, including anything under `locks/` other than a stream’s
+  lock file. Plans exclude declared dependents, affected selections, and
+  whole affected decision histories; applications still own Forget
+  approval, generation retirement, restore admission, and disposal
   ([\#48](https://github.com/JamesHWade/graft/issues/48)).
 - [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
   and
