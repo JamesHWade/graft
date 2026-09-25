@@ -1,25 +1,3 @@
-# A child process holds a store's lock (`locks/store.lock`) directly with
-# filelock, as another graft process would, until the test kills it.
-local_store_lock_holder <- function(store, exclusive, env = parent.frame()) {
-  lock_path <- file.path(store@path, "locks", "store.lock")
-  dir.create(dirname(lock_path), showWarnings = FALSE)
-  held <- tempfile("held-")
-  holder <- callr::r_bg(
-    function(lock_path, held, exclusive) {
-      lock <- filelock::lock(lock_path, exclusive = exclusive)
-      file.create(held)
-      Sys.sleep(30)
-      filelock::unlock(lock)
-    },
-    list(lock_path = lock_path, held = held, exclusive = exclusive)
-  )
-  withr::defer(holder$kill(), envir = env)
-  while (!file.exists(held)) {
-    Sys.sleep(0.01)
-  }
-  holder
-}
-
 test_that("graft_with_store_lock() returns the value of its code", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
   ref <- graft_with_store_lock(store, graft_save(store, "kept", "note"))
@@ -67,7 +45,7 @@ test_that("an exclusive hold keeps writes and manifests out", {
     graft_with_store_lock(store, assign("ran", TRUE, envir = state)),
     class = "graft_store_busy_error"
   )
-  expect_false(exists("ran", envir = state))
+  expect_identical(ls(state), character())
 
   holder$kill()
   ref <- graft_save(store, "after", "note")
@@ -95,6 +73,23 @@ test_that("writers share the lock, and a manifest waits for them", {
 test_that("the store lock file passes the manifest's lock directory check", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
   graft_save(store, "kept", "note")
-  expect_true(file.exists(file.path(store@path, "locks", "store.lock")))
+  expect_contains(list.files(file.path(store@path, "locks")), "store.lock")
   expect_no_error(graft_manifest(store))
+})
+
+test_that("a decision takes the store lock before its stream lock", {
+  f <- local_decision_fixture()
+  store <- graft_store(f$store@path, lock_timeout = 0.2)
+  # Taken in the other order, a writer could hold the stream lock while it
+  # waits for the store's, and an exclusive holder deciding in that stream
+  # would wait for it in turn.
+  holder <- local_store_lock_holder(store, exclusive = TRUE)
+  expect_error(
+    decision_submit(utils::modifyList(f$request, list(store = store))),
+    class = "graft_store_busy_error"
+  )
+  expect_identical(
+    list.files(file.path(store@path, "locks")),
+    "store.lock"
+  )
 })

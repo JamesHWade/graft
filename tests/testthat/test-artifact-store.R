@@ -549,13 +549,18 @@ test_that("a save survives a competing replacement during its own read-back", {
 
 test_that("reading an object that is absent fails without waiting", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
-  elapsed <- system.time(
-    expect_error(
-      artifact_storage_read(store, "revisions", strrep("a", 64L), 1024),
-      class = "graft_artifact_error"
-    )
-  )[["elapsed"]]
-  expect_lt(elapsed, 0.5)
+  real_bytes <- artifact_bytes
+  attempts <- 0L
+  local_mocked_bindings(artifact_bytes = function(path, limit) {
+    attempts <<- attempts + 1L
+    real_bytes(path, limit)
+  })
+  expect_error(
+    artifact_storage_read(store, "revisions", strrep("a", 64L), 1024),
+    class = "graft_artifact_error"
+  )
+  # A present object gets 20 attempts over about a second.
+  expect_identical(attempts, 5L)
 })
 
 test_that("a read survives an object that is briefly absent during a replacement", {

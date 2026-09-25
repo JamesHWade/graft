@@ -23,10 +23,12 @@
 #' not referenced by a revision are retained in the inventory so a replacement
 #' planner can omit them explicitly.
 #'
-#' The operation does not quiesce writers, remove source objects, authorize
-#' access, interpret a host Forget decision, or admit a generation for service.
-#' Hosts must quiesce the source and perform their own publication and restore
-#' checks around this point-in-time inspection.
+#' A local store's lock is held exclusively for the whole inventory, so writers
+#' in other processes wait rather than change the store midway; see
+#' [graft_with_store_lock()]. The operation does not remove source objects,
+#' authorize access, interpret a host Forget decision, or admit a generation
+#' for service. Hosts perform their own publication and restore checks around
+#' this point-in-time inspection.
 #'
 #' @returns A list with format, id and ordered objects. Each object has
 #' kind, key, size and the SHA-256 digest of its exact stored bytes.

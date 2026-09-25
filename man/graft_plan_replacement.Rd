@@ -53,9 +53,10 @@ manifest only after the source and target have been checked again.
 \description{
 Compute an operational replacement plan after forgetting exact artifact
 revisions, complete decision streams, or both, or with nothing to forget to
-clean up unreferenced content a failed save left behind. The plan preserves every
-revision that is neither forgotten nor a transitive reverse dependent, which
-is a revision that depends directly or indirectly on a forgotten revision.
+clean up unreferenced content a failed save left behind. The plan preserves
+every revision that is neither forgotten nor a transitive reverse
+dependent, which is a revision that depends directly or indirectly on a
+forgotten revision.
 It then retains only content referenced by those revisions. It removes a
 selection when any exact reference in it is removed. It removes a whole
 decision stream when a historical record names a removed selection or when

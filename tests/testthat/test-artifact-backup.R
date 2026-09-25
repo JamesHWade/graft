@@ -397,12 +397,12 @@ test_that("backups and their verification never write lock files", {
   backup_path <- file.path(withr::local_tempdir(), "closed-backup")
   receipt <- graft_backup(source, backup_path, "reader-a", "generation-1")
   objects <- file.path(backup_path, "objects")
-  expect_false(dir.exists(file.path(objects, "locks")))
+  expect_identical(dir.exists(file.path(objects, "locks")), FALSE)
 
   expect_identical(graft_verify_backup(backup_path, receipt), receipt)
   target <- graft_store(withr::local_tempdir(), create = TRUE)
   graft_restore(backup_path, target, receipt)
-  expect_false(dir.exists(file.path(objects, "locks")))
+  expect_identical(dir.exists(file.path(objects, "locks")), FALSE)
 
   skip_on_os("windows")
   skip_if(identical(Sys.info()[["user"]], "root"))
