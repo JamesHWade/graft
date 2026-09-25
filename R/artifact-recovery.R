@@ -276,10 +276,18 @@ artifact_recovery_enumerate_local <- function(store) {
   ) {
     artifact_abort("Unsupported artifact store marker.")
   }
-  expected <- c("store.json", artifact_recovery_kinds())
+  expected <- c("store.json", "locks", artifact_recovery_kinds())
   unknown <- setdiff(root_entries, expected)
   if (length(unknown)) {
     artifact_abort("Artifact store contains unknown root entries.")
+  }
+  # Lock files coordinate writers and hold no content, so they are not objects.
+  if (
+    "locks" %in%
+      root_entries &&
+      !artifact_recovery_directory(file.path(root, "locks"))
+  ) {
+    artifact_abort("Artifact store contains a non-directory lock path.")
   }
   for (kind in artifact_recovery_kinds()) {
     path <- file.path(root, kind)

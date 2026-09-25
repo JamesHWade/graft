@@ -56,3 +56,52 @@ decision_journal_files <- function(store) {
     full.names = TRUE
   )
 }
+
+graft_checkout <- function() {
+  if (pkgload::is_dev_package("graft")) normalizePath("../..") else NULL
+}
+
+# Records `rounds` accepts in `stream`, each naming the head it read, and
+# retries when another process moved the head first.
+decision_race_worker <- function(
+  path,
+  stream,
+  selection,
+  prefix,
+  rounds,
+  go,
+  checkout
+) {
+  if (!is.null(checkout)) {
+    pkgload::load_all(checkout, quiet = TRUE)
+  }
+  store <- graft::graft_store(path)
+  while (!file.exists(go)) {
+    Sys.sleep(0.01)
+  }
+  done <- 0L
+  attempts <- 0L
+  while (done < rounds && attempts < rounds * 50L) {
+    attempts <- attempts + 1L
+    head <- graft:::artifact_read_decision(store, stream)
+    ok <- tryCatch(
+      {
+        graft:::artifact_decide(
+          store,
+          stream = stream,
+          key = sprintf("%s-%d", prefix, done + 1L),
+          expected = if (is.null(head)) NULL else head$id,
+          selection = selection,
+          action = "accept",
+          actor = prefix,
+          reason = "race",
+          purpose = "research"
+        )
+        TRUE
+      },
+      graft_artifact_error = function(e) FALSE
+    )
+    if (ok) done <- done + 1L
+  }
+  done
+}

@@ -14,11 +14,20 @@
 #'   or read through this handle, a positive whole number. Defaults to 1 MiB
 #'   (`1024^2`), independently of payload and dependency-count bounds. Increase
 #'   it for large dependency lists, including when reopening the store.
+#' @param lock_timeout Seconds to wait while another process records a
+#'   decision in the same stream. Defaults to 10. When the wait runs out, the
+#'   call fails with a `graft_store_busy_error` and records nothing.
 #' @details
 #' Identity, media type, and reference strings are normalized to plain UTF-8
 #' character values without R attributes.
 #'
-#' Local stores support trusted files with one writer. SHA-256 digests
+#' Local stores hold trusted files. Several R processes can write to one
+#' store: content and revisions are saved under their SHA-256 digests, so
+#' concurrent saves of the same bytes agree, and decisions in a stream are
+#' serialized by a file lock, as PostgreSQL scopes are by an advisory lock. The
+#' lock is an operating-system advisory lock (via the filelock package) on a
+#' file under `locks/` in the store, so it only works where the file system
+#' honours such locks; some network file systems do not. SHA-256 digests
 #' identify content and metadata. Repeating an identical save returns the same
 #' reference, while corrections retain earlier revisions. There is no mutable
 #' latest pointer.
@@ -28,8 +37,8 @@
 #' retries reuse verified content. Orphans are retained rather than deleted
 #' automatically. Successful reads verify metadata, payload size, and digest.
 #' Interrupted writes cannot produce a successful incomplete reference. The
-#' interface does not promise power-loss durability, concurrent publication,
-#' authorization, erasure, or backup recovery. Applications control access and
+#' interface does not promise power-loss durability, authorization, erasure, or
+#' backup recovery. Applications control access and
 #' policy.
 #' Local handles have no open connections, so callers do not need to close them.
 #' For transaction-scoped database persistence, use
@@ -50,7 +59,8 @@ graft_store <- function(
   path,
   create = FALSE,
   max_bytes = 64 * 1024^2,
-  max_revision_bytes = 1024^2
+  max_revision_bytes = 1024^2,
+  lock_timeout = 10
 ) {
   artifact_check_path(path)
   if (!rlang::is_bool(create)) {
@@ -58,6 +68,15 @@ graft_store <- function(
   }
   artifact_check_limit(max_bytes, "max_bytes")
   artifact_check_limit(max_revision_bytes, "max_revision_bytes")
+  if (
+    !is.numeric(lock_timeout) ||
+      length(lock_timeout) != 1L ||
+      is.na(lock_timeout) ||
+      !is.finite(lock_timeout) ||
+      lock_timeout < 0
+  ) {
+    artifact_abort("`lock_timeout` must be one non-negative number of seconds.")
+  }
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   if (create) {
     if (file.exists(path) && !dir.exists(path)) {
@@ -87,7 +106,8 @@ graft_store <- function(
   LocalArtifactStore(
     path = normalizePath(path, winslash = "/"),
     max_bytes = max_bytes,
-    max_revision_bytes = max_revision_bytes
+    max_revision_bytes = max_revision_bytes,
+    lock_timeout = lock_timeout
   )
 }
 
@@ -357,6 +377,39 @@ S7::method(artifact_storage_put, LocalArtifactStore) <- function(
   limit
 ) {
   artifact_put(bytes, artifact_path(store, kind, key), limit)
+}
+
+# A decision reads the stream's head and publishes the next sequence number,
+# so two processes deciding at once could both publish the same number and
+# fork the journal. Local stores hold an exclusive lock per stream for that
+# read-then-write; PostgreSQL scopes already hold an advisory lock.
+S7::method(artifact_with_stream_lock, LocalArtifactStore) <- function(
+  store,
+  stream,
+  code
+) {
+  dir <- file.path(store@path, "locks")
+  if (!dir.exists(dir) && !dir.create(dir) && !dir.exists(dir)) {
+    artifact_abort("Could not create the store's lock directory.")
+  }
+  path <- file.path(dir, paste0(artifact_sha(charToRaw(stream)), ".lock"))
+  lock <- artifact_lock(path, store@lock_timeout)
+  if (is.null(lock)) {
+    graft_abort(
+      c("graft_store_busy_error", "graft_artifact_error"),
+      paste0(
+        "Another process is recording a decision in this stream; waited ",
+        format(store@lock_timeout),
+        " seconds. Retry with the same `key`."
+      )
+    )
+  }
+  on.exit(filelock::unlock(lock), add = TRUE)
+  code()
+}
+
+artifact_lock <- function(path, timeout) {
+  filelock::lock(path, exclusive = TRUE, timeout = timeout * 1000)
 }
 
 artifact_bytes <- function(path, limit) {

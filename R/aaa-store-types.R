@@ -37,12 +37,25 @@ ArtifactStore <- S7::new_class(
 #' @param max_bytes Maximum payload bytes for one artifact and the complete
 #'   dependency set it references.
 #' @param max_revision_bytes Maximum encoded revision metadata bytes.
+#' @param lock_timeout Seconds to wait for another process's decision in the
+#'   same stream before giving up.
 #' @export
 LocalArtifactStore <- S7::new_class(
   "LocalArtifactStore",
   package = "graft",
   parent = ArtifactStore,
   properties = list(
+    lock_timeout = S7::new_property(
+      S7::class_numeric,
+      default = 10,
+      validator = function(value) {
+        if (
+          length(value) != 1L || is.na(value) || !is.finite(value) || value < 0
+        ) {
+          "must be one non-negative number of seconds"
+        }
+      }
+    ),
     path = S7::new_property(
       S7::class_character,
       validator = function(value) {
@@ -123,6 +136,10 @@ artifact_store_valid_connection <- function(value) {
 
 artifact_storage_read <- S7::new_generic("artifact_storage_read", "store")
 artifact_storage_put <- S7::new_generic("artifact_storage_put", "store")
+artifact_with_stream_lock <- S7::new_generic(
+  "artifact_with_stream_lock",
+  "store"
+)
 artifact_decision_entries <- S7::new_generic(
   "artifact_decision_entries",
   "store"
