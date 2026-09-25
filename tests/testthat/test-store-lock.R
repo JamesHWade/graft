@@ -93,3 +93,23 @@ test_that("a decision takes the store lock before its stream lock", {
     "store.lock"
   )
 })
+
+test_that("a host hold on a store it cannot write fails rather than skip", {
+  skip_on_os("windows")
+  skip_if(identical(Sys.info()[["user"]], "root"))
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE)
+  withr::defer(Sys.chmod(path, "0755"))
+  Sys.chmod(path, "0555")
+
+  expect_length(graft_manifest(store)$objects, 0L)
+  expect_error(
+    graft_with_store_lock(store, TRUE),
+    class = "graft_artifact_error"
+  )
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
+  expect_error(
+    graft_replace(store, target, graft_plan_replacement(store)),
+    class = "graft_artifact_error"
+  )
+})

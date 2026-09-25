@@ -31,7 +31,9 @@
 #' historical decision records. Local source stores require a trusted
 #' directory; the backup holds the store's lock exclusively (see
 #' [graft_with_store_lock()]), so writers from other processes wait until it
-#' finishes. PostgreSQL callers retain transaction and commit ownership; a
+#' finishes. A store this process cannot write is read without the lock; the
+#' source is inventoried again after copying, and the backup fails if it
+#' changed. PostgreSQL callers retain transaction and commit ownership; a
 #' successful receipt does not prove that a transaction has committed. The
 #' destination is built in a sibling staging directory and is renamed only
 #' after the complete image is verified. On an
@@ -56,7 +58,7 @@ graft_backup <- function(
   max_bundle_metadata_bytes = 4 * 1024^2
 ) {
   artifact_backup_check_source_store(store)
-  artifact_with_store_lock(store, TRUE, function() {
+  artifact_with_store_read_lock(store, function() {
     artifact_backup_create(
       store,
       path,

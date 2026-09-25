@@ -139,7 +139,8 @@ graft_store <- function(
 #'
 #' @returns The value of `code`. If the lock is not free within the store's
 #'   `lock_timeout`, an error of class `graft_store_busy_error` is signalled
-#'   and `code` is not run.
+#'   and `code` is not run. A store this process cannot write has no lock it
+#'   can take, so holding it is an error too.
 #'
 #' @examples
 #' path <- tempfile("artifacts-")
@@ -495,9 +496,6 @@ S7::method(artifact_with_store_lock, LocalArtifactStore) <- function(
     }
     return(code())
   }
-  if (artifact_store_read_only(store)) {
-    return(artifact_without_store_lock(store, code))
-  }
   lock <- artifact_lock(
     artifact_lock_path(store, "store.lock"),
     store@lock_timeout,
@@ -536,8 +534,24 @@ artifact_without_store_lock <- function(store, code) {
   code()
 }
 
-# A store no one can write to has no writers to wait for, and reading it
-# (a manifest, a backup) must not fail for want of a lock file.
+# An inventory or a backup only reads the store. When this process cannot
+# write to it, it cannot create the lock file either, so the read runs
+# without the lock rather than failing. That does not prove no one else
+# writes: a backup rechecks its source after copying and fails if it changed,
+# and a manifest is a point-in-time inspection. Anything that writes, or that
+# a host relies on to fence writers (graft_with_store_lock(), replacement,
+# restore), always takes the lock.
+artifact_with_store_read_lock <- function(store, code) {
+  if (
+    is.null(artifact_store_locks[[store@path]]) &&
+      S7::S7_inherits(store, LocalArtifactStore) &&
+      artifact_store_read_only(store)
+  ) {
+    return(artifact_without_store_lock(store, code))
+  }
+  artifact_with_store_lock(store, TRUE, code)
+}
+
 artifact_store_read_only <- function(store) {
   locks <- file.path(store@path, "locks")
   target <- if (dir.exists(locks)) locks else store@path

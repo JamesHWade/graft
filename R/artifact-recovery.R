@@ -57,7 +57,7 @@ artifact_recovery_snapshot <- function(
 ) {
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
-  artifact_with_store_lock(store, TRUE, function() {
+  artifact_with_store_read_lock(store, function() {
     artifact_recovery_read_snapshot(
       store,
       max_objects,

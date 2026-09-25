@@ -18,7 +18,8 @@ graft_with_store_lock(store, code, exclusive = TRUE)
 \value{
 The value of \code{code}. If the lock is not free within the store's
 \code{lock_timeout}, an error of class \code{graft_store_busy_error} is signalled
-and \code{code} is not run.
+and \code{code} is not run. A store this process cannot write has no lock it
+can take, so holding it is an error too.
 }
 \description{
 Run code while holding the store's lock, so an application can make a
