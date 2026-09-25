@@ -389,7 +389,7 @@ S7::method(artifact_with_stream_lock, LocalArtifactStore) <- function(
   code
 ) {
   dir <- file.path(store@path, "locks")
-  if (!dir.exists(dir) && !dir.create(dir) && !dir.exists(dir)) {
+  if (!dir.exists(dir) && !artifact_create_dir(dir) && !dir.exists(dir)) {
     artifact_abort("Could not create the store's lock directory.")
   }
   path <- file.path(dir, paste0(artifact_sha(charToRaw(stream)), ".lock"))
@@ -433,6 +433,22 @@ artifact_bytes <- function(path, limit) {
 }
 
 artifact_rename_file <- function(from, to) file.rename(from, to)
+
+# Read a published file, retrying briefly while another process replaces it
+# with the same bytes. A read that still fails after the retries is an error.
+artifact_settled_bytes <- function(path, limit, attempts = 20L, wait = 0.05) {
+  for (i in seq_len(attempts - 1L)) {
+    bytes <- tryCatch(
+      artifact_bytes(path, limit),
+      graft_artifact_error = function(e) NULL
+    )
+    if (!is.null(bytes)) {
+      return(bytes)
+    }
+    Sys.sleep(wait)
+  }
+  artifact_bytes(path, limit)
+}
 artifact_create_dir <- function(path) {
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
 }
@@ -442,7 +458,7 @@ artifact_put <- function(bytes, path, limit) {
     artifact_abort("Artifact exceeds the byte bound.")
   }
   if (file.exists(path)) {
-    if (!identical(artifact_bytes(path, limit), bytes)) {
+    if (!identical(artifact_settled_bytes(path, limit), bytes)) {
       artifact_abort("Immutable artifact path contains different bytes.")
     }
     return(invisible(NULL))
@@ -458,14 +474,17 @@ artifact_put <- function(bytes, path, limit) {
   tryCatch(writeBin(bytes, staging), error = function(e) {
     artifact_abort("Could not stage artifact bytes.")
   })
-  # A rename can lose to another process publishing the same digest (Windows
-  # will not rename over an existing file); the bytes are then checked below.
-  if (!artifact_rename_file(staging, path) && !file.exists(path)) {
+  # Another process may publish the same digest first. Its rename can then
+  # fail with a warning, or, on Windows where file.rename() replaces the
+  # destination, replace ours while we verify it. Either way the path holds
+  # these bytes, so the warning is dropped and the verifying read retries.
+  published <- suppressWarnings(artifact_rename_file(staging, path))
+  if (!published && !file.exists(path)) {
     artifact_abort(
       "Artifact publication failed; no successful reference issued."
     )
   }
-  if (!identical(artifact_bytes(path, limit), bytes)) {
+  if (!identical(artifact_settled_bytes(path, limit), bytes)) {
     artifact_abort("Published artifact verification failed.")
   }
   invisible(NULL)

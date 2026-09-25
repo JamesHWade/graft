@@ -11,7 +11,8 @@ artifact_decide <- function(
   max_decisions = 1000L,
   max_metadata_bytes = 1024^2,
   max_artifacts = 1000L,
-  max_selection_bytes = 1024^2
+  max_selection_bytes = 1024^2,
+  locked = FALSE
 ) {
   artifact_check_store(store)
   request <- artifact_decision_request(
@@ -26,7 +27,7 @@ artifact_decide <- function(
   )
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_selection_bytes, "max_selection_bytes")
-  artifact_with_stream_lock(store, request$stream, function() {
+  decide <- function() {
     records <- artifact_decisions(
       store,
       request$stream,
@@ -97,7 +98,13 @@ artifact_decide <- function(
       max_decisions,
       max_metadata_bytes
     )
-  })
+  }
+  # graft_accept() takes the lock itself so the selection it creates is
+  # covered too.
+  if (isTRUE(locked)) {
+    return(decide())
+  }
+  artifact_with_stream_lock(store, request$stream, decide)
 }
 
 artifact_read_decision <- function(

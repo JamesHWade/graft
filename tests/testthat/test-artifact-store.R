@@ -446,8 +446,7 @@ test_that("two processes saving the same bytes into fresh stores both succeed", 
 test_that("a rename that loses to an identical publication still succeeds", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
   local_mocked_bindings(artifact_rename_file = function(from, to) {
-    # Another writer published the same digest first; Windows refuses to
-    # rename over an existing file.
+    # Another writer published the same digest first.
     file.copy(from, to)
     FALSE
   })
@@ -481,5 +480,43 @@ test_that("a directory another process created first is used, not an error", {
     FALSE
   })
   ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+})
+
+test_that("a losing rename's warning does not escape, even under warn = 2", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  withr::local_options(warn = 2)
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    file.copy(from, to)
+    warning("cannot rename file, reason 'Access is denied'")
+    FALSE
+  })
+  expect_no_warning(
+    ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  )
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    warning("disk full")
+    FALSE
+  })
+  expect_error(
+    artifact_save(store, "other", charToRaw("new"), "text/plain"),
+    "no successful reference"
+  )
+})
+
+test_that("verifying a publication retries while another process replaces it", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  original <- artifact_bytes
+  failures <- 2L
+  local_mocked_bindings(artifact_bytes = function(path, limit) {
+    if (failures > 0L && grepl("[/\\\\]content[/\\\\]", path)) {
+      failures <<- failures - 1L
+      artifact_abort("Could not read artifact bytes.")
+    }
+    original(path, limit)
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(failures, 0L)
   expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
 })

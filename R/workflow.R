@@ -354,28 +354,38 @@ graft_accept <- function(
   max_artifacts = 1000L,
   max_selection_bytes = 1024^2
 ) {
-  selection <- artifact_selection_id(
-    store,
-    x,
-    max_artifacts,
-    max_selection_bytes
-  )
+  artifact_check_store(store)
   expected <- artifact_expected_id(expected)
-  record <- artifact_decide(
-    store,
-    stream = stream,
-    key = key,
-    expected = expected,
-    selection = selection,
-    action = "accept",
-    actor = actor,
-    reason = reason,
-    purpose = purpose,
-    max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes,
-    max_artifacts = max_artifacts,
-    max_selection_bytes = max_selection_bytes
+  locked_stream <- tryCatch(
+    artifact_check_text(stream, "stream"),
+    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
   )
+  # The stream lock covers the selection as well as the decision, so a call
+  # that times out waiting for it has written nothing.
+  record <- artifact_with_stream_lock(store, locked_stream, function() {
+    selection <- artifact_selection_id(
+      store,
+      x,
+      max_artifacts,
+      max_selection_bytes
+    )
+    artifact_decide(
+      store,
+      stream = stream,
+      key = key,
+      expected = expected,
+      selection = selection,
+      action = "accept",
+      actor = actor,
+      reason = reason,
+      purpose = purpose,
+      max_decisions = max_decisions,
+      max_metadata_bytes = max_metadata_bytes,
+      max_artifacts = max_artifacts,
+      max_selection_bytes = max_selection_bytes,
+      locked = TRUE
+    )
+  })
   current <- artifact_retry_head(
     store,
     stream,

@@ -478,3 +478,58 @@ test_that("head changes during verification cannot silently authorize new work",
     "withdraw"
   )
 })
+
+test_that("a lock directory another process created first is used", {
+  f <- local_decision_fixture()
+  unlink(file.path(f$store@path, "locks"), recursive = TRUE)
+  withr::local_options(warn = 2)
+  local_mocked_bindings(artifact_create_dir = function(path) {
+    dir.create(path, recursive = TRUE, showWarnings = FALSE)
+    FALSE
+  })
+  expect_identical(decision_submit(f$request)$key, "review-1")
+})
+
+test_that("an accept that times out on the lock writes no selection", {
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE, lock_timeout = 0.2)
+  ref <- graft_save(store, "kept", "note")
+  lock_path <- file.path(
+    path,
+    "locks",
+    paste0(artifact_sha(charToRaw("topic")), ".lock")
+  )
+  dir.create(dirname(lock_path))
+  held <- file.path(dirname(path), "held-accept")
+  holder <- callr::r_bg(
+    function(lock_path, held) {
+      lock <- filelock::lock(lock_path)
+      file.create(held)
+      Sys.sleep(5)
+      filelock::unlock(lock)
+    },
+    list(lock_path = lock_path, held = held)
+  )
+  withr::defer(holder$kill())
+  while (!file.exists(held)) {
+    Sys.sleep(0.01)
+  }
+  selections <- function() {
+    list.files(file.path(path, "selections"), recursive = TRUE)
+  }
+  before <- selections()
+  expect_error(
+    graft_accept(
+      store,
+      ref,
+      stream = "topic",
+      expected = NULL,
+      key = "keep-1",
+      actor = "reviewer",
+      reason = "kept",
+      purpose = "research"
+    ),
+    class = "graft_store_busy_error"
+  )
+  expect_identical(selections(), before)
+})
