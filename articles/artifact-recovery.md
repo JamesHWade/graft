@@ -167,10 +167,29 @@ authenticity nor freshness.
 By default, the inventory is limited to 10,000 objects and 64 MiB of
 stored bytes. `max_metadata_bytes` limits selection metadata and each
 complete decision journal. Artifact payload and revision limits also
-come from the store handle. The application must quiesce writers for the
-entire operation. Local files keep their trusted, single-writer model.
-PostgreSQL scope locks run inside application-owned transactions;
-copying between stores is not a distributed transaction.
+come from the store handle. A local store’s manifests, plans, and copies
+hold its store lock exclusively, so writers in other processes wait for
+them rather than changing the store midway. An application switching to
+a replacement holds the source’s lock across the plan, the copy, and the
+switch with
+[`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md),
+and checks inside each of its own writes that the store is still
+current. PostgreSQL scope locks run inside application-owned
+transactions; copying between stores is not a distributed transaction.
+
+## Clean up after failed saves
+
+A failed save can leave content that no revision references. A plan with
+nothing to forget copies everything else:
+
+``` r
+
+cleanup <- graft_plan_replacement(store)
+graft_replace(store, graft_store(fresh_path, create = TRUE), cleanup)
+```
+
+The application then switches to the fresh store as it would after a
+Forget.
 
 ## Keep the restore decision outside the backup
 

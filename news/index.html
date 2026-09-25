@@ -65,6 +65,8 @@
 <code><a href="../reference/graft_streams.html">graft_streams()</a></code> lists the decision streams in a store with each stream’s current decision, so an application can show what it has kept without keeping its own catalog. It verifies every journal it reads, is bounded by stream count and aggregate metadata bytes, and works the same on local and PostgreSQL stores. It returns decisions only, never artifact content. Consumer contract 4.1.0 (<a href="https://github.com/JamesHWade/graft/issues/96" class="external-link">#96</a>).</li>
 <li>
 <code><a href="../reference/graft_tool.html">graft_tool()</a></code> exposes current reviewed memory through a native read-only ellmer tool and optional shinychat result display, checking application eligibility on every invocation (<a href="https://github.com/JamesHWade/graft/issues/90" class="external-link">#90</a>).</li>
+<li>
+<code><a href="../reference/graft_with_store_lock.html">graft_with_store_lock()</a></code> holds a local store’s lock while an application changes it. Every write holds the lock shared, and manifests, replacement plans and copies, backups, and restores hold it exclusively, so they can run while other processes write; a host forgetting an artifact holds it across the plan, the copy, and its switch to the replacement. <code><a href="../reference/graft_plan_replacement.html">graft_plan_replacement()</a></code> accepts a plan with nothing to forget, which leaves out only unreferenced content from failed saves. Consumer contract 4.2.0 (<a href="https://github.com/JamesHWade/graft/issues/96" class="external-link">#96</a>).</li>
 </ul></div>
   </main></div>
 

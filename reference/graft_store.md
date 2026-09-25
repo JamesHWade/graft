@@ -72,12 +72,17 @@ There is no mutable latest pointer.
 Payloads are published before immutable revision metadata, using staged
 files in the destination directory. A failed save can leave unreferenced
 bytes; retries reuse verified content. Orphans are retained rather than
-deleted automatically. Successful reads verify metadata, payload size,
-and digest. Interrupted writes cannot produce a successful incomplete
-reference. The interface does not promise power-loss durability,
-authorization, erasure, or backup recovery. Applications control access
-and policy. Local handles have no open connections, so callers do not
-need to close them. For transaction-scoped database persistence, use
+deleted automatically; a replacement planned with nothing to forget
+([`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md))
+copies everything but them. Every write also holds the store's lock
+shared; see
+[`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md).
+Successful reads verify metadata, payload size, and digest. Interrupted
+writes cannot produce a successful incomplete reference. The interface
+does not promise power-loss durability, authorization, erasure, or
+backup recovery. Applications control access and policy. Local handles
+have no open connections, so callers do not need to close them. For
+transaction-scoped database persistence, use
 [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
 with the same artifact APIs.
 

@@ -8,7 +8,7 @@ graft::graft_contract_version()
 ```
 
     ## $contract
-    ## [1] "4.1.0"
+    ## [1] "4.2.0"
     ## 
     ## $artifact
     ## [1] "1"

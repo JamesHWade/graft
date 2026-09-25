@@ -46,6 +46,8 @@
 - [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
   [`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
   : Plan and build a bounded artifact-store replacement
+- [`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md)
+  : Hold a store's lock while an application changes it
 
 ## Public S7 classes
 

@@ -1,6 +1,13 @@
 # Report Graft's artifact and vocabulary contracts
 
-Consumer contract 4.1 adds
+Consumer contract 4.2 adds
+[`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md):
+local writes share a store lock that whole-store operations hold
+exclusively, so a manifest, backup, or replacement can run while an
+application is live, and
+[`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
+accepts a plan with nothing to forget, which leaves out only
+unreferenced content. Consumer contract 4.1 adds
 [`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md),
 which lists decision streams and their current decisions. Consumer
 contract 4 replaces the public artifact-prefixed interface with
@@ -34,7 +41,7 @@ vocabulary, and binding formats.
 ``` r
 graft_contract_version()
 #> $contract
-#> [1] "4.1.0"
+#> [1] "4.2.0"
 #> 
 #> $artifact
 #> [1] "1"

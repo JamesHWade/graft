@@ -26,8 +26,8 @@ LocalArtifactStore(
 
 - lock_timeout:
 
-  Seconds to wait for another process's decision in the same stream
-  before giving up.
+  Seconds to wait for another process's decision in the same stream, or
+  for the store's lock, before giving up.
 
 - path:
 

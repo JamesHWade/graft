@@ -104,3 +104,13 @@
   and optional shinychat result display, checking application
   eligibility on every invocation
   ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+- [`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md)
+  holds a local store’s lock while an application changes it. Every
+  write holds the lock shared, and manifests, replacement plans and
+  copies, backups, and restores hold it exclusively, so they can run
+  while other processes write; a host forgetting an artifact holds it
+  across the plan, the copy, and its switch to the replacement.
+  [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
+  accepts a plan with nothing to forget, which leaves out only
+  unreferenced content from failed saves. Consumer contract 4.2.0
+  ([\#96](https://github.com/JamesHWade/graft/issues/96)).
