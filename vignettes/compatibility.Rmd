@@ -23,7 +23,9 @@ The consumer contract is **4.1.0**. Everyday work uses the task verbs
 along with the S7
 store and value classes. The old artifact-prefixed exports have been removed, and
 no compatibility aliases exist. Artifact bytes, selection formats, and content
-identities remain unchanged.
+identities remain unchanged. Contract 4.1.0 adds `graft_streams()` and the
+`lock_timeout` argument of `graft_store()`, which bounds the wait for a
+stream's decision lock on a local store.
 
 `DESCRIPTION` pins the dictionary integration to the validated data-dict source
 revision. Commons is application-owned. Pass retained vocabulary context and validated
