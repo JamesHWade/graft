@@ -404,3 +404,82 @@ test_that("opening a store rejects a FIFO marker without blocking", {
   )
   expect_identical(result, "graft_artifact_error")
 })
+
+test_that("two processes saving the same bytes into fresh stores both succeed", {
+  root <- withr::local_tempdir()
+  paths <- file.path(root, sprintf("store-%02d", seq_len(40)))
+  for (path in paths) {
+    graft_store(path, create = TRUE)
+  }
+  go <- file.path(root, "go")
+  worker <- function(paths, go, checkout) {
+    if (!is.null(checkout)) {
+      pkgload::load_all(checkout, quiet = TRUE)
+    }
+    while (!file.exists(go)) {
+      Sys.sleep(0.001)
+    }
+    vapply(
+      paths,
+      function(path) {
+        tryCatch(
+          {
+            graft::graft_save(graft::graft_store(path), "same bytes", "note")
+            ""
+          },
+          error = function(e) conditionMessage(e)
+        )
+      },
+      character(1)
+    )
+  }
+  args <- list(paths = paths, go = go, checkout = graft_checkout())
+  workers <- lapply(1:2, function(i) callr::r_bg(worker, args))
+  file.create(go)
+  for (w in workers) {
+    w$wait(60000)
+  }
+  failures <- unlist(lapply(workers, \(w) w$get_result()))
+  expect_identical(unique(failures), "")
+})
+
+test_that("a rename that loses to an identical publication still succeeds", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    # Another writer published the same digest first; Windows refuses to
+    # rename over an existing file.
+    file.copy(from, to)
+    FALSE
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+  expect_length(list.files(store@path, "^staged-", recursive = TRUE), 0)
+})
+
+test_that("a failed rename with no or different bytes at the destination fails", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_rename_file = function(from, to) FALSE)
+  expect_error(
+    artifact_save(store, "note", charToRaw("same"), "text/plain"),
+    "no successful reference"
+  )
+  local_mocked_bindings(artifact_rename_file = function(from, to) {
+    writeBin(charToRaw("other"), to)
+    FALSE
+  })
+  expect_error(
+    artifact_save(store, "note", charToRaw("same"), "text/plain"),
+    class = "graft_artifact_error"
+  )
+  expect_length(list.files(store@path, "^staged-", recursive = TRUE), 0)
+})
+
+test_that("a directory another process created first is used, not an error", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  local_mocked_bindings(artifact_create_dir = function(path) {
+    dir.create(path, recursive = TRUE)
+    FALSE
+  })
+  ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
+})

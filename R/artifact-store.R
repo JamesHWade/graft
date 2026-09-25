@@ -433,6 +433,9 @@ artifact_bytes <- function(path, limit) {
 }
 
 artifact_rename_file <- function(from, to) file.rename(from, to)
+artifact_create_dir <- function(path) {
+  dir.create(path, recursive = TRUE, showWarnings = FALSE)
+}
 
 artifact_put <- function(bytes, path, limit) {
   if (length(bytes) > limit) {
@@ -444,17 +447,20 @@ artifact_put <- function(bytes, path, limit) {
     }
     return(invisible(NULL))
   }
-  if (
-    !dir.exists(dirname(path)) && !dir.create(dirname(path), recursive = TRUE)
-  ) {
-    artifact_abort("Could not create artifact publication directory.")
+  # Another process may create the directory between the check and ours.
+  if (!dir.exists(dirname(path)) && !artifact_create_dir(dirname(path))) {
+    if (!dir.exists(dirname(path))) {
+      artifact_abort("Could not create artifact publication directory.")
+    }
   }
   staging <- tempfile("staged-", tmpdir = dirname(path))
   on.exit(unlink(staging), add = TRUE)
   tryCatch(writeBin(bytes, staging), error = function(e) {
     artifact_abort("Could not stage artifact bytes.")
   })
-  if (!artifact_rename_file(staging, path)) {
+  # A rename can lose to another process publishing the same digest (Windows
+  # will not rename over an existing file); the bytes are then checked below.
+  if (!artifact_rename_file(staging, path) && !file.exists(path)) {
     artifact_abort(
       "Artifact publication failed; no successful reference issued."
     )
