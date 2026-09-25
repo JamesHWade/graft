@@ -491,8 +491,8 @@ test_that("a losing rename's warning does not escape, even under warn = 2", {
     warning("cannot rename file, reason 'Access is denied'")
     FALSE
   })
-  expect_no_warning(
-    ref <- artifact_save(store, "note", charToRaw("same"), "text/plain")
+  ref <- expect_no_warning(
+    artifact_save(store, "note", charToRaw("same"), "text/plain")
   )
   expect_identical(rawToChar(artifact_read(store, ref)$bytes), "same")
   local_mocked_bindings(artifact_rename_file = function(from, to) {
