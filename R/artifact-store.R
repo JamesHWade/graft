@@ -543,8 +543,8 @@ artifact_without_store_lock <- function(store, code) {
 # restore), always takes the lock.
 artifact_with_store_read_lock <- function(store, code) {
   if (
-    is.null(artifact_store_locks[[store@path]]) &&
-      S7::S7_inherits(store, LocalArtifactStore) &&
+    S7::S7_inherits(store, LocalArtifactStore) &&
+      is.null(artifact_store_locks[[store@path]]) &&
       artifact_store_read_only(store)
   ) {
     return(artifact_without_store_lock(store, code))
