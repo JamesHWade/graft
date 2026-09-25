@@ -1,6 +1,9 @@
 # Report Graft's artifact and vocabulary contracts
 
-Consumer contract 4 replaces the public artifact-prefixed interface with
+Consumer contract 4.1 adds
+[`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md),
+which lists decision streams and their current decisions. Consumer
+contract 4 replaces the public artifact-prefixed interface with
 task-oriented verbs and S7 stores and values, without compatibility
 aliases. Stored wire formats and exact content identities remain
 unchanged. Consumer contract 3.2 adds closed artifact backup bundles
@@ -31,7 +34,7 @@ vocabulary, and binding formats.
 ``` r
 graft_contract_version()
 #> $contract
-#> [1] "4.0.0"
+#> [1] "4.1.0"
 #> 
 #> $artifact
 #> [1] "1"

@@ -187,6 +187,49 @@ Each `Decision@selection` is an exact selection digest.
 values. A withdrawal derives its purpose and selection from the verified
 predecessor, so callers cannot replace them with changed properties.
 
+## List what is kept
+
+[`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md)
+returns each stream’s current decision, so an application can show what
+it has kept without keeping a separate catalog. Pass `purpose` to list
+only the streams whose current decision was recorded for that purpose,
+and check `@action` to tell accepted streams from withdrawn ones.
+
+``` r
+
+path <- tempfile("artifact-streams-")
+store <- graft_store(path, create = TRUE)
+report <- graft_save(store, "Reviewed report", id = "report")
+graft_accept(
+  store, report, stream = "project:reactor", key = "keep-1", expected = NULL,
+  actor = "reviewer:alice", reason = "Kept to the project", purpose = "kept"
+)
+```
+
+    ## <Decision accept stream=project:reactor sequence=1 id=7f8e25d1c66d60ead067f55450c776643232cc64a24f23e6e8863d27c36de404>
+
+``` r
+
+kept <- graft_streams(store, purpose = "kept")
+vapply(kept, \(x) paste(x@stream, x@action), character(1))
+```
+
+    ## [1] "project:reactor accept"
+
+``` r
+
+unlink(path, recursive = TRUE)
+```
+
+Listing reads decision records only, like
+[`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md).
+It returns no artifact content and needs no eligibility decision;
+[`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
+still decides whether the accepted evidence may be used. Stream names,
+actors, and reasons are visible in the result, so the application
+decides who may list a store. Decisions carry no timestamps, and streams
+are ordered by name.
+
 Always supply the predecessor observed during review. An identical retry
 returns its original historical record and does not restore eligibility.
 A changed retry or a stale new request fails. Withdrawal needs intact

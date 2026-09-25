@@ -80,7 +80,7 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">graft</span><span class="fu">::</span><span class="fu"><a href="../reference/graft_contract_version.html">graft_contract_version</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## $contract</span></span>
-<span><span class="co">## [1] "4.0.0"</span></span>
+<span><span class="co">## [1] "4.1.0"</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $artifact</span></span>
 <span><span class="co">## [1] "1"</span></span>
@@ -112,14 +112,14 @@
 and rlang. Publishing vocabulary also requires the data-dict R package
 and CLI. Reading a published release requires neither the CLI nor the
 original dictionary files.</p>
-<p>The consumer contract is <strong>4.0.0</strong>. Everyday work uses
+<p>The consumer contract is <strong>4.1.0</strong>. Everyday work uses
 the task verbs <code><a href="../reference/graft_store.html">graft_store()</a></code>, <code><a href="../reference/graft_save.html">graft_save()</a></code>,
 <code><a href="../reference/graft_read.html">graft_read()</a></code>, <code><a href="../reference/graft_accept.html">graft_accept()</a></code>,
-<code><a href="../reference/graft_withdraw.html">graft_withdraw()</a></code>, <code><a href="../reference/graft_recall.html">graft_recall()</a></code>, and
-<code><a href="../reference/graft_history.html">graft_history()</a></code>, along with the S7 store and value classes.
-The old artifact-prefixed exports have been removed, and no
-compatibility aliases exist. Artifact bytes, selection formats, and
-content identities remain unchanged.</p>
+<code><a href="../reference/graft_withdraw.html">graft_withdraw()</a></code>, <code><a href="../reference/graft_recall.html">graft_recall()</a></code>,
+<code><a href="../reference/graft_history.html">graft_history()</a></code>, and <code><a href="../reference/graft_streams.html">graft_streams()</a></code>, along
+with the S7 store and value classes. The old artifact-prefixed exports
+have been removed, and no compatibility aliases exist. Artifact bytes,
+selection formats, and content identities remain unchanged.</p>
 <p><code>DESCRIPTION</code> pins the dictionary integration to the
 validated data-dict source revision. Commons is application-owned. Pass
 retained vocabulary context and validated data to its public source API.

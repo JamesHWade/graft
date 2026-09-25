@@ -40,7 +40,9 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="graft-0009000">graft 0.0.0.9000<a class="anchor" aria-label="anchor" href="#graft-0009000"></a></h2>
-<ul><li>Graft provides persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers (<a href="https://github.com/JamesHWade/graft/issues/74" class="external-link">#74</a>).</li>
+<ul><li>
+<code><a href="../reference/graft_streams.html">graft_streams()</a></code> lists the decision streams in a store with each stream’s current decision, so an application can show what it has kept without keeping its own catalog. It verifies every journal it reads, is bounded by stream count and aggregate metadata bytes, and works the same on local and PostgreSQL stores. It returns decisions only, never artifact content. Consumer contract 4.1.0 (<a href="https://github.com/JamesHWade/graft/issues/96" class="external-link">#96</a>).</li>
+<li>Graft provides persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers (<a href="https://github.com/JamesHWade/graft/issues/74" class="external-link">#74</a>).</li>
 <li>The public interface uses S7 store handles and typed references, content, selections, decisions, recall results, and vocabulary releases. The former artifact-prefixed functions are removed without compatibility aliases (<a href="https://github.com/JamesHWade/graft/issues/90" class="external-link">#90</a>).</li>
 <li>The getting-started guide and runnable project-memory example show how to give an ellmer agent in shinychat a reviewed notebook that survives new conversations and app restarts, including corrections with retained evidence (<a href="https://github.com/JamesHWade/graft/issues/41" class="external-link">#41</a>).</li>
 <li>

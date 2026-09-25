@@ -24,6 +24,8 @@
   : Read the evidence currently accepted for a stream
 - [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md)
   : Read the chronological decision journal for one stream
+- [`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md)
+  : List decision streams and their current decisions
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
   : Create a fixed read-only ellmer tool for reviewed content
 

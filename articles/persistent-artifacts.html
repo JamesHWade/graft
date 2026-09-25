@@ -225,6 +225,37 @@ enforce access on every route.</p>
 <code>Recall@artifacts</code> contain materialized <code>Artifact</code>
 values. A withdrawal derives its purpose and selection from the verified
 predecessor, so callers cannot replace them with changed properties.</p>
+</div>
+<div class="section level2">
+<h2 id="list-what-is-kept">List what is kept<a class="anchor" aria-label="anchor" href="#list-what-is-kept"></a>
+</h2>
+<p><code><a href="../reference/graft_streams.html">graft_streams()</a></code> returns each stream’s current decision,
+so an application can show what it has kept without keeping a separate
+catalog. Pass <code>purpose</code> to list only the streams whose
+current decision was recorded for that purpose, and check
+<code>@action</code> to tell accepted streams from withdrawn ones.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-streams-"</span><span class="op">)</span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Reviewed report"</span>, id <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/graft_accept.html">graft_accept</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>, <span class="va">report</span>, stream <span class="op">=</span> <span class="st">"project:reactor"</span>, key <span class="op">=</span> <span class="st">"keep-1"</span>, expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"reviewer:alice"</span>, reason <span class="op">=</span> <span class="st">"Kept to the project"</span>, purpose <span class="op">=</span> <span class="st">"kept"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## &lt;Decision accept stream=project:reactor sequence=1 id=7f8e25d1c66d60ead067f55450c776643232cc64a24f23e6e8863d27c36de404&gt;</span></span></code></pre>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">kept</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_streams.html">graft_streams</a></span><span class="op">(</span><span class="va">store</span>, purpose <span class="op">=</span> <span class="st">"kept"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">kept</span>, \<span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">x</span><span class="op">@</span><span class="va">stream</span>, <span class="va">x</span><span class="op">@</span><span class="va">action</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [1] "project:reactor accept"</span></span></code></pre>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Listing reads decision records only, like
+<code><a href="../reference/graft_history.html">graft_history()</a></code>. It returns no artifact content and needs
+no eligibility decision; <code><a href="../reference/graft_recall.html">graft_recall()</a></code> still decides
+whether the accepted evidence may be used. Stream names, actors, and
+reasons are visible in the result, so the application decides who may
+list a store. Decisions carry no timestamps, and streams are ordered by
+name.</p>
 <p>Always supply the predecessor observed during review. An identical
 retry returns its original historical record and does not restore
 eligibility. A changed retry or a stale new request fails. Withdrawal
@@ -349,7 +380,7 @@ synthetic fixtures do not establish production access or erasure.</p>
 selection, decision, and vocabulary interfaces inside a DBI transaction
 controlled by the application. Its optional DBI and RPostgres
 dependencies are needed only for PostgreSQL stores.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbWithTransaction.html" class="external-link">dbWithTransaction</a></span><span class="op">(</span><span class="va">connection</span>, <span class="op">{</span></span>
 <span>  <span class="co"># The host derives this scope from authenticated identity and checks access.</span></span>
 <span>  <span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store_postgres.html">graft_store_postgres</a></span><span class="op">(</span></span>

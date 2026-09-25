@@ -2,6 +2,14 @@
 
 ## graft 0.0.0.9000
 
+- [`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md)
+  lists the decision streams in a store with each stream’s current
+  decision, so an application can show what it has kept without keeping
+  its own catalog. It verifies every journal it reads, is bounded by
+  stream count and aggregate metadata bytes, and works the same on local
+  and PostgreSQL stores. It returns decisions only, never artifact
+  content. Consumer contract 4.1.0
+  ([\#96](https://github.com/JamesHWade/graft/issues/96)).
 - Graft provides persistent artifacts, exact dependency selections, host
   decision history, and shared vocabulary. Native graph stores, LinkML
   compilation, commit plans, snapshots, calculations, managed OKF trees,

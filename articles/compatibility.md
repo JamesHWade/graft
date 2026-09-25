@@ -8,7 +8,7 @@ graft::graft_contract_version()
 ```
 
     ## $contract
-    ## [1] "4.0.0"
+    ## [1] "4.1.0"
     ## 
     ## $artifact
     ## [1] "1"
@@ -42,15 +42,16 @@ rlang. Publishing vocabulary also requires the data-dict R package and
 CLI. Reading a published release requires neither the CLI nor the
 original dictionary files.
 
-The consumer contract is **4.0.0**. Everyday work uses the task verbs
+The consumer contract is **4.1.0**. Everyday work uses the task verbs
 [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md),
 [`graft_save()`](https://jameshwade.github.io/graft/reference/graft_save.md),
 [`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md),
 [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md),
 [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md),
 [`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md),
-and
 [`graft_history()`](https://jameshwade.github.io/graft/reference/graft_history.md),
+and
+[`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md),
 along with the S7 store and value classes. The old artifact-prefixed
 exports have been removed, and no compatibility aliases exist. Artifact
 bytes, selection formats, and content identities remain unchanged.
