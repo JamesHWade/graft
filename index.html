@@ -182,7 +182,7 @@ Save definitions and relationships with a specific data-dict release so agents a
 <div class="section level2">
 <h2 id="storage-and-operational-guides">Storage and operational guides<a class="anchor" aria-label="anchor" href="#storage-and-operational-guides"></a>
 </h2>
-<p>A local Graft store uses trusted files and supports one writer. For PostgreSQL, your application owns the transaction in which Graft reads and writes. This pre-production example is for one trusted local user. Before deploying to several users, your app needs to check access to each user or project and decide how long to keep the data.</p>
+<p>A local Graft store uses trusted files, and several R processes can write to it on a file system that honours advisory locks (many network file systems do not). For PostgreSQL, your application owns the transaction in which Graft reads and writes. This pre-production example is for one trusted local user. Before deploying to several users, your app needs to check access to each user or project and decide how long to keep the data.</p>
 <ul>
 <li><a href="articles/artifact-backups.html">Back up and restore an artifact store</a></li>
 <li><a href="articles/artifact-recovery.html">Build a verified replacement store</a></li>

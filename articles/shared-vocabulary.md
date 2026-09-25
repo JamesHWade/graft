@@ -40,7 +40,7 @@ Reads verify every artifact in the retained release and rebuild the
 context from it. They need neither the original files nor an installed
 data-dict binary. This checks content integrity. It is not a signature
 or independent proof of the publisher’s identity or claims. Stores
-retain the trusted local, single-writer limits described in [persistent
+retain the trusted local storage limits described in [persistent
 artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
 
 [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)

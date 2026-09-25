@@ -55,6 +55,11 @@ and
 along with the S7 store and value classes. The old artifact-prefixed
 exports have been removed, and no compatibility aliases exist. Artifact
 bytes, selection formats, and content identities remain unchanged.
+Contract 4.1.0 adds
+[`graft_streams()`](https://jameshwade.github.io/graft/reference/graft_streams.md)
+and the `lock_timeout` argument of
+[`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md),
+which bounds the wait for a stream’s decision lock on a local store.
 
 `DESCRIPTION` pins the dictionary integration to the validated data-dict
 source revision. Commons is application-owned. Pass retained vocabulary

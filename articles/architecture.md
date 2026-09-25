@@ -40,15 +40,16 @@ vocabulary; it does not run an ontology reasoner.
 
 The public `ArtifactStore` S7 class has `LocalArtifactStore` and
 `PostgresArtifactStore` implementations. Graft supports bounded
-immutable local files with one writer. Its PostgreSQL scopes run inside
-transactions owned by the application. Normal reads verify digests and
-predecessor identity, ignore abandoned staging, and allow identical
-retries. A complete manifest must account for every entry, so abandoned
-staging and unknown objects are rejected. Replacement plans copy the
-exact artifacts remaining after exclusions into empty quarantine stores
-and verify the full image. The store does not provide distributed
-transactions, power-loss guarantees, authentication, or permanent
-deletion.
+immutable local files; a per-stream file lock serializes decisions from
+several processes, as an advisory lock does for a PostgreSQL scope. Its
+PostgreSQL scopes run inside transactions owned by the application.
+Normal reads verify digests and predecessor identity, ignore abandoned
+staging, and allow identical retries. A complete manifest must account
+for every entry, so abandoned staging and unknown objects are rejected.
+Replacement plans copy the exact artifacts remaining after exclusions
+into empty quarantine stores and verify the full image. The store does
+not provide distributed transactions, power-loss guarantees,
+authentication, or permanent deletion.
 
 A closed directory backup retains the complete logical image, including
 orphan content and every historical decision. Verification compares the

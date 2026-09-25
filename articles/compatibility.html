@@ -119,7 +119,10 @@ the task verbs <code><a href="../reference/graft_store.html">graft_store()</a></
 <code><a href="../reference/graft_history.html">graft_history()</a></code>, and <code><a href="../reference/graft_streams.html">graft_streams()</a></code>, along
 with the S7 store and value classes. The old artifact-prefixed exports
 have been removed, and no compatibility aliases exist. Artifact bytes,
-selection formats, and content identities remain unchanged.</p>
+selection formats, and content identities remain unchanged. Contract
+4.1.0 adds <code><a href="../reference/graft_streams.html">graft_streams()</a></code> and the
+<code>lock_timeout</code> argument of <code><a href="../reference/graft_store.html">graft_store()</a></code>, which
+bounds the wait for a stream’s decision lock on a local store.</p>
 <p><code>DESCRIPTION</code> pins the dictionary integration to the
 validated data-dict source revision. Commons is application-owned. Pass
 retained vocabulary context and validated data to its public source API.

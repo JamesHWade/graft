@@ -8,6 +8,7 @@ Local artifact store
 LocalArtifactStore(
   max_bytes = integer(0),
   max_revision_bytes = integer(0),
+  lock_timeout = 10,
   path = character(0)
 )
 ```
@@ -22,6 +23,11 @@ LocalArtifactStore(
 - max_revision_bytes:
 
   Maximum encoded revision metadata bytes.
+
+- lock_timeout:
+
+  Seconds to wait for another process's decision in the same stream
+  before giving up.
 
 - path:
 

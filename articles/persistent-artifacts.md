@@ -9,10 +9,12 @@ from current reuse.
 ## Save and reopen exact content
 
 The shared local artifact interface preserves opaque bytes and checks
-them when they are read. It supports trusted local files with one
-writer. Applications still need their own rules for approval, access,
-concurrent publication, power-loss durability, and permanent erasure.
-Saving bytes does not approve them for use.
+them when they are read. It supports trusted local files, and several R
+processes can write to one store: a file lock serializes decisions in
+each stream. The lock needs a file system that honours advisory locks,
+which some network file systems do not. Applications still need their
+own rules for approval, access, power-loss durability, and permanent
+erasure. Saving bytes does not approve them for use.
 
 ``` r
 

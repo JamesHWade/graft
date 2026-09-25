@@ -48,6 +48,7 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">LocalArtifactStore</span><span class="op">(</span></span>
 <span>  max_bytes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
 <span>  max_revision_bytes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
+<span>  lock_timeout <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -63,6 +64,11 @@ dependency set it references.</p></dd>
 
 <dt id="arg-max-revision-bytes">max_revision_bytes<a class="anchor" aria-label="anchor" href="#arg-max-revision-bytes"></a></dt>
 <dd><p>Maximum encoded revision metadata bytes.</p></dd>
+
+
+<dt id="arg-lock-timeout">lock_timeout<a class="anchor" aria-label="anchor" href="#arg-lock-timeout"></a></dt>
+<dd><p>Seconds to wait for another process's decision in the
+same stream before giving up.</p></dd>
 
 
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>

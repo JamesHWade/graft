@@ -116,11 +116,13 @@ saved selections and evidence.
 
 ## Storage and operational guides
 
-A local Graft store uses trusted files and supports one writer. For
-PostgreSQL, your application owns the transaction in which Graft reads
-and writes. This pre-production example is for one trusted local user.
-Before deploying to several users, your app needs to check access to
-each user or project and decide how long to keep the data.
+A local Graft store uses trusted files, and several R processes can
+write to it on a file system that honours advisory locks (many network
+file systems do not). For PostgreSQL, your application owns the
+transaction in which Graft reads and writes. This pre-production example
+is for one trusted local user. Before deploying to several users, your
+app needs to check access to each user or project and decide how long to
+keep the data.
 
 - [Back up and restore an artifact
   store](https://jameshwade.github.io/graft/articles/artifact-backups.md)

@@ -11,7 +11,8 @@ graft_store(
   path,
   create = FALSE,
   max_bytes = 64 * 1024^2,
-  max_revision_bytes = 1024^2
+  max_revision_bytes = 1024^2,
+  lock_timeout = 10
 )
 ```
 
@@ -41,6 +42,12 @@ graft_store(
   independently of payload and dependency-count bounds. Increase it for
   large dependency lists, including when reopening the store.
 
+- lock_timeout:
+
+  Seconds to wait while another process records a decision in the same
+  stream. Defaults to 10. When the wait runs out, the call fails with a
+  `graft_store_busy_error` and records nothing.
+
 ## Value
 
 `graft_store()` returns a
@@ -51,10 +58,16 @@ graft_store(
 Identity, media type, and reference strings are normalized to plain
 UTF-8 character values without R attributes.
 
-Local stores support trusted files with one writer. SHA-256 digests
-identify content and metadata. Repeating an identical save returns the
-same reference, while corrections retain earlier revisions. There is no
-mutable latest pointer.
+Local stores hold trusted files. Several R processes can write to one
+store: content and revisions are saved under their SHA-256 digests, so
+concurrent saves of the same bytes agree, and decisions in a stream are
+serialized by a file lock, as PostgreSQL scopes are by an advisory lock.
+The lock is an operating-system advisory lock (via the filelock package)
+on a file under `locks/` in the store, so it only works where the file
+system honours such locks; some network file systems do not. SHA-256
+digests identify content and metadata. Repeating an identical save
+returns the same reference, while corrections retain earlier revisions.
+There is no mutable latest pointer.
 
 Payloads are published before immutable revision metadata, using staged
 files in the destination directory. A failed save can leave unreferenced
@@ -62,10 +75,9 @@ bytes; retries reuse verified content. Orphans are retained rather than
 deleted automatically. Successful reads verify metadata, payload size,
 and digest. Interrupted writes cannot produce a successful incomplete
 reference. The interface does not promise power-loss durability,
-concurrent publication, authorization, erasure, or backup recovery.
-Applications control access and policy. Local handles have no open
-connections, so callers do not need to close them. For
-transaction-scoped database persistence, use
+authorization, erasure, or backup recovery. Applications control access
+and policy. Local handles have no open connections, so callers do not
+need to close them. For transaction-scoped database persistence, use
 [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
 with the same artifact APIs.
 

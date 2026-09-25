@@ -88,10 +88,12 @@ inspection from current reuse.</p>
 <h2 id="save-and-reopen-exact-content">Save and reopen exact content<a class="anchor" aria-label="anchor" href="#save-and-reopen-exact-content"></a>
 </h2>
 <p>The shared local artifact interface preserves opaque bytes and checks
-them when they are read. It supports trusted local files with one
-writer. Applications still need their own rules for approval, access,
-concurrent publication, power-loss durability, and permanent erasure.
-Saving bytes does not approve them for use.</p>
+them when they are read. It supports trusted local files, and several R
+processes can write to one store: a file lock serializes decisions in
+each stream. The lock needs a file system that honours advisory locks,
+which some network file systems do not. Applications still need their
+own rules for approval, access, power-loss durability, and permanent
+erasure. Saving bytes does not approve them for use.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
