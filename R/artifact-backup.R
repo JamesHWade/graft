@@ -128,12 +128,14 @@ artifact_backup_create <- function(
     max_bytes = store@max_bytes,
     max_revision_bytes = store@max_revision_bytes
   )
-  artifact_backup_copy_objects(
-    store,
-    staging_store,
-    snapshot$manifest$objects,
-    limits$max_metadata_bytes
-  )
+  artifact_without_store_lock(staging_store, function() {
+    artifact_backup_copy_objects(
+      store,
+      staging_store,
+      snapshot$manifest$objects,
+      limits$max_metadata_bytes
+    )
+  })
   artifact_put(
     descriptor_bytes,
     file.path(staging, "bundle.json"),
@@ -609,12 +611,14 @@ artifact_backup_verify_bundle <- function(path, expected, limits) {
     max_bytes = limits$max_bytes,
     max_revision_bytes = limits$max_revision_bytes
   )
-  snapshot <- artifact_recovery_snapshot(
-    store,
-    max_objects = limits$max_objects,
-    max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
-  )
+  snapshot <- artifact_without_store_lock(store, function() {
+    artifact_recovery_snapshot(
+      store,
+      max_objects = limits$max_objects,
+      max_total_bytes = limits$max_total_bytes,
+      max_metadata_bytes = limits$max_metadata_bytes
+    )
+  })
   if (!identical(snapshot$manifest, descriptor$manifest)) {
     artifact_abort("Backup object image does not match its descriptor.")
   }

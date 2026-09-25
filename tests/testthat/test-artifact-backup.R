@@ -390,3 +390,30 @@ test_that("path containment handles filesystem roots and sibling prefixes", {
   expect_identical(artifact_backup_path_contains("D:/", "E:/backup"), FALSE)
   expect_identical(artifact_backup_path_contains("/store", "/store-2"), FALSE)
 })
+
+test_that("backups and their verification never write lock files", {
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
+  graft_save(source, "evidence", "note")
+  backup_path <- file.path(withr::local_tempdir(), "closed-backup")
+  receipt <- graft_backup(source, backup_path, "reader-a", "generation-1")
+  objects <- file.path(backup_path, "objects")
+  expect_false(dir.exists(file.path(objects, "locks")))
+
+  expect_identical(graft_verify_backup(backup_path, receipt), receipt)
+  target <- graft_store(withr::local_tempdir(), create = TRUE)
+  graft_restore(backup_path, target, receipt)
+  expect_false(dir.exists(file.path(objects, "locks")))
+
+  skip_on_os("windows")
+  skip_if(identical(Sys.info()[["user"]], "root"))
+  # A closed image on read-only storage still verifies.
+  files <- list.files(backup_path, recursive = TRUE, full.names = TRUE)
+  dirs <- c(
+    backup_path,
+    list.dirs(backup_path, recursive = TRUE, full.names = TRUE)
+  )
+  withr::defer(Sys.chmod(unique(dirs), "0755"))
+  Sys.chmod(files, "0444")
+  Sys.chmod(unique(dirs), "0555")
+  expect_identical(graft_verify_backup(backup_path, receipt), receipt)
+})

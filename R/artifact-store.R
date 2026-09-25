@@ -513,6 +513,18 @@ S7::method(artifact_with_store_lock, LocalArtifactStore) <- function(
   code()
 }
 
+# A backup's staging image is private to the process building it, and a closed
+# backup image must not change, so neither takes a lock file: their work runs
+# as if the lock were already held.
+artifact_without_store_lock <- function(store, code) {
+  if (!is.null(artifact_store_locks[[store@path]])) {
+    return(code())
+  }
+  assign(store@path, TRUE, envir = artifact_store_locks)
+  on.exit(rm(list = store@path, envir = artifact_store_locks), add = TRUE)
+  code()
+}
+
 artifact_lock_path <- function(store, name) {
   dir <- file.path(store@path, "locks")
   if (!dir.exists(dir) && !artifact_create_dir(dir) && !dir.exists(dir)) {
