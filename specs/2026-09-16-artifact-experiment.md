@@ -47,7 +47,7 @@ See the [architecture decision](../adr/0007-test-artifact-composition-before-exp
 The Graft package was installed from main
 [`25ed779`](https://github.com/JamesHWade/graft/tree/25ed779aa34cd888da3212eec437ee2a64bfcca0).
 The recorded local run used R 4.6.1 and DuckDB 1.5.5. Source and environment pins
-for the integrated suite are in `tools/experiments/pins.json`; the runner records
+for the integrated suite are in [`tools/experiments/pins.json`](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/pins.json); the runner records
 actual runtime versions separately. No public package code or existing store was
 changed.
 

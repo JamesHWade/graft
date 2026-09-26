@@ -15,9 +15,11 @@ data-dict CLI 0.0.3 at `0161d460b6eb70d337028f8eddbf2f443bcb8f67`.
 the executable digest and exact content references. Source builds with the same
 version number need the commit pin; version 0.0.3 alone is insufficient.
 
-Reproduction command using the required setup attestation:
+Reproduction command using the required setup attestation. The experiment was
+removed from the repository, so run it from a checkout of its last revision:
 
 ```sh
+git checkout 6d7bd84129c3bb2800509d3489719e31bece1ac7
 export GRAFT_EXPERIMENT_HOME=/tmp/graft-experiment-dependencies
 Rscript tools/experiments/setup.R
 Rscript tools/experiments/vocabulary/run.R /tmp/graft-vocabulary-results
