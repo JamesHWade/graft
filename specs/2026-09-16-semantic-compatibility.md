@@ -10,8 +10,8 @@ tool calls compute over the same Parquet bytes validated by data-dict. A concret
 counterexample remains: data-dict accepts an R-language definition that Commons
 rejects. No additional Graft parser, CLI bridge, or evaluator was implemented.
 
-Run [the fixture](../tools/experiments/semantic-compatibility/README.md).
-[Recorded results](../tools/experiments/semantic-compatibility/observed.json) include
+Run [the fixture](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/semantic-compatibility/README.md).
+[Recorded results](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/semantic-compatibility/observed.json) include
 runtime versions, SHA-256 input identity, individual checks, and negative-case
 messages. Source pins and install instructions are in that README. The two tools
 consume one authored dictionary; Commons still recompiles its expressions.

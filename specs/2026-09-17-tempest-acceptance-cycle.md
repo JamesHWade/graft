@@ -3,8 +3,8 @@
 Experiment #64, September 17, 2026. This follows the migration and public-input
 experiments. This historical result used Tempest `6d3386c`; its dependency pins
 are retained in the recorded result below. The
-[runner](../tools/experiments/tempest-cycle/run.R) now uses the
-[current pinned sources](../tools/experiments/pins.json).
+[runner](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-cycle/run.R) now uses the
+[current pinned sources](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/pins.json).
 
 ## Question and result
 
@@ -17,7 +17,7 @@ manifest path runs acceptance and consumption with Graft absent from its R
 library. The Graft path uses the same host decisions and content preservation.
 Both retain exact initial, unchanged and corrected acceptance receipts, source
 bodies, four evidence records per selection, reports and original promotion
-bundle files. The [recorded result](../tools/experiments/tempest-cycle/observed.json)
+bundle files. The [recorded result](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-cycle/observed.json)
 records 192 passing assertions and the executed failure checks. The complete
 seven-experiment suite at that revision also passed; the independent dependency/content assertions
 were added afterward and rerun in the focused acceptance fixture.

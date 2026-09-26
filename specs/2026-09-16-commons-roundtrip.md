@@ -1,7 +1,7 @@
 # Commons artifact and selected-memory roundtrip
 
 Experiment #62, September 16, 2026. See the
-[runnable fixture](../tools/experiments/roundtrip/README.md).
+[runnable fixture](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/roundtrip/README.md).
 
 ## Observed result
 

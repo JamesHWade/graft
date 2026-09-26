@@ -1,7 +1,7 @@
 # Persistent artifact experiment
 
 Experiment #59, September 16, 2026. The code is in
-[`tools/experiments/artifacts`](../tools/experiments/artifacts/README.md).
+[`tools/experiments/artifacts`](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/artifacts/README.md).
 
 ## Observed result
 
