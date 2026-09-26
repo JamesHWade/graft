@@ -131,8 +131,10 @@ decision metadata, and descriptor size. The descriptor defaults to at
 most 4 MiB; the store defaults to 10,000 objects and 64 MiB total.
 Payload and revision limits come from the source or target store handle.
 Standalone verification also exposes `max_bytes` and
-`max_revision_bytes`. The bundle cannot supply these bounds. Enumerating
-a local directory is not itself a streaming bounded operation.
+`max_revision_bytes`. The bundle cannot supply these bounds. A local
+inventory checks the object count and total bytes as it lists each
+directory and stops at the first bound exceeded, but it still reads each
+directory’s names at once.
 
 A receipt from another scope or generation cannot certify this bundle,
 even if the artifact bytes are identical. An old bundle and its matching

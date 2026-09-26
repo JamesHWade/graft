@@ -294,10 +294,11 @@ keep those identities and history. Graft does not yet expose a pluggable
 backend interface.
 
 Earlier composition experiments compared native graph storage with
-immutable manifests. Their source and observations remain in the
-repository as historical research. They led to the artifact contract and
-the retirement of the native store. Their examples document that earlier
-architecture and are not instructions for the current store.
+immutable manifests. Their source and observations were removed from the
+repository and remain in its git history as research. They led to the
+artifact contract and the retirement of the native store. Their examples
+document that earlier architecture and are not instructions for the
+current store.
 
 Graft keeps the shared infrastructure. Tempest and Rill own product
 semantics, access, approval, and retention. Publication recovery remains
