@@ -4,7 +4,7 @@ The [September 17 follow-up](2026-09-17-tempest-reuse.md) closes the artifact in
 and saved-session reuse gap described below. This page records the original
 migration result; future artifact acceptance and lifecycle work remain open.
 
-Experiment #64, September 16, 2026. The [runnable fixture](../tools/experiments/tempest-migration/README.md)
+Experiment #64, September 16, 2026. The [runnable fixture](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-migration/README.md)
 uses Tempest at `3cfe220577bdce61ee3b94684cc4ffdf5e1fdb83` and the complete pinned
 environment shared by the artifact experiments.
 
@@ -24,7 +24,7 @@ or relabel an artifact digest as a native snapshot.
 
 ## Executed evidence
 
-The [recorded local run](../tools/experiments/tempest-migration/observed.json)
+The [recorded local run](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-migration/observed.json)
 passes **121 assertions**, plus source-integrity and rollback guards.
 The complete experiment is also part of the Linux CI suite.
 

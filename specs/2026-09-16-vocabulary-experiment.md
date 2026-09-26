@@ -7,17 +7,19 @@ separate ontology package.**
 
 ## Runtime evidence
 
-The [runner](../tools/experiments/vocabulary/run.R) passes 18 focused cases on
+The [runner](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/vocabulary/run.R) passes 18 focused cases on
 R 4.6.1, Commons 0.1.0.9000 at
 `726a2ed459c2b7c7aebc29539895f04873276b4f`, and datadict 0.1.0 plus the source-built
 data-dict CLI 0.0.3 at `0161d460b6eb70d337028f8eddbf2f443bcb8f67`.
-[Recorded output](../tools/experiments/vocabulary/observed/results.json) includes
+[Recorded output](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/vocabulary/observed/results.json) includes
 the executable digest and exact content references. Source builds with the same
 version number need the commit pin; version 0.0.3 alone is insufficient.
 
-Reproduction command using the required setup attestation:
+Reproduction command using the required setup attestation. The experiment was
+removed from the repository, so run it from a checkout of its last revision:
 
 ```sh
+git checkout 6d7bd84129c3bb2800509d3489719e31bece1ac7
 export GRAFT_EXPERIMENT_HOME=/tmp/graft-experiment-dependencies
 Rscript tools/experiments/setup.R
 Rscript tools/experiments/vocabulary/run.R /tmp/graft-vocabulary-results
@@ -39,7 +41,7 @@ checks the attested CLI digest and package source pins before producing evidence
 | Historical replay | Release v2 renames `specimen` to `specimen_id` and clarifies a term. Reopening v1 reproduces its complete published result and context exactly; the old binding rejects the new frame. |
 | Unsafe comparison/join | Shared temperature fails due to different units, grain, conditions and scope. Equal sample strings also fail the scope check. The fixture performs no join or conversion. |
 
-The [context](../tools/experiments/vocabulary/observed/context-v1.md) includes
+The [context](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/vocabulary/observed/context-v1.md) includes
 release IDs, term IDs, dictionary digests and qualifiers in the body. Human
 explanations and exact JSON records come from the same validated records. Tests
 parse the rendered records back and compare them to the machine representation.

@@ -40,10 +40,10 @@ reuse purpose with hosts.
 | #62 uses public constructors and real dispatched tools with deterministic transport | A host can supply retained context/data and save generated artifacts through the same storage boundary | Free-running model quality, semantic truth, production access control or live-chat revocation are proved |
 | Most artifact lifecycle code is shared outside the two metadata adapters | Compare all custom code and policies; neither existing package already owns the whole lifecycle | Counting only the short manifest adapter establishes total lifecycle cost |
 
-The [artifact README](../tools/experiments/artifacts/README.md),
+The [artifact README](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/artifacts/README.md),
 [vocabulary results](2026-09-16-vocabulary-experiment.md),
 [semantic conformance results](2026-09-16-semantic-compatibility.md), and
-[roundtrip host](../tools/experiments/roundtrip/host.R) are the local evidence.
+[roundtrip host](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/roundtrip/host.R) are the local evidence.
 The final ADR should use the completed runner results, rather than treating code
 inspection as runtime verification.
 

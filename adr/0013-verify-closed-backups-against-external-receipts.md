@@ -27,7 +27,8 @@ compares every identity field. Unknown fields, duplicate entries, noncanonical
 bytes, unsupported formats, links, nonregular objects, and incomplete histories
 are rejected. Input limits come from callers, never the bundle. Descriptor size
 is bounded before JSON parsing; object inventory and bytes use recovery limits.
-Local directory enumeration still precedes the inventory count check.
+A local inventory checks count and bytes as each directory is listed and
+stops at the first exceeded bound; each directory's names are read at once.
 
 A full backup preserves valid orphan content and every decision record. It does
 not apply exclusions. Use the replacement planner to choose survivors, then back

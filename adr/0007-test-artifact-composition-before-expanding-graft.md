@@ -58,8 +58,10 @@ the bounded retirement evidence below; implementation remains a separate step.
 | #62 | Both paths preserve 16-object output selections across processes and correction, using real Commons calculation, context and sandboxed R outputs | Commons can generate/consume artifacts but still needs an explicit preservation/approval owner |
 | #64 | Native history survives migration; public artifact input, direct acceptance, correction and withdrawal work without Graft installed in either producer or consumer | The bounded consumer lifecycle has a replacement path; implement the artifact boundary and remove obsolete native integrations |
 
-Results and reproducible commands are indexed in
-[`tools/experiments/README.md`](../tools/experiments/README.md). The independent
+The experiments were removed from the repository after the native graph was
+retired; their last version is pinned in the links here. Results and commands
+are indexed in
+[`tools/experiments/README.md`](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/README.md). The independent
 [countercase](../specs/2026-09-16-architecture-countercase.md) challenges immediate
 retirement and records what would reverse this decision. Its compatibility
 concerns are superseded by the pre-production policy in this ADR.
@@ -107,7 +109,7 @@ The original migration experiment used Tempest `3cfe220`. The follow-up recorded
 [`6d3386c`](https://github.com/JamesHWade/tempest/tree/6d3386cbbe22fdc0c1539c436e3ab2f4660567f3)
 from [Tempest #71](https://github.com/JamesHWade/tempest/pull/71), including the
 public artifact input. These are historical pins. The current suite is defined by
-[`pins.json`](../tools/experiments/pins.json) and now includes
+[`pins.json`](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/pins.json) and now includes
 [Tempest #74](https://github.com/JamesHWade/tempest/pull/74), with public artifact
 publication, historical reads and fresh decision admission.
 

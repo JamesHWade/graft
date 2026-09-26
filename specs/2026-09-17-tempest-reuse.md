@@ -3,14 +3,14 @@
 Experiment #64, September 17, 2026. This follows the
 [historical migration experiment](2026-09-16-tempest-migration.md) and uses the
 sources recorded in the historical evidence below.
-[Current suite pins](../tools/experiments/pins.json) may differ. Tempest
+[Current suite pins](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/pins.json) may differ. Tempest
 [`6d3386c`](https://github.com/JamesHWade/tempest/tree/6d3386cbbe22fdc0c1539c436e3ab2f4660567f3)
 is the implementation in [PR #71](https://github.com/JamesHWade/tempest/pull/71).
 
-The [recorded run](../tools/experiments/tempest-reuse/observed.json) passed all
+The [recorded run](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-reuse/observed.json) passed all
 48 reuse assertions; the complete six-experiment suite at that revision also passed, including
 121 migration assertions and the source-integrity/rollback guards. The
-[companion migration receipt](../tools/experiments/tempest-migration/observed-current.json)
+[companion migration receipt](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-migration/observed-current.json)
 records that companion run separately from the original historical experiment.
 
 ## Result and decision
@@ -46,7 +46,7 @@ prove that an assertion is true.
 
 ## Executed boundary
 
-The [runner](../tools/experiments/tempest-reuse/run.R) creates and saves three
+The [runner](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/tempest-reuse/run.R) creates and saves three
 sessions using public constructors, then exits that process. A second independent
 process rechecks host eligibility and resumes the saved sessions. Both processes
 have Tempest and its required dependencies, and explicitly verify that Graft cannot
