@@ -109,6 +109,63 @@ test_that("manifest bounds are checked before payload reads", {
   )
 })
 
+test_that("local inventory stops at the first exceeded bound", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  for (text in c("one", "two", "three")) {
+    artifact_save(store, text, charToRaw(text), "text/plain")
+  }
+  sized <- 0L
+  local_mocked_bindings(artifact_recovery_file_size = function(path) {
+    sized <<- sized + 1L
+    file.info(path)$size
+  })
+
+  expect_error(
+    graft_manifest(store, max_objects = 2),
+    "object-count bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(sized, 0L)
+
+  expect_error(
+    graft_manifest(store, max_total_bytes = 4),
+    "total byte bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(sized, 2L)
+})
+
+test_that("local inventory counts decision streams before reading them", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- artifact_save(store, "kept", charToRaw("kept"), "text/plain")
+  selection <- artifact_select(store, list(ref))
+  for (stream in c("a", "b", "c")) {
+    artifact_decide(
+      store,
+      stream,
+      "review",
+      expected = NULL,
+      selection = selection,
+      action = "accept",
+      actor = "reviewer",
+      reason = "reviewed",
+      purpose = "research"
+    )
+  }
+  expect_no_error(graft_manifest(store, max_objects = 6))
+  local_mocked_bindings(artifact_recovery_directory = function(path) {
+    if (grepl("decisions/[0-9a-f]{64}$", path)) {
+      stop("stream directory examined")
+    }
+    isTRUE(file.info(path)$isdir)
+  })
+  expect_error(
+    graft_manifest(store, max_objects = 5),
+    "object-count bound",
+    class = "graft_artifact_error"
+  )
+})
+
 test_that("empty stores have a stable empty manifest", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
   dir.create(file.path(store@path, "content"))

@@ -254,7 +254,11 @@ artifact_recovery_enumerate <- function(
   if (S7::S7_inherits(store, PostgresArtifactStore)) {
     entries <- artifact_recovery_enumerate_postgres(store, max_objects)
   } else {
-    entries <- artifact_recovery_enumerate_local(store)
+    entries <- artifact_recovery_enumerate_local(
+      store,
+      max_objects,
+      max_total_bytes
+    )
   }
   artifact_recovery_check_entry_bounds(
     entries,
@@ -273,7 +277,11 @@ artifact_recovery_enumerate <- function(
   )
 }
 
-artifact_recovery_enumerate_local <- function(store) {
+artifact_recovery_enumerate_local <- function(
+  store,
+  max_objects,
+  max_total_bytes
+) {
   root <- store@path
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   root_entries <- list.files(
@@ -334,6 +342,24 @@ artifact_recovery_enumerate_local <- function(store) {
     }
   }
 
+  # Check the bounds as the listing grows, so an oversized store fails before
+  # every object is examined. Each directory's names are still read at once.
+  count <- 0
+  total <- 0
+  count_names <- function(names) {
+    count <<- count + length(names)
+    if (count > max_objects) {
+      artifact_abort("Artifact store exceeds the object-count bound.")
+    }
+  }
+  add_size <- function(size) {
+    total <<- total + size
+    if (total > max_total_bytes) {
+      artifact_abort("Artifact store exceeds the total byte bound.")
+    }
+    size
+  }
+
   entries <- list()
   for (kind in c("content", "revisions", "selections")) {
     path <- file.path(root, kind)
@@ -347,6 +373,7 @@ artifact_recovery_enumerate_local <- function(store) {
       recursive = FALSE,
       include.dirs = TRUE
     )
+    count_names(names)
     for (name in names) {
       object_path <- file.path(path, name)
       if (
@@ -358,7 +385,7 @@ artifact_recovery_enumerate_local <- function(store) {
       entries[[length(entries) + 1L]] <- list(
         kind = kind,
         key = name,
-        size = artifact_recovery_file_size(object_path)
+        size = add_size(artifact_recovery_file_size(object_path))
       )
     }
   }
@@ -372,6 +399,10 @@ artifact_recovery_enumerate_local <- function(store) {
       recursive = FALSE,
       include.dirs = TRUE
     )
+    # Every stream holds at least one decision.
+    if (count + length(stream_names) > max_objects) {
+      artifact_abort("Artifact store exceeds the object-count bound.")
+    }
     for (stream in stream_names) {
       stream_path <- file.path(decisions, stream)
       if (
@@ -390,6 +421,7 @@ artifact_recovery_enumerate_local <- function(store) {
       if (!length(names)) {
         artifact_abort("Artifact decision journal contains an empty stream.")
       }
+      count_names(names)
       for (name in names) {
         object_path <- file.path(stream_path, name)
         key <- paste(stream, name, sep = "/")
@@ -402,7 +434,7 @@ artifact_recovery_enumerate_local <- function(store) {
         entries[[length(entries) + 1L]] <- list(
           kind = "decisions",
           key = key,
-          size = artifact_recovery_file_size(object_path)
+          size = add_size(artifact_recovery_file_size(object_path))
         )
       }
     }
