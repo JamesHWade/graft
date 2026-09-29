@@ -294,8 +294,12 @@ agent$run_sync("How do we count an active customer?")
 To keep something an agent produces, save it from your application and leave
 acceptance to a person, as in section 2. deputy's `TrustedResults()` passes the
 unchanged value of a tool you designate to your application, so what you save
-never has to be copied out of the model's reply. The memory tool can be
-registered alongside it because it is read-only and closed-world:
+never has to be copied out of the model's reply. Each call to the tool below
+saves a draft, so it is annotated as not read-only, though not destructive
+because it only adds a revision. deputy runs it in `"standard"` mode and
+refuses it in `"plan"` mode, and in `"readonly"` mode unless you list it in
+`tool_allowlist`. The memory tool can be registered alongside it because it is
+read-only and closed-world:
 
 ```{r agent-draft, eval=FALSE}
 draft_tool <- ellmer::tool(
@@ -304,7 +308,8 @@ draft_tool <- ellmer::tool(
   description = "Propose a new definition for review.",
   arguments = list(definition = ellmer::type_string("The proposed definition")),
   annotations = ellmer::tool_annotations(
-    read_only_hint = TRUE,
+    read_only_hint = FALSE,
+    destructive_hint = FALSE,
     open_world_hint = FALSE
   )
 )
@@ -318,17 +323,17 @@ agent <- deputy::Agent$new(
       drafts[[event$result_id]] <<- graft_save(
         store,
         event$value,
-        id = "metric:active-customer",
-        dependencies = source
+        id = "draft:metric:active-customer"
       )
     }
   )
 )
 ```
 
-A saved draft is a new revision of the note, but it is not recalled yet:
-`graft_recall()` keeps returning the accepted revision until a reviewer calls
-`graft_accept()` for the draft, as section 5 shows for a correction.
+A draft has its own ID and records no evidence, so `graft_recall()` keeps
+returning the accepted note. When a person has reviewed the draft, save the
+reviewed definition as a new revision of the note, with the source it rests
+on, and accept that, as section 5 shows for a correction.
 
 ## 5. Review a correction and keep the history
 
