@@ -303,7 +303,7 @@ read-only and closed-world:
 
 ```{r agent-draft, eval=FALSE}
 draft_tool <- ellmer::tool(
-  function(definition) definition,
+  \(definition) definition,
   name = "draft_definition",
   description = "Propose a new definition for review.",
   arguments = list(definition = ellmer::type_string("The proposed definition")),
