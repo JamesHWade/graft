@@ -336,6 +336,71 @@ chat API</a>. The example targets ellmer 0.5.0 and shinychat 0.5.0. Its
 automated checks run without a provider; your choice of model affects
 whether and how it uses the tool.</p>
 </div>
+<div class="section level3">
+<h3 id="use-it-with-an-agent-runtime">Use it with an agent runtime<a class="anchor" aria-label="anchor" href="#use-it-with-an-agent-runtime"></a>
+</h3>
+<p>Because <code><a href="../reference/graft_tool.html">graft_tool()</a></code> returns an ordinary ellmer tool,
+agent runtimes built on ellmer accept it unchanged. Its annotations mark
+it read-only and closed-world, so a runtime that checks annotations can
+run it where it refuses tools that change things. With <a href="https://jameshwade.github.io/deputy/" class="external-link">deputy</a>, for example, the
+tool runs in the default <code>"standard"</code> and in
+<code>"plan"</code> permission modes. <code>"readonly"</code> mode runs
+only deputy’s own read tools and the tools you list in
+<code>tool_allowlist</code>:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va"><a href="https://jameshwade.github.io/deputy/reference/Agent.html" class="external-link">Agent</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">chat</a></span><span class="op">(</span><span class="st">"openai/gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">memory_tool</span><span class="op">)</span>,</span>
+<span>  permissions <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/deputy/reference/Permissions.html" class="external-link">Permissions</a></span><span class="op">(</span></span>
+<span>    mode <span class="op">=</span> <span class="st">"readonly"</span>,</span>
+<span>    tool_allowlist <span class="op">=</span> <span class="st">"recall_project_memory"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">agent</span><span class="op">$</span><span class="fu">run_sync</span><span class="op">(</span><span class="st">"How do we count an active customer?"</span><span class="op">)</span></span></code></pre></div>
+<p>To keep something an agent produces, save it from your application
+and leave acceptance to a person, as in section 2. deputy’s
+<code>TrustedResults()</code> passes the unchanged value of a tool you
+designate to your application, so what you save never has to be copied
+out of the model’s reply. Each call to the tool below saves a draft, so
+it is annotated as not read-only, though not destructive because it only
+adds a revision. deputy runs it in <code>"standard"</code> mode and
+refuses it in <code>"plan"</code> mode, and in <code>"readonly"</code>
+mode unless you list it in <code>tool_allowlist</code>. The memory tool
+can be registered alongside it because it is read-only and
+closed-world:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">draft_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
+<span>  \<span class="op">(</span><span class="va">definition</span><span class="op">)</span> <span class="va">definition</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"draft_definition"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Propose a new definition for review."</span>,</span>
+<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>definition <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"The proposed definition"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  annotations <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool_annotations.html" class="external-link">tool_annotations</a></span><span class="op">(</span></span>
+<span>    read_only_hint <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>    destructive_hint <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>    open_world_hint <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">drafts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va"><a href="https://jameshwade.github.io/deputy/reference/Agent.html" class="external-link">Agent</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">chat</a></span><span class="op">(</span><span class="st">"openai/gpt-6-luna"</span><span class="op">)</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">memory_tool</span>, <span class="va">draft_tool</span><span class="op">)</span>,</span>
+<span>  trusted_results <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu">TrustedResults</span><span class="op">(</span></span>
+<span>    definition <span class="op">=</span> <span class="st">"draft_definition"</span>,</span>
+<span>    on_result <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">drafts</span><span class="op">[[</span><span class="va">event</span><span class="op">$</span><span class="va">result_id</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>        <span class="va">store</span>,</span>
+<span>        <span class="va">event</span><span class="op">$</span><span class="va">value</span>,</span>
+<span>        id <span class="op">=</span> <span class="st">"draft:metric:active-customer"</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>A draft has its own ID and records no evidence, so
+<code><a href="../reference/graft_recall.html">graft_recall()</a></code> keeps returning the accepted note. When a
+person has reviewed the draft, save the reviewed definition as a new
+revision of the note, with the source it rests on, and accept that, as
+section 5 shows for a correction.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="review-a-correction-and-keep-the-history">5. Review a correction and keep the history<a class="anchor" aria-label="anchor" href="#review-a-correction-and-keep-the-history"></a>
@@ -344,7 +409,7 @@ whether and how it uses the tool.</p>
 source and note under the same logical IDs to create new exact
 revisions. Accept the corrected selection with the previous decision as
 its expected predecessor:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">source_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  <span class="st">"Updated metrics handbook: active customers have a paid account and activity in the past 60 days. Exclude staff and test accounts."</span>,</span>
@@ -371,16 +436,16 @@ its expected predecessor:</p>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 60 days, excluding staff and test accounts."</span></span></code></pre>
 <p>A fresh conversation retrieves the 60-day definition. The original
 note and its source remain available at their exact references:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 30 days, excluding staff and test accounts."</span></span></code></pre>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">source</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Metrics handbook: active customers have a paid account and activity in the past 30 days. Exclude staff and test accounts."</span></span></code></pre>
 <p>The old acceptance is no longer current for reuse. If the note should
 no longer be used, record a withdrawal. The packaged app exposes that
 action as Stop using this note:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">withdrawn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_withdraw.html">graft_withdraw</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  stream <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>

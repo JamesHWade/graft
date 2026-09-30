@@ -300,6 +300,79 @@ The example targets ellmer 0.5.0 and shinychat 0.5.0. Its automated
 checks run without a provider; your choice of model affects whether and
 how it uses the tool.
 
+### Use it with an agent runtime
+
+Because
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+returns an ordinary ellmer tool, agent runtimes built on ellmer accept
+it unchanged. Its annotations mark it read-only and closed-world, so a
+runtime that checks annotations can run it where it refuses tools that
+change things. With [deputy](https://jameshwade.github.io/deputy/), for
+example, the tool runs in the default `"standard"` and in `"plan"`
+permission modes. `"readonly"` mode runs only deputy’s own read tools
+and the tools you list in `tool_allowlist`:
+
+``` r
+
+agent <- deputy::Agent$new(
+  chat = ellmer::chat("openai/gpt-6-luna"),
+  tools = list(memory_tool),
+  permissions = deputy::Permissions(
+    mode = "readonly",
+    tool_allowlist = "recall_project_memory"
+  )
+)
+agent$run_sync("How do we count an active customer?")
+```
+
+To keep something an agent produces, save it from your application and
+leave acceptance to a person, as in section 2. deputy’s
+`TrustedResults()` passes the unchanged value of a tool you designate to
+your application, so what you save never has to be copied out of the
+model’s reply. Each call to the tool below saves a draft, so it is
+annotated as not read-only, though not destructive because it only adds
+a revision. deputy runs it in `"standard"` mode and refuses it in
+`"plan"` mode, and in `"readonly"` mode unless you list it in
+`tool_allowlist`. The memory tool can be registered alongside it because
+it is read-only and closed-world:
+
+``` r
+
+draft_tool <- ellmer::tool(
+  \(definition) definition,
+  name = "draft_definition",
+  description = "Propose a new definition for review.",
+  arguments = list(definition = ellmer::type_string("The proposed definition")),
+  annotations = ellmer::tool_annotations(
+    read_only_hint = FALSE,
+    destructive_hint = FALSE,
+    open_world_hint = FALSE
+  )
+)
+drafts <- list()
+agent <- deputy::Agent$new(
+  chat = ellmer::chat("openai/gpt-6-luna"),
+  tools = list(memory_tool, draft_tool),
+  trusted_results = deputy::TrustedResults(
+    definition = "draft_definition",
+    on_result = function(event) {
+      drafts[[event$result_id]] <<- graft_save(
+        store,
+        event$value,
+        id = "draft:metric:active-customer"
+      )
+    }
+  )
+)
+```
+
+A draft has its own ID and records no evidence, so
+[`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
+keeps returning the accepted note. When a person has reviewed the draft,
+save the reviewed definition as a new revision of the note, with the
+source it rests on, and accept that, as section 5 shows for a
+correction.
+
 ## 5. Review a correction and keep the history
 
 The team now changes the activity window to 60 days. Save the new source
