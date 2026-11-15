@@ -680,7 +680,7 @@ artifact_recovery_check_entry_bounds <- function(
       numeric(1)
     )
     if (
-      any(!is.finite(decision_totals)) ||
+      !all(is.finite(decision_totals)) ||
         any(decision_totals > max_metadata_bytes)
     ) {
       artifact_abort(
