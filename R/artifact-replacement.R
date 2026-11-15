@@ -36,9 +36,11 @@
 #' roots. The host must supply all additional roots and streams required by its
 #' Forget policy, including copies outside this artifact store.
 #'
-#' Planning does not authorize Forget and does not delete anything. Replacement
-#' copies verified objects into a new empty store. The source's objects are
-#' never changed; a writable source may gain its lock file under `locks/`.
+#' Planning does not authorize Forget or delete committed source objects.
+#' Replacement copies verified objects into a new empty store. The source's
+#' committed objects are never changed; a writable local source may have
+#' recognized abandoned staging removed under its exclusive lock and gain its
+#' lock file under `locks/`.
 #' A copy or verification failure can leave a partial target. The host must
 #' quarantine and discard that target, then rebuild a new empty target.
 #' Planning and replacement hold the local source's and target's store locks
@@ -46,6 +48,10 @@
 #' that switches to the replacement should hold the source's lock across the
 #' plan, the copy, and the switch; see [graft_with_store_lock()]. PostgreSQL
 #' callers must hold the host transaction and scope lock for the operation.
+#' Writable local inventories remove only recognized abandoned staging files;
+#' read-only inventories and closed backup verification continue to reject
+#' staging. An empty hash-named decision directory is treated as no committed
+#' stream during writable recovery.
 #'
 #' @returns
 #' `graft_plan_replacement()` returns a list with format
@@ -94,7 +100,8 @@ graft_plan_replacement <- function(
     store,
     max_objects = limits$max_objects,
     max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
+    max_metadata_bytes = limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   artifact_replacement_plan_from_snapshot(
     snapshot,
@@ -138,7 +145,8 @@ artifact_replace <- function(source, target, plan) {
     target,
     max_objects = checked$limits$max_objects,
     max_total_bytes = checked$limits$max_total_bytes,
-    max_metadata_bytes = checked$limits$max_metadata_bytes
+    max_metadata_bytes = checked$limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (length(target_snapshot$manifest$objects)) {
     artifact_abort(
@@ -190,7 +198,8 @@ artifact_replace <- function(source, target, plan) {
     source,
     max_objects = checked$limits$max_objects,
     max_total_bytes = checked$limits$max_total_bytes,
-    max_metadata_bytes = checked$limits$max_metadata_bytes
+    max_metadata_bytes = checked$limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (!identical(source_after$manifest, checked$source)) {
     artifact_abort("Source manifest changed during replacement.")
@@ -199,7 +208,8 @@ artifact_replace <- function(source, target, plan) {
     target,
     max_objects = checked$limits$max_objects,
     max_total_bytes = checked$limits$max_total_bytes,
-    max_metadata_bytes = checked$limits$max_metadata_bytes
+    max_metadata_bytes = checked$limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (!identical(target_after$manifest, checked$target)) {
     artifact_abort("Replacement target manifest did not verify.")

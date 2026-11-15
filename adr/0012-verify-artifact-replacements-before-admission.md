@@ -32,18 +32,32 @@ Expose three bounded operations:
 3. `graft_artifact_replace()` copies those exact survivors to an empty quarantine
    store and verifies both the source and the resulting manifest before returning.
 
-These operations never delete source content, publish an application generation,
-change acceptance, or authorize a restore. A manifest is a content checksum, not a
-signature, access decision, freshness proof, or erasure certificate.
+These operations never delete committed source objects, publish an application
+generation, change acceptance, or authorize a restore. A manifest is a content
+checksum, not a signature, access decision, freshness proof, or erasure
+certificate.
 
 ### Complete inventory
 
 The manifest includes every content, revision, selection, and decision object,
 with its storage key, byte count, and digest. Ordering is deterministic across
 backends. The store marker is validated separately. Enumeration and byte budgets
-apply to the whole scope. Unknown entries, abandoned staging, symbolic links,
+apply to the whole scope. Unknown entries, unrecognized staging, symbolic links,
 malformed records, broken dependencies, and incomplete journals fail closed.
 Even an unavailable selection on an old withdrawal prevents certification.
+
+Writable local manifest, replacement, backup, and restore operations hold the
+store lock exclusively and recover only regular, nonsymlink staging files in
+known object directories and valid hash-named decision directories. Their names
+must use the reserved `staged-` prefix followed by lowercase hexadecimal
+characters. Existing object-count and byte bounds apply before any staging file
+is removed. A valid hash-named decision directory with no committed files is a
+known no-record state from an interrupted first publication; recovery omits it
+from the logical inventory and leaves the directory in place. This state is
+safe to encounter repeatedly. Read-only inventories and closed backup
+verification do not recover staging or empty decision directories and continue
+to fail closed. Malformed names, links, nonregular paths, and every other
+unknown entry remain errors.
 
 Well-formed orphan content is inventoried, then omitted from a replacement.
 Content used by any surviving revision is retained, even when an excluded
@@ -75,10 +89,11 @@ atomic transactions. Hosts must order scope locks consistently across operations
 
 Execution recomputes the plan from the source before writing, rejecting changed
 or edited plans. The target must contain no objects. A failure can leave a partial
-candidate; it must remain quarantined. Retry into a fresh empty target. No cleanup
-or deletion occurs automatically. A successful return verifies an exact logical
-image, not filesystem flushes, committed database transactions, copied external
-files, or application publication.
+candidate; it must remain quarantined. Retry into a fresh empty target. Graft
+does not clean up a partial replacement target or delete source objects
+automatically. A successful return verifies an exact logical image, not
+filesystem flushes, committed database transactions, copied external files, or
+application publication.
 
 ## Application and operations follow-through
 

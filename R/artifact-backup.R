@@ -25,9 +25,10 @@
 #'   generation, and complete manifest digest.
 #'
 #' @details
-#' The source's objects are never changed; a writable source may gain the
-#' lock file under `locks/` that every write uses, which is not part of its
-#' manifest. A backup includes valid orphan content and all
+#' The source's committed objects are never changed; a writable local source
+#' may have recognized abandoned staging removed under its exclusive lock and
+#' may gain the lock file under `locks/`, which is not part of its manifest.
+#' A backup includes valid orphan content and all
 #' historical decision records. Local source stores require a trusted
 #' directory; the backup holds the store's lock exclusively (see
 #' [graft_with_store_lock()]), so writers from other processes wait until it
@@ -100,7 +101,8 @@ artifact_backup_create <- function(
     store,
     max_objects = limits$max_objects,
     max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
+    max_metadata_bytes = limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   descriptor <- list(
     format = "graft-artifact-backup/1",
@@ -151,7 +153,8 @@ artifact_backup_create <- function(
     store,
     max_objects = limits$max_objects,
     max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
+    max_metadata_bytes = limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (!identical(source_after$manifest, snapshot$manifest)) {
     artifact_abort("Artifact source changed during backup.")
@@ -195,7 +198,8 @@ artifact_backup_create <- function(
 #' The receipt is required from an independent application registry; it is not
 #' read from the bundle. Matching scope and generation values identify the
 #' expected image but do not authenticate it or establish current restore
-#' eligibility. Verification never changes the bundle.
+#' eligibility. Verification never changes the bundle and rejects extra staged
+#' files or empty decision directories without attempting recovery.
 #'
 #' @export
 graft_verify_backup <- function(
@@ -241,10 +245,13 @@ graft_verify_backup <- function(
 #'
 #' @details
 #' The bundle is verified before any target object is written, then verified
-#' again after copying. The target must be empty and outside the bundle. A
-#' failed copy can leave a partial target. Quarantine it and retry in a fresh
-#' empty target. The source bundle is never changed. PostgreSQL callers own the
-#' surrounding transaction and commit.
+#' again after copying. A writable local target is inventoried under its
+#' exclusive lock; recognized abandoned staging is removed and empty
+#' hash-named decision directories are treated as no-record state. The target
+#' must otherwise be empty and outside the bundle. A failed copy can leave a
+#' partial target. Quarantine it and retry in a fresh empty target. The source
+#' bundle is never changed. PostgreSQL callers own the surrounding transaction
+#' and commit.
 #'
 #' @export
 graft_restore <- function(
@@ -304,7 +311,8 @@ artifact_backup_restore <- function(
     target,
     max_objects = limits$max_objects,
     max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
+    max_metadata_bytes = limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (length(target_snapshot$manifest$objects)) {
     artifact_abort("Artifact restore target must be empty.")
@@ -325,7 +333,8 @@ artifact_backup_restore <- function(
     target,
     max_objects = limits$max_objects,
     max_total_bytes = limits$max_total_bytes,
-    max_metadata_bytes = limits$max_metadata_bytes
+    max_metadata_bytes = limits$max_metadata_bytes,
+    recover_staging = TRUE
   )
   if (!identical(target_after$manifest, checked$manifest)) {
     artifact_abort("Restored artifact store manifest did not verify.")
@@ -622,7 +631,8 @@ artifact_backup_verify_bundle <- function(path, expected, limits) {
       store,
       max_objects = limits$max_objects,
       max_total_bytes = limits$max_total_bytes,
-      max_metadata_bytes = limits$max_metadata_bytes
+      max_metadata_bytes = limits$max_metadata_bytes,
+      recover_staging = FALSE
     )
   })
   if (!identical(snapshot$manifest, descriptor$manifest)) {

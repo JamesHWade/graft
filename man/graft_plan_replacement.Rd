@@ -69,9 +69,11 @@ are never scanned for identifiers, private fields, reasons, or other erasure
 roots. The host must supply all additional roots and streams required by its
 Forget policy, including copies outside this artifact store.
 
-Planning does not authorize Forget and does not delete anything. Replacement
-copies verified objects into a new empty store. The source's objects are
-never changed; a writable source may gain its lock file under \verb{locks/}.
+Planning does not authorize Forget or delete committed source objects.
+Replacement copies verified objects into a new empty store. The source's
+committed objects are never changed; a writable local source may have
+recognized abandoned staging removed under its exclusive lock and gain its
+lock file under \verb{locks/}.
 A copy or verification failure can leave a partial target. The host must
 quarantine and discard that target, then rebuild a new empty target.
 Planning and replacement hold the local source's and target's store locks
@@ -79,6 +81,10 @@ exclusively, so writers from other processes wait until they finish. A host
 that switches to the replacement should hold the source's lock across the
 plan, the copy, and the switch; see \code{\link[=graft_with_store_lock]{graft_with_store_lock()}}. PostgreSQL
 callers must hold the host transaction and scope lock for the operation.
+Writable local inventories remove only recognized abandoned staging files;
+read-only inventories and closed backup verification continue to reject
+staging. An empty hash-named decision directory is treated as no committed
+stream during writable recovery.
 }
 \examples{
 path <- tempfile("artifacts-")

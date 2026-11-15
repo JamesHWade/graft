@@ -46,5 +46,6 @@ complete artifact histories, and all caller-supplied bounds.
 The receipt is required from an independent application registry; it is not
 read from the bundle. Matching scope and generation values identify the
 expected image but do not authenticate it or establish current restore
-eligibility. Verification never changes the bundle.
+eligibility. Verification never changes the bundle and rejects extra staged
+files or empty decision directories without attempting recovery.
 }

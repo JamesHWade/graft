@@ -17,19 +17,23 @@
 #'
 #' @details
 #' The function performs a strict, bounded inspection of a closed candidate.
-#' Unknown object kinds, unexpected paths, staging files, symbolic links,
-#' nonregular files, malformed metadata, missing dependencies, corrupt bytes,
-#' and incomplete decision streams are rejected. Valid content objects that are
-#' not referenced by a revision are retained in the inventory so a replacement
-#' planner can omit them explicitly.
+#' A writable local store's recognized abandoned staging files are removed
+#' while its lock is held exclusively. A valid hash-named decision directory
+#' with no committed record is treated as no stream during this recovery scan.
+#' Other unknown object kinds, unexpected paths, staging files in a read-only
+#' store, symbolic links, nonregular files, malformed metadata, missing
+#' dependencies, corrupt bytes, and incomplete decision streams are rejected.
+#' Valid content objects that are not referenced by a revision are retained in
+#' the inventory so a replacement planner can omit them explicitly.
 #'
 #' A local store's lock is held exclusively for the whole inventory, so writers
 #' in other processes wait rather than change the store midway; see
 #' [graft_with_store_lock()]. A store this process cannot write is inventoried
-#' without the lock, so a writer under another account does not wait. The operation does not remove source objects,
-#' authorize access, interpret a host Forget decision, or admit a generation
-#' for service. Hosts perform their own publication and restore checks around
-#' this point-in-time inspection.
+#' without the lock and cannot recover staging. Closed backup verification also
+#' remains read-only and rejects staged paths. The operation does not remove
+#' source objects, authorize access, interpret a host Forget decision, or admit
+#' a generation for service. Hosts perform their own publication and restore
+#' checks around this point-in-time inspection.
 #'
 #' @returns A list with format, id and ordered objects. Each object has
 #' kind, key, size and the SHA-256 digest of its exact stored bytes.
@@ -45,7 +49,8 @@ graft_manifest <- function(
     store,
     max_objects,
     max_total_bytes,
-    max_metadata_bytes
+    max_metadata_bytes,
+    recover_staging = TRUE
   )
   snapshot$manifest
 }
@@ -54,16 +59,27 @@ artifact_recovery_snapshot <- function(
   store,
   max_objects = 10000L,
   max_total_bytes = 64 * 1024^2,
-  max_metadata_bytes = 1024^2
+  max_metadata_bytes = 1024^2,
+  recover_staging = FALSE
 ) {
   artifact_recovery_preflight_store(store)
   artifact_check_store(store)
+  if (!rlang::is_bool(recover_staging)) {
+    artifact_abort("`recover_staging` must be TRUE or FALSE.")
+  }
+  artifact_check_limit(max_objects, "max_objects")
+  artifact_check_limit(max_total_bytes, "max_total_bytes")
+  artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
   artifact_with_store_read_lock(store, function() {
+    recover_staging <- isTRUE(recover_staging) &&
+      S7::S7_inherits(store, LocalArtifactStore) &&
+      !artifact_store_read_only(store)
     artifact_recovery_read_snapshot(
       store,
       max_objects,
       max_total_bytes,
-      max_metadata_bytes
+      max_metadata_bytes,
+      recover_staging
     )
   })
 }
@@ -72,7 +88,8 @@ artifact_recovery_read_snapshot <- function(
   store,
   max_objects,
   max_total_bytes,
-  max_metadata_bytes
+  max_metadata_bytes,
+  recover_staging = FALSE
 ) {
   artifact_check_limit(max_objects, "max_objects")
   artifact_check_limit(max_total_bytes, "max_total_bytes")
@@ -82,7 +99,8 @@ artifact_recovery_read_snapshot <- function(
     store,
     max_objects,
     max_total_bytes,
-    max_metadata_bytes
+    max_metadata_bytes,
+    recover_staging
   )
   artifacts <- artifact_recovery_read_revisions(
     store,
@@ -111,7 +129,8 @@ artifact_recovery_read_snapshot <- function(
     entries$objects,
     max_objects,
     max_total_bytes,
-    max_metadata_bytes
+    max_metadata_bytes,
+    recover_staging
   )
   manifest <- artifact_recovery_manifest(entries$objects)
   list(
@@ -249,7 +268,8 @@ artifact_recovery_enumerate <- function(
   store,
   max_objects,
   max_total_bytes,
-  max_metadata_bytes
+  max_metadata_bytes,
+  recover_staging = FALSE
 ) {
   if (S7::S7_inherits(store, PostgresArtifactStore)) {
     entries <- artifact_recovery_enumerate_postgres(store, max_objects)
@@ -257,14 +277,18 @@ artifact_recovery_enumerate <- function(
     entries <- artifact_recovery_enumerate_local(
       store,
       max_objects,
-      max_total_bytes
+      max_total_bytes,
+      max_metadata_bytes,
+      recover_staging
     )
   }
   artifact_recovery_check_entry_bounds(
     entries,
     max_objects,
     max_total_bytes,
-    max_metadata_bytes
+    max_metadata_bytes,
+    store@max_bytes,
+    store@max_revision_bytes
   )
   objects <- lapply(entries, artifact_recovery_object_entry)
   objects <- unname(objects)
@@ -280,8 +304,20 @@ artifact_recovery_enumerate <- function(
 artifact_recovery_enumerate_local <- function(
   store,
   max_objects,
-  max_total_bytes
+  max_total_bytes,
+  max_metadata_bytes,
+  recover_staging = FALSE
 ) {
+  if (
+    recover_staging &&
+      (!identical(artifact_store_locks[[store@path]], TRUE) ||
+        artifact_store_read_only(store))
+  ) {
+    artifact_abort(
+      "Artifact staging recovery requires the exclusive store lock."
+    )
+  }
+
   root <- store@path
   marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   root_entries <- list.files(
@@ -346,6 +382,8 @@ artifact_recovery_enumerate_local <- function(
   # every object is examined. Each directory's names are still read at once.
   count <- 0
   total <- 0
+  staging_total <- 0
+  staging_paths <- character()
   count_names <- function(names) {
     count <<- count + length(names)
     if (count > max_objects) {
@@ -358,6 +396,20 @@ artifact_recovery_enumerate_local <- function(
       artifact_abort("Artifact store exceeds the total byte bound.")
     }
     size
+  }
+  record_staging <- function(path, name) {
+    if (
+      !grepl("^staged-[0-9a-f]+$", name) ||
+        !artifact_recovery_regular_file(path)
+    ) {
+      artifact_abort("Artifact store contains an invalid staging path.")
+    }
+    staging_total <<- staging_total + artifact_recovery_file_size(path)
+    if (staging_total > max_total_bytes) {
+      artifact_abort("Artifact store exceeds the abandoned-staging byte bound.")
+    }
+    staging_paths <<- c(staging_paths, path)
+    invisible(NULL)
   }
 
   entries <- list()
@@ -376,6 +428,10 @@ artifact_recovery_enumerate_local <- function(
     count_names(names)
     for (name in names) {
       object_path <- file.path(path, name)
+      if (recover_staging && startsWith(name, "staged-")) {
+        record_staging(object_path, name)
+        next
+      }
       if (
         !artifact_recovery_valid_key(kind, name) ||
           !artifact_recovery_regular_file(object_path)
@@ -399,7 +455,7 @@ artifact_recovery_enumerate_local <- function(
       recursive = FALSE,
       include.dirs = TRUE
     )
-    # Every stream holds at least one decision.
+    # Bound the stream-directory scan before descending into its directories.
     if (count + length(stream_names) > max_objects) {
       artifact_abort("Artifact store exceeds the object-count bound.")
     }
@@ -418,12 +474,16 @@ artifact_recovery_enumerate_local <- function(
         recursive = FALSE,
         include.dirs = TRUE
       )
-      if (!length(names)) {
+      if (!length(names) && !recover_staging) {
         artifact_abort("Artifact decision journal contains an empty stream.")
       }
       count_names(names)
       for (name in names) {
         object_path <- file.path(stream_path, name)
+        if (recover_staging && startsWith(name, "staged-")) {
+          record_staging(object_path, name)
+          next
+        }
         key <- paste(stream, name, sep = "/")
         if (
           !artifact_recovery_valid_key("decisions", key) ||
@@ -439,7 +499,41 @@ artifact_recovery_enumerate_local <- function(
       }
     }
   }
+
+  if (recover_staging) {
+    artifact_recovery_check_entry_bounds(
+      entries,
+      max_objects,
+      max_total_bytes,
+      max_metadata_bytes,
+      store@max_bytes,
+      store@max_revision_bytes
+    )
+    artifact_recovery_remove_staging(store, staging_paths)
+  }
   entries
+}
+
+artifact_recovery_remove_staging <- function(
+  store,
+  staging_paths
+) {
+  if (!identical(artifact_store_locks[[store@path]], TRUE)) {
+    artifact_abort(
+      "Artifact staging recovery requires the exclusive store lock."
+    )
+  }
+  for (path in staging_paths) {
+    removed <- suppressWarnings(unlink(path))
+    if (
+      removed != 0L ||
+        file.exists(path) ||
+        artifact_recovery_is_symlink(path)
+    ) {
+      artifact_abort("Could not remove an abandoned artifact staging file.")
+    }
+  }
+  invisible(NULL)
 }
 
 artifact_recovery_enumerate_postgres <- function(store, max_objects) {
@@ -513,7 +607,9 @@ artifact_recovery_check_entry_bounds <- function(
   entries,
   max_objects,
   max_total_bytes,
-  max_metadata_bytes
+  max_metadata_bytes,
+  max_bytes,
+  max_revision_bytes
 ) {
   if (length(entries) > max_objects) {
     artifact_abort("Artifact store exceeds the object-count bound.")
@@ -522,6 +618,20 @@ artifact_recovery_check_entry_bounds <- function(
   total <- if (length(sizes)) sum(sizes) else 0
   if (!is.finite(total) || total > max_total_bytes) {
     artifact_abort("Artifact store exceeds the total byte bound.")
+  }
+  content <- entries[vapply(
+    entries,
+    \(entry) entry$kind == "content",
+    logical(1)
+  )]
+  if (
+    any(vapply(
+      content,
+      \(entry) entry$size > max_bytes,
+      logical(1)
+    ))
+  ) {
+    artifact_abort("Artifact content exceeds the store byte bound.")
   }
   metadata <- vapply(
     entries,
@@ -536,6 +646,47 @@ artifact_recovery_check_entry_bounds <- function(
     ))
   ) {
     artifact_abort("Artifact metadata exceeds the metadata byte bound.")
+  }
+  revisions <- entries[vapply(
+    entries,
+    \(entry) entry$kind == "revisions",
+    logical(1)
+  )]
+  if (
+    any(vapply(
+      revisions,
+      \(entry) entry$size > max_revision_bytes,
+      logical(1)
+    ))
+  ) {
+    artifact_abort("Artifact revision exceeds the revision byte bound.")
+  }
+  decisions <- entries[vapply(
+    entries,
+    \(entry) entry$kind == "decisions",
+    logical(1)
+  )]
+  if (length(decisions)) {
+    streams <- sub(
+      "/.*$",
+      "",
+      vapply(decisions, \(entry) entry$key, character(1))
+    )
+    decision_totals <- vapply(
+      split(decisions, streams),
+      \(stream) {
+        sum(vapply(stream, \(entry) entry$size, numeric(1)))
+      },
+      numeric(1)
+    )
+    if (
+      !all(is.finite(decision_totals)) ||
+        any(decision_totals > max_metadata_bytes)
+    ) {
+      artifact_abort(
+        "Decision journal exceeds its metadata bound or has invalid entries."
+      )
+    }
   }
   invisible(NULL)
 }
@@ -767,13 +918,15 @@ artifact_recovery_verify_unchanged <- function(
   objects,
   max_objects,
   max_total_bytes,
-  max_metadata_bytes
+  max_metadata_bytes,
+  recover_staging
 ) {
   current <- artifact_recovery_enumerate(
     store,
     max_objects,
     max_total_bytes,
-    max_metadata_bytes
+    max_metadata_bytes,
+    recover_staging
   )$objects
   expected <- lapply(objects, artifact_recovery_manifest_entry)
   actual <- lapply(current, artifact_recovery_manifest_entry)
