@@ -37,17 +37,21 @@ store-format marker but excludes it from the manifest's object list.
 }
 \details{
 The function performs a strict, bounded inspection of a closed candidate.
-Unknown object kinds, unexpected paths, staging files, symbolic links,
-nonregular files, malformed metadata, missing dependencies, corrupt bytes,
-and incomplete decision streams are rejected. Valid content objects that are
-not referenced by a revision are retained in the inventory so a replacement
-planner can omit them explicitly.
+A writable local store's recognized abandoned staging files are removed
+while its lock is held exclusively. A valid hash-named decision directory
+with no committed record is treated as no stream during this recovery scan.
+Other unknown object kinds, unexpected paths, staging files in a read-only
+store, symbolic links, nonregular files, malformed metadata, missing
+dependencies, corrupt bytes, and incomplete decision streams are rejected.
+Valid content objects that are not referenced by a revision are retained in
+the inventory so a replacement planner can omit them explicitly.
 
 A local store's lock is held exclusively for the whole inventory, so writers
 in other processes wait rather than change the store midway; see
 \code{\link[=graft_with_store_lock]{graft_with_store_lock()}}. A store this process cannot write is inventoried
-without the lock, so a writer under another account does not wait. The operation does not remove source objects,
-authorize access, interpret a host Forget decision, or admit a generation
-for service. Hosts perform their own publication and restore checks around
-this point-in-time inspection.
+without the lock and cannot recover staging. Closed backup verification also
+remains read-only and rejects staged paths. The operation does not remove
+source objects, authorize access, interpret a host Forget decision, or admit
+a generation for service. Hosts perform their own publication and restore
+checks around this point-in-time inspection.
 }
