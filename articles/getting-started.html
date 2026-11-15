@@ -347,10 +347,10 @@ tool runs in the default <code>"standard"</code> and in
 only deputy’s own read tools and the tools you list in
 <code>tool_allowlist</code>:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va">Agent</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va"><a href="https://jameshwade.github.io/deputy/reference/Agent.html" class="external-link">Agent</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">chat</a></span><span class="op">(</span><span class="st">"openai/gpt-6-luna"</span><span class="op">)</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">memory_tool</span><span class="op">)</span>,</span>
-<span>  permissions <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu">Permissions</span><span class="op">(</span></span>
+<span>  permissions <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/deputy/reference/Permissions.html" class="external-link">Permissions</a></span><span class="op">(</span></span>
 <span>    mode <span class="op">=</span> <span class="st">"readonly"</span>,</span>
 <span>    tool_allowlist <span class="op">=</span> <span class="st">"recall_project_memory"</span></span>
 <span>  <span class="op">)</span></span>
@@ -380,10 +380,10 @@ closed-world:</p>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">drafts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va">Agent</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu">deputy</span><span class="fu">::</span><span class="va"><a href="https://jameshwade.github.io/deputy/reference/Agent.html" class="external-link">Agent</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  chat <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">chat</a></span><span class="op">(</span><span class="st">"openai/gpt-6-luna"</span><span class="op">)</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">memory_tool</span>, <span class="va">draft_tool</span><span class="op">)</span>,</span>
-<span>  trusted_results <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu">TrustedResults</span><span class="op">(</span></span>
+<span>  trusted_results <span class="op">=</span> <span class="fu">deputy</span><span class="fu">::</span><span class="fu"><a href="https://jameshwade.github.io/deputy/reference/TrustedResults.html" class="external-link">TrustedResults</a></span><span class="op">(</span></span>
 <span>    definition <span class="op">=</span> <span class="st">"draft_definition"</span>,</span>
 <span>    on_result <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">event</span><span class="op">)</span> <span class="op">{</span></span>
 <span>      <span class="va">drafts</span><span class="op">[[</span><span class="va">event</span><span class="op">$</span><span class="va">result_id</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
