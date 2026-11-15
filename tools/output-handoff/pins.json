@@ -1,22 +1,21 @@
 {
   "graft_base": "ad0ab921a02df602bb3687649e48b2e470cf23d6",
-  "ellmer_observed": "0.5.0",
+  "ellmer_observed": "0.5.1",
   "sources": {
     "commons": {
       "repository": "posit-dev/commons",
-      "commit": "c1d97d6f5dea094580213198842173af5d299c47",
-      "proposal": "https://github.com/posit-dev/commons/pull/414",
-      "url": "https://codeload.github.com/posit-dev/commons/legacy.tar.gz/c1d97d6f5dea094580213198842173af5d299c47",
+      "commit": "8d49b53f488489d07bbdbec3afa15930a6a4e347",
+      "url": "https://codeload.github.com/posit-dev/commons/legacy.tar.gz/8d49b53f488489d07bbdbec3afa15930a6a4e347",
       "archive": "commons.tar.gz",
-      "sha256": "b5c5f2a2704d9d6d2f12bf8ce0fd037687e5598450e95b185beda9bd5ace8d09",
+      "sha256": "f9bace8181d1be18a241d29c31d1045c99ff5866a8b87ab9fd59206638b508fd",
       "package_path": "pkg-r"
     },
     "deputy": {
       "repository": "JamesHWade/deputy",
-      "commit": "0ab9862330627b053c4a9870bd5f1300d0829768",
-      "url": "https://codeload.github.com/JamesHWade/deputy/legacy.tar.gz/0ab9862330627b053c4a9870bd5f1300d0829768",
+      "commit": "f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d",
+      "url": "https://codeload.github.com/JamesHWade/deputy/legacy.tar.gz/f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d",
       "archive": "deputy.tar.gz",
-      "sha256": "194627647aa41a8c66c86a5427b00833c3644c7e2c8ccd9d609fadc10057e2eb",
+      "sha256": "4429cad2accc9c1a5bd5acfd4ac6a437599cef9251a93caaffdf395fd3e58d1e",
       "package_path": "."
     }
   }

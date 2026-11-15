@@ -1,6 +1,6 @@
 # Completed output handoff proposal
 
-Date: 2026-10-10. Status: proposed upstream contract with a source-only
+Date: 2026-10-10; upstream inventory refreshed 2026-11-15. Status: proposed upstream contract with a source-only
 conformance prototype for [Graft #66](https://github.com/JamesHWade/graft/issues/66).
 This document does not add a Graft production export or change consumer contract
 4.2.0. The prototype is in `tools/output-handoff/`. Graft is pre-production;
@@ -32,8 +32,11 @@ intentionally omits binary bytes and is unsuitable as the output retention path.
 
 ## Public upstream inventory
 
-The following claims were checked against the sources pinned in `pins.json`.
-Commons PR #414 is a draft, so its `trusted()` interface is provisional.
+The following claims were checked against the current-main source revisions
+pinned in `pins.json` on November 15, 2026. Commons PR #414 merged on October 28
+with `commons()` as the public data object and `agent()` as the agent constructor.
+The earlier draft `trusted()` constructor is not exported. The fixture exercises
+`commons()$measure()` directly, without an agent or private method access.
 
 | Public surface | Preservable content | Limitation |
 | --- | --- | --- |
@@ -41,12 +44,21 @@ Commons PR #414 is a draft, so its `trusted()` interface is provisional.
 | ellmer `ContentText@text` | Literal UTF-8 text | Report, SQL, table JSON, and raw citation text require explicit host/producer roles; text is not evidence of authority |
 | ellmer `ContentImageInline@type`, `@data` | Decoded PNG bytes with explicit media type | Bound encoded and decoded sizes; remote images and uploaded handles require a separate retention contract |
 | ellmer `Turn@role`, `@contents`; completed chat history | Literal completed assistant report and raw native contents | Partial streamed text is not a completed turn; final prose cannot substitute for a designated tool result |
-| Commons draft `trusted()$measure()` | The measure's original return value, including an explicitly authored `ContentToolResult` | A raw data frame/ggplot is not itself a portable handoff; the producer must materialize explicit content |
-| Commons draft `$metrics()` / `$calculation()` | Result value | These methods return `$result`, dropping prepared SQL and other execution metadata |
-| Commons draft `$context()` / `$describe()` / `$search()` | Text projection | These are not complete structured provenance envelopes |
+| Commons `commons()$measure()` | The measure's original return value, including an explicitly authored `ContentToolResult` | A raw data frame/ggplot is not itself a portable handoff; the producer must materialize explicit content |
+| Commons `$metrics()` / `$calculation()` | Result value | These methods return `$result`, dropping prepared SQL and other execution metadata |
+| Commons `$context()` / `$describe()` / `$search()` | Text projection | These are not complete structured provenance envelopes |
 | Commons `measure()` and `semantic_layer()` | A public place to author an explicit completed producer value | Rendered tables, private handles, and `extra$data` are not a stable lossless table export |
 | Deputy `TrustedResults()` / `result_trusted_results()` | Original designated tool value before model projection/offload, plus IDs, converted arguments, and tool fingerprint | The event records production, not successful host delivery or review |
 | Deputy `Agent$run_async()` / `AgentResult$stop_reason` / `result_is_success()` | Explicit runtime completion outcome | A completed run can still lack required outputs; delivery failure must be checked separately |
+
+Commons has also merged editable document artifacts (#404), Connect sharing
+(#408), and returning sandbox plots as checked PNG bytes instead of host paths
+(#515). These improve authoring, delivery, and the worker boundary. They do not
+establish the neutral completed-output contract proposed here. The current public
+exports provide no general extraction operation for the complete document,
+structured tables, images, and calculation/citation evidence. This fixture keeps
+its explicit authored-content route; it does not scrape artifact UI internals or
+claim that sharing a rendered document supplies exact retained dependencies.
 
 The earlier [#62 experiment](https://github.com/JamesHWade/graft/issues/62),
 documented in `specs/2026-09-16-commons-roundtrip.md`, preserved report text, a
@@ -187,7 +199,7 @@ processes; a separate core-only run exercises storage/envelope behavior.
 
 ## Concrete upstream request
 
-For Commons PR #414, retain the direct trusted-calculation interface, and add a
+Build on the merged Commons direct-calculation interface with a
 public completed-output value or extraction operation that supplies explicit
 structured table bytes, images, report text, SQL/bindings when available, labels,
 raw citation text, and completion/error states. Use that one value behind the
@@ -205,15 +217,20 @@ Before production adoption, agree the upstream versioning and structured-output
 contract, exercise a real Commons analysis stream and a deputy consumer under
 their actual host permissions, and specify asynchronous cancellation/delivery
 retry guarantees. The conformance prototype supplies evidence for that discussion;
-it does not make draft Commons interfaces stable or settle application policy.
+it does not turn the proposed output envelope into a supported upstream API or
+settle application policy.
 
 ## Primary sources
 
 - [Commons interoperability issue #410](https://github.com/posit-dev/commons/issues/410)
-  and [draft PR #414](https://github.com/posit-dev/commons/pull/414).
-- [Pinned Commons trusted methods](https://github.com/posit-dev/commons/blob/c1d97d6f5dea094580213198842173af5d299c47/pkg-r/R/trusted.R)
-  and [measure contract](https://github.com/posit-dev/commons/blob/c1d97d6f5dea094580213198842173af5d299c47/pkg-r/R/measures.R).
-- [Pinned deputy trusted-results policy](https://github.com/JamesHWade/deputy/blob/0ab9862330627b053c4a9870bd5f1300d0829768/R/trusted-results.R)
-  and [result/event contract](https://github.com/JamesHWade/deputy/blob/0ab9862330627b053c4a9870bd5f1300d0829768/R/agent-result.R).
+  and [merged PR #414](https://github.com/posit-dev/commons/pull/414).
+- [Pinned Commons public data-object methods](https://github.com/posit-dev/commons/blob/8d49b53f488489d07bbdbec3afa15930a6a4e347/pkg-r/R/commons.R)
+  and [measure contract](https://github.com/posit-dev/commons/blob/8d49b53f488489d07bbdbec3afa15930a6a4e347/pkg-r/R/measures.R).
+- [Pinned deputy trusted-results policy](https://github.com/JamesHWade/deputy/blob/f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d/R/trusted-results.R)
+  and [result/event contract](https://github.com/JamesHWade/deputy/blob/f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d/R/agent-result.R).
 - [ellmer ContentToolResult](https://ellmer.tidyverse.org/reference/ContentToolResult.html)
   and [inline images](https://ellmer.tidyverse.org/reference/ContentImageInline.html).
+
+- Commons merged [editable artifacts #404](https://github.com/posit-dev/commons/pull/404),
+  [Connect sharing #408](https://github.com/posit-dev/commons/pull/408), and
+  [PNG-byte handoff #515](https://github.com/posit-dev/commons/pull/515).

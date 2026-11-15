@@ -94,11 +94,11 @@ handoff_commons_value <- function(mode = "complete") {
     arguments = list()
   )
   semantic <- commons::semantic_layer(measure)
-  trusted <- commons::trusted(
+  analysis <- commons::commons(
     data_sources = commons::data_source(observations = data.frame(x = 1L)),
     semantic_layer = semantic
   )
-  trusted$measure("completed_output")
+  analysis$measure("completed_output")
 }
 
 handoff_deputy_measure_tool <- function(mode = "complete", async = FALSE) {

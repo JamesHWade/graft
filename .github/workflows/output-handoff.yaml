@@ -39,10 +39,10 @@ jobs:
           # Producer sources are loaded from verified archives by run.R.
           # Installing their dependencies here affects only this CI library.
           extra-packages: |
-            commons=posit-dev/commons/pkg-r@c1d97d6f5dea094580213198842173af5d299c47
-            deputy=JamesHWade/deputy@0ab9862330627b053c4a9870bd5f1300d0829768
+            commons=posit-dev/commons/pkg-r@8d49b53f488489d07bbdbec3afa15930a6a4e347
+            deputy=JamesHWade/deputy@f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d
             datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
-            ellmer@0.5.0
+            ellmer@0.5.1
             any::httpuv
             any::promises
             any::later
