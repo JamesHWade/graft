@@ -41,7 +41,10 @@ pins in its isolated CI library. It can also be dispatched manually.
 
 The observed ellmer version is recorded in the pins. The runner reports its
 actual installed version; a different version needs fresh conformance evidence.
-The Commons `trusted()` route comes from draft PR #414 and is provisional.
+The Commons route uses the public `commons()$measure()` interface merged in
+PR #414. Both producer source revisions were refreshed from main on November 15,
+2026. The neutral output envelope remains a proposal; Commons document artifacts
+and Connect sharing do not by themselves supply that complete export contract.
 
 ## What the tests establish
 
