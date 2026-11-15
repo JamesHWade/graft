@@ -33,11 +33,15 @@
 #' latest pointer.
 #'
 #' Payloads are published before immutable revision metadata, using staged files
-#' in the destination directory. A failed save can leave unreferenced bytes;
-#' retries reuse verified content. Orphans are retained rather than deleted
-#' automatically; a replacement planned with nothing to forget
-#' ([graft_plan_replacement()]) copies everything but them. Every write also
-#' holds the store's lock shared; see [graft_with_store_lock()]. Successful
+#' in the destination directory. A killed writer can leave a staged file;
+#' writable local inventories remove recognized abandoned staging while holding
+#' the exclusive store lock. A valid empty decision directory has no committed
+#' journal and is treated as no stream during recovery. A failed save can also
+#' leave unreferenced bytes; retries reuse verified content. Content orphans are
+#' retained rather than deleted automatically; a replacement planned with
+#' nothing to forget ([graft_plan_replacement()]) copies everything but them.
+#' Every write also holds the store's lock shared; see
+#' [graft_with_store_lock()]. Successful
 #' reads verify metadata, payload size, and digest. Interrupted writes cannot
 #' produce a successful incomplete reference. The interface does not promise
 #' power-loss durability, authorization, erasure, or backup recovery.
@@ -489,7 +493,7 @@ S7::method(artifact_with_store_lock, LocalArtifactStore) <- function(
 ) {
   held <- artifact_store_locks[[store@path]]
   if (!is.null(held)) {
-    if (exclusive && !held) {
+    if (exclusive && identical(held, FALSE)) {
       artifact_abort(
         "An operation on the whole store cannot run inside a write to it."
       )
@@ -529,7 +533,7 @@ artifact_without_store_lock <- function(store, code) {
   if (!is.null(artifact_store_locks[[store@path]])) {
     return(code())
   }
-  assign(store@path, TRUE, envir = artifact_store_locks)
+  assign(store@path, "virtual", envir = artifact_store_locks)
   on.exit(rm(list = store@path, envir = artifact_store_locks), add = TRUE)
   code()
 }
@@ -627,6 +631,7 @@ artifact_put <- function(bytes, path, limit) {
       artifact_abort("Could not create artifact publication directory.")
     }
   }
+  # Recovery reserves the `staged-` prefix and checks tempfile's hex suffix.
   staging <- tempfile("staged-", tmpdir = dirname(path))
   on.exit(unlink(staging), add = TRUE)
   tryCatch(writeBin(bytes, staging), error = function(e) {

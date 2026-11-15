@@ -179,28 +179,88 @@ test_that("empty stores have a stable empty manifest", {
   expect_identical(graft_manifest(store), manifest)
 })
 
-test_that("incomplete decision directories are rejected", {
+test_that("recovery ignores empty decision directories without records", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
-  stream <- file.path(store@path, "decisions", strrep("a", 64))
+  stream_name <- "empty-journal"
+  stream <- file.path(
+    store@path,
+    "decisions",
+    artifact_sha(charToRaw(stream_name))
+  )
   dir.create(stream, recursive = TRUE)
   expect_error(
-    graft_manifest(store),
+    artifact_recovery_snapshot(store),
     class = "graft_artifact_error"
   )
+
+  expect_identical(graft_manifest(store)$objects, list())
+  expect_identical(graft_manifest(store)$objects, list())
+  expect_length(graft_history(store, stream_name), 0L)
+  expect_length(graft_streams(store), 0L)
+  expect_identical(dir.exists(stream), TRUE)
 })
 
-test_that("staging and dangling links are rejected before reads", {
-  skip_on_os("windows")
+test_that("manifest removes recognized abandoned staging files", {
   store <- graft_store(withr::local_tempdir(), create = TRUE)
+  content <- file.path(store@path, "content")
+  dir.create(content)
+  staged_content <- tempfile("staged-", tmpdir = content)
+  writeBin(charToRaw("partial"), staged_content)
+
+  content_manifest <- graft_manifest(store)
+
+  expect_identical(content_manifest$objects, list())
+  expect_identical(file.exists(staged_content), FALSE)
+
   stream <- file.path(store@path, "decisions", strrep("a", 64))
   dir.create(stream, recursive = TRUE)
-  writeBin(charToRaw("partial"), file.path(stream, "staged-interrupted"))
+  staged_decision <- tempfile("staged-", tmpdir = stream)
+  writeBin(charToRaw("partial"), staged_decision)
+
+  decision_manifest <- graft_manifest(store)
+
+  expect_identical(decision_manifest$objects, list())
+  expect_identical(file.exists(staged_decision), FALSE)
+  expect_identical(dir.exists(stream), TRUE)
+})
+
+test_that("malformed staging and unknown paths remain fail-closed", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  content <- file.path(store@path, "content")
+  dir.create(content)
+  malformed <- file.path(content, "staged-not-hex")
+  writeBin(charToRaw("unknown"), malformed)
   expect_error(
     graft_manifest(store),
     class = "graft_artifact_error"
   )
+  expect_identical(file.exists(malformed), TRUE)
 
-  unlink(file.path(store@path, "decisions"), recursive = TRUE)
+  unlink(malformed)
+  staged <- tempfile("staged-", tmpdir = content)
+  writeBin(charToRaw("partial"), staged)
+  unknown <- file.path(store@path, "unknown.txt")
+  writeLines("unknown", unknown)
+  expect_error(graft_manifest(store), class = "graft_artifact_error")
+  expect_identical(file.exists(staged), TRUE)
+  expect_identical(file.exists(unknown), TRUE)
+
+  unlink(unknown)
+  expect_no_error(graft_manifest(store))
+  expect_identical(file.exists(staged), FALSE)
+})
+
+test_that("staging and dangling links remain fail-closed", {
+  skip_on_os("windows")
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  content <- file.path(store@path, "content")
+  dir.create(content)
+  linked_staging <- tempfile("staged-", tmpdir = content)
+  expect_identical(file.symlink("missing-staging", linked_staging), TRUE)
+  expect_error(graft_manifest(store), class = "graft_artifact_error")
+  expect_identical(Sys.readlink(linked_staging), "missing-staging")
+
+  unlink(content, recursive = TRUE)
   content <- file.path(store@path, "content")
   dir.create(content)
   linked <- file.path(content, strrep("b", 64))
@@ -209,6 +269,294 @@ test_that("staging and dangling links are rejected before reads", {
     graft_manifest(store),
     class = "graft_artifact_error"
   )
+})
+
+test_that("staging cleanup observes object and byte bounds before removal", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  content <- file.path(store@path, "content")
+  dir.create(content)
+  staged <- vapply(
+    seq_len(2),
+    function(i) {
+      path <- tempfile("staged-", tmpdir = content)
+      writeBin(charToRaw(paste0("partial-", i)), path)
+      path
+    },
+    character(1)
+  )
+
+  expect_error(
+    graft_manifest(store, max_objects = 1),
+    "object-count bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), c(TRUE, TRUE))
+
+  expect_error(
+    graft_manifest(store, max_total_bytes = 1),
+    "abandoned-staging byte bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), c(TRUE, TRUE))
+})
+
+test_that("staging remains when a revision exceeds its byte bound", {
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE)
+  ref <- artifact_save(
+    store,
+    "revision bound",
+    charToRaw("revision bytes"),
+    "text/plain"
+  )
+  revision_size <- file.info(
+    file.path(path, "revisions", ref$revision)
+  )$size
+  small_store <- graft_store(
+    path,
+    max_revision_bytes = revision_size - 1
+  )
+  staged <- file.path(path, "content", "staged-a")
+  writeBin(charToRaw("partial"), staged)
+
+  expect_error(
+    graft_manifest(small_store),
+    "revision byte bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), TRUE)
+})
+
+test_that("staging remains when a decision stream exceeds its metadata bound", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  ref <- graft_save(store, "report", "decision bound")
+  first <- graft_accept(
+    store,
+    ref,
+    "metadata-bound",
+    expected = NULL,
+    key = "first",
+    actor = "reviewer",
+    reason = "first",
+    purpose = "test"
+  )
+  graft_accept(
+    store,
+    ref,
+    "metadata-bound",
+    expected = first,
+    key = "second",
+    actor = "reviewer",
+    reason = "second",
+    purpose = "test"
+  )
+  stream <- file.path(
+    store@path,
+    "decisions",
+    artifact_sha(charToRaw("metadata-bound"))
+  )
+  records <- list.files(stream, full.names = TRUE)
+  sizes <- file.info(records)$size
+  bound <- max(sizes)
+  expect_gt(sum(sizes), bound)
+  staged <- file.path(stream, "staged-a")
+  writeBin(charToRaw("partial"), staged)
+
+  expect_error(
+    graft_manifest(store, max_metadata_bytes = bound),
+    "metadata bound",
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), TRUE)
+})
+
+test_that("a read-only manifest leaves staging untouched and fails closed", {
+  skip_on_os("windows")
+  skip_if(identical(Sys.info()[["user"]], "root"))
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  content <- file.path(store@path, "content")
+  dir.create(content)
+  staged <- tempfile("staged-", tmpdir = content)
+  writeBin(charToRaw("partial"), staged)
+  withr::defer(Sys.chmod(store@path, "0755"))
+  Sys.chmod(store@path, "0555")
+
+  expect_error(graft_manifest(store), class = "graft_artifact_error")
+  expect_identical(file.exists(staged), TRUE)
+})
+
+test_that("a manifest waits for a live writer before cleaning staging", {
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE, lock_timeout = 0.2)
+  ready <- tempfile()
+  checkout <- if (pkgload::is_dev_package("graft")) {
+    normalizePath(test_path("../.."))
+  } else {
+    NULL
+  }
+  writer <- callr::r_bg(
+    function(path, checkout, ready) {
+      if (!is.null(checkout)) {
+        pkgload::load_all(checkout, quiet = TRUE)
+      }
+      store <- graft::graft_store(path, lock_timeout = 0.2)
+      graft::graft_with_store_lock(
+        store,
+        {
+          content <- file.path(store@path, "content")
+          dir.create(content, showWarnings = FALSE)
+          staged <- tempfile("staged-", tmpdir = content)
+          writeBin(charToRaw("live write"), staged)
+          writeLines(staged, ready)
+          Sys.sleep(30)
+        },
+        exclusive = FALSE
+      )
+    },
+    args = list(path = path, checkout = checkout, ready = ready)
+  )
+  withr::defer(writer$kill())
+  deadline <- Sys.time() + 10
+  while (!file.exists(ready) && writer$is_alive() && Sys.time() < deadline) {
+    Sys.sleep(0.01)
+  }
+  expect_identical(file.exists(ready), TRUE)
+  staged <- readLines(ready, warn = FALSE)
+  expect_identical(file.exists(staged), TRUE)
+
+  expect_error(
+    graft_manifest(store),
+    class = "graft_store_busy_error"
+  )
+  expect_identical(file.exists(staged), TRUE)
+
+  writer$kill()
+  expect_no_error(graft_manifest(store))
+  expect_identical(file.exists(staged), FALSE)
+})
+
+test_that("killed writers leave staging that a later inventory recovers", {
+  skip_on_os("windows")
+  checkout <- if (pkgload::is_dev_package("graft")) {
+    normalizePath(test_path("../.."))
+  } else {
+    NULL
+  }
+  kill_writer <- function(path, mode) {
+    callr::r_bg(
+      function(path, checkout, mode) {
+        if (!is.null(checkout)) {
+          pkgload::load_all(checkout, quiet = TRUE)
+        }
+        store <- graft::graft_store(path, lock_timeout = 2)
+        if (identical(mode, "content")) {
+          trace(
+            "artifact_rename_file",
+            tracer = quote(tools::pskill(Sys.getpid(), tools::SIGKILL)),
+            where = asNamespace("graft"),
+            print = FALSE
+          )
+          graft::graft_save(
+            store,
+            "content interrupted",
+            "recovery/content"
+          )
+        } else {
+          trace(
+            "artifact_rename_file",
+            tracer = quote(
+              if (
+                grepl(
+                  "/decisions/",
+                  to,
+                  fixed = TRUE
+                )
+              ) {
+                tools::pskill(Sys.getpid(), tools::SIGKILL)
+              }
+            ),
+            where = asNamespace("graft"),
+            print = FALSE
+          )
+          ref <- graft::graft_save(
+            store,
+            "decision payload",
+            "recovery/decision"
+          )
+          graft::graft_accept(
+            store,
+            ref,
+            "recovery/stream",
+            expected = NULL,
+            key = "first",
+            actor = "test",
+            reason = "recovery",
+            purpose = "test"
+          )
+        }
+      },
+      args = list(path = path, checkout = checkout, mode = mode)
+    )
+  }
+
+  content_path <- withr::local_tempdir()
+  content_store <- graft_store(content_path, create = TRUE)
+  content_writer <- kill_writer(content_path, "content")
+  withr::defer(content_writer$kill())
+  content_writer$wait()
+  expect_identical(content_writer$get_exit_status() == 0L, FALSE)
+  content_staging <- list.files(
+    file.path(content_path, "content"),
+    pattern = "^staged-",
+    full.names = TRUE
+  )
+  expect_length(content_staging, 1L)
+  expect_length(graft_manifest(content_store)$objects, 0L)
+  expect_identical(file.exists(content_staging), FALSE)
+  content_ref <- graft_save(
+    content_store,
+    "content interrupted",
+    "recovery/content"
+  )
+  expect_identical(
+    graft_read(content_store, content_ref)@data,
+    "content interrupted"
+  )
+
+  decision_path <- withr::local_tempdir()
+  decision_store <- graft_store(decision_path, create = TRUE)
+  decision_ref <- graft_save(
+    decision_store,
+    "decision payload",
+    "recovery/decision"
+  )
+  decision_writer <- kill_writer(decision_path, "decision")
+  withr::defer(decision_writer$kill())
+  decision_writer$wait()
+  expect_identical(decision_writer$get_exit_status() == 0L, FALSE)
+  decision_staging <- list.files(
+    file.path(decision_path, "decisions"),
+    pattern = "^staged-",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  expect_length(decision_staging, 1L)
+  decision_plan <- graft_plan_replacement(decision_store)
+  expect_length(decision_plan$source$objects, 3L)
+  expect_identical(file.exists(decision_staging), FALSE)
+  expect_length(graft_manifest(decision_store)$objects, 3L)
+  accepted <- graft_accept(
+    decision_store,
+    decision_ref,
+    "recovery/stream",
+    expected = NULL,
+    key = "first",
+    actor = "test",
+    reason = "recovery",
+    purpose = "test"
+  )
+  expect_identical(accepted@action, "accept")
+  expect_length(graft_manifest(decision_store)$objects, 4L)
 })
 
 test_that("a nonregular marker is rejected without opening it", {

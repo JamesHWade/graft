@@ -50,9 +50,10 @@ the local artifact store. The receipt is small enough for an application to
 retain separately from the bundle.
 }
 \details{
-The source's objects are never changed; a writable source may gain the
-lock file under \verb{locks/} that every write uses, which is not part of its
-manifest. A backup includes valid orphan content and all
+The source's committed objects are never changed; a writable local source
+may have recognized abandoned staging removed under its exclusive lock and
+may gain the lock file under \verb{locks/}, which is not part of its manifest.
+A backup includes valid orphan content and all
 historical decision records. Local source stores require a trusted
 directory; the backup holds the store's lock exclusively (see
 \code{\link[=graft_with_store_lock]{graft_with_store_lock()}}), so writers from other processes wait until it

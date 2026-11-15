@@ -112,6 +112,45 @@ test_that("backup verification requires the external receipt and canonical image
   )
 })
 
+test_that("closed backup verification rejects staging without removing it", {
+  source <- graft_store(withr::local_tempdir(), create = TRUE)
+  artifact_save(source, "report", charToRaw("report bytes"), "text/plain")
+  backup_path <- file.path(withr::local_tempdir(), "closed-backup")
+  receipt <- graft_backup(source, backup_path, "reader-a", "gen-1")
+
+  staged <- file.path(backup_path, "objects", "content", "staged-a")
+  writeBin(charToRaw("partial"), staged)
+  closed_store <- graft_store(file.path(backup_path, "objects"))
+  expect_error(
+    artifact_without_store_lock(
+      closed_store,
+      artifact_recovery_snapshot(closed_store, recover_staging = TRUE)
+    ),
+    "exclusive store lock",
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), TRUE)
+  expect_error(
+    graft_verify_backup(backup_path, receipt),
+    class = "graft_artifact_error"
+  )
+  expect_identical(file.exists(staged), TRUE)
+
+  unlink(staged)
+  empty_stream <- file.path(
+    backup_path,
+    "objects",
+    "decisions",
+    strrep("a", 64)
+  )
+  dir.create(empty_stream, recursive = TRUE)
+  expect_error(
+    graft_verify_backup(backup_path, receipt),
+    class = "graft_artifact_error"
+  )
+  expect_identical(dir.exists(empty_stream), TRUE)
+})
+
 test_that("backup paths cannot overwrite or overlap a source store", {
   source <- graft_store(withr::local_tempdir(), create = TRUE)
   parent <- withr::local_tempdir()
