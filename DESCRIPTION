@@ -41,7 +41,7 @@ Config/testthat/parallel: true
 Config/roxygen2/version: 8.1.0
 Config/Needs/check: posit-dev/commons/pkg-r@726a2ed459c2b7c7aebc29539895f04873276b4f, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
 Config/Needs/coverage: posit-dev/commons/pkg-r@726a2ed459c2b7c7aebc29539895f04873276b4f, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
-Config/Needs/website: brand.yml, posit-dev/commons/pkg-r@726a2ed459c2b7c7aebc29539895f04873276b4f, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
+Config/Needs/website: brand.yml, posit-dev/commons/pkg-r@726a2ed459c2b7c7aebc29539895f04873276b4f, datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67, deputy=JamesHWade/deputy@f464cb660e7a8d49cb0af5ffb69bf1fd9fce1f7d
 URL: https://jameshwade.github.io/graft/, https://github.com/JamesHWade/graft
 VignetteBuilder: knitr
 BugReports: https://github.com/JamesHWade/graft/issues

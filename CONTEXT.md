@@ -23,6 +23,12 @@ and access policy. Recording a decision is not authentication or factual proof.
 **Candidate**: A host-owned proposal represented by exact artifact references.
 Preserving a candidate or selecting its dependencies does not accept it.
 
+**Output handoff**: A producer's explicit delivery of completed content and
+producer evidence to a host for preservation as a candidate. Producer completion,
+evidence labels, and preservation do not establish host acceptance or permission
+to reuse the content.
+_Avoid_: Trusted artifact, automatic acceptance
+
 **Decision stream**: A host-chosen subject identity with one ordered decision
 history and one current head. A stream is independent of an artifact identity.
 
