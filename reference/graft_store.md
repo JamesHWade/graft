@@ -70,9 +70,13 @@ returns the same reference, while corrections retain earlier revisions.
 There is no mutable latest pointer.
 
 Payloads are published before immutable revision metadata, using staged
-files in the destination directory. A failed save can leave unreferenced
-bytes; retries reuse verified content. Orphans are retained rather than
-deleted automatically; a replacement planned with nothing to forget
+files in the destination directory. A killed writer can leave a staged
+file; writable local inventories remove recognized abandoned staging
+while holding the exclusive store lock. A valid empty decision directory
+has no committed journal and is treated as no stream during recovery. A
+failed save can also leave unreferenced bytes; retries reuse verified
+content. Content orphans are retained rather than deleted automatically;
+a replacement planned with nothing to forget
 ([`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md))
 copies everything but them. Every write also holds the store's lock
 shared; see

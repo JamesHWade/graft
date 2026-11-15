@@ -69,8 +69,9 @@ generation, and complete manifest digest.
 
 ## Details
 
-The source's objects are never changed; a writable source may gain the
-lock file under `locks/` that every write uses, which is not part of its
+The source's committed objects are never changed; a writable local
+source may have recognized abandoned staging removed under its exclusive
+lock and may gain the lock file under `locks/`, which is not part of its
 manifest. A backup includes valid orphan content and all historical
 decision records. Local source stores require a trusted directory; the
 backup holds the store's lock exclusively (see

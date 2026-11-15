@@ -44,6 +44,17 @@
   retained receipt and an empty quarantine target; applications still
   authorize restore using independent current registry state
   ([\#86](https://github.com/JamesHWade/graft/issues/86)).
+- [`graft_backup()`](https://jameshwade.github.io/graft/reference/graft_backup.md),
+  [`graft_manifest()`](https://jameshwade.github.io/graft/reference/graft_manifest.md),
+  [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md),
+  [`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md),
+  and
+  [`graft_restore()`](https://jameshwade.github.io/graft/reference/graft_restore.md)
+  remove recognized abandoned staging files from writable local stores
+  while holding the exclusive store lock, and treat empty hash-named
+  decision directories as no-record state; malformed paths, read-only
+  stores, and closed backup verification still fail closed
+  ([\#105](https://github.com/JamesHWade/graft/issues/105)).
 - [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
   reports consumer contract 4.0.0 and the artifact, manifest,
   replacement, backup, selection, decision, vocabulary, binding, and

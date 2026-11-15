@@ -59,7 +59,10 @@ The complete manifest of the verified restored target.
 ## Details
 
 The bundle is verified before any target object is written, then
-verified again after copying. The target must be empty and outside the
-bundle. A failed copy can leave a partial target. Quarantine it and
-retry in a fresh empty target. The source bundle is never changed.
-PostgreSQL callers own the surrounding transaction and commit.
+verified again after copying. A writable local target is inventoried
+under its exclusive lock; recognized abandoned staging is removed and
+empty hash-named decision directories are treated as no-record state.
+The target must otherwise be empty and outside the bundle. A failed copy
+can leave a partial target. Quarantine it and retry in a fresh empty
+target. The source bundle is never changed. PostgreSQL callers own the
+surrounding transaction and commit.
