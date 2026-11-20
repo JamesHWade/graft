@@ -49,6 +49,11 @@ Its retained selection includes original sources, canonical dictionary exports,
 validated bindings, and literal data context. Reading a release is independent
 of the publishing CLI. Relationship semantics do not grant executable authority.
 
+The resolved-export ingestion work in #65 is an upstream proposal and source-only
+conformance fixture. Commons still compiles authored dictionaries independently
+of data-dict. Neither retained exports nor the proposed fixture add a Graft
+expression compiler or an implemented resolved-export constructor.
+
 ## Current implementation
 
 Consumer contract 4 uses task-oriented verbs and S7 stores and values while

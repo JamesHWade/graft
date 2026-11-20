@@ -1,0 +1,72 @@
+name: Resolved export conformance
+
+on:
+  pull_request:
+    paths:
+      - tools/resolved-export/**
+      - specs/2026-11-19-*.md
+      - DESCRIPTION
+      - .github/workflows/resolved-export.yaml
+  push:
+    branches: [main]
+    paths:
+      - tools/resolved-export/**
+      - specs/2026-11-19-*.md
+      - DESCRIPTION
+      - .github/workflows/resolved-export.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resolved-export-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          extra-packages: |
+            commons=posit-dev/commons/pkg-r@03349a71ef3b64c80c6cd53f215ea870db2851a8
+            datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
+            ellmer@0.5.1
+            duckdb@1.5.5
+            any::yaml
+      - name: Select the qualified Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.92.0 --profile minimal
+          rustup default 1.92.0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ${{ runner.temp }}/resolved-export-cache/target
+          key: ${{ runner.os }}-resolved-export-rust-1.92.0-${{ hashFiles('tools/resolved-export/pins.json') }}
+      - name: Prepare pinned source archives and CLI
+        shell: bash
+        run: Rscript --vanilla tools/resolved-export/prepare.R "$RUNNER_TEMP/resolved-export-cache"
+      - name: Exercise public upstream routes and proposed contract offline
+        shell: bash
+        run: Rscript --vanilla tools/resolved-export/run.R --cache "$RUNNER_TEMP/resolved-export-cache" --output "$RUNNER_TEMP/resolved-export-evidence"
+      - name: Retain conformance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-export-evidence
+          path: |
+            ${{ runner.temp }}/resolved-export-evidence
+            ${{ runner.temp }}/resolved-export-cache/cli.json
+            ${{ runner.temp }}/resolved-export-cache/cargo.*.log
+          if-no-files-found: warn
