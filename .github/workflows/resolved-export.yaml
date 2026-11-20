@@ -36,11 +36,12 @@ jobs:
         env:
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Use the repository binary; run.R requires exactly pins.json's version.
           extra-packages: |
             commons=posit-dev/commons/pkg-r@03349a71ef3b64c80c6cd53f215ea870db2851a8
             datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67
             ellmer@0.5.1
-            duckdb@1.5.5
+            any::duckdb
             any::yaml
       - name: Select the qualified Rust toolchain
         shell: bash

@@ -109,11 +109,10 @@ upstream_fixture_prepare <- function(fixture_dir, output_dir) {
   dictionary <- file.path(output_dir, "data-dict.yaml")
   parquet <- file.path(output_dir, "sales.parquet")
   upstream_copy_bytes(source_dictionary, dictionary)
-
-  con <- DBI::dbConnect(duckdb::duckdb(shared_home = FALSE))
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-  DBI::dbWriteTable(con, "sales", upstream_sales())
-  upstream_write_sales_parquet(con, parquet)
+  upstream_copy_bytes(
+    file.path(fixture_dir, "fixtures", "sales.parquet"),
+    parquet
+  )
 
   list(
     output_dir = output_dir,

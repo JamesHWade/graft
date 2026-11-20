@@ -23,7 +23,7 @@ dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 pak::pkg_install(c(
   "commons=posit-dev/commons/pkg-r@03349a71ef3b64c80c6cd53f215ea870db2851a8",
   "datadict=tidyverse/data-dict/r@0161d460b6eb70d337028f8eddbf2f443bcb8f67",
-  "ellmer@0.5.1", "duckdb@1.5.5",
+  "ellmer@0.5.1", "duckdb@2.0.0",
   "any::testthat", "any::pkgload", "any::digest", "any::jsonlite",
   "any::yaml", "any::withr", "any::processx"
 ), lib = lib, ask = FALSE)
@@ -68,14 +68,19 @@ string alone is insufficient: its bytes must match the local build record.
 The dictionary and generation recipe come from
 [the reviewed #61 fixture](https://github.com/JamesHWade/graft/tree/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/semantic-compatibility).
 The original Parquet file was written to a temporary evidence directory and
-was not committed. The fixture recovers its bytes with the original rows and
-COPY settings under DuckDB 1.5.5, then checks them against the independent
+was not committed. The committed 513-byte fixture was recovered with the original rows and
+COPY settings under DuckDB 1.5.5. Every run checks those retained bytes against the independent
 [historical result record](https://github.com/JamesHWade/graft/blob/6d7bd84129c3bb2800509d3489719e31bece1ac7/tools/experiments/semantic-compatibility/observed.json).
 
 | Input | Historical SHA-256 required by the tests |
 | --- | --- |
 | Dictionary | `2b9ac2432abf8236963f6125d164aa9d1b909c24f6895dad4ab150adc26adfaa` |
 | Parquet | `6eaf106b9009f4d416b1622b025f4e5ec226db5f81ed039b0e2c52566ff06016` |
+
+Execution uses DuckDB 2.0.0. Its version is checked separately from the retained
+input identity, so executing the fixture does not require rebuilding the old
+engine used to recover the file. CI installs the repository binary and refuses
+any version that differs from `pins.json`.
 
 All current routes consume those exact recovered Parquet bytes or detached rows
 read from them. Invalid-data and expression variants are separate files.
@@ -142,7 +147,7 @@ it, or that a real Commons constructor consumes this proposed object.
 
 | File | Responsibility |
 | --- | --- |
-| `upstream.R`, `fixtures/data-dict.yaml` | Recover exact historical inputs and call current public upstream interfaces. |
+| `upstream.R`, `fixtures/` | Preserve exact historical inputs and call current public upstream interfaces. |
 | `contract.R` | Nonexecuting proposed admission and request-role checks. |
 | `tests/test-upstream.R` | Current numerical results, counterexamples, and independent file measures. |
 | `tests/test-contract.R` | Proposed metadata, identity, refusal, and preservation behavior. |

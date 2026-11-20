@@ -2,7 +2,7 @@
   "format": 1,
   "graft_base": "0d486ee8a7303a8341bd28aba5e336ec4e2bb9f1",
   "ellmer": "0.5.1",
-  "duckdb": "1.5.5",
+  "duckdb": "2.0.0",
   "rust": "1.92.0",
   "cli_version": "data-dict 0.0.3",
   "sources": {
