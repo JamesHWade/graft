@@ -1,0 +1,32 @@
+$version: 0.1.0
+$learn_more: https://data-dict.tidyverse.org/
+name: Artifact evidence fixture
+description: One sales observation per row; missing revenue is permitted.
+tables:
+  - name: sales
+    source:
+      parquet: sales.parquet
+    columns:
+      - name: id
+        type: number(id)
+        examples: [1, 2]
+        constraints: [primary_key]
+      - name: revenue
+        type: number(quantity)
+        range: [0, 100]
+        constraints:
+          - assert: revenue >= 0
+      - name: region
+        type: enum
+        values: [EMEA, APAC]
+    definitions:
+      - name: emea
+        expr: region = 'EMEA'
+      - name: total
+        expr: SUM(revenue)
+      - name: doubled
+        expr: revenue * 2
+      - name: constant
+        expr: '42'
+      - name: total_doubled
+        expr: SUM(doubled)

@@ -25,3 +25,4 @@
 ^CONTEXT[.]md$
 ^tools/hex-sticker$
 ^tools/output-handoff$
+^tools/resolved-export$

@@ -1,0 +1,341 @@
+{
+  "observed_date": "2026-11-19",
+  "qualification": "Local macOS arm64 run; CI results are reported separately on the PR.",
+  "run": {
+    "status": "passed",
+    "scope": "pinned public upstream baseline and nonexecuting proposed-interface conformance",
+    "sources": {
+      "commons": {
+        "repository": "posit-dev/commons",
+        "commit": "03349a71ef3b64c80c6cd53f215ea870db2851a8",
+        "sha256": "8c95a09c61e969404499001a502901aa0b23781f1ed359fa6a348310cf8e3775"
+      },
+      "datadict": {
+        "repository": "tidyverse/data-dict",
+        "commit": "0161d460b6eb70d337028f8eddbf2f443bcb8f67",
+        "sha256": "f9de1c60ca0ee7d551683fc57d45887505dacd56787f34654cb7bb28bc4f80b3"
+      }
+    },
+    "cli": {
+      "format": 1,
+      "source_commit": "0161d460b6eb70d337028f8eddbf2f443bcb8f67",
+      "source_archive_sha256": "f9de1c60ca0ee7d551683fc57d45887505dacd56787f34654cb7bb28bc4f80b3",
+      "cargo_lock_sha256": "f1f73fd6d03651ef1b9e70892499c9d185abb081c7d966af3404a8b4250ca22e",
+      "binary_sha256": "80f9966576808ec2ec7b9798b85761acf356bb48f0703b29abd2502c3bf19826",
+      "cli_version": "data-dict 0.0.3",
+      "rust": "1.92.0",
+      "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08) (Homebrew)",
+      "platform": {
+        "sysname": "Darwin",
+        "machine": "arm64"
+      }
+    },
+    "versions": {
+      "R": "4.6.1",
+      "commons": "0.2.0.9000",
+      "datadict": "0.1.0",
+      "ellmer": "0.5.1",
+      "duckdb": "2.0.0",
+      "DBI": "1.3.0",
+      "jsonlite": "2.0.0",
+      "testthat": "3.3.2"
+    },
+    "tests": [
+      {
+        "test": "admission and request return a non-executing proposed closure",
+        "passed": 11,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "current export without proposed grain metadata is refused",
+        "passed": 1,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "host bindings verify dictionary, source, export, and report bytes",
+        "passed": 4,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "profiling and failed or non-data validation are not admission evidence",
+        "passed": 4,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "an actual failed data-validation report refuses admission",
+        "passed": 2,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "format and backend selection are explicit",
+        "passed": 3,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "typed definitions, duplicate names, and references are checked",
+        "passed": 6,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "dependency cycles and selected translation refusals fail clearly",
+        "passed": 3,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "raw export paths never select host input paths",
+        "passed": 2,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "grain is explicit, scalar and aggregate remain distinct, and mixed is refused",
+        "passed": 4,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "request roles follow supplied grain instead of the lossy kind",
+        "passed": 5,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "language, canonical form, fidelity, notes, and errors remain unchanged",
+        "passed": 10,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "a separately created Commons source remains usable after refusal",
+        "passed": 3,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "proposed metadata and selection do not absorb file measures",
+        "passed": 3,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "source archives cannot drift from their declared pins",
+        "passed": 1,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "a CLI build record cannot silently select another source",
+        "passed": 1,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "changed CLI bytes fail before they can be executed",
+        "passed": 1,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "upstream fixture preserves exact bytes and resolved metadata",
+        "passed": 24,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "Commons reads the exact detached Parquet rows through public methods",
+        "passed": 9,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "validation failure remains distinct from profiling success",
+        "passed": 5,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "data-dict and Commons reject unresolved references",
+        "passed": 17,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "R-language definitions expose the upstream compiler boundary",
+        "passed": 5,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "Commons refuses a mixed-grain metric dimension",
+        "passed": 6,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      },
+      {
+        "test": "file measures remain callable alongside dictionary definitions",
+        "passed": 2,
+        "failed": 0,
+        "error": false,
+        "warning": 0,
+        "skipped": false
+      }
+    ],
+    "proposed_constructor_implemented_upstream": false,
+    "proposed_selection_executed": false
+  },
+  "historical_input_sha256": {
+    "dictionary": "2b9ac2432abf8236963f6125d164aa9d1b909c24f6895dad4ab150adc26adfaa",
+    "parquet": "6eaf106b9009f4d416b1622b025f4e5ec226db5f81ed039b0e2c52566ff06016"
+  },
+  "observations": {
+    "baseline-results": {
+      "commons": {
+        "total": 35,
+        "filter_emea_total": 15,
+        "total_doubled": 70,
+        "constant": 42,
+        "doubled_rows": [
+          20,
+          40,
+          null,
+          10
+        ]
+      },
+      "bare_translation": {
+        "total": 35,
+        "doubled": [
+          20,
+          40,
+          null,
+          10
+        ],
+        "constant": [
+          42,
+          42,
+          42,
+          42
+        ]
+      }
+    },
+    "counterexample-invalid-values": {
+      "data_validation": {
+        "status": 1,
+        "report_sha256": "b639c33951e4e969b7df8ff296d0ec0b92b363d98c99135ab2cc65601b441211"
+      },
+      "export_data": {
+        "status": "succeeded",
+        "tables": 1
+      },
+      "commons_constructor": {
+        "status": "accepted",
+        "class": "commons_data_source"
+      }
+    },
+    "counterexample-mixed-grain": {
+      "data_dict": {
+        "status": "accepted"
+      },
+      "commons_constructor": {
+        "status": "accepted"
+      },
+      "commons_metrics": {
+        "status": "rejected",
+        "class": "rlang_error",
+        "message": "Mixed-grain definition \"probe\" cannot be grouped by with `call_metrics()`; use it in `run_sql()`."
+      }
+    },
+    "counterexample-r-language": {
+      "data_dict": {
+        "status": "accepted"
+      },
+      "commons": {
+        "status": "rejected",
+        "class": "commons_definition_invalid_error",
+        "message": "Definition \"probe\" on table \"sales\" has an invalid expression.\nCaused by error in `commons::data_source()`:\n! Invalid definition expression at character 1.\nx expected an expression"
+      }
+    },
+    "counterexample-references": {
+      "missing_reference": {
+        "data_dict": {
+          "status": "rejected",
+          "diagnostic_code": "S20",
+          "diagnostic_message": "A definition may only reference columns/definitions from its table.",
+          "detail": "   |           ^^^^^^^^^^^^^^ column `missing_column` not found"
+        },
+        "commons": {
+          "status": "rejected",
+          "class": "commons_definition_invalid_error",
+          "message": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `commons::data_source()`:\n! Column \"missing_column\" not found."
+        }
+      },
+      "related_reference": {
+        "data_dict": {
+          "status": "rejected",
+          "diagnostic_code": "S20",
+          "diagnostic_message": "A definition may only reference columns/definitions from its table.",
+          "detail": "   |           ^^^^^^^^^^^^^ column `other` not found"
+        },
+        "commons": {
+          "status": "rejected",
+          "class": "commons_definition_invalid_error",
+          "message": "Definition \"probe\" on table \"sales\" does not type-check.\nCaused by error in `commons::data_source()`:\n! Column \"other\" not found."
+        }
+      }
+    }
+  },
+  "input_recovery": "The committed 513-byte Parquet was recovered under DuckDB 1.5.5 and matches the historical digest; this run executes the retained bytes under DuckDB 2.0.0."
+}

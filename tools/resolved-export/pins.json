@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "graft_base": "0d486ee8a7303a8341bd28aba5e336ec4e2bb9f1",
+  "ellmer": "0.5.1",
+  "duckdb": "2.0.0",
+  "rust": "1.92.0",
+  "cli_version": "data-dict 0.0.3",
+  "sources": {
+    "commons": {
+      "repository": "posit-dev/commons",
+      "commit": "03349a71ef3b64c80c6cd53f215ea870db2851a8",
+      "url": "https://codeload.github.com/posit-dev/commons/legacy.tar.gz/03349a71ef3b64c80c6cd53f215ea870db2851a8",
+      "archive": "commons.tar.gz",
+      "sha256": "8c95a09c61e969404499001a502901aa0b23781f1ed359fa6a348310cf8e3775",
+      "package_path": "pkg-r"
+    },
+    "datadict": {
+      "repository": "tidyverse/data-dict",
+      "commit": "0161d460b6eb70d337028f8eddbf2f443bcb8f67",
+      "url": "https://codeload.github.com/tidyverse/data-dict/legacy.tar.gz/0161d460b6eb70d337028f8eddbf2f443bcb8f67",
+      "archive": "data-dict.tar.gz",
+      "sha256": "f9de1c60ca0ee7d551683fc57d45887505dacd56787f34654cb7bb28bc4f80b3",
+      "package_path": "r"
+    }
+  }
+}
