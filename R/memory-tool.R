@@ -13,6 +13,22 @@
 #' @param eligible A required host-supplied function with no arguments. It must
 #'   return whether the current consultation is allowed when called.
 #' @param name The ellmer tool name. Defaults to `"recall_project_memory"`.
+#' @param max_text_bytes Maximum total UTF-8 bytes of text previews returned
+#'   for one invocation. Text beyond this bound is marked as truncated and its
+#'   exact artifact reference is retained. Binary artifacts are always
+#'   represented by reference and byte size only. Defaults to 64 KiB.
+#'
+#' @details
+#' The JSON value contains the lookup `status`, fixed `stream` and `purpose`,
+#' and the retained `decision_id`. An accepted result includes bounded
+#' artifact descriptors with `ref`, `data`, `media_type`, `size`, dependency
+#' references, and explicit `truncated` and `omitted` flags. Its `roots` field
+#' contains root references and metadata only; full previews are in
+#' `artifacts`. The top-level `omitted` field retains every omitted exact
+#' reference. The text bound covers UTF-8 artifact previews; retained
+#' reference and status metadata remains subject to the recall limits.
+#' Missing and withdrawn results have distinct messages and no artifact
+#' content.
 #'
 #' @returns An [ellmer::ToolDef]. Calling the tool returns an
 #' [ellmer::ContentToolResult] whose value is a JSON string.
@@ -22,7 +38,8 @@ graft_tool <- function(
   stream,
   purpose,
   eligible,
-  name = "recall_project_memory"
+  name = "recall_project_memory",
+  max_text_bytes = 64 * 1024L
 ) {
   if (!requireNamespace("ellmer", quietly = TRUE)) {
     rlang::check_installed(
@@ -36,6 +53,8 @@ graft_tool <- function(
   stream <- artifact_check_text(stream, "stream")
   purpose <- artifact_check_text(purpose, "purpose")
   name <- artifact_check_text(name, "name")
+  graft_tool_check_text_limit(max_text_bytes)
+  max_text_bytes <- as.integer(max_text_bytes)
   if (!grepl("^[A-Za-z0-9_-]+$", name)) {
     artifact_abort("`name` must contain only letters, numbers, `-` and `_`.")
   }
@@ -54,7 +73,12 @@ graft_tool <- function(
       purpose = purpose,
       eligible = host_eligible
     )
-    payload <- graft_tool_payload(recall, stream, purpose)
+    payload <- graft_tool_payload(
+      recall,
+      stream,
+      purpose,
+      max_text_bytes = max_text_bytes
+    )
     ellmer::ContentToolResult(
       value = graft_tool_json(payload),
       extra = graft_tool_extra(payload)
@@ -78,7 +102,14 @@ graft_tool <- function(
   )
 }
 
-graft_tool_payload <- function(recall, stream, purpose) {
+graft_tool_payload <- function(
+  recall,
+  stream,
+  purpose,
+  max_text_bytes = 64 * 1024L
+) {
+  graft_tool_check_text_limit(max_text_bytes)
+  max_text_bytes <- as.integer(max_text_bytes)
   status <- recall@status
   decision <- recall@decision
   decision_id <- if (is.null(decision)) {
@@ -94,28 +125,85 @@ graft_tool_payload <- function(recall, stream, purpose) {
   )
   if (identical(status, "accepted")) {
     payload$selection_id <- recall@selection@id
-    payload$roots <- lapply(recall@roots, graft_tool_artifact)
-    payload$artifacts <- lapply(recall@artifacts, graft_tool_artifact)
+    state <- new.env(parent = emptyenv())
+    state$text_bytes <- 0
+    payload$artifacts <- lapply(
+      recall@artifacts,
+      graft_tool_artifact,
+      state = state,
+      max_text_bytes = max_text_bytes
+    )
+    payload$roots <- lapply(recall@roots, function(artifact) {
+      list(
+        ref = list(
+          id = artifact@ref@id,
+          revision = artifact@ref@revision
+        ),
+        media_type = artifact@media_type,
+        size = length(artifact@bytes)
+      )
+    })
+    payload$text_bytes <- state$text_bytes
+    payload$max_text_bytes <- max_text_bytes
+    payload$truncated <- any(vapply(
+      payload$artifacts,
+      `[[`,
+      logical(1),
+      "truncated"
+    ))
+    payload$omitted <- lapply(
+      payload$artifacts,
+      function(artifact) if (isTRUE(artifact$omitted)) artifact$ref
+    )
+    payload$omitted <- Filter(Negate(is.null), payload$omitted)
   } else {
     payload$message <- if (identical(status, "withdrawn")) {
-      "There is no reviewed project memory to use. Ask the user to save one."
+      paste(
+        "The reviewed project memory was withdrawn and was not available",
+        "for this consultation."
+      )
     } else {
-      "There is no reviewed project memory to use. Ask the user to save one."
+      paste(
+        "No reviewed project memory has been saved for this consultation.",
+        "Ask the user to save one."
+      )
     }
   }
   payload
 }
 
-graft_tool_artifact <- function(artifact) {
+graft_tool_artifact <- function(
+  artifact,
+  state = NULL,
+  max_text_bytes = 64 * 1024L
+) {
+  if (is.null(state)) {
+    state <- new.env(parent = emptyenv())
+    state$text_bytes <- 0
+  }
   ref <- artifact@ref
   data <- artifact@data
-  if (is.raw(data)) {
+  size <- length(artifact@bytes)
+  omitted <- is.raw(data)
+  truncated <- FALSE
+  if (omitted) {
     data <- NULL
+  } else {
+    original_bytes <- nchar(enc2utf8(data), type = "bytes")
+    remaining <- max(0, max_text_bytes - state$text_bytes)
+    data <- graft_tool_utf8_prefix(data, remaining)
+    preview_bytes <- nchar(enc2utf8(data), type = "bytes")
+    state$text_bytes <- state$text_bytes + preview_bytes
+    truncated <- preview_bytes < original_bytes
+    omitted <- truncated && preview_bytes == 0
   }
   list(
     ref = list(id = ref@id, revision = ref@revision),
     data = data,
     media_type = artifact@media_type,
+    size = size,
+    truncated = truncated,
+    omitted = omitted,
     dependencies = lapply(
       artifact@dependencies,
       function(dependency) {
@@ -123,6 +211,49 @@ graft_tool_artifact <- function(artifact) {
       }
     )
   )
+}
+
+graft_tool_utf8_prefix <- function(value, max_bytes) {
+  value <- enc2utf8(value)
+  if (max_bytes <= 0L || !nzchar(value)) {
+    return(if (max_bytes <= 0L) "" else value)
+  }
+  if (nchar(value, type = "bytes") <= max_bytes) {
+    return(value)
+  }
+  characters <- nchar(value, type = "chars")
+  lower <- 0L
+  upper <- min(characters, max_bytes)
+  while (lower < upper) {
+    middle <- ceiling((lower + upper) / 2)
+    candidate <- substr(value, 1L, middle)
+    if (nchar(candidate, type = "bytes") <= max_bytes) {
+      lower <- middle
+    } else {
+      upper <- middle - 1L
+    }
+  }
+  substr(value, 1L, lower)
+}
+
+graft_tool_check_text_limit <- function(value) {
+  if (
+    !is.numeric(value) ||
+      length(value) != 1L ||
+      is.na(value) ||
+      !is.finite(value) ||
+      value < 0 ||
+      value > .Machine$integer.max ||
+      value != floor(value)
+  ) {
+    artifact_abort(
+      paste(
+        "`max_text_bytes` must be a non-negative whole number no greater",
+        "than the R integer limit."
+      )
+    )
+  }
+  invisible(NULL)
 }
 
 graft_tool_json <- function(value) {
@@ -136,28 +267,68 @@ graft_tool_extra <- function(payload) {
   if (!requireNamespace("shinychat", quietly = TRUE)) {
     return(list())
   }
-  display_text <- if (identical(payload$status, "accepted")) {
-    accepted <- payload$artifacts
-    text <- vapply(
-      accepted,
-      function(artifact) {
-        if (is.null(artifact$data)) {
-          "[binary content retained by reference]"
-        } else {
-          paste0(artifact$data)
-        }
-      },
-      character(1)
-    )
-    paste(text, collapse = "\n\n")
-  } else {
-    payload$message
-  }
-  list(
-    display = shinychat::tool_result_display(
-      title = "Reviewed project memory",
-      text = display_text,
+  display <- switch(
+    payload$status,
+    accepted = list(
+      title = "Project memory consulted",
+      label = "Project memory consulted",
+      value_preview = graft_tool_display_preview(payload),
+      text = graft_tool_display_text(payload),
+      show_request = FALSE
+    ),
+    withdrawn = list(
+      title = "Project memory withdrawn",
+      label = "Project memory withdrawn",
+      value_preview = "Withdrawn reviewed memory was not used",
+      text = payload$message,
+      show_request = FALSE
+    ),
+    missing = list(
+      title = "Project memory not found",
+      label = "Project memory not found",
+      value_preview = "No reviewed memory had been saved",
+      text = payload$message,
       show_request = FALSE
     )
   )
+  list(
+    display = do.call(shinychat::tool_result_display, display)
+  )
+}
+
+graft_tool_display_preview <- function(payload) {
+  parts <- character()
+  if (length(payload$artifacts)) {
+    count <- length(payload$artifacts)
+    noun <- if (count == 1L) "artifact" else "artifacts"
+    parts <- c(parts, paste(count, "retained", noun))
+  }
+  if (isTRUE(payload$truncated)) {
+    parts <- c(parts, "some text truncated")
+  }
+  if (length(payload$omitted)) {
+    parts <- c(parts, paste(length(payload$omitted), "content omitted"))
+  }
+  paste(c("Project memory consulted", parts), collapse = "; ")
+}
+
+graft_tool_display_text <- function(payload) {
+  text <- vapply(
+    payload$artifacts,
+    function(artifact) {
+      if (isTRUE(artifact$omitted)) {
+        return(paste0(
+          "[content omitted; ",
+          artifact$media_type,
+          ", ",
+          artifact$size,
+          " bytes retained by reference]"
+        ))
+      }
+      suffix <- if (isTRUE(artifact$truncated)) " [truncated]" else ""
+      paste0(artifact$data, suffix)
+    },
+    character(1)
+  )
+  paste(text, collapse = "\n\n")
 }

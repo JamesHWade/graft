@@ -252,3 +252,287 @@ test_that("graft_tool reports missing and withdrawn memory explicitly", {
   expect_null(result$roots)
   expect_null(result$artifacts)
 })
+
+test_that("graft_tool bounds UTF-8 text and retains omitted references", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  text_ref <- graft::graft_save(
+    store,
+    "éclair and more text",
+    id = "text",
+    media_type = "text/plain"
+  )
+  binary_ref <- graft::graft_save(
+    store,
+    as.raw(0:7),
+    id = "figure",
+    media_type = "image/png"
+  )
+  root <- graft::graft_save(
+    store,
+    "The reviewed note.",
+    id = "topic",
+    media_type = "text/plain",
+    dependencies = list(text_ref, binary_ref)
+  )
+  graft::graft_accept(
+    store,
+    x = root,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() TRUE,
+    max_text_bytes = 5L
+  )
+  payload <- jsonlite::fromJSON(tool()@value, simplifyVector = FALSE)
+  artifacts <- payload$artifacts
+  text_bytes <- sum(vapply(
+    c(artifacts, payload$roots),
+    function(artifact) {
+      if (is.null(artifact$data)) 0L else nchar(artifact$data, type = "bytes")
+    },
+    integer(1)
+  ))
+
+  expect_lte(text_bytes, 5L)
+  expect_identical(
+    any(vapply(artifacts, `[[`, logical(1), "truncated")),
+    TRUE
+  )
+  expect_identical(
+    any(vapply(artifacts, `[[`, logical(1), "omitted")),
+    TRUE
+  )
+  expect_identical(artifacts[[1L]]$ref$id, "topic")
+  expect_null(payload$roots[[1L]]$data)
+  expect_identical(payload$roots[[1L]]$ref$id, "topic")
+  expect_identical(
+    sort(vapply(payload$omitted, `[[`, character(1), "id")),
+    sort(vapply(
+      artifacts[vapply(artifacts, `[[`, logical(1), "omitted")],
+      function(artifact) artifact$ref$id,
+      character(1)
+    ))
+  )
+  figure <- artifacts[[which(vapply(
+    artifacts,
+    function(artifact) identical(artifact$ref$id, "figure"),
+    logical(1)
+  ))]]
+  expect_null(figure$data)
+  expect_identical(figure$media_type, "image/png")
+  expect_identical(figure$size, 8L)
+})
+
+test_that("graft_tool truncates on UTF-8 boundaries", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  ref <- graft::graft_save(store, "é🙂z", id = "topic")
+  graft::graft_accept(
+    store,
+    x = ref,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() TRUE,
+    max_text_bytes = 3L
+  )
+
+  artifact <- jsonlite::fromJSON(
+    tool()@value,
+    simplifyVector = FALSE
+  )$artifacts[[1L]]
+  expect_identical(artifact$data, "é")
+  expect_identical(nchar(artifact$data, type = "bytes"), 2L)
+  expect_identical(artifact$truncated, TRUE)
+})
+
+test_that("graft_tool can return metadata without text", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  ref <- graft::graft_save(store, "Reviewed note", id = "topic")
+  graft::graft_accept(
+    store,
+    x = ref,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() TRUE,
+    max_text_bytes = 0L
+  )
+  payload <- jsonlite::fromJSON(tool()@value, simplifyVector = FALSE)
+
+  expect_identical(payload$text_bytes, 0L)
+  expect_identical(payload$max_text_bytes, 0L)
+  expect_identical(payload$artifacts[[1L]]$data, "")
+  expect_identical(payload$artifacts[[1L]]$truncated, TRUE)
+  expect_identical(payload$artifacts[[1L]]$omitted, TRUE)
+  expect_identical(payload$omitted[[1L]]$id, "topic")
+})
+
+test_that("graft_tool validates its text limit", {
+  skip_if_not_installed("ellmer")
+
+  store <- graft::graft_store(withr::local_tempdir(), create = TRUE)
+  expect_error(
+    graft::graft_tool(
+      store,
+      stream = "topic",
+      purpose = "test",
+      eligible = function() TRUE,
+      max_text_bytes = -1
+    ),
+    class = "graft_artifact_error"
+  )
+  expect_error(
+    graft::graft_tool(
+      store,
+      stream = "topic",
+      purpose = "test",
+      eligible = function() TRUE,
+      max_text_bytes = 1.5
+    ),
+    class = "graft_artifact_error"
+  )
+})
+
+test_that("graft_tool distinguishes missing and withdrawn memory", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() TRUE
+  )
+  missing <- jsonlite::fromJSON(tool()@value, simplifyVector = FALSE)
+
+  ref <- graft::graft_save(store, "Secret reviewed note", id = "topic")
+  accepted <- graft::graft_accept(
+    store,
+    x = ref,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+  graft::graft_withdraw(
+    store,
+    stream = "topic",
+    expected = accepted,
+    key = "withdraw-1",
+    actor = "test-reviewer",
+    reason = "Withdrawn"
+  )
+  withdrawn <- jsonlite::fromJSON(tool()@value, simplifyVector = FALSE)
+
+  expect_identical(missing$status, "missing")
+  expect_identical(withdrawn$status, "withdrawn")
+  expect_identical(identical(missing$message, withdrawn$message), FALSE)
+  expect_match(missing$message, "has been saved", fixed = TRUE)
+  expect_match(withdrawn$message, "withdrawn", fixed = TRUE)
+  expect_identical(
+    grepl("Secret reviewed note", withdrawn$message, fixed = TRUE),
+    FALSE
+  )
+})
+
+test_that("graft_tool denies access before revealing retained content", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  ref <- graft::graft_save(store, "Secret reviewed note", id = "topic")
+  graft::graft_accept(
+    store,
+    x = ref,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() FALSE
+  )
+
+  error <- tryCatch(tool(), error = identity)
+  expect_s3_class(error, "graft_error")
+  expect_identical(
+    grepl("Secret reviewed note", conditionMessage(error), fixed = TRUE),
+    FALSE
+  )
+  expect_identical(
+    grepl(path, conditionMessage(error), fixed = TRUE),
+    FALSE
+  )
+})
+
+test_that("graft_tool display describes a past consultation", {
+  skip_if_not_installed("ellmer")
+  skip_if_not_installed("shinychat")
+
+  path <- withr::local_tempdir()
+  store <- graft::graft_store(path, create = TRUE)
+  ref <- graft::graft_save(store, "Reviewed note", id = "topic")
+  graft::graft_accept(
+    store,
+    x = ref,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "test-reviewer",
+    reason = "Reviewed",
+    purpose = "test"
+  )
+  tool <- graft::graft_tool(
+    store,
+    stream = "topic",
+    purpose = "test",
+    eligible = function() TRUE
+  )
+
+  display <- tool()@extra$display
+  expect_s3_class(display, "shinychat_tool_result_display")
+  expect_identical(display$label, "Project memory consulted")
+  expect_match(display$value_preview, "consulted", fixed = TRUE)
+})

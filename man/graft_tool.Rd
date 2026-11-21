@@ -4,7 +4,14 @@
 \alias{graft_tool}
 \title{Create a fixed read-only ellmer tool for reviewed content}
 \usage{
-graft_tool(store, stream, purpose, eligible, name = "recall_project_memory")
+graft_tool(
+  store,
+  stream,
+  purpose,
+  eligible,
+  name = "recall_project_memory",
+  max_text_bytes = 64 * 1024L
+)
 }
 \arguments{
 \item{store}{A store returned by \code{\link[=graft_store]{graft_store()}} or
@@ -19,6 +26,11 @@ application.}
 return whether the current consultation is allowed when called.}
 
 \item{name}{The ellmer tool name. Defaults to \code{"recall_project_memory"}.}
+
+\item{max_text_bytes}{Maximum total UTF-8 bytes of text previews returned
+for one invocation. Text beyond this bound is marked as truncated and its
+exact artifact reference is retained. Binary artifacts are always
+represented by reference and byte size only. Defaults to 64 KiB.}
 }
 \value{
 An \link[ellmer:ToolDef]{ellmer::ToolDef}. Calling the tool returns an
@@ -29,4 +41,16 @@ Create an \link[ellmer:ToolDef]{ellmer::ToolDef} that reads content accepted for
 stream and purpose chosen by the host application. The tool has no
 model-controlled arguments and never writes to the store. It evaluates
 \code{eligible} on every invocation before it looks up retained content.
+}
+\details{
+The JSON value contains the lookup \code{status}, fixed \code{stream} and \code{purpose},
+and the retained \code{decision_id}. An accepted result includes bounded
+artifact descriptors with \code{ref}, \code{data}, \code{media_type}, \code{size}, dependency
+references, and explicit \code{truncated} and \code{omitted} flags. Its \code{roots} field
+contains root references and metadata only; full previews are in
+\code{artifacts}. The top-level \code{omitted} field retains every omitted exact
+reference. The text bound covers UTF-8 artifact previews; retained
+reference and status metadata remains subject to the recall limits.
+Missing and withdrawn results have distinct messages and no artifact
+content.
 }
