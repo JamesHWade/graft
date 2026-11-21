@@ -130,6 +130,12 @@ validated data-dict source revision. Commons is application-owned. Pass
 retained vocabulary context and validated data to its public source API.
 Graft does not maintain a Commons connection adapter or copy executable
 agent tools.</p>
+<p>Graft’s vocabulary integration was tested against Commons
+<strong>0.2.0</strong> from CRAN. It passes retained context to
+<code><a href="https://posit-dev.github.io/commons/r/reference/context_layer.html" class="external-link">commons::context_layer()</a></code> and a validated dictionary to
+<code><a href="https://posit-dev.github.io/commons/r/reference/data_source.html" class="external-link">commons::data_source()</a></code>. The output-handoff and
+resolved-export experiments each specify their tested Commons revision
+in their own <code>pins.json</code>.</p>
 <p>Applications such as Tempest and Rill adopt this public API in their
 integration layers. They choose which evidence to retain, validate their
 domain results, and authorize reuse. Both have completed their contract

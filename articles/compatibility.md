@@ -71,6 +71,14 @@ source revision. Commons is application-owned. Pass retained vocabulary
 context and validated data to its public source API. Graft does not
 maintain a Commons connection adapter or copy executable agent tools.
 
+Graft’s vocabulary integration was tested against Commons **0.2.0** from
+CRAN. It passes retained context to
+[`commons::context_layer()`](https://posit-dev.github.io/commons/r/reference/context_layer.html)
+and a validated dictionary to
+[`commons::data_source()`](https://posit-dev.github.io/commons/r/reference/data_source.html).
+The output-handoff and resolved-export experiments each specify their
+tested Commons revision in their own `pins.json`.
+
 Applications such as Tempest and Rill adopt this public API in their
 integration layers. They choose which evidence to retain, validate their
 domain results, and authorize reuse. Both have completed their contract
