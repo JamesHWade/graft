@@ -214,9 +214,11 @@ fail instead of silently using another source.
 creates an ordinary ellmer `ToolDef` with the stream and purpose fixed
 by the application. On every invocation it calls the eligibility
 callback, then returns an ellmer `ContentToolResult` with the recall
-status, exact content references, and decision ID. When shinychat is
-installed, the result also carries `tool_result_display` metadata for
-the chat UI:
+status, exact content references, and decision ID. The host sets
+`max_text_bytes` to limit the total artifact text that enters the chat.
+When a preview is too short, the application can read the full artifact
+by its exact reference. A binary artifact carries its reference, media
+type, and size.
 
 ``` r
 
@@ -225,6 +227,7 @@ memory_tool <- graft_tool(
   stream = "metric:active-customer",
   purpose = "project-assistance",
   eligible = function() TRUE,
+  max_text_bytes = 4096L,
   name = "recall_project_memory"
 )
 chat <- ellmer::chat_openai(
@@ -244,11 +247,10 @@ The tool is read-only. The application’s review controls perform writes,
 so the choice to retain an answer stays visible to the user. You can add
 a draft step in which an agent proposes a note and a person edits and
 reviews it before saving. The model never chooses the store, stream,
-purpose, or eligibility callback. The optional display is the ordinary
-[`shinychat::tool_result_display()`](https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html)
-payload. The app still uses shinychat’s public
-[`chat_append()`](https://posit-dev.github.io/shinychat/r/reference/chat_append.html)
-and ellmer’s public `Chat$register_tool()` interfaces.
+purpose, or eligibility callback. Opening a saved shinychat conversation
+restores the card the user saw at the time. If a reviewer has since
+corrected or withdrawn the source, call the tool again to learn what the
+host currently permits.
 
 ### Put the agent in shinychat
 

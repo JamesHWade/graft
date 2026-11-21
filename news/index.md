@@ -111,10 +111,11 @@
   content. Consumer contract 4.1.0
   ([\#96](https://github.com/JamesHWade/graft/issues/96)).
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
-  exposes current reviewed memory through a native read-only ellmer tool
-  and optional shinychat result display, checking application
-  eligibility on every invocation
-  ([\#90](https://github.com/JamesHWade/graft/issues/90)).
+  returns bounded UTF-8 text previews with exact references, media
+  types, byte sizes, and explicit missing or withdrawn statuses;
+  shinychat displays historical consultation metadata for restored
+  conversations
+  ([\#110](https://github.com/JamesHWade/graft/issues/110)).
 - [`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md)
   holds a local store’s lock while an application changes it. Every
   write holds the lock shared, and manifests, replacement plans and
