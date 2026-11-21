@@ -72,7 +72,9 @@ test_that("the recall evaluation exercises every reviewed-memory state", {
 
   instruction <- samples[samples$case == "instruction_like", ]
   expect_identical(instruction$result[[1]], "7")
-  instruction_trace <- instruction$solver_metadata[[1]]$trace
+  instruction_trace <- helpers$graft_recall_eval_trace(instruction$solver_chat[[
+    1
+  ]])
   expect_match(
     instruction_trace$results[[1]]$payload$artifacts[[1]]$data,
     "report 11",
@@ -86,15 +88,15 @@ test_that("the recall evaluation exercises every reviewed-memory state", {
   expect_identical(withdrawn$result[[1]], "NO_REVIEWED_ANSWER")
   expect_identical(denied$result[[1]], "NO_REVIEWED_MEMORY_ACCESS")
   expect_identical(
-    missing$solver_metadata[[1]]$trace$evidence_status,
+    missing$scorer_metadata[[1]]$observed_evidence_status,
     "missing"
   )
   expect_identical(
-    withdrawn$solver_metadata[[1]]$trace$evidence_status,
+    withdrawn$scorer_metadata[[1]]$observed_evidence_status,
     "withdrawn"
   )
   expect_identical(
-    denied$solver_metadata[[1]]$trace$evidence_status,
+    denied$scorer_metadata[[1]]$observed_evidence_status,
     "denied"
   )
 })
@@ -157,7 +159,7 @@ test_that("recall scoring distinguishes answer and evidence failures", {
     "incorrect"
   )
 
-  signed_value <- accepted
+  signed_value <- instruction
   signed_value$result <- "-7"
   expect_identical(
     scorer(signed_value)$scorer_metadata[[1]]$answer_quality,
@@ -194,9 +196,40 @@ test_that("recall scoring distinguishes answer and evidence failures", {
   )
 
   trace <- helpers$graft_recall_eval_trace(accepted$solver_chat[[1]])
+  swapped <- trace
+  swapped$results[[1]]$payload$artifacts[[2L]]$data <- "unrelated source"
+  expect_identical(
+    helpers$graft_recall_eval_evidence_ok(swapped, fixture$cases$accepted),
+    FALSE
+  )
   trace$request_names <- "other_tool"
   expect_identical(
     helpers$graft_recall_eval_evidence_ok(trace, fixture$cases$accepted),
     FALSE
   )
+})
+
+test_that("a supplied chat uses the case-specific tool and scoring prompt", {
+  skip_if_not_installed("vitals", "0.4.0")
+  helpers <- new.env(parent = globalenv())
+  sys.source(
+    system.file("evals", "recall-evaluation.R", package = "graft"),
+    helpers
+  )
+  fixture <- helpers$graft_recall_eval_fixture(withr::local_tempdir())
+  case <- fixture$cases$corrected
+  chat <- ellmer::chat_openai_compatible(
+    base_url = "https://example.invalid/v1",
+    model = "offline",
+    credentials = function() "offline"
+  )
+  httr2::local_mocked_responses(helpers$graft_recall_eval_responses("60 days"))
+  solve <- helpers$graft_recall_eval_solver(fixture$cases, chat)
+  run <- solve(case$input)
+
+  expect_identical(unname(run$result), "60 days")
+  trace <- helpers$graft_recall_eval_trace(run$solver_chat[[1L]])
+  expect_identical(helpers$graft_recall_eval_evidence_ok(trace, case), TRUE)
+  expect_length(chat$get_turns(), 0L)
+  expect_length(chat$get_tools(), 0L)
 })
