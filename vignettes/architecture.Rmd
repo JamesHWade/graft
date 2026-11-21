@@ -19,6 +19,14 @@ vignette: >
 | Tempest | Research evidence, verification, reports, and research admission |
 | Rill | Reader experience, access, approval, and retention policy |
 
+## Graft and Commons
+
+Use Commons to run an analysis and record how it arrived at an answer. Use
+Graft when a host needs to retain the exact report, table, or figure and record
+a decision about reusing it. For example, a Trusted marker describes the
+calculation behind a Commons answer. A reviewer can still withdraw the report
+from use in a project. Graft records that decision for the project’s purpose.
+
 ## Stored contracts
 
 Each artifact revision records its identity, media type, bytes, and exact
