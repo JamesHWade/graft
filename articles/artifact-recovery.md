@@ -212,6 +212,11 @@ copies, invalidate available encryption keys, or prove physical secure
 erasure. Graft’s synthetic replacement and restore tests do not
 establish those production guarantees.
 
+After switching to the replacement, follow the [backup retention
+procedure](https://jameshwade.github.io/graft/articles/artifact-backups.html#retention-after-forget)
+to account for old generations, encryption keys, and copies in other
+systems.
+
 The [Forget and restore
 gate](https://github.com/JamesHWade/graft/issues/48) remains open until
 Rill’s actual workflow, independent durable journal, closed backups, and

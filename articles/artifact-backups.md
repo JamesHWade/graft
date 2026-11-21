@@ -143,6 +143,44 @@ independent registry must deny retired generations, including after
 loading an old database backup. A bundle checksum cannot tell Graft that
 the registry was rolled back.
 
+## Retention after Forget
+
+Suppose a Reader has moved from generation 1 to generation 2 after a
+Forget. An off-site backup of generation 1 still contains the original
+records. Three different actions matter when that backup comes back
+online.
+
+1.  **The host retires the generation.** Record generation 1 in the
+    independent retirement registry. Check the current registry before
+    admitting a restore, including during disaster recovery. Deny the
+    request if current retirement state is unavailable.
+2.  **Graft checks the supplied receipt.** If generation 2 is eligible,
+    pass its independently retained receipt to
+    [`graft_restore()`](https://jameshwade.github.io/graft/reference/graft_restore.md).
+    Graft refuses a generation 1 bundle presented with that receipt.
+    Giving Graft the old matching receipt would still allow the
+    mechanical restore. The decision to withhold it belongs to the host.
+3.  **The operator accounts for every copy.** Inventory the old source
+    store, backup bundles, staging areas, and offline and off-site
+    media. Record who controls each copy and when it can be disposed of.
+    If retention policy requires keeping a copy, record its expiry and
+    keep it excluded from use.
+
+For encrypted backups, plan the key lifetime when creating the backup.
+If a retired generation has its own encryption key, destroying every
+recoverable copy of that key can make the encrypted backup unreadable.
+Account for escrow, key backups, and plaintext exports first. A key
+shared with a surviving generation also protects data that still needs
+to be restored.
+
+Track storage snapshots and replicas, PostgreSQL write-ahead logs and
+base backups, object storage versions, and application caches and
+indexes in the same inventory. Each system has its own expiry or
+disposal procedure. Removing a file or deleting a row only changes what
+that interface can retrieve. Record restore refusal, generation
+retirement, and copy disposal separately so an operator can see which
+copies still exist.
+
 ## Recover an interrupted operation
 
 Before starting, register the backup destination and its staging parent

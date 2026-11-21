@@ -232,6 +232,9 @@ content only when every access path enforces it. It does not destroy
 offline copies, invalidate available encryption keys, or prove physical
 secure erasure. Graft’s synthetic replacement and restore tests do not
 establish those production guarantees.</p>
+<p>After switching to the replacement, follow the <a href="artifact-backups.html#retention-after-forget">backup retention
+procedure</a> to account for old generations, encryption keys, and
+copies in other systems.</p>
 <p>The <a href="https://github.com/JamesHWade/graft/issues/48" class="external-link">Forget
 and restore gate</a> remains open until Rill’s actual workflow,
 independent durable journal, closed backups, and failure recovery are
