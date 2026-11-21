@@ -42,7 +42,26 @@ test_that("public workflow values are S7 objects", {
   expect_identical(artifact@bytes, charToRaw("hello"))
   expect_identical(decision@selection, digest)
   expect_match(capture.output(print(ref)), "ArtifactRef")
+  expect_match(capture.output(print(artifact)), "Artifact")
+  expect_match(capture.output(print(selection)), "ArtifactSelection")
+  expect_match(capture.output(print(decision)), "Decision")
   expect_match(capture.output(print(recall)), "accepted")
+})
+
+test_that("store constructors remain valid across supported S7 releases", {
+  path <- withr::local_tempdir()
+  store <- LocalArtifactStore(
+    path = normalizePath(path, winslash = "/"),
+    max_bytes = 1024,
+    max_revision_bytes = 2048,
+    lock_timeout = 2
+  )
+
+  expect_s7_class(store, LocalArtifactStore)
+  expect_silent(S7::validate(store))
+  expect_identical(store@max_bytes, 1024)
+  expect_identical(store@max_revision_bytes, 2048)
+  expect_identical(store@lock_timeout, 2)
 })
 
 test_that("public values validate their shape and do not provide dollar access", {

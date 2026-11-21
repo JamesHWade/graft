@@ -1,0 +1,59 @@
+name: S7 compatibility
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  values:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        s7: ['0.2.2', '1.0.0']
+    name: S7 ${{ matrix.s7 }} constructors and dispatch
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      S7_VERSION: ${{ matrix.s7 }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: S7@${{ matrix.s7 }}
+          needs: check
+
+      - name: Verify selected S7 release
+        shell: Rscript {0}
+        run: |
+          version <- as.character(utils::packageVersion("S7"))
+          stopifnot(identical(version, Sys.getenv("S7_VERSION")))
+
+      - name: Check constructors and source-package dispatch
+        shell: Rscript {0}
+        run: |
+          pkgload::load_all(quiet = TRUE)
+          testthat::test_local(
+            filter = "^value-types$",
+            stop_on_failure = TRUE
+          )
+
+      - name: Install a fresh package copy
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/graft-installed"
+          R CMD INSTALL --library="$RUNNER_TEMP/graft-installed" .
+
+      - name: Check installed-package print dispatch
+        shell: bash
+        run: |
+          R_LIBS_USER="$RUNNER_TEMP/graft-installed:${R_LIBS_USER}" \
+            Rscript --vanilla tools/s7-compatibility/installed-smoke.R
