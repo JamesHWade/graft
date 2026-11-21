@@ -55,6 +55,7 @@ test_that("mcptools stdio exposes read-only recall and synthetic content", {
   )
 
   libraries <- .libPaths()
+  launcher <- if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript"
   server_env <- c(
     GRAFT_SOURCE_ROOT = source_root,
     GRAFT_MCP_STORE = store_path,
@@ -64,7 +65,7 @@ test_that("mcptools stdio exposes read-only recall and synthetic content", {
     list(
       mcpServers = list(
         graft = list(
-          command = "Rscript",
+          command = file.path(R.home("bin"), launcher),
           args = list(server_path),
           env = as.list(server_env)
         )
