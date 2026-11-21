@@ -1,0 +1,179 @@
+---
+title: "Evaluate agent recall of reviewed memory"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Evaluate agent recall of reviewed memory}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+An agent can call a memory tool and still answer from the wrong revision, treat
+retained text as instructions, or invent an answer when the host has withdrawn
+access. This article provides a small, credential-free `vitals::Task` for
+measuring those behaviors with synthetic local Graft stores.
+
+The evaluation covers accepted, corrected, missing, withdrawn,
+instruction-like, and host-denied memory. The scripted solver makes a real
+ellmer tool request and executes the real `graft_tool()` result. Only the
+provider response is scripted locally, so the ordinary package test suite does
+not need an API key or make a network request.
+
+```{r setup, include=FALSE}
+has_recall_eval <- requireNamespace("vitals", quietly = TRUE) &&
+  packageVersion("vitals") >= "0.4.0" &&
+  requireNamespace("httr2", quietly = TRUE)
+if (has_recall_eval) {
+  eval_helpers <- system.file(
+    "evals",
+    "recall-evaluation.R",
+    package = "graft",
+    mustWork = TRUE
+  )
+  source(eval_helpers)
+}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = has_recall_eval
+)
+```
+
+If `vitals` 0.4 or `httr2` is unavailable, the code examples remain visible
+but are not evaluated while building the package website. Install the released
+versions before running the evaluation locally.
+
+The installed package exposes the self-contained fixture and task helpers at a
+stable path:
+
+```{r load-helper, eval=FALSE}
+source(system.file(
+  "evals",
+  "recall-evaluation.R",
+  package = "graft",
+  mustWork = TRUE
+))
+```
+
+## Run the offline task
+
+The fixture creates one local store per case. Every accepted store contains a
+reviewed note and its source; the correction and withdrawal are recorded as
+distinct decision events. The denied case retains the note but the host
+callback returns `FALSE`.
+
+```{r fixture}
+fixture <- graft_recall_eval_fixture()
+names(fixture$cases)
+```
+
+The solver uses a deliberately narrow response convention so answer scoring
+does not mistake a contradiction for a correct answer. A model returns only
+the reviewed value, preserving units when present, or one of the two
+abstention tokens: `NO_REVIEWED_ANSWER` and
+`NO_REVIEWED_MEMORY_ACCESS`. Punctuation and case are normalized, but extra
+claims are not accepted.
+
+```{r run-task}
+task <- graft_recall_eval_task(fixture)
+task$eval(view = FALSE)
+samples <- task$get_samples()
+samples[, c("case", "result", "score")]
+```
+
+The scripted task exercises the complete ellmer turn sequence. For example,
+the first case contains both a tool request and the tool result that Graft
+returned:
+
+```{r inspect-turns}
+paste(
+  vapply(
+    samples$solver_chat[[1]]$get_turns(),
+    function(turn) paste(format(turn), collapse = "\n"),
+    character(1)
+  ),
+  collapse = "\n\n"
+)
+```
+
+## Read the two scoring dimensions
+
+`score` is correct only when both dimensions pass. The scorer also logs them
+separately in `scorer_metadata`, so a wrong answer from a valid current note is
+not confused with a right-looking answer that had no reviewed support.
+
+```{r score-dimensions}
+score_table <- data.frame(
+  case = samples$case,
+  answer_quality = vapply(
+    samples$scorer_metadata,
+    `[[`,
+    character(1),
+    "answer_quality"
+  ),
+  evidence_integrity = vapply(
+    samples$scorer_metadata,
+    `[[`,
+    character(1),
+    "evidence_integrity"
+  ),
+  observed_evidence_status = vapply(
+    samples$scorer_metadata,
+    `[[`,
+    character(1),
+    "observed_evidence_status"
+  ),
+  failure = vapply(
+    samples$scorer_metadata,
+    `[[`,
+    character(1),
+    "failure"
+  )
+)
+score_table
+```
+
+For accepted rows, the evidence check compares the tool result with the exact
+decision, selection, root reference, source reference, and retained bytes in
+the synthetic fixture. For missing and withdrawn rows, it requires the tool to
+return no content. For the denied row, it requires the eligibility error and no
+retained content. The scorer reads the request and its linked result directly from the recorded
+`solver_chat`.
+
+## Read the vitals log
+
+`Task$log()` writes the Inspect-compatible evaluation record. `vitals 0.4`
+can read that record back into a tibble, including the recorded solver chats.
+
+```{r read-log}
+log_path <- task$log()
+logged <- vitals::vitals_log_read(
+  log_path,
+  solver_chat = samples$solver_chat[[1]]
+)
+logged[, c("input", "result", "score")]
+```
+
+The offline log records real tool calls with scripted answers. Keep it with
+the fixture inputs when comparing runs.
+
+## Run a chosen model
+
+Supply a fresh ellmer chat to run the same cases and scoring rules against a
+model. With your provider credentials configured, set `GRAFT_RECALL_EVAL_MODEL`
+to the model you want to evaluate. This example uses an OpenAI chat. Other
+ellmer providers can supply the chat in the same way.
+
+```{r live, eval=FALSE}
+model <- Sys.getenv("GRAFT_RECALL_EVAL_MODEL")
+stopifnot(nzchar(model))
+live <- graft_recall_eval_task(
+  fixture,
+  chat = ellmer::chat_openai(model = model),
+  log_dir = file.path(getwd(), "recall-evaluation-live")
+)
+live$eval(view = FALSE)
+live$get_samples()[, c("case", "result", "score")]
+```
+
+Each case uses its own chat and store. Inspect the linked recall request and
+result alongside the answer when interpreting a model's score.

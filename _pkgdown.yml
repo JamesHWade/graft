@@ -23,6 +23,7 @@ articles:
       - artifact-recovery
       - artifact-backups
       - shared-vocabulary
+      - recall-evaluation
       - architecture
       - compatibility
 reference:

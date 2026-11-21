@@ -1,5 +1,6 @@
 # graft 0.0.0.9000
 
+* A credential-free `vitals::Task` article evaluates whether an ellmer agent uses accepted, corrected, missing, withdrawn, instruction-like, and host-denied memory correctly, with separate answer and evidence scores and an opt-in live-model path (#112).
 * Graft provides persistent artifacts, exact dependency selections, host decision history, and shared vocabulary. Native graph stores, LinkML compilation, commit plans, snapshots, calculations, managed OKF trees, and graph agent adapters are removed without compatibility wrappers (#74).
 * The public interface uses S7 store handles and typed references, content, selections, decisions, recall results, and vocabulary releases. The former artifact-prefixed functions are removed without compatibility aliases (#90).
 * The getting-started guide and runnable project-memory example show how to give an ellmer agent in shinychat a reviewed notebook that survives new conversations and app restarts, including corrections with retained evidence (#41).
