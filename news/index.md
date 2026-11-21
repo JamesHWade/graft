@@ -2,6 +2,13 @@
 
 ## graft 0.0.0.9000
 
+- A credential-free
+  [`vitals::Task`](https://vitals.tidyverse.org/reference/Task.html)
+  article evaluates whether an ellmer agent uses accepted, corrected,
+  missing, withdrawn, instruction-like, and host-denied memory
+  correctly, with separate answer and evidence scores and an opt-in
+  live-model path
+  ([\#112](https://github.com/JamesHWade/graft/issues/112)).
 - Graft provides persistent artifacts, exact dependency selections, host
   decision history, and shared vocabulary. Native graph stores, LinkML
   compilation, commit plans, snapshots, calculations, managed OKF trees,

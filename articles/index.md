@@ -21,6 +21,9 @@
 - [Shared concepts across
   workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
 
+- [Evaluate agent recall of reviewed
+  memory](https://jameshwade.github.io/graft/articles/recall-evaluation.md):
+
 - [Architecture](https://jameshwade.github.io/graft/articles/architecture.md):
 
 - [Supported
