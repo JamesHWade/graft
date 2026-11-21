@@ -29,12 +29,15 @@ Suggests:
     commons,
     datadict,
     ellmer (>= 0.5.0),
+    httr2 (>= 1.2.0),
     knitr,
     pkgload,
     rmarkdown,
     shiny,
     shinychat (>= 0.5.0),
     testthat (>= 3.0.0),
+    tibble,
+    vitals (>= 0.4.0),
     withr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
