@@ -42,7 +42,7 @@ rlang. Publishing vocabulary also requires the data-dict R package and
 CLI. Reading a published release requires neither the CLI nor the
 original dictionary files.
 
-The consumer contract is **4.1.0**. Everyday work uses the task verbs
+The consumer contract is **4.2.0**. Everyday work uses the task verbs
 [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md),
 [`graft_save()`](https://jameshwade.github.io/graft/reference/graft_save.md),
 [`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md),
@@ -60,6 +60,11 @@ Contract 4.1.0 adds
 and the `lock_timeout` argument of
 [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md),
 which bounds the wait for a stream’s decision lock on a local store.
+Contract 4.2.0 adds
+[`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md)
+and lets
+[`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
+accept a plan with nothing to forget.
 
 `DESCRIPTION` pins the dictionary integration to the validated data-dict
 source revision. Commons is application-owned. Pass retained vocabulary
@@ -68,9 +73,9 @@ maintain a Commons connection adapter or copy executable agent tools.
 
 Applications such as Tempest and Rill adopt this public API in their
 integration layers. They choose which evidence to retain, validate their
-domain results, and authorize reuse. [Issue
-\#91](https://github.com/JamesHWade/graft/issues/91) tracks their
-contract 4 migration.
+domain results, and authorize reuse. Both have completed their contract
+4 migration; see [issue
+\#91](https://github.com/JamesHWade/graft/issues/91).
 
 ## Native chat classes
 

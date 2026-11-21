@@ -302,7 +302,7 @@ current store.
 
 Graft keeps the shared infrastructure. Tempest and Rill own product
 semantics, access, approval, and retention. Publication recovery remains
-separate work in [\#49](https://github.com/JamesHWade/graft/issues/49).
+separate work in [\#86](https://github.com/JamesHWade/graft/issues/86).
 
 ## Use retained research in Tempest
 

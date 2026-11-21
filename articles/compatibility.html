@@ -111,7 +111,7 @@
 and rlang. Publishing vocabulary also requires the data-dict R package
 and CLI. Reading a published release requires neither the CLI nor the
 original dictionary files.</p>
-<p>The consumer contract is <strong>4.1.0</strong>. Everyday work uses
+<p>The consumer contract is <strong>4.2.0</strong>. Everyday work uses
 the task verbs <code><a href="../reference/graft_store.html">graft_store()</a></code>, <code><a href="../reference/graft_save.html">graft_save()</a></code>,
 <code><a href="../reference/graft_read.html">graft_read()</a></code>, <code><a href="../reference/graft_accept.html">graft_accept()</a></code>,
 <code><a href="../reference/graft_withdraw.html">graft_withdraw()</a></code>, <code><a href="../reference/graft_recall.html">graft_recall()</a></code>,
@@ -121,7 +121,10 @@ have been removed, and no compatibility aliases exist. Artifact bytes,
 selection formats, and content identities remain unchanged. Contract
 4.1.0 adds <code><a href="../reference/graft_streams.html">graft_streams()</a></code> and the
 <code>lock_timeout</code> argument of <code><a href="../reference/graft_store.html">graft_store()</a></code>, which
-bounds the wait for a stream’s decision lock on a local store.</p>
+bounds the wait for a stream’s decision lock on a local store. Contract
+4.2.0 adds <code><a href="../reference/graft_with_store_lock.html">graft_with_store_lock()</a></code> and lets
+<code><a href="../reference/graft_plan_replacement.html">graft_plan_replacement()</a></code> accept a plan with nothing to
+forget.</p>
 <p><code>DESCRIPTION</code> pins the dictionary integration to the
 validated data-dict source revision. Commons is application-owned. Pass
 retained vocabulary context and validated data to its public source API.
@@ -129,8 +132,8 @@ Graft does not maintain a Commons connection adapter or copy executable
 agent tools.</p>
 <p>Applications such as Tempest and Rill adopt this public API in their
 integration layers. They choose which evidence to retain, validate their
-domain results, and authorize reuse. <a href="https://github.com/JamesHWade/graft/issues/91" class="external-link">Issue #91</a>
-tracks their contract 4 migration.</p>
+domain results, and authorize reuse. Both have completed their contract
+4 migration; see <a href="https://github.com/JamesHWade/graft/issues/91" class="external-link">issue #91</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="native-chat-classes">Native chat classes<a class="anchor" aria-label="anchor" href="#native-chat-classes"></a>
