@@ -30,6 +30,7 @@ Suggests:
     datadict,
     ellmer (>= 0.5.0),
     knitr,
+    mcptools (>= 1.0.1),
     pkgload,
     rmarkdown,
     shiny,
