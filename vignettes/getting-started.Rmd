@@ -1,8 +1,12 @@
 ---
-title: "Give a chat agent project memory"
+title: "Add reviewed memory to an app"
+description: >
+  Save outputs with source evidence, record explicit host review, and wire
+  graft_tool() and graft_tools() into ellmer, shinychat, deputy, mcptools, and
+  ragnar.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Give a chat agent project memory}
+  %\VignetteIndexEntry{Add reviewed memory to an app}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -13,53 +17,23 @@ dir.create(example_dir)
 knitr::opts_knit$set(root.dir = example_dir)
 ```
 
-An analytics assistant should answer "How do we count an active customer?" with
-the definition your team agreed on last week. It should show the source for that
-definition and use a correction after someone reviews it.
+An analytics assistant should answer *"How do we count an active customer?"*
+with the definition your team agreed on last week, cite the exact source behind
+it, and switch cleanly to a correction once someone reviews it.
 
-Graft gives an R application a place to keep this knowledge. An ellmer agent can
-retrieve it through an ordinary R tool, and shinychat can provide the chat
-interface. A report, another agent, or a later R session can use the same saved
-knowledge.
+This guide walks through the core workflow in R—no API key required for the
+storage steps—and then connects the store to `ellmer`, `shinychat`, `deputy`,
+`mcptools`, and `ragnar`.
 
-This guide builds a small project notebook. It shows how to:
+<div class="graft-callout">
+<p><strong>Want to click through the finished app first?</strong> Run the bundled Shiny notebook locally with scripted replies (or set <code>OPENAI_API_KEY</code> and <code>GRAFT_DEMO_LIVE=true</code> for a live model):</p>
 
-1. Save a definition with its source.
-2. Record a person's review for project assistance.
-3. Reopen the notebook and retrieve the current reviewed definition.
-4. Connect that retrieval to an ellmer agent in shinychat.
-5. Review a correction while keeping the original evidence available.
-
-The storage walkthrough runs without a model or API key. The complete app also
-includes a scripted preview, so you can try the interaction before enabling a
-model.
-
-## Try the complete app first
-
-```{r install, eval=FALSE}
+```r
 pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
 Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
 shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
-
-Read the proposed definition and source in the notebook, choose Review and
-save, and ask "How do we count an active customer?" Start a New conversation and
-ask the same question. Then change the definition and source
-from 30 days to 60 days and review the correction. The next conversation should
-use the new definition. The prefilled handbook excerpt is fictional sample
-data. Replace it with your own project evidence when you adapt the app.
-
-The default preview uses real Graft files and deterministic replies. It does not
-call ellmer or present its replies as model-generated answers. For the live
-agent, configure `OPENAI_API_KEY`, set `Sys.setenv(GRAFT_DEMO_LIVE = "true")`,
-and restart the app. Live mode sends prompts and retrieved notes to the
-configured model provider. The example uses `ellmer::chat_openai()`; you can
-substitute another ellmer provider in the app's chat factory.
-
-Stop and restart the app with the same store path to see the notebook survive
-the R process. Chat messages live in the session, while the reviewed notebook
-is stored on disk. The [example's source and run instructions](https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory)
-are included in the installed package.
+</div>
 
 ## 1. Keep the definition and its source
 

@@ -1,8 +1,11 @@
 ---
-title: "Shared concepts across workflows"
+title: "Share vocabulary across data-dict workflows"
+description: >
+  Publish pinned concepts, relationships, qualified data-dict bindings, and
+  Commons-compatible Markdown context as immutable Graft releases.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Shared concepts across workflows}
+  %\VignetteIndexEntry{Share vocabulary across data-dict workflows}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

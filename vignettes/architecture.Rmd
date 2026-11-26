@@ -1,11 +1,11 @@
 ---
-title: "Graft in the ellmer ecosystem"
+title: "Integrate with the ellmer ecosystem"
 description: >
   How graft composes with ellmer, shinychat, ragnar, commons, data-dict,
   mcptools, vitals, deputy, and scans—and what its storage model guarantees.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Graft in the ellmer ecosystem}
+  %\VignetteIndexEntry{Integrate with the ellmer ecosystem}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -13,6 +13,11 @@ vignette: >
 Graft is intentionally small. Rather than bundling an LLM client, a vector
 database, a semantic calculation engine, or a chat UI, it provides the one piece
 most agent stacks leave out: **durable, reviewed, evidence-linked memory**.
+
+<figure class="graft-figure">
+<img src="figures/graft-ecosystem.svg" alt="Graft in the ellmer ecosystem: producers and discovery tools feed candidate artifacts into Graft's save, review, and recall lifecycle, serving ellmer, shinychat, deputy, mcptools, vitals, and scans." />
+<figcaption>Graft sits between live producers and future sessions: immutable artifacts, an explicit host review boundary, and verified recall tools with a promotion loop back from <code>scans</code>.</figcaption>
+</figure>
 
 ## Ecosystem ownership
 

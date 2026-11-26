@@ -1,8 +1,12 @@
 ---
-title: "Evaluate agent recall of reviewed memory"
+title: "Evaluate recall with vitals and scans"
+description: >
+  Measure whether an ellmer agent uses accepted, corrected, withdrawn,
+  instruction-like, and host-denied memory properly with a credential-free
+  vitals::Task.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Evaluate agent recall of reviewed memory}
+  %\VignetteIndexEntry{Evaluate recall with vitals and scans}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -177,3 +181,14 @@ live$get_samples()[, c("case", "result", "score")]
 
 Each case uses its own chat and store. Inspect the linked recall request and
 result alongside the answer when interpreting a model's score.
+
+## Pair vitals with scans
+
+Use `vitals` to score *whether* the agent got the right answer and obeyed
+withdrawal or access boundaries. Use [scans](https://github.com/JamesHWade/scans)
+to investigate *how* a run unfolded across tool calls and turns: every
+`graft_tool()` and `graft_tools()` result carries a plain-data `@extra$graft`
+record on its `ContentToolResult` (`status`, `stream`, `decision_id`,
+`selection_id`, `artifact_refs`, `truncated`, `omitted_count`) so recorded
+`solver_chat` objects retain machine-readable consultation metadata with no
+live store handles.

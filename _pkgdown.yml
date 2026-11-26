@@ -8,24 +8,29 @@ template:
 development:
   mode: auto
 home:
-  title: "graft: Reviewed project memory for R apps and agents"
+  title: "graft: Persistent, reviewed memory for R apps and agents"
   description: >
-    Keep reviewed findings, definitions, and exact evidence for the next
-    conversation, agent, or workflow.
+    Add a review-gated memory and artifact store to ellmer, shinychat, deputy,
+    or mcptools apps and agents.
 navbar:
   structure:
     left: [intro, articles, reference, news]
     right: [search, github, lightswitch]
 articles:
-  - title: Learn graft
+  - title: Start here
+    navbar: Start here
     contents:
       - getting-started
+      - architecture
+  - title: Guides
+    navbar: Guides
+    contents:
       - persistent-artifacts
       - shared-vocabulary
       - recall-evaluation
-      - architecture
 reference:
   - title: Store and save
+    desc: Create local or PostgreSQL stores and save immutable artifacts and dependency selections.
     contents:
       - graft_store
       - graft_store_postgres
@@ -35,6 +40,7 @@ reference:
       - graft_select
       - graft_read_selection
   - title: Review and recall
+    desc: Record explicit host decisions, inspect history, and expose bounded recall tools to agents.
     contents:
       - graft_accept
       - graft_withdraw
@@ -44,10 +50,12 @@ reference:
       - graft_tool
       - graft_tools
   - title: Shared vocabulary
+    desc: Pin concepts, relationships, and qualified data-dict bindings across workflows.
     contents:
       - graft_publish_vocabulary
       - graft_read_vocabulary
   - title: S7 classes
+    desc: Typed store handles and immutable return values.
     contents:
       - ArtifactStore
       - LocalArtifactStore
