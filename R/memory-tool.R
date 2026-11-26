@@ -206,7 +206,7 @@ graft_tools <- function(
       decisions <- graft_streams(
         store,
         purpose = purpose,
-        max_streams = max_streams
+        max_streams = max(1000L, max_streams)
       )
       for (decision in decisions) {
         if (!identical(decision@action, "accept")) {
@@ -214,6 +214,10 @@ graft_tools <- function(
         }
         if (!isTRUE(check_eligible(decision@stream))) {
           next
+        }
+        if (length(entries) >= max_streams) {
+          truncated <- TRUE
+          break
         }
         entries[[length(entries) + 1L]] <- list(
           stream = decision@stream,

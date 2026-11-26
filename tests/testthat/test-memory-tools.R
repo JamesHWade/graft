@@ -217,6 +217,78 @@ test_that("graft_tools discovers dynamic streams and bounds text previews", {
   expect_identical(recalled@extra$graft$truncated, TRUE)
 })
 
+test_that("graft_tools applies max_streams after filtering when discovering streams", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE)
+  ref <- graft_save(store, "Reviewed note", id = "note")
+
+  withdrawn_acc <- graft_accept(
+    store,
+    ref,
+    stream = "a:withdrawn",
+    expected = NULL,
+    key = "r1",
+    actor = "reviewer",
+    reason = "Initial",
+    purpose = "assist"
+  )
+  graft_withdraw(
+    store,
+    stream = "a:withdrawn",
+    expected = withdrawn_acc,
+    key = "w1",
+    actor = "reviewer",
+    reason = "Withdrawn"
+  )
+  graft_accept(
+    store,
+    ref,
+    stream = "b:ineligible",
+    expected = NULL,
+    key = "r1",
+    actor = "reviewer",
+    reason = "Ineligible",
+    purpose = "assist"
+  )
+  graft_accept(
+    store,
+    ref,
+    stream = "c:eligible-1",
+    expected = NULL,
+    key = "r1",
+    actor = "reviewer",
+    reason = "First eligible",
+    purpose = "assist"
+  )
+  graft_accept(
+    store,
+    ref,
+    stream = "d:eligible-2",
+    expected = NULL,
+    key = "r1",
+    actor = "reviewer",
+    reason = "Second eligible",
+    purpose = "assist"
+  )
+
+  tools <- graft_tools(
+    store,
+    purpose = "assist",
+    eligible = function(stream) !identical(stream, "b:ineligible"),
+    max_streams = 1L
+  )
+  listed <- tools$list_project_memory()
+  payload <- jsonlite::fromJSON(listed@value, simplifyVector = FALSE)
+
+  expect_identical(payload$count, 1L)
+  expect_identical(payload$truncated, TRUE)
+  expect_identical(payload$streams[[1L]]$stream, "c:eligible-1")
+  expect_identical(listed@extra$graft$truncated, TRUE)
+  expect_identical(listed@extra$graft$streams, "c:eligible-1")
+})
+
 test_that("stale search index hit on a withdrawn or corrected stream cannot leak stale memory", {
   skip_if_not_installed("ellmer")
 
