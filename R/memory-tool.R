@@ -30,6 +30,14 @@
 #' Missing and withdrawn results have distinct messages and no artifact
 #' content.
 #'
+#' Each returned [ellmer::ContentToolResult] also carries a plain-data `graft`
+#' list under `@extra$graft` with `status`, `stream`, `purpose`, `decision_id`,
+#' `selection_id`, `root_refs`, `artifact_refs`, `artifact_count`, `text_bytes`,
+#' `truncated`, `omitted_refs`, and `omitted_count`. It contains no live store
+#' handle and no raw artifact content, so downstream trajectory analyzers such
+#' as scans can inspect memory consultations deterministically from recorded
+#' chats.
+#'
 #' @returns An [ellmer::ToolDef]. Calling the tool returns an
 #' [ellmer::ContentToolResult] whose value is a JSON string.
 #' @export
@@ -263,9 +271,42 @@ graft_tool_json <- function(value) {
   )
 }
 
+graft_tool_metadata <- function(payload) {
+  artifact_refs <- if (length(payload$artifacts)) {
+    lapply(payload$artifacts, `[[`, "ref")
+  } else {
+    list()
+  }
+  root_refs <- if (length(payload$roots)) {
+    lapply(payload$roots, `[[`, "ref")
+  } else {
+    list()
+  }
+  omitted_refs <- if (length(payload$omitted)) {
+    payload$omitted
+  } else {
+    list()
+  }
+  list(
+    status = payload$status,
+    stream = payload$stream,
+    purpose = payload$purpose,
+    decision_id = payload$decision_id,
+    selection_id = payload$selection_id,
+    root_refs = root_refs,
+    artifact_refs = artifact_refs,
+    artifact_count = length(artifact_refs),
+    text_bytes = as.integer(payload$text_bytes %||% 0L),
+    truncated = isTRUE(payload$truncated),
+    omitted_refs = omitted_refs,
+    omitted_count = length(omitted_refs)
+  )
+}
+
 graft_tool_extra <- function(payload) {
+  extra <- list(graft = graft_tool_metadata(payload))
   if (!requireNamespace("shinychat", quietly = TRUE)) {
-    return(list())
+    return(extra)
   }
   display <- switch(
     payload$status,
@@ -291,9 +332,8 @@ graft_tool_extra <- function(payload) {
       show_request = FALSE
     )
   )
-  list(
-    display = do.call(shinychat::tool_result_display, display)
-  )
+  extra$display <- do.call(shinychat::tool_result_display, display)
+  extra
 }
 
 graft_tool_display_preview <- function(payload) {

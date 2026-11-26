@@ -53,4 +53,12 @@ reference. The text bound covers UTF-8 artifact previews; retained
 reference and status metadata remains subject to the recall limits.
 Missing and withdrawn results have distinct messages and no artifact
 content.
+
+Each returned \link[ellmer:ContentToolResult]{ellmer::ContentToolResult} also carries a plain-data \code{graft}
+list under \verb{@extra$graft} with \code{status}, \code{stream}, \code{purpose}, \code{decision_id},
+\code{selection_id}, \code{root_refs}, \code{artifact_refs}, \code{artifact_count}, \code{text_bytes},
+\code{truncated}, \code{omitted_refs}, and \code{omitted_count}. It contains no live store
+handle and no raw artifact content, so downstream trajectory analyzers such
+as scans can inspect memory consultations deterministically from recorded
+chats.
 }
