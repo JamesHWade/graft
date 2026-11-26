@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Persistent artifacts and selected memory • graft</title>
+<title>Persistent artifacts and review history • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -12,14 +12,14 @@
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Source_Sans_3-0.4.10/font.css" rel="stylesheet">
-<link href="../deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Source_Sans_3-0.5.0/font.css" rel="stylesheet">
+<link href="../deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Persistent artifacts and selected memory">
-<meta name="description" content="Save exact artifacts, record host decisions and guard current reuse. Understand the relationship to Commons, data-dict and the migration evidence.
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Persistent artifacts and review history">
+<meta name="description" content="Save immutable artifacts with exact dependencies, record host acceptance and withdrawal decisions, list streams, and persist to local directories or PostgreSQL scopes.
 ">
-<meta property="og:description" content="Save exact artifacts, record host decisions and guard current reuse. Understand the relationship to Commons, data-dict and the migration evidence.
+<meta property="og:description" content="Save immutable artifacts with exact dependencies, record host acceptance and withdrawal decisions, list streams, and persist to local directories or PostgreSQL scopes.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
@@ -69,7 +69,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Persistent artifacts and selected memory</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Persistent artifacts and review history</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/graft/blob/main/vignettes/persistent-artifacts.Rmd" class="external-link"><code>vignettes/persistent-artifacts.Rmd</code></a></small>
@@ -78,21 +78,18 @@
 
     
     
-<p>Saved work should remain available after an R session ends and after
-the software that stores it changes. Graft keeps reports, tables,
-figures, and the exact evidence selected for later workflows. Its
-decision journal records host reviews and distinguishes historical
-inspection from current reuse.</p>
+<p>Saved work should remain verifiable after an R session ends. Graft
+keeps reports, tables, figures, and the exact evidence behind them as
+immutable revisions, then records explicit host review decisions so
+historical inspection stays separate from current reuse.</p>
 <div class="section level2">
 <h2 id="save-and-reopen-exact-content">Save and reopen exact content<a class="anchor" aria-label="anchor" href="#save-and-reopen-exact-content"></a>
 </h2>
-<p>The shared local artifact interface preserves opaque bytes and checks
-them when they are read. It supports trusted local files, and several R
-processes can write to one store: a file lock serializes decisions in
-each stream. The lock needs a file system that honours advisory locks,
-which some network file systems do not. Applications still need their
-own rules for approval, access, power-loss durability, and permanent
-erasure. Saving bytes does not approve them for use.</p>
+<p>A local store keeps content-addressed files on disk and verifies
+digests on every read. Several R processes can write to one store:
+content writes use atomic staged renames, and per-stream advisory file
+locks serialize decision recording (on file systems that honor advisory
+locks). Saving bytes never approves them for reuse.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -117,20 +114,23 @@ erasure. Saving bytes does not approve them for use.</p>
 <pre><code><span><span class="co">## [1] "Corrected report"</span></span></code></pre>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><code>ArtifactRef</code> values contain an identity and immutable
-revision. Keep them with the workflow that uses them. The store has no
-automatic latest or approved selection. This project is pre-production.
-Consumer contract 4 uses typed S7 stores and values. The earlier
-graph/compiler experiments remain historical evidence, not installed
-storage code.</p>
+<p>An <code>ArtifactRef</code> pairs a logical identity
+(<code>@id</code>) with an exact immutable revision
+(<code>@revision</code>). There is no mutable “latest” pointer: keep the
+references your workflow depends on, or record a decision stream when an
+application wants a reviewed current result.</p>
+<p>Use <code><a href="../reference/graft_save_file.html">graft_save_file()</a></code> to ingest a bounded file from disk
+explicitly; strings passed to <code><a href="../reference/graft_save.html">graft_save()</a></code> are always
+treated as UTF-8 text content, never as file paths.</p>
 </div>
 <div class="section level2">
-<h2 id="pin-evidence-and-shared-meaning">Pin evidence and shared meaning<a class="anchor" aria-label="anchor" href="#pin-evidence-and-shared-meaning"></a>
+<h2 id="pin-evidence-with-selections">Pin evidence with selections<a class="anchor" aria-label="anchor" href="#pin-evidence-with-selections"></a>
 </h2>
-<p>A dependency is an exact artifact reference. Save dictionary and
-vocabulary releases as content, then reference them alongside the
-evidence for a report. The selection preserves their bytes. It does not
-evaluate expressions or infer that two measurements are comparable.</p>
+<p>Declare dependencies by passing one <code>ArtifactRef</code> (or a
+list of them) to <code><a href="../reference/graft_save.html">graft_save()</a></code>. Calling
+<code><a href="../reference/graft_select.html">graft_select()</a></code> captures the roots together with their
+complete verified dependency closure as an immutable
+<code>ArtifactSelection</code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-selection-"</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -159,30 +159,23 @@ evaluate expressions or infer that two measurements are comparable.</p>
 <span><span class="co">## &lt;ArtifactRef vocabulary:lab@084f468d1dd656e8d360372e129b9421e28a561e4f26e48149a354868c14c6b9&gt;</span></span></code></pre>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>The returned <code>ArtifactSelection</code> includes the report,
-dictionary, and vocabulary revisions in <code>@artifacts</code>.
-<code>max_metadata_bytes</code> separately limits encoded selection
-metadata (1 MiB by default). Increase it when artifact identities are
-numerous or long, and pass the same limit when creating and reading the
-selection. Likewise, open the store with a larger
-<code>max_revision_bytes</code> (default 1 MiB) when dependency lists
-create large revision manifests.</p>
-<p><code>max_artifacts</code> limits traversal, and the store’s
-<code>max_bytes</code> limits the total selected payload bytes. Reading
-checks the full dependency chain again. Save the selection identifier
-with the application workflow, then apply the application’s access and
-reuse decisions. The decision functions below record application
-approval; a selection alone is not accepted memory. The small dictionary
-above shows that Graft keeps supplied bytes without interpreting them.
-It does not demonstrate a validated data-dict contract.</p>
+<p><code>reopened_selection@artifacts</code> contains the exact
+revisions of the report, dictionary, and vocabulary.
+<code>max_artifacts</code> bounds dependency traversal,
+<code>store@max_bytes</code> bounds aggregate selected payloads, and
+<code>max_metadata_bytes</code> / <code>max_revision_bytes</code> bound
+encoded metadata (1 MiB by default). Reading a selection re-verifies the
+entire dependency chain.</p>
 </div>
 <div class="section level2">
 <h2 id="record-acceptance-and-withdrawal">Record acceptance and withdrawal<a class="anchor" aria-label="anchor" href="#record-acceptance-and-withdrawal"></a>
 </h2>
 <p>Applications decide whether a candidate is acceptable and who may use
-it. Graft records each decision against an exact selection. A stream
-names one independently reviewed subject. A new operation key starts a
-new review even when the selection has not changed.</p>
+it. Graft records each decision in a named <strong>decision
+stream</strong>. Supply the expected predecessor
+(<code>expected = NULL</code> for the first decision, or the prior
+<code>Decision</code>) and a stable request <code>key</code> so stale
+reviews fail and retries are idempotent:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-decisions-"</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -212,29 +205,32 @@ new review even when the selection has not changed.</p>
 <pre><code><span><span class="co">## [1] "withdraw"</span></span></code></pre>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>The <code>eligible = TRUE</code> argument stands in for the
-application’s current check that the material may be used; it does not
-authenticate anyone. Recall also requires the current accepted head, an
-exact purpose match, and intact selected content. The earlier acceptance
-remains available through <code><a href="../reference/graft_history.html">graft_history()</a></code> after withdrawal,
-but it cannot pass current recall. Authorized historical inspection can
-still use exact <code><a href="../reference/graft_read.html">graft_read()</a></code> calls. Applications must
-enforce access on every route.</p>
-<p>Each <code>Decision@selection</code> is an exact selection digest.
-<code>Recall@selection</code> is the verified
-<code>ArtifactSelection</code>, while <code>Recall@roots</code> and
-<code>Recall@artifacts</code> contain materialized <code>Artifact</code>
-values. A withdrawal derives its purpose and selection from the verified
-predecessor, so callers cannot replace them with changed properties.</p>
+<ul>
+<li>
+<code>eligible = TRUE</code> stands in for your application’s
+current access check.</li>
+<li>
+<code><a href="../reference/graft_recall.html">graft_recall()</a></code> verifies eligibility, purpose match, the
+stream’s current accepted head, and every selected byte. After
+withdrawal it returns status <code>"withdrawn"</code> with no artifact
+payloads.</li>
+<li>
+<code><a href="../reference/graft_history.html">graft_history()</a></code> and <code><a href="../reference/graft_read.html">graft_read()</a></code> keep
+earlier decisions and revisions inspectable for audit without
+re-approving them for reuse.</li>
+<li>
+<code>Decision@selection</code> holds the exact selection digest so
+histories can be inspected without materializing payloads.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="list-what-is-kept">List what is kept<a class="anchor" aria-label="anchor" href="#list-what-is-kept"></a>
 </h2>
-<p><code><a href="../reference/graft_streams.html">graft_streams()</a></code> returns each stream’s current decision,
-so an application can show what it has kept without keeping a separate
-catalog. Pass <code>purpose</code> to list only the streams whose
-current decision was recorded for that purpose, and check
-<code>@action</code> to tell accepted streams from withdrawn ones.</p>
+<p><code><a href="../reference/graft_streams.html">graft_streams()</a></code> returns each stream’s current decision
+so an application can display what it has kept without maintaining a
+separate catalog. Pass <code>purpose</code> to filter by purpose, and
+inspect <code>@action</code> to distinguish accepted streams from
+withdrawn ones:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"artifact-streams-"</span><span class="op">)</span></span>
 <span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="va">path</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -250,141 +246,19 @@ current decision was recorded for that purpose, and check
 <pre><code><span><span class="co">## [1] "project:reactor accept"</span></span></code></pre>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">path</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Listing reads decision records only, like
-<code><a href="../reference/graft_history.html">graft_history()</a></code>. It returns no artifact content and needs
-no eligibility decision; <code><a href="../reference/graft_recall.html">graft_recall()</a></code> still decides
-whether the accepted evidence may be used. Stream names, actors, and
-reasons are visible in the result, so the application decides who may
-list a store. Decisions carry no timestamps, and streams are ordered by
+<p>Listing reads decision metadata only—it returns no artifact payloads
+and requires no eligibility callback. Streams are returned ordered by
 name.</p>
-<p>Always supply the predecessor observed during review. An identical
-retry returns its original historical record and does not restore
-eligibility. A changed retry or a stale new request fails. Withdrawal
-needs intact decision history, but it can still proceed when selected
-payloads are corrupt or unavailable.</p>
-<p>Each stream uses a bounded, append-only journal. The defaults allow
-1,000 decisions and 1 MiB of aggregate journal metadata; selection
-bounds are independent. Staging is not a committed decision. A complete
-immutable record is the commit point, so an interrupted request can be
-retried without duplicating acceptance. Concurrent writers, power-loss
-durability, and backup recovery are separate operational work.</p>
 </div>
 <div class="section level2">
-<h2 id="from-analysis-to-later-reuse">From analysis to later reuse<a class="anchor" aria-label="anchor" href="#from-analysis-to-later-reuse"></a>
+<h2 id="use-postgresql-scopes">Use PostgreSQL scopes<a class="anchor" aria-label="anchor" href="#use-postgresql-scopes"></a>
 </h2>
-<p>Suppose Commons produces a report, table, and figure. The artifact
-layer can keep their contents, stable identities, revisions, and
-references to the exact inputs and meaning used to produce them. A
-correction creates a new result while the original remains available for
-historical inspection.</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr class="header">
-<th>Concern</th>
-<th>Proposed owner</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Local schemas, types, constraints, and expressions</td>
-<td>data-dict</td>
-</tr>
-<tr class="even">
-<td>Shared concepts and qualified bindings across dictionaries</td>
-<td>A separate internal vocabulary publishing module</td>
-</tr>
-<tr class="odd">
-<td>Analysis, context search, and calculation evidence</td>
-<td>Commons</td>
-</tr>
-<tr class="even">
-<td>Artifact contents, revisions, dependencies, and saved
-selections</td>
-<td>Graft shared artifact infrastructure</td>
-</tr>
-<tr class="odd">
-<td>Approval, access, reuse purpose, withdrawal, and active task
-lifetime</td>
-<td>The application</td>
-</tr>
-</tbody>
-</table>
-<p>The vocabulary publisher connects domain concepts across workflows. A
-binding can associate two local fields with one concept while retaining
-their source dictionaries and units. It does not establish that their
-values can be joined or compared.</p>
-</div>
-<div class="section level2">
-<h2 id="persistent-artifacts-provide-material-for-memory">Persistent artifacts provide material for memory<a class="anchor" aria-label="anchor" href="#persistent-artifacts-provide-material-for-memory"></a>
-</h2>
-<p>A later workflow might select an approved interpretation, a
-dictionary release, and three earlier results. The saved selection
-records those exact revisions and dependencies. The full selection
-remains available even when no new acceptance receipt is recorded.</p>
-<p>Saving a draft and approving reuse are separate actions. When a new
-workflow starts, the application checks current eligibility. A
-correction or a return to an earlier input revision does not reapprove a
-withdrawn selection. The prototype lets the application approve it again
-explicitly. The application decides who may do that and for what
-purpose. Historical access does not grant permission to use the evidence
-in a new task.</p>
-<p>The application also owns cancellation of active work, Reader
-identity, and permanent Forget. A stored selection cannot erase copies
-already given to a model.</p>
-</div>
-<div class="section level2">
-<h2 id="what-replaceable-means">What replaceable means<a class="anchor" aria-label="anchor" href="#what-replaceable-means"></a>
-</h2>
-<p>Applications retain exact artifacts, dependency selections, and
-application decisions. They do not depend on graph tables, a schema
-compiler, or native store objects. A future storage implementation must
-keep those identities and history. Graft does not yet expose a pluggable
-backend interface.</p>
-<p>Earlier composition experiments compared native graph storage with
-immutable manifests. Their source and observations were removed from the
-repository and remain in its git history as research. They led to the
-artifact contract and the retirement of the native store. Their examples
-document that earlier architecture and are not instructions for the
-current store.</p>
-<p>Graft keeps the shared infrastructure. Tempest and Rill own product
-semantics, access, approval, and retention. Publication recovery remains
-separate work in <a href="https://github.com/JamesHWade/graft/issues/86" class="external-link">#86</a>.</p>
-</div>
-<div class="section level2">
-<h2 id="use-retained-research-in-tempest">Use retained research in Tempest<a class="anchor" aria-label="anchor" href="#use-retained-research-in-tempest"></a>
-</h2>
-<p>Tempest maps validated completed research into this artifact
-contract. Its <code>tempest_publish_artifact_research()</code> retains
-the exact evidence and all of its dependencies, along with source
-bodies, program provenance, and a readable report. The application
-explicitly accepts that selection with <code><a href="../reference/graft_accept.html">graft_accept()</a></code>.</p>
-<p><code>tempest_reuse_artifact_research()</code> validates the
-scientific evidence and checks the current Graft decision through an
-application-provided eligibility callback. New runs and resumed sessions
-check permission to reuse the evidence again. The callback is transient.
-Session bundles retain content and decision provenance, never a saved
-permission. Historical inspection uses
-<code>tempest_read_artifact_research()</code> and does not grant
-reuse.</p>
-<p>The <a href="https://jameshwade.github.io/tempest/articles/artifact-knowledge.html" class="external-link">Tempest
-artifact guide</a> contains the installed offline example. Current
-Tempest consumer tests exercise publication, fresh-process reads,
-corrections, and current admission through these public interfaces. The
-earlier pinned experiment suite remains historical evidence. These
-synthetic fixtures do not establish production access or erasure.</p>
-</div>
-<div class="section level2">
-<h2 id="postgresql-and-application-scopes">PostgreSQL and application scopes<a class="anchor" aria-label="anchor" href="#postgresql-and-application-scopes"></a>
-</h2>
-<p><code><a href="../reference/graft_store_postgres.html">graft_store_postgres()</a></code> provides the same artifact,
-selection, decision, and vocabulary interfaces inside a DBI transaction
-controlled by the application. Its optional DBI and RPostgres
-dependencies are needed only for PostgreSQL stores.</p>
+<p>For multi-user or database-backed apps,
+<code><a href="../reference/graft_store_postgres.html">graft_store_postgres()</a></code> provides the exact same API inside a
+DBI transaction owned by your application:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbWithTransaction.html" class="external-link">dbWithTransaction</a></span><span class="op">(</span><span class="va">connection</span>, <span class="op">{</span></span>
-<span>  <span class="co"># The host derives this scope from authenticated identity and checks access.</span></span>
+<span>  <span class="co"># Derive scope from authenticated identity and check access first.</span></span>
 <span>  <span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_store_postgres.html">graft_store_postgres</a></span><span class="op">(</span></span>
 <span>    <span class="va">connection</span>, scope <span class="op">=</span> <span class="va">trusted_scope</span>, create <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span>
@@ -394,36 +268,15 @@ dependencies are needed only for PostgreSQL stores.</p>
 <span>    actor <span class="op">=</span> <span class="va">trusted_actor</span>,</span>
 <span>    reason <span class="op">=</span> <span class="st">"Explicit review"</span>, purpose <span class="op">=</span> <span class="st">"reader-context"</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="co"># Host catalog and receipt writes can use this same connection.</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># Only successful transaction completion commits the operation.</span></span></code></pre></div>
-<p>Every retained row belongs to one scope. Graft serializes operations
-within a scope until commit or rollback, and the application can retain
-its own records atomically in the same transaction. A scope key does not
-authenticate anyone; the database role can still access other scopes
-directly. Applications must check access before every operation and
-derive the scope from trusted identity, including in background workers.
-Connections and store handles are process-local.</p>
-<p>This interface does not implement permanent Forget or stop an old
-database backup from restoring deleted content. The application and
-storage system must handle those obligations before a broad memory
-rollout.</p>
-</div>
-<div class="section level2">
-<h2 id="build-a-verified-replacement">Build a verified replacement<a class="anchor" aria-label="anchor" href="#build-a-verified-replacement"></a>
-</h2>
-<p>An application can preview exclusions with
-<code><a href="../reference/graft_plan_replacement.html">graft_plan_replacement()</a></code> and copy the remaining artifacts
-into a separate empty store with <code><a href="../reference/graft_plan_replacement.html">graft_replace()</a></code>,
-preserving their exact contents. <code><a href="../reference/graft_manifest.html">graft_manifest()</a></code> verifies
-the complete logical object set, including historical decisions. See <a href="artifact-recovery.html">Verify a replacement artifact store</a>
-for the runnable example and the separate Forget and restore
-obligations.</p>
-<p>For a complete copy that retains every object and historical
-decision, use <code><a href="../reference/graft_backup.html">graft_backup()</a></code>. Verification and restore
-require the receipt that the application keeps separately from the
-bundle. See <a href="artifact-backups.html">Back up and restore an
-artifact store</a>.</p>
+<span>  <span class="co"># Application catalog writes can commit atomically in the same transaction.</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>Every retained row in <code>graft_artifact_objects</code> belongs to
+one <code>scope</code>, and a transaction-level advisory lock serializes
+operations within that scope. Rolling back the transaction undoes every
+write cleanly. Because the scope key isolates data rather than
+authenticating callers, applications should always derive
+<code>scope</code> from authenticated identity and never let a model
+choose it.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

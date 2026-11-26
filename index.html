@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>graft: Project memory for R apps and agents • graft</title>
+<title>graft: Reviewed project memory for R apps and agents • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -12,14 +12,14 @@
 <link rel="manifest" href="site.webmanifest">
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/Source_Sans_3-0.4.10/font.css" rel="stylesheet">
-<link href="deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/Source_Sans_3-0.5.0/font.css" rel="stylesheet">
+<link href="deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Project memory for R apps and agents">
-<meta name="description" content="Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="graft: Reviewed project memory for R apps and agents">
+<meta name="description" content="Keep reviewed findings, definitions, and exact evidence for the next conversation, agent, or workflow.
 ">
-<meta property="og:description" content="Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
+<meta property="og:description" content="Keep reviewed findings, definitions, and exact evidence for the next conversation, agent, or workflow.
 ">
 <meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
@@ -71,124 +71,206 @@
 </div>
 <div class="graft-hero">
 <p class="graft-eyebrow">
-Project memory for R apps and agents
+Reviewed project memory for the ellmer ecosystem
 </p>
 <h2 data-toc-skip>
-Give your next conversation<br>the knowledge your team has reviewed.
+Give your next agent<br>the knowledge your team reviewed.
 </h2>
 <p class="graft-hero-copy">
-Save a finding or an agreed definition with the evidence behind it. An agent or workflow can look it up later, check its exact sources, and see how it changed.
+Save findings, metric definitions, and reports with the exact evidence behind them. Record human review and corrections, then let ellmer, shinychat, deputy, or MCP clients recall only what is currently accepted.
 </p>
 <div class="graft-actions">
-<p><a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a> <a class="external-link btn btn-outline-secondary" href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory">Get the runnable Shiny example</a></p>
+<p><a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a> <a class="btn btn-outline-secondary" href="articles/architecture.html">See how graft fits the ellmer ecosystem</a></p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="remember-an-agreed-definition">Remember an agreed definition<a class="anchor" aria-label="anchor" href="#remember-an-agreed-definition"></a>
+<h2 id="why-reviewed-memory">Why reviewed memory?<a class="anchor" aria-label="anchor" href="#why-reviewed-memory"></a>
 </h2>
-<p>You’re building an analytics assistant with ellmer and shinychat. The team agrees that an active customer has a paid account and used the product in the last 30 days. Next week, someone opens a fresh conversation and asks how to count active customers.</p>
-<p>With Graft, your app can retrieve the reviewed definition and the exact source behind it. If the team changes the window to 60 days, you can review that correction, use it in later conversations, and still inspect the earlier version.</p>
+<p>Language models start every session from scratch. Conversations live in a chat window; search indexes return whatever matches a query—even drafts, superseded definitions, or withdrawn results.</p>
+<p>Suppose your team agrees that an “active customer” has a paid account and used the product in the past 30 days. With graft, your app saves that definition alongside its source, records your review, and exposes a read-only tool to future chats. When the window changes to 60 days, you review the correction while keeping the original evidence and decision history intact.</p>
 <table class="table table graft-workflow">
 <thead><tr>
 <th>
-Review once
+<ol style="list-style-type: decimal"><li>Save with evidence
+</li></ol>
 </th>
 <th>
-Reuse later
+<ol start="2" style="list-style-type: decimal"><li>Review explicitly
+</li></ol>
 </th>
 <th>
-Correct with history
+<ol start="3" style="list-style-type: decimal"><li>Recall safely
+</li></ol>
 </th>
 </tr></thead>
 <tbody><tr>
 <td>
-Save the agreed definition and its handbook excerpt.
+Store text, JSON, reports, or figures with exact references to their inputs.
 </td>
 <td>
-Let a fresh chat retrieve the current reviewed note through <code><a href="reference/graft_tool.html">graft_tool()</a></code>.
+Record who accepted or withdrew a selection—never from an unreviewed model write.
 </td>
 <td>
-Review the updated definition while preserving the original evidence.
+Hand <code><a href="reference/graft_tool.html">graft_tool()</a></code> to ellmer, shinychat, deputy, or mcptools so agents read only current approved memory.
 </td>
 </tr></tbody>
 </table>
 </div>
 <div class="section level2">
-<h2 id="try-it-in-a-shiny-app">Try it in a Shiny app<a class="anchor" aria-label="anchor" href="#try-it-in-a-shiny-app"></a>
+<h2 id="try-the-project-notebook-app">Try the project notebook app<a class="anchor" aria-label="anchor" href="#try-the-project-notebook-app"></a>
 </h2>
-<p>The included project notebook puts review controls beside a shinychat conversation. The default scripted preview uses real Graft files without model calls.</p>
+<p>The package includes a runnable Shiny app pairing a reviewable notebook with a shinychat conversation. By default it runs locally with real graft storage and scripted replies—no API key required.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span>, <span class="st">"ellmer"</span>, <span class="st">"shinychat"</span>, <span class="st">"shiny"</span>, <span class="st">"bslib"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>GRAFT_DEMO_STORE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"project-memory"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"project-memory"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Review and save the proposed definition, then ask “How do we count an active customer?” Start a new conversation and ask again. Stop and restart the app to reopen the same notebook. The <a href="articles/getting-started.html">getting-started guide</a> walks through the storage calls, connects <code><a href="reference/graft_tool.html">graft_tool()</a></code> to ellmer, and explains how to enable the live agent.</p>
+<ol style="list-style-type: decimal">
+<li>Review and save the proposed definition and source.</li>
+<li>Ask <em>“How do we count an active customer?”</em>
+</li>
+<li>Start a <strong>New conversation</strong> and ask again—the reviewed definition persists.</li>
+<li>Update the definition to 60 days, review the correction, and ask in a fresh chat to verify the updated answer while keeping history intact.</li>
+</ol>
+<p>Set <code>OPENAI_API_KEY</code> and <code>Sys.setenv(GRAFT_DEMO_LIVE = "true")</code> to switch to a live ellmer agent. See the <a href="articles/getting-started.html">getting-started guide</a> for the step-by-step code, <code>deputy</code> runtime integration, and <code>mcptools</code> setup.</p>
 </div>
 <div class="section level2">
-<h2 id="where-you-could-use-graft">Where you could use Graft<a class="anchor" aria-label="anchor" href="#where-you-could-use-graft"></a>
+<h2 id="where-graft-fits-in-the-ellmer-ecosystem">Where graft fits in the ellmer ecosystem<a class="anchor" aria-label="anchor" href="#where-graft-fits-in-the-ellmer-ecosystem"></a>
+</h2>
+<p>graft stays small and composes cleanly with Posit’s ellmerverse and the wider ellmerverse+ stack:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr>
+<th>Package</th>
+<th>Role</th>
+<th>How it pairs with graft</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+<strong>ellmer</strong> &amp; <strong>shinychat</strong>
+</td>
+<td>Model calls, tools, and chat UI</td>
+<td>Register <code><a href="reference/graft_tool.html">graft_tool()</a></code> so chats consult reviewed memory with rich tool cards</td>
+</tr>
+<tr>
+<td><strong>ragnar</strong></td>
+<td>Similarity search (RAG) over documents</td>
+<td>
+<strong>ragnar finds, graft verifies</strong>: use ragnar to locate candidates, then recall only current accepted revisions through graft</td>
+</tr>
+<tr>
+<td>
+<strong>commons</strong> &amp; <strong>data-dict</strong>
+</td>
+<td>Trusted data analysis &amp; dictionary contracts</td>
+<td>Commons runs live analyses; graft retains reviewed reports, conclusions, and pinned shared vocabularies across sessions</td>
+</tr>
+<tr>
+<td><strong>deputy</strong></td>
+<td>Governed agent runtime &amp; <code>TrustedResults</code>
+</td>
+<td>Run <code><a href="reference/graft_tool.html">graft_tool()</a></code> in read-only/plan modes and capture agent drafts via <code>TrustedResults()</code> for human review</td>
+</tr>
+<tr>
+<td><strong>mcptools</strong></td>
+<td>Model Context Protocol servers</td>
+<td>Serve <code><a href="reference/graft_tool.html">graft_tool()</a></code> to Claude Code, Positron, or Posit Assistant</td>
+</tr>
+<tr>
+<td>
+<strong>vitals</strong> &amp; <strong>scans</strong>
+</td>
+<td>LLM evals &amp; trajectory analysis</td>
+<td>Evaluate memory recall with <code>vitals</code> and inspect completed agent runs and promotion candidates with <code>scans</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Read <a href="articles/architecture.html">Graft in the ellmer ecosystem</a> for the full ownership map.</p>
+</div>
+<div class="section level2">
+<h2 id="quick-start-in-r">Quick start in R<a class="anchor" aria-label="anchor" href="#quick-start-in-r"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="st">"analysis-memory"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">source</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Handbook: use a 30-day activity window."</span>, <span class="st">"handbook"</span><span class="op">)</span></span>
+<span><span class="va">note</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="st">"An active customer has a paid account and activity in the past 30 days."</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="va">source</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">decision</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_accept.html">graft_accept</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">note</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>
+<span>  expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  key <span class="op">=</span> <span class="st">"review-1"</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"analyst"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Matches the metrics handbook"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"project-assistance"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Later session or fresh process</span></span>
+<span><span class="va">recalled</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_recall.html">graft_recall</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="st">"analysis-memory"</span><span class="op">)</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"project-assistance"</span>,</span>
+<span>  eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">recalled</span><span class="op">@</span><span class="va">roots</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
+<p>Saving a correction under the same ID creates a new immutable revision while leaving the original reference readable with <code><a href="reference/graft_read.html">graft_read()</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="explore-the-guides">Explore the guides<a class="anchor" aria-label="anchor" href="#explore-the-guides"></a>
 </h2>
 <div class="graft-paths">
 <section><h3>
-Project knowledge for an agent
+Project memory for chat agents
 </h3>
 <p>
-Save a reviewed definition, decision, or finding for another conversation. Your app chooses what to keep and who can use it.
+Wire reviewed notes into ellmer, shinychat, deputy, and local MCP servers with <code><a href="reference/graft_tool.html">graft_tool()</a></code>.
 </p>
 <p>
 <a href="articles/getting-started.html">Give a chat agent project memory</a>
 </p>
 </section><section><h3>
-A report with its evidence
+Artifacts, evidence, and history
 </h3>
 <p>
-Keep a conclusion, table, or figure with its exact inputs so you can check what went into the result.
+Save reports, tables, and figures with exact dependencies, list streams, and persist to local directories or PostgreSQL scopes.
 </p>
 <p>
-<a href="articles/persistent-artifacts.html">Keep artifacts and review history</a>
+<a href="articles/persistent-artifacts.html">Persistent artifacts and review history</a>
 </p>
 </section><section><h3>
-Shared concepts across workflows
+Shared vocabulary across workflows
 </h3>
 <p>
-Save definitions and relationships with a specific data-dict release so agents and applications can recover the same vocabulary.
+Pin concepts, relationships, and qualified data-dict bindings so agents share consistent terminology across releases.
 </p>
 <p>
-<a href="articles/shared-vocabulary.html">Publish shared vocabulary</a>
+<a href="articles/shared-vocabulary.html">Shared concepts across workflows</a>
+</p>
+</section><section><h3>
+Evaluate recall with vitals
+</h3>
+<p>
+Test accepted, corrected, withdrawn, instruction-like, and host-denied memory with a credential-free <code><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">vitals::Task</a></code>.
+</p>
+<p>
+<a href="articles/recall-evaluation.html">Evaluate agent recall</a>
 </p>
 </section>
 </div>
-</div>
-<div class="section level2">
-<h2 id="save-a-result-with-its-evidence">Save a result with its evidence<a class="anchor" aria-label="anchor" href="#save-a-result-with-its-evidence"></a>
-</h2>
-<p>Start with a fresh directory and ordinary text:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jameshwade.github.io/graft/">graft</a></span><span class="op">)</span></span>
-<span><span class="va">store</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_store.html">graft_store</a></span><span class="op">(</span><span class="st">"analysis-memory"</span>, create <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">source</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"Handbook: use a 30-day activity window."</span>, <span class="st">"handbook"</span><span class="op">)</span></span>
-<span><span class="va">note</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
-<span>  <span class="va">store</span>, <span class="st">"An active customer used the product in the past 30 days."</span>,</span>
-<span>  id <span class="op">=</span> <span class="st">"active-customer"</span>, dependencies <span class="op">=</span> <span class="va">source</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
-<p>Reopen it later with <code>graft_store("analysis-memory")</code>. Saving a correction under the same ID creates a new revision; the original reference still reads the original content. Use <code><a href="reference/graft_accept.html">graft_accept()</a></code> to record a review and <code><a href="reference/graft_recall.html">graft_recall()</a></code> to retrieve the current accepted result, as shown in the getting-started guide.</p>
-</div>
-<div class="section level2">
-<h2 id="add-graft-to-an-existing-application">Add Graft to an existing application<a class="anchor" aria-label="anchor" href="#add-graft-to-an-existing-application"></a>
-</h2>
-<p>Keep ellmer for the model and tool calls, shinychat for the conversation, and your application’s review and access controls. Add Graft where a useful result should outlive the current chat or R process.</p>
-<p>Start with one kind of note and a read-only <code><a href="reference/graft_tool.html">graft_tool()</a></code> fixed to its stream and purpose. A larger app can use its own catalog or search index to choose relevant notes, then ask Graft to verify the saved selections and evidence.</p>
-</div>
-<div class="section level2">
-<h2 id="storage-and-operational-guides">Storage and operational guides<a class="anchor" aria-label="anchor" href="#storage-and-operational-guides"></a>
-</h2>
-<p>A local Graft store uses trusted files, and several R processes can write to it on a file system that honours advisory locks (many network file systems do not). For PostgreSQL, your application owns the transaction in which Graft reads and writes. This pre-production example is for one trusted local user. Before deploying to several users, your app needs to check access to each user or project and decide how long to keep the data.</p>
-<ul>
-<li><a href="articles/artifact-backups.html">Back up and restore an artifact store</a></li>
-<li><a href="articles/artifact-recovery.html">Build a verified replacement store</a></li>
-<li><a href="articles/architecture.html">Understand the architecture</a></li>
-<li><a href="articles/compatibility.html">Check integration requirements</a></li>
-</ul>
-<p>Permanent Forget and recovery from retired backups remain active work. Saving or reviewing material records your application’s decision; it does not establish that a claim is true.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

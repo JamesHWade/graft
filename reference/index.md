@@ -1,6 +1,6 @@
 # Package index
 
-## Everyday workflow
+## Store and save
 
 - [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
   : Create or reopen a local artifact store
@@ -16,6 +16,9 @@
   : Capture and verify an exact dependency selection
 - [`graft_read_selection()`](https://jameshwade.github.io/graft/reference/graft_read_selection.md)
   : Read one exact retained dependency selection
+
+## Review and recall
+
 - [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
   : Record acceptance of exact retained evidence
 - [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md)
@@ -29,27 +32,14 @@
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
   : Create a fixed read-only ellmer tool for reviewed content
 
-## Vocabulary and operations
+## Shared vocabulary
 
 - [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
   : Publish a validated shared vocabulary release
 - [`graft_read_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_read_vocabulary.md)
   : Read a retained vocabulary release
-- [`graft_backup()`](https://jameshwade.github.io/graft/reference/graft_backup.md)
-  : Create a closed artifact-store backup
-- [`graft_verify_backup()`](https://jameshwade.github.io/graft/reference/graft_verify_backup.md)
-  : Verify a closed artifact-store backup
-- [`graft_restore()`](https://jameshwade.github.io/graft/reference/graft_restore.md)
-  : Restore a verified backup into an empty artifact store
-- [`graft_manifest()`](https://jameshwade.github.io/graft/reference/graft_manifest.md)
-  : Inventory a complete artifact store
-- [`graft_plan_replacement()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
-  [`graft_replace()`](https://jameshwade.github.io/graft/reference/graft_plan_replacement.md)
-  : Plan and build a bounded artifact-store replacement
-- [`graft_with_store_lock()`](https://jameshwade.github.io/graft/reference/graft_with_store_lock.md)
-  : Hold a store's lock while an application changes it
 
-## Public S7 classes
+## S7 classes
 
 - [`ArtifactStore()`](https://jameshwade.github.io/graft/reference/ArtifactStore.md)
   : Abstract artifact store
@@ -69,8 +59,3 @@
   A result from a current reviewed-artifact lookup
 - [`VocabularyRelease()`](https://jameshwade.github.io/graft/reference/VocabularyRelease.md)
   : A retained shared vocabulary release
-
-## Contract
-
-- [`graft_contract_version()`](https://jameshwade.github.io/graft/reference/graft_contract_version.md)
-  : Report Graft's artifact and vocabulary contracts

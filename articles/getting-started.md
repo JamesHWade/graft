@@ -317,7 +317,7 @@ and the tools you list in `tool_allowlist`:
 ``` r
 
 agent <- deputy::Agent$new(
-  chat = ellmer::chat("openai/gpt-6-luna"),
+  chat = ellmer::chat_openai(),
   tools = list(memory_tool),
   permissions = deputy::Permissions(
     mode = "readonly",
@@ -353,7 +353,7 @@ draft_tool <- ellmer::tool(
 )
 drafts <- list()
 agent <- deputy::Agent$new(
-  chat = ellmer::chat("openai/gpt-6-luna"),
+  chat = ellmer::chat_openai(),
   tools = list(memory_tool, draft_tool),
   trusted_results = deputy::TrustedResults(
     definition = "draft_definition",
@@ -511,8 +511,8 @@ graft_history(store, "metric:active-customer")
     ## [[3]]
     ## <Decision withdraw stream=metric:active-customer sequence=3 id=5bd286071d93890bad6b54375a603289b1edfefb68b12d2e52d5e22f2f830754>
 
-Withdrawal retains history. Permanent deletion and backup retirement
-require a separate retention workflow.
+Withdrawal stops future recall while keeping the decision history
+inspectable.
 
 ## Make it yours
 
@@ -524,13 +524,19 @@ Adapt these choices to your project:
 | Evidence | A text excerpt | Source documents, analysis inputs, tables, or figures declared as dependencies |
 | Review subject | `metric:active-customer` | A stable identifier from your application’s catalog |
 | Review action | A local person clicks save | Your approval workflow and authenticated reviewer identity |
-| Retrieval | One fixed read-only tool | A catalog or search step selects relevant streams, then Graft verifies the chosen selections |
+| Retrieval | One fixed read-only tool | A catalog or search step (such as ragnar) selects relevant streams, then graft verifies the chosen selections |
 | Storage and access | One trusted local user’s directory | Application-scoped local storage or PostgreSQL transactions, with current authorization on every access path |
 
-If several agents need the same terminology, see [publish shared
-vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.md),
-which starts from a data-dict dictionary. For reports and review
-histories, read [persistent
-artifacts](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
-When you need to move the notebook, use [verified
-backups](https://jameshwade.github.io/graft/articles/artifact-backups.md).
+Next steps:
+
+- Save multi-artifact selections and use PostgreSQL scopes in
+  [Persistent artifacts and review
+  history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md).
+- Share consistent terminology across workflows in [Shared concepts
+  across
+  workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md).
+- Measure recall behavior offline in [Evaluate agent
+  recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md).
+- See how graft pairs with ragnar, commons, deputy, and scans in [Graft
+  in the ellmer
+  ecosystem](https://jameshwade.github.io/graft/articles/architecture.md).

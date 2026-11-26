@@ -2,9 +2,6 @@
 <url><loc>https://jameshwade.github.io/graft/404.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/LICENSE-text.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/architecture.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/articles/artifact-backups.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/articles/artifact-recovery.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/articles/compatibility.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/getting-started.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/index.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/articles/persistent-artifacts.html</loc></url>
@@ -23,17 +20,12 @@
 <url><loc>https://jameshwade.github.io/graft/reference/Recall.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/VocabularyRelease.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_accept.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_backup.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_contract_version.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_history.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_manifest.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_plan_replacement.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_read.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_read_selection.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_read_vocabulary.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_recall.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_restore.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_save.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_save_file.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_select.html</loc></url>
@@ -41,8 +33,6 @@
 <url><loc>https://jameshwade.github.io/graft/reference/graft_store_postgres.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_streams.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_tool.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_verify_backup.html</loc></url>
-<url><loc>https://jameshwade.github.io/graft/reference/graft_with_store_lock.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/graft_withdraw.html</loc></url>
 <url><loc>https://jameshwade.github.io/graft/reference/index.html</loc></url>
 </urlset>

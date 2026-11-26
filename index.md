@@ -1,39 +1,39 @@
 # graft
 
-Project memory for R apps and agents
+Reviewed project memory for the ellmer ecosystem
 
-## Give your next conversation the knowledge your team has reviewed.
+## Give your next agent the knowledge your team reviewed.
 
-Save a finding or an agreed definition with the evidence behind it. An
-agent or workflow can look it up later, check its exact sources, and see
-how it changed.
+Save findings, metric definitions, and reports with the exact evidence
+behind them. Record human review and corrections, then let ellmer,
+shinychat, deputy, or MCP clients recall only what is currently
+accepted.
 
 [Build a project memory
 assistant](https://jameshwade.github.io/graft/articles/getting-started.md)
-[Get the runnable Shiny
-example](https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory)
+[See how graft fits the ellmer
+ecosystem](https://jameshwade.github.io/graft/articles/architecture.md)
 
-## Remember an agreed definition
+## Why reviewed memory?
 
-You’re building an analytics assistant with ellmer and shinychat. The
-team agrees that an active customer has a paid account and used the
-product in the last 30 days. Next week, someone opens a fresh
-conversation and asks how to count active customers.
+Language models start every session from scratch. Conversations live in
+a chat window; search indexes return whatever matches a query—even
+drafts, superseded definitions, or withdrawn results.
 
-With Graft, your app can retrieve the reviewed definition and the exact
-source behind it. If the team changes the window to 60 days, you can
-review that correction, use it in later conversations, and still inspect
-the earlier version.
+Suppose your team agrees that an “active customer” has a paid account
+and used the product in the past 30 days. With graft, your app saves
+that definition alongside its source, records your review, and exposes a
+read-only tool to future chats. When the window changes to 60 days, you
+review the correction while keeping the original evidence and decision
+history intact.
 
-| Review once | Reuse later | Correct with history |
-|----|----|----|
-| Save the agreed definition and its handbook excerpt. | Let a fresh chat retrieve the current reviewed note through [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md). | Review the updated definition while preserving the original evidence. |
+[TABLE]
 
-## Try it in a Shiny app
+## Try the project notebook app
 
-The included project notebook puts review controls beside a shinychat
-conversation. The default scripted preview uses real Graft files without
-model calls.
+The package includes a runnable Shiny app pairing a reviewable notebook
+with a shinychat conversation. By default it runs locally with real
+graft storage and scripted replies—no API key required.
 
 ``` r
 
@@ -42,97 +42,111 @@ Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
 shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
 
-Review and save the proposed definition, then ask “How do we count an
-active customer?” Start a new conversation and ask again. Stop and
-restart the app to reopen the same notebook. The [getting-started
+1.  Review and save the proposed definition and source.
+2.  Ask *“How do we count an active customer?”*
+3.  Start a **New conversation** and ask again—the reviewed definition
+    persists.
+4.  Update the definition to 60 days, review the correction, and ask in
+    a fresh chat to verify the updated answer while keeping history
+    intact.
+
+Set `OPENAI_API_KEY` and `Sys.setenv(GRAFT_DEMO_LIVE = "true")` to
+switch to a live ellmer agent. See the [getting-started
 guide](https://jameshwade.github.io/graft/articles/getting-started.md)
-walks through the storage calls, connects
-[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
-to ellmer, and explains how to enable the live agent.
+for the step-by-step code, `deputy` runtime integration, and `mcptools`
+setup.
 
-## Where you could use Graft
+## Where graft fits in the ellmer ecosystem
 
-### Project knowledge for an agent
+graft stays small and composes cleanly with Posit’s ellmerverse and the
+wider ellmerverse+ stack:
 
-Save a reviewed definition, decision, or finding for another
-conversation. Your app chooses what to keep and who can use it.
+| Package | Role | How it pairs with graft |
+|----|----|----|
+| **ellmer** & **shinychat** | Model calls, tools, and chat UI | Register [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) so chats consult reviewed memory with rich tool cards |
+| **ragnar** | Similarity search (RAG) over documents | **ragnar finds, graft verifies**: use ragnar to locate candidates, then recall only current accepted revisions through graft |
+| **commons** & **data-dict** | Trusted data analysis & dictionary contracts | Commons runs live analyses; graft retains reviewed reports, conclusions, and pinned shared vocabularies across sessions |
+| **deputy** | Governed agent runtime & `TrustedResults` | Run [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) in read-only/plan modes and capture agent drafts via `TrustedResults()` for human review |
+| **mcptools** | Model Context Protocol servers | Serve [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) to Claude Code, Positron, or Posit Assistant |
+| **vitals** & **scans** | LLM evals & trajectory analysis | Evaluate memory recall with `vitals` and inspect completed agent runs and promotion candidates with `scans` |
 
-[Give a chat agent project
-memory](https://jameshwade.github.io/graft/articles/getting-started.md)
+Read [Graft in the ellmer
+ecosystem](https://jameshwade.github.io/graft/articles/architecture.md)
+for the full ownership map.
 
-### A report with its evidence
-
-Keep a conclusion, table, or figure with its exact inputs so you can
-check what went into the result.
-
-[Keep artifacts and review
-history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
-
-### Shared concepts across workflows
-
-Save definitions and relationships with a specific data-dict release so
-agents and applications can recover the same vocabulary.
-
-[Publish shared
-vocabulary](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
-
-## Save a result with its evidence
-
-Start with a fresh directory and ordinary text:
+## Quick start in R
 
 ``` r
 
 library(graft)
+
 store <- graft_store("analysis-memory", create = TRUE)
+
 source <- graft_save(store, "Handbook: use a 30-day activity window.", "handbook")
 note <- graft_save(
-  store, "An active customer used the product in the past 30 days.",
-  id = "active-customer", dependencies = source
+  store,
+  "An active customer has a paid account and activity in the past 30 days.",
+  id = "metric:active-customer",
+  dependencies = source
 )
-graft_read(store, note)@data
+
+decision <- graft_accept(
+  store,
+  note,
+  stream = "metric:active-customer",
+  expected = NULL,
+  key = "review-1",
+  actor = "analyst",
+  reason = "Matches the metrics handbook",
+  purpose = "project-assistance"
+)
+
+# Later session or fresh process
+recalled <- graft_recall(
+  graft_store("analysis-memory"),
+  stream = "metric:active-customer",
+  purpose = "project-assistance",
+  eligible = TRUE
+)
+recalled@roots[[1L]]@data
 ```
 
-Reopen it later with `graft_store("analysis-memory")`. Saving a
-correction under the same ID creates a new revision; the original
-reference still reads the original content. Use
-[`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
-to record a review and
-[`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
-to retrieve the current accepted result, as shown in the getting-started
-guide.
+Saving a correction under the same ID creates a new immutable revision
+while leaving the original reference readable with
+[`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md).
 
-## Add Graft to an existing application
+## Explore the guides
 
-Keep ellmer for the model and tool calls, shinychat for the
-conversation, and your application’s review and access controls. Add
-Graft where a useful result should outlive the current chat or R
-process.
+### Project memory for chat agents
 
-Start with one kind of note and a read-only
-[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
-fixed to its stream and purpose. A larger app can use its own catalog or
-search index to choose relevant notes, then ask Graft to verify the
-saved selections and evidence.
+Wire reviewed notes into ellmer, shinychat, deputy, and local MCP
+servers with
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md).
 
-## Storage and operational guides
+[Give a chat agent project
+memory](https://jameshwade.github.io/graft/articles/getting-started.md)
 
-A local Graft store uses trusted files, and several R processes can
-write to it on a file system that honours advisory locks (many network
-file systems do not). For PostgreSQL, your application owns the
-transaction in which Graft reads and writes. This pre-production example
-is for one trusted local user. Before deploying to several users, your
-app needs to check access to each user or project and decide how long to
-keep the data.
+### Artifacts, evidence, and history
 
-- [Back up and restore an artifact
-  store](https://jameshwade.github.io/graft/articles/artifact-backups.md)
-- [Build a verified replacement
-  store](https://jameshwade.github.io/graft/articles/artifact-recovery.md)
-- [Understand the
-  architecture](https://jameshwade.github.io/graft/articles/architecture.md)
-- [Check integration
-  requirements](https://jameshwade.github.io/graft/articles/compatibility.md)
+Save reports, tables, and figures with exact dependencies, list streams,
+and persist to local directories or PostgreSQL scopes.
 
-Permanent Forget and recovery from retired backups remain active work.
-Saving or reviewing material records your application’s decision; it
-does not establish that a claim is true.
+[Persistent artifacts and review
+history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
+
+### Shared vocabulary across workflows
+
+Pin concepts, relationships, and qualified data-dict bindings so agents
+share consistent terminology across releases.
+
+[Shared concepts across
+workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
+
+### Evaluate recall with vitals
+
+Test accepted, corrected, withdrawn, instruction-like, and host-denied
+memory with a credential-free
+[`vitals::Task`](https://vitals.tidyverse.org/reference/Task.html).
+
+[Evaluate agent
+recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)

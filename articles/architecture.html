@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Architecture • graft</title>
+<title>Graft in the ellmer ecosystem • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -12,11 +12,16 @@
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Source_Sans_3-0.4.10/font.css" rel="stylesheet">
-<link href="../deps/IBM_Plex_Mono-0.4.10/font.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Source_Sans_3-0.5.0/font.css" rel="stylesheet">
+<link href="../deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Architecture">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Graft in the ellmer ecosystem">
+<meta name="description" content="How graft composes with ellmer, shinychat, ragnar, commons, data-dict, mcptools, vitals, deputy, and scans—and what its storage model guarantees.
+">
+<meta property="og:description" content="How graft composes with ellmer, shinychat, ragnar, commons, data-dict, mcptools, vitals, deputy, and scans—and what its storage model guarantees.
+">
+<meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -64,7 +69,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Architecture</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Graft in the ellmer ecosystem</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/graft/blob/main/vignettes/architecture.Rmd" class="external-link"><code>vignettes/architecture.Rmd</code></a></small>
@@ -73,125 +78,255 @@
 
     
     
+<p>Graft is intentionally small. Rather than bundling an LLM client, a
+vector database, a semantic calculation engine, or a chat UI, it
+provides the one piece most agent stacks leave out: <strong>durable,
+reviewed, evidence-linked memory</strong>.</p>
 <div class="section level2">
-<h2 id="ownership">Ownership<a class="anchor" aria-label="anchor" href="#ownership"></a>
+<h2 id="ecosystem-ownership">Ecosystem ownership<a class="anchor" aria-label="anchor" href="#ecosystem-ownership"></a>
 </h2>
 <table class="table">
 <colgroup>
-<col width="50%">
-<col width="50%">
+<col width="33%">
+<col width="33%">
+<col width="33%">
 </colgroup>
 <thead><tr class="header">
-<th>Component</th>
+<th>Package</th>
 <th>Owns</th>
+<th>Boundary with graft</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Commons</td>
-<td>Live analysis and tools supplied by the application</td>
+<td><strong>ellmer</strong></td>
+<td>Model calls, tool calling, structured outputs</td>
+<td>
+<code><a href="../reference/graft_tool.html">graft_tool()</a></code> returns a standard
+<code><a href="https://ellmer.tidyverse.org/reference/ToolDef.html" class="external-link">ellmer::ToolDef</a></code> and <code>ContentToolResult</code>. Graft
+never holds a chat or calls a model.</td>
 </tr>
 <tr class="even">
-<td>Data-dict</td>
-<td>Data description and dictionary semantics</td>
+<td><strong>shinychat</strong></td>
+<td>Streaming chat UI and tool result cards</td>
+<td>
+<code><a href="../reference/graft_tool.html">graft_tool()</a></code> attaches
+<code><a href="https://posit-dev.github.io/shinychat/r/reference/tool_result_display.html" class="external-link">shinychat::tool_result_display()</a></code> metadata when shinychat is
+installed.</td>
 </tr>
 <tr class="odd">
-<td>ellmer</td>
-<td>Model conversations and tool execution</td>
+<td><strong>ragnar</strong></td>
+<td>Document chunking and similarity search (RAG)</td>
+<td>ragnar locates candidate passages; graft verifies whether a specific
+revision is currently accepted for use.</td>
 </tr>
 <tr class="even">
-<td>shinychat</td>
-<td>Chat interface and tool-result presentation</td>
+<td><strong>commons</strong></td>
+<td>Live data analysis, trusted calculations, calculation
+provenance</td>
+<td>Commons executes analyses and tracks how an answer was computed;
+graft retains reviewed conclusions, reports, and evidence across
+sessions.</td>
 </tr>
 <tr class="odd">
-<td>Graft</td>
-<td>Exact artifacts, selections, decision history, vocabulary
-releases</td>
+<td><strong>data-dict</strong></td>
+<td>Table schemas, constraints, and expression semantics</td>
+<td>data-dict validates individual dictionaries; graft pins validated
+dictionaries alongside cross-workflow concepts and bindings.</td>
 </tr>
 <tr class="even">
-<td>Tempest</td>
-<td>Research evidence, verification, reports, and research
-admission</td>
+<td><strong>mcptools</strong></td>
+<td>Model Context Protocol transport</td>
+<td>Serve <code><a href="../reference/graft_tool.html">graft_tool()</a></code> through
+<code><a href="https://posit-dev.github.io/mcptools/reference/server.html" class="external-link">mcptools::mcp_server()</a></code> so external clients (Claude Code,
+Positron, Posit Assistant) can read reviewed memory.</td>
 </tr>
 <tr class="odd">
-<td>Rill</td>
-<td>Reader experience, access, approval, and retention policy</td>
+<td><strong>vitals</strong></td>
+<td>Outcome evaluation for LLM tasks</td>
+<td>Graft ships an offline <code><a href="https://vitals.tidyverse.org/reference/Task.html" class="external-link">vitals::Task</a></code> for testing
+accepted, corrected, withdrawn, and host-denied memory recall.</td>
+</tr>
+<tr class="even">
+<td><strong>deputy</strong></td>
+<td>Governed agent runtime, permissions,
+<code>TrustedResults</code>
+</td>
+<td>deputy enforces read-only/plan permissions against
+<code><a href="../reference/graft_tool.html">graft_tool()</a></code> annotations and passes tool outputs to the
+host for draft capture.</td>
+</tr>
+<tr class="odd">
+<td><strong>scans</strong></td>
+<td>Post-run trajectory diagnosis and review</td>
+<td>scans inspects completed runs (including tool calls and promotion
+candidates); graft persists reviewed findings and memory for later
+runs.</td>
+</tr>
+<tr class="even">
+<td><strong>shinymcp</strong></td>
+<td>Interactive Shiny UIs as MCP Apps</td>
+<td>Applications can present a candidate artifact in a read-only MCP App
+card while keeping <code><a href="../reference/graft_accept.html">graft_accept()</a></code> behind a host
+control.</td>
+</tr>
+<tr class="odd">
+<td>
+<strong>Host apps</strong> (<code>tempest</code>, <code>rill</code>,
+<code>crucible</code>, your app)</td>
+<td>User identity, authorization, approval UX, retention</td>
+<td>Applications choose what to save, who may accept or recall it, and
+when a session must reset after a correction.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level2">
-<h2 id="graft-and-commons">Graft and Commons<a class="anchor" aria-label="anchor" href="#graft-and-commons"></a>
+<h2 id="how-graft-composes-with-adjacent-tools">How graft composes with adjacent tools<a class="anchor" aria-label="anchor" href="#how-graft-composes-with-adjacent-tools"></a>
 </h2>
-<p>Use Commons to run an analysis and record how it arrived at an
-answer. Use Graft when a host needs to retain the exact report, table,
-or figure and record a decision about reusing it. For example, a Trusted
-marker describes the calculation behind a Commons answer. A reviewer can
-still withdraw the report from use in a project. Graft records that
-decision for the project’s purpose.</p>
+<div class="section level3">
+<h3 id="graft-and-ragnar">Graft and ragnar<a class="anchor" aria-label="anchor" href="#graft-and-ragnar"></a>
+</h3>
+<p><strong>ragnar</strong> is a mutable DuckDB retrieval index: great
+for finding relevant chunks across many documents, with no built-in
+concept of human review, immutable evidence lineage, or withdrawal.
+<strong>Graft</strong> is the opposite: it checks exact revisions and
+current acceptance, without running embeddings or approximate
+search.</p>
+<p>They pair naturally: <strong>ragnar finds, graft verifies.</strong>
+Index accepted artifacts in ragnar keyed by exact stream or artifact
+reference, then pass any search hit through <code><a href="../reference/graft_recall.html">graft_recall()</a></code>
+before showing it to a model so stale or withdrawn entries never
+re-enter a prompt as current memory.</p>
+</div>
+<div class="section level3">
+<h3 id="graft-and-commons">Graft and Commons<a class="anchor" aria-label="anchor" href="#graft-and-commons"></a>
+</h3>
+<p>Use <strong>Commons</strong> to run an analysis against live data and
+record how it arrived at an answer. Use <strong>Graft</strong> when your
+application needs to keep the resulting report, table, figure, or agreed
+definition and record a team decision about reusing it later.</p>
+<p>A Commons <em>Trusted</em> marker describes how a calculation ran; a
+reviewer can still withdraw or supersede a conclusion for a project’s
+purpose. Graft records that review lifecycle separately from calculation
+execution. When sharing vocabulary across workflows, pass a published
+release’s <code>@context</code> to <code><a href="https://posit-dev.github.io/commons/r/reference/context_layer.html" class="external-link">commons::context_layer()</a></code>
+alongside a validated dictionary in
+<code><a href="https://posit-dev.github.io/commons/r/reference/data_source.html" class="external-link">commons::data_source()</a></code>.</p>
+</div>
+<div class="section level3">
+<h3 id="graft-and-deputy">Graft and deputy<a class="anchor" aria-label="anchor" href="#graft-and-deputy"></a>
+</h3>
+<p><code><a href="../reference/graft_tool.html">graft_tool()</a></code> is a plain <code><a href="https://ellmer.tidyverse.org/reference/ToolDef.html" class="external-link">ellmer::ToolDef</a></code>
+annotated as read-only, closed-world, idempotent, and non-destructive.
+<strong>deputy</strong> respects those annotations in
+<code>"standard"</code> and <code>"plan"</code> modes (and in
+<code>"readonly"</code> mode when allowlisted).</p>
+<p>On the write side, agents should propose rather than accept. With
+deputy’s <code>TrustedResults()</code>, the host application receives a
+designated tool’s exact output without parsing model prose, saves it as
+an unaccepted draft with <code><a href="../reference/graft_save.html">graft_save()</a></code>, and leaves
+<code><a href="../reference/graft_accept.html">graft_accept()</a></code> to an explicit review control.</p>
+</div>
+<div class="section level3">
+<h3 id="graft-vitals-and-scans">Graft, vitals, and scans<a class="anchor" aria-label="anchor" href="#graft-vitals-and-scans"></a>
+</h3>
+<ul>
+<li>
+<strong>vitals</strong> measures whether an agent answers accurately
+and respects corrections, withdrawals, and access denials (see <a href="recall-evaluation.html">Evaluate agent recall</a>).</li>
+<li>
+<strong>scans</strong> inspects completed <code>ellmer</code>,
+<code>deputy</code>, <code>commons</code>, and <code>tempest</code>
+trajectories to diagnose tool failures, unexpected routes, and promotion
+candidates. Because <code><a href="../reference/graft_tool.html">graft_tool()</a></code> returns structured JSON
+containing <code>status</code>, <code>stream</code>,
+<code>purpose</code>, <code>decision_id</code>,
+<code>selection_id</code>, and exact artifact references, completed
+chats carry machine-readable recall evidence without exposing live store
+handles. When a reviewer promotes a recurring finding from scans into
+project memory, graft stores the reviewed note and its supporting
+evidence for future sessions.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="graft-and-mcptools">Graft and mcptools<a class="anchor" aria-label="anchor" href="#graft-and-mcptools"></a>
+</h3>
+<p>Because <code><a href="../reference/graft_tool.html">graft_tool()</a></code> has no model-controlled store or
+stream arguments, you can pass it straight to
+<code>mcptools::mcp_server(tools = list(memory_tool))</code> to give
+Claude Code, Positron, or Posit Assistant bounded read-only access to
+reviewed project memory. See <a href="getting-started.html#serve-it-over-mcp">Serve it over MCP</a>.</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="stored-contracts">Stored contracts<a class="anchor" aria-label="anchor" href="#stored-contracts"></a>
+<h2 id="core-data-model">Core data model<a class="anchor" aria-label="anchor" href="#core-data-model"></a>
 </h2>
-<p>Each artifact revision records its identity, media type, bytes, and
-exact dependencies. <code>ArtifactRef</code>, <code>Artifact</code>, and
-<code>ArtifactSelection</code> expose those values. Their S7 properties
-describe stored data; they do not grant authorization. A decision stream
-records the application’s explicit acceptance and withdrawal decisions
-for one subject and purpose. <code>Decision</code> and
-<code>Recall</code> values expose the predecessor, current head,
-purpose, and materialized artifacts. A review can add a decision while
-leaving the selection unchanged.</p>
-<p>Reading a historical artifact and reading currently accepted content
-use different paths. <code><a href="../reference/graft_read.html">graft_read()</a></code> can read an exact old
-artifact after a correction. <code><a href="../reference/graft_recall.html">graft_recall()</a></code> also requires
-the exact current accepted event, a matching purpose, and current
-eligibility from the application.</p>
-<p>Vocabulary releases are stored as artifacts. Each release keeps
-concepts, relationships, field bindings, dictionary source bytes,
-canonical exports, and literal context together. It provides a shared
-vocabulary; it does not run an ontology reasoner.</p>
+<p>Graft is built around four small, composable primitives exposed as S7
+values:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Artifacts (<code>ArtifactRef</code>,
+<code>Artifact</code>)</strong>: Immutable bytes identified by a logical
+<code>id</code> and content-addressed <code>revision</code> (SHA-256 of
+canonical metadata plus payload digest). Saving updated content under
+the same <code>id</code> creates a new revision without overwriting the
+earlier one.</li>
+<li>
+<strong>Selections (<code>ArtifactSelection</code>)</strong>:
+Explicit root references together with their complete verified
+dependency closure. Reading a selection re-verifies every referenced
+artifact and digest.</li>
+<li>
+<strong>Decision streams (<code>Decision</code>,
+<code>Recall</code>)</strong>: Append-only journals recording explicit
+host <code>accept</code> and <code>withdraw</code> events for a named
+subject and <code>purpose</code>, protected by expected-predecessor
+checks and idempotent request keys.
+<ul>
+<li>
+<code><a href="../reference/graft_read.html">graft_read()</a></code> reads an exact historical artifact by
+reference.</li>
+<li>
+<code><a href="../reference/graft_recall.html">graft_recall()</a></code> checks current host eligibility, purpose
+match, the stream’s current accepted head, and intact selected
+bytes.</li>
+<li>
+<code><a href="../reference/graft_streams.html">graft_streams()</a></code> and <code><a href="../reference/graft_history.html">graft_history()</a></code>
+inspect decisions without loading artifact payloads.</li>
+</ul>
+</li>
+<li>
+<strong>Vocabulary releases
+(<code>VocabularyRelease</code>)</strong>: Immutable selections bundling
+shared concepts, relationships, qualified data-dict bindings, source
+bytes, and generated Markdown context so readers do not need the
+publishing CLI.</li>
+</ol>
 </div>
 <div class="section level2">
-<h2 id="persistence-boundary">Persistence boundary<a class="anchor" aria-label="anchor" href="#persistence-boundary"></a>
+<h2 id="persistence-model">Persistence model<a class="anchor" aria-label="anchor" href="#persistence-model"></a>
 </h2>
-<p>The public <code>ArtifactStore</code> S7 class has
-<code>LocalArtifactStore</code> and <code>PostgresArtifactStore</code>
-implementations. Graft supports bounded immutable local files; a
-per-stream file lock serializes decisions from several processes, as an
-advisory lock does for a PostgreSQL scope. Its PostgreSQL scopes run
-inside transactions owned by the application. Normal reads verify
-digests and predecessor identity, ignore abandoned staging, and allow
-identical retries. A complete manifest must account for every entry, so
-abandoned staging and unknown objects are rejected. Replacement plans
-copy the exact artifacts remaining after exclusions into empty
-quarantine stores and verify the full image. The store does not provide
-distributed transactions, power-loss guarantees, authentication, or
-permanent deletion.</p>
-<p>A closed directory backup retains the complete logical image,
-including orphan content and every historical decision. Verification
-compares the canonical bundle descriptor and all stored objects with an
-externally retained identity receipt. Restore copies into an empty
-quarantine target and checks both images again. See <a href="artifact-backups.html">Back up and restore an artifact
-store</a>.</p>
-<p>Applications retire generations and use an independent durable
-journal to decide whether a backup may be restored. A valid content
-checksum does not authorize an old backup. See <a href="artifact-recovery.html">Verify a replacement artifact
-store</a>.</p>
-<p>Applications depend on these artifact semantics rather than graph
-tables or a compiler, so the persistence layer can be replaced. Any
-future engine must preserve exact retained identities and history. Graft
-has no public pluggable-backend interface today.</p>
-</div>
-<div class="section level2">
-<h2 id="native-graph-retirement">Native graph retirement<a class="anchor" aria-label="anchor" href="#native-graph-retirement"></a>
-</h2>
-<p>The graph/compiler APIs and their DuckDB, Python, LinkML, and
-graph-adapter dependencies are retired. Consumer contract 4 uses S7
-stores and values through a task-oriented public API. Graft has no
-compatibility layer, and the retained artifact formats are unchanged.
-Source history, earlier ADRs, and experiment observations describe the
-previous architecture. Their native examples are historical context, not
-supported recipes for current Graft.</p>
+<p>The abstract <code>ArtifactStore</code> S7 class has two built-in
+implementations:</p>
+<ul>
+<li>
+<strong><code>LocalArtifactStore</code>
+(<code><a href="../reference/graft_store.html">graft_store()</a></code>)</strong>: Stores content-addressed objects
+and append-only decision journals in a local directory. Several R
+processes can safely write to one store on a file system that honors
+advisory file locks—content writes are atomic staged renames and
+decisions take a per-stream file lock.</li>
+<li>
+<strong><code>PostgresArtifactStore</code>
+(<code><a href="../reference/graft_store_postgres.html">graft_store_postgres()</a></code>)</strong>: Stores the exact same
+bytes and digests in <code>graft_artifact_objects</code> inside a DBI
+transaction owned by your application, isolated by a host-selected
+<code>scope</code> key and serialized with a transaction-scoped advisory
+lock.</li>
+</ul>
+<p>Neither store serializes live connections, ellmer chats, or R
+environments. Every object is plain canonical JSON or raw bytes,
+verified on read.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

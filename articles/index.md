@@ -5,18 +5,12 @@
 - [Give a chat agent project
   memory](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-- [Persistent artifacts and selected
-  memory](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
+- [Persistent artifacts and review
+  history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
 
-  Save exact artifacts, record host decisions and guard current reuse.
-  Understand the relationship to Commons, data-dict and the migration
-  evidence.
-
-- [Verify a replacement artifact
-  store](https://jameshwade.github.io/graft/articles/artifact-recovery.md):
-
-- [Back up and restore an artifact
-  store](https://jameshwade.github.io/graft/articles/artifact-backups.md):
+  Save immutable artifacts with exact dependencies, record host
+  acceptance and withdrawal decisions, list streams, and persist to
+  local directories or PostgreSQL scopes.
 
 - [Shared concepts across
   workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
@@ -24,7 +18,9 @@
 - [Evaluate agent recall of reviewed
   memory](https://jameshwade.github.io/graft/articles/recall-evaluation.md):
 
-- [Architecture](https://jameshwade.github.io/graft/articles/architecture.md):
+- [Graft in the ellmer
+  ecosystem](https://jameshwade.github.io/graft/articles/architecture.md):
 
-- [Supported
-  integrations](https://jameshwade.github.io/graft/articles/compatibility.md):
+  How graft composes with ellmer, shinychat, ragnar, commons, data-dict,
+  mcptools, vitals, deputy, and scans—and what its storage model
+  guarantees.
