@@ -9,70 +9,35 @@ them. Record human review and corrections, then let ellmer, shinychat, deputy,
 or MCP clients recall only what is currently accepted.
 </p>
 <div class="graft-actions">
-<a class="btn btn-primary" href="articles/getting-started.html">Build a project memory assistant</a>
-<a class="btn btn-outline-secondary" href="articles/architecture.html">See how graft fits the ellmer ecosystem</a>
+<a class="btn btn-primary" href="articles/getting-started.html">Get started</a>
+<a class="btn btn-outline-secondary" href="articles/architecture.html">See the ecosystem map</a>
 </div>
 </div>
 
-## Why reviewed memory?
+## How graft works
 
-Language models start every session from scratch. Conversations live in a chat
-window; search indexes return whatever matches a query—even drafts, superseded
-definitions, or withdrawn results.
+Chat histories stay trapped in a single session, and similarity indexes return
+whatever matches a query—including drafts, superseded definitions, or withdrawn
+conclusions. Graft gives your application an explicit review boundary between
+what an agent generates and what future runs remember.
 
-Suppose your team agrees that an "active customer" has a paid account and used
-the product in the past 30 days. With graft, your app saves that definition
-alongside its source, records your review, and exposes a read-only tool to
-future chats. When the window changes to 60 days, you review the correction
-while keeping the original evidence and decision history intact.
-
-<table class="table graft-workflow">
-<thead><tr><th>1. Save with evidence</th><th>2. Review explicitly</th><th>3. Recall safely</th></tr></thead>
-<tbody><tr>
-<td>Store text, JSON, reports, or figures with exact references to their inputs.</td>
-<td>Record who accepted or withdrew a selection—never from an unreviewed model write.</td>
-<td>Hand <code>graft_tool()</code> to ellmer, shinychat, deputy, or mcptools so agents read only current approved memory.</td>
-</tr></tbody>
-</table>
-
-## Try the project notebook app
-
-The package includes a runnable Shiny app pairing a reviewable notebook with a
-shinychat conversation. By default it runs locally with real graft storage and
-scripted replies—no API key required.
-
-```r
-pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
-Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
-shiny::runApp(system.file("examples", "project-memory", package = "graft"))
-```
-
-1. Review and save the proposed definition and source.
-2. Ask *"How do we count an active customer?"*
-3. Start a **New conversation** and ask again—the reviewed definition persists.
-4. Update the definition to 60 days, review the correction, and ask in a fresh
-   chat to verify the updated answer while keeping history intact.
-
-Set `OPENAI_API_KEY` and `Sys.setenv(GRAFT_DEMO_LIVE = "true")` to switch to a
-live ellmer agent. See the [getting-started guide](articles/getting-started.html)
-for the step-by-step code, `deputy` runtime integration, and `mcptools` setup.
-
-## Where graft fits in the ellmer ecosystem
-
-graft stays small and composes cleanly with Posit's ellmerverse and the wider
-ellmerverse+ stack:
-
-| Package | Role | How it pairs with graft |
-|---|---|---|
-| **ellmer** & **shinychat** | Model calls, tools, and chat UI | Register `graft_tool()` so chats consult reviewed memory with rich tool cards |
-| **ragnar** | Similarity search (RAG) over documents | **ragnar finds, graft verifies**: use ragnar to locate candidates, then recall only current accepted revisions through graft |
-| **commons** & **data-dict** | Trusted data analysis & dictionary contracts | Commons runs live analyses; graft retains reviewed reports, conclusions, and pinned shared vocabularies across sessions |
-| **deputy** | Governed agent runtime & `TrustedResults` | Run `graft_tool()` in read-only/plan modes and capture agent drafts via `TrustedResults()` for human review |
-| **mcptools** | Model Context Protocol servers | Serve `graft_tool()` to Claude Code, Positron, or Posit Assistant |
-| **vitals** & **scans** | LLM evals & trajectory analysis | Evaluate memory recall with `vitals` and inspect completed agent runs and promotion candidates with `scans` |
-
-Read [Graft in the ellmer ecosystem](articles/architecture.html) for the full
-ownership map.
+<div class="graft-steps">
+<section>
+<span class="graft-step-num">01</span>
+<h3>Save with evidence</h3>
+<p>Store text, JSON, reports, or figures as immutable SHA-256 revisions linked to exact input references.</p>
+</section>
+<section>
+<span class="graft-step-num">02</span>
+<h3>Review explicitly</h3>
+<p>Record who accepted, corrected, or withdrew a selection—always from host code, never from an unreviewed model write.</p>
+</section>
+<section>
+<span class="graft-step-num">03</span>
+<h3>Recall safely</h3>
+<p>Pass <code>graft_tool()</code> or <code>graft_tools()</code> to ellmer, shinychat, deputy, or mcptools with per-call eligibility checks.</p>
+</section>
+</div>
 
 ## Quick start in R
 
@@ -100,44 +65,73 @@ decision <- graft_accept(
   purpose = "project-assistance"
 )
 
-# Later session or fresh process
-recalled <- graft_recall(
-  graft_store("analysis-memory"),
-  stream = "metric:active-customer",
+# Expose bounded, read-only recall to ellmer, deputy, or mcptools
+tools <- graft_tools(
+  store,
   purpose = "project-assistance",
-  eligible = TRUE
+  eligible = function(stream) TRUE
 )
-recalled@roots[[1L]]@data
 ```
 
 Saving a correction under the same ID creates a new immutable revision while
 leaving the original reference readable with `graft_read()`.
+
+## Where graft fits in the ellmer ecosystem
+
+<div class="graft-ecosystem-table">
+
+| Package | Role | How it pairs with graft |
+|---|---|---|
+| **ellmer** & **shinychat** | Model calls, tools, and chat UI | Register `graft_tool()` or `graft_tools()` so fresh chats consult reviewed memory with rich tool cards |
+| **ragnar** | Similarity search (RAG) | **ragnar finds, graft verifies**: search broadly with ragnar, then verify current acceptance through `graft_recall()` |
+| **commons** & **data-dict** | Trusted data analysis & data contracts | Commons runs live queries; graft preserves reviewed outputs and pinned shared vocabularies |
+| **deputy** | Governed agent runtime & `TrustedResults` | Run graft tools in read-only/plan modes and capture agent drafts via `TrustedResults()` for human review |
+| **mcptools** | Model Context Protocol servers | Serve `graft_tool()` or `graft_tools()` to Claude Code, Positron, or Posit Assistant |
+| **vitals** & **scans** | LLM evals & trajectory analysis | Score recall accuracy with `vitals`; inspect `@extra$graft` consultations and promote findings from `scans` |
+
+</div>
+
+See [Graft in the ellmer ecosystem](articles/architecture.html) for the full
+diagram and ownership map.
+
+## Try the interactive Shiny notebook
+
+The package includes a runnable Shiny app pairing a reviewable project notebook
+with a shinychat conversation. By default it runs locally with real graft files
+and scripted replies—no API key required:
+
+```r
+pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
+Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
+shiny::runApp(system.file("examples", "project-memory", package = "graft"))
+```
+
+Review and save the proposed definition, ask *"How do we count an active
+customer?"*, start a **New conversation**, and then review a 60-day correction.
+Set `OPENAI_API_KEY` and `Sys.setenv(GRAFT_DEMO_LIVE = "true")` to switch to a
+live ellmer agent.
 
 ## Explore the guides
 
 <div class="graft-paths">
 <section>
 <h3>Project memory for chat agents</h3>
-<p>Wire reviewed notes into ellmer, shinychat, deputy, and local MCP servers
-with <code>graft_tool()</code>.</p>
-<p><a href="articles/getting-started.html">Give a chat agent project memory</a></p>
+<p>Build the workflow step by step and connect <code>graft_tool()</code> and <code>graft_tools()</code> to ellmer, shinychat, deputy, mcptools, and ragnar.</p>
+<p><a href="articles/getting-started.html">Give a chat agent project memory →</a></p>
 </section>
 <section>
 <h3>Artifacts, evidence, and history</h3>
-<p>Save reports, tables, and figures with exact dependencies, list streams, and
-persist to local directories or PostgreSQL scopes.</p>
-<p><a href="articles/persistent-artifacts.html">Persistent artifacts and review history</a></p>
+<p>Save reports, tables, and figures with exact dependencies, list streams, and persist to local directories or PostgreSQL scopes.</p>
+<p><a href="articles/persistent-artifacts.html">Persistent artifacts and review history →</a></p>
 </section>
 <section>
 <h3>Shared vocabulary across workflows</h3>
-<p>Pin concepts, relationships, and qualified data-dict bindings so agents
-share consistent terminology across releases.</p>
-<p><a href="articles/shared-vocabulary.html">Shared concepts across workflows</a></p>
+<p>Pin concepts, relationships, and qualified data-dict bindings so agents and Commons workflows share consistent terminology.</p>
+<p><a href="articles/shared-vocabulary.html">Shared concepts across workflows →</a></p>
 </section>
 <section>
 <h3>Evaluate recall with vitals</h3>
-<p>Test accepted, corrected, withdrawn, instruction-like, and host-denied
-memory with a credential-free <code>vitals::Task</code>.</p>
-<p><a href="articles/recall-evaluation.html">Evaluate agent recall</a></p>
+<p>Test accepted, corrected, withdrawn, instruction-like, and host-denied memory with a credential-free <code>vitals::Task</code>.</p>
+<p><a href="articles/recall-evaluation.html">Evaluate agent recall →</a></p>
 </section>
 </div>

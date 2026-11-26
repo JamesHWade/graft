@@ -14,6 +14,11 @@ Graft is intentionally small. Rather than bundling an LLM client, a vector
 database, a semantic calculation engine, or a chat UI, it provides the one piece
 most agent stacks leave out: **durable, reviewed, evidence-linked memory**.
 
+<figure class="graft-figure">
+<img src="figures/graft-ecosystem.svg" alt="Graft in the ellmer ecosystem: producers and discovery tools feed candidate artifacts into Graft's save, review, and recall lifecycle, serving ellmer, shinychat, deputy, mcptools, vitals, and scans." />
+<figcaption>Graft sits between live producers and future sessions: immutable artifacts, an explicit host review boundary, and verified recall tools with a promotion loop back from <code>scans</code>.</figcaption>
+</figure>
+
 ## Ecosystem ownership
 
 | Package | Owns | Boundary with graft |

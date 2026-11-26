@@ -1,5 +1,8 @@
 ---
 title: "Shared concepts across workflows"
+description: >
+  Publish pinned concepts, relationships, qualified data-dict bindings, and
+  Commons-compatible Markdown context as immutable Graft releases.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Shared concepts across workflows}
