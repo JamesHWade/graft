@@ -45,7 +45,15 @@
   deployments.
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
   exposes bounded, read-only reviewed memory as an `ellmer` `ToolDef`
-  with `shinychat` display metadata, compatible with `deputy` permission
+  with `shinychat` display metadata and plain-data `@extra$graft`
+  consultation metadata for `scans`, compatible with `deputy` permission
   modes and local `mcptools` MCP servers
   ([\#110](https://github.com/JamesHWade/graft/issues/110),
-  [\#113](https://github.com/JamesHWade/graft/issues/113)).
+  [\#113](https://github.com/JamesHWade/graft/issues/113),
+  [\#128](https://github.com/JamesHWade/graft/issues/128)).
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  exposes bounded multi-stream discovery and recall tools
+  (`list_project_memory` and `recall_project_memory`) with per-stream
+  host eligibility and allowlist enforcement, alongside a `ragnar`
+  composition recipe
+  ([\#111](https://github.com/JamesHWade/graft/issues/111)).

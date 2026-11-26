@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Give a chat agent project memory • graft</title>
+<title>Add reviewed memory to an app • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,7 +16,12 @@
 <link href="../deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Give a chat agent project memory">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Add reviewed memory to an app">
+<meta name="description" content="Save outputs with source evidence, record explicit host review, and wire graft_tool() and graft_tools() into ellmer, shinychat, deputy, mcptools, and ragnar.
+">
+<meta property="og:description" content="Save outputs with source evidence, record explicit host review, and wire graft_tool() and graft_tools() into ellmer, shinychat, deputy, mcptools, and ragnar.
+">
+<meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -35,7 +40,20 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -64,7 +82,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Give a chat agent project memory</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Add reviewed memory to an app</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/graft/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
@@ -73,53 +91,25 @@
 
     
     
-<p>An analytics assistant should answer “How do we count an active
-customer?” with the definition your team agreed on last week. It should
-show the source for that definition and use a correction after someone
-reviews it.</p>
-<p>Graft gives an R application a place to keep this knowledge. An
-ellmer agent can retrieve it through an ordinary R tool, and shinychat
-can provide the chat interface. A report, another agent, or a later R
-session can use the same saved knowledge.</p>
-<p>This guide builds a small project notebook. It shows how to:</p>
-<ol style="list-style-type: decimal">
-<li>Save a definition with its source.</li>
-<li>Record a person’s review for project assistance.</li>
-<li>Reopen the notebook and retrieve the current reviewed
-definition.</li>
-<li>Connect that retrieval to an ellmer agent in shinychat.</li>
-<li>Review a correction while keeping the original evidence
-available.</li>
-</ol>
-<p>The storage walkthrough runs without a model or API key. The complete
-app also includes a scripted preview, so you can try the interaction
-before enabling a model.</p>
-<div class="section level2">
-<h2 id="try-the-complete-app-first">Try the complete app first<a class="anchor" aria-label="anchor" href="#try-the-complete-app-first"></a>
-</h2>
+<p>An analytics assistant should answer <em>“How do we count an active
+customer?”</em> with the definition your team agreed on last week, cite
+the exact source behind it, and switch cleanly to a correction once
+someone reviews it.</p>
+<p>This guide walks through the core workflow in R—no API key required
+for the storage steps—and then connects the store to
+<code>ellmer</code>, <code>shinychat</code>, <code>deputy</code>,
+<code>mcptools</code>, and <code>ragnar</code>.</p>
+<div class="graft-callout">
+<p>
+<strong>Want to click through the finished app first?</strong> Run the
+bundled Shiny notebook locally with scripted replies (or set
+<code>OPENAI_API_KEY</code> and <code>GRAFT_DEMO_LIVE=true</code> for a
+live model):
+</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"JamesHWade/graft"</span>, <span class="st">"ellmer"</span>, <span class="st">"shinychat"</span>, <span class="st">"shiny"</span>, <span class="st">"bslib"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>GRAFT_DEMO_STORE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"project-memory"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"examples"</span>, <span class="st">"project-memory"</span>, package <span class="op">=</span> <span class="st">"graft"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Read the proposed definition and source in the notebook, choose
-Review and save, and ask “How do we count an active customer?” Start a
-New conversation and ask the same question. Then change the definition
-and source from 30 days to 60 days and review the correction. The next
-conversation should use the new definition. The prefilled handbook
-excerpt is fictional sample data. Replace it with your own project
-evidence when you adapt the app.</p>
-<p>The default preview uses real Graft files and deterministic replies.
-It does not call ellmer or present its replies as model-generated
-answers. For the live agent, configure <code>OPENAI_API_KEY</code>, set
-<code>Sys.setenv(GRAFT_DEMO_LIVE = "true")</code>, and restart the app.
-Live mode sends prompts and retrieved notes to the configured model
-provider. The example uses <code><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">ellmer::chat_openai()</a></code>; you can
-substitute another ellmer provider in the app’s chat factory.</p>
-<p>Stop and restart the app with the same store path to see the notebook
-survive the R process. Chat messages live in the session, while the
-reviewed notebook is stored on disk. The <a href="https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory" class="external-link">example’s
-source and run instructions</a> are included in the installed
-package.</p>
 </div>
 <div class="section level2">
 <h2 id="keep-the-definition-and-its-source">1. Keep the definition and its source<a class="anchor" aria-label="anchor" href="#keep-the-definition-and-its-source"></a>
@@ -450,6 +440,64 @@ through <code><a href="https://posit-dev.github.io/mcptools/reference/client.htm
 <code>readOnlyHint</code>, and calls the tool to retrieve synthetic
 accepted content.</p>
 </div>
+<div class="section level3">
+<h3 id="recall-across-multiple-streams-and-pair-with-ragnar">Recall across multiple streams and pair with ragnar<a class="anchor" aria-label="anchor" href="#recall-across-multiple-streams-and-pair-with-ragnar"></a>
+</h3>
+<p>When your notebook holds more than one reviewed topic, use
+<code><a href="../reference/graft_tools.html">graft_tools()</a></code> to give an agent a bounded listing tool
+(<code>list_project_memory</code>) alongside a parameterized recall tool
+(<code>recall_project_memory</code>). Every call checks the host’s
+<code>streams</code> allowlist (when supplied) and evaluates
+<code>eligible(stream)</code> afresh, so the model can never probe
+unlisted or withdrawn topics:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">memory_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_tools.html">graft_tools</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"project-assistance"</span>,</span>
+<span>  eligible <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">stream</span><span class="op">)</span> <span class="fu">user_can_read</span><span class="op">(</span><span class="va">current_user</span>, <span class="va">stream</span><span class="op">)</span>,</span>
+<span>  streams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"metric:active-customer"</span>, <span class="st">"metric:churn-rate"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">chat</span><span class="op">$</span><span class="fu">set_tools</span><span class="op">(</span><span class="va">memory_tools</span><span class="op">)</span></span></code></pre></div>
+<p>For large notebooks where listing every stream is not enough, pair
+<strong>ragnar</strong> with <strong>graft</strong>: <em>ragnar finds,
+graft verifies.</em> Index only the currently accepted artifact
+revisions keyed by <code>stream</code> and <code>revision</code>, remove
+or update entries when a decision changes, and always pass a ragnar
+search hit through <code><a href="../reference/graft_recall.html">graft_recall()</a></code> before showing it to the
+model so a stale index entry for a withdrawn or superseded note never
+reaches the prompt:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1. Index currently accepted streams into ragnar keyed by stream + revision</span></span>
+<span><span class="va">accepted_streams</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span></span>
+<span>  \<span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">d</span><span class="op">@</span><span class="va">action</span>, <span class="st">"accept"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/graft_streams.html">graft_streams</a></span><span class="op">(</span><span class="va">store</span>, purpose <span class="op">=</span> <span class="st">"project-assistance"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">docs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">accepted_streams</span>, <span class="kw">function</span><span class="op">(</span><span class="va">d</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">recalled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_recall.html">graft_recall</a></span><span class="op">(</span></span>
+<span>    <span class="va">store</span>, <span class="va">d</span><span class="op">@</span><span class="va">stream</span>, purpose <span class="op">=</span> <span class="st">"project-assistance"</span>, eligible <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">root</span> <span class="op">&lt;-</span> <span class="va">recalled</span><span class="op">@</span><span class="va">roots</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    origin <span class="op">=</span> <span class="va">d</span><span class="op">@</span><span class="va">stream</span>,</span>
+<span>    revision <span class="op">=</span> <span class="va">root</span><span class="op">@</span><span class="va">ref</span><span class="op">@</span><span class="va">revision</span>,</span>
+<span>    text <span class="op">=</span> <span class="va">root</span><span class="op">@</span><span class="va">data</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. On retrieval, verify every ragnar hit through graft_recall()</span></span>
+<span><span class="va">verify_ragnar_hit</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">store</span>, <span class="va">hit_stream</span>, <span class="va">purpose</span>, <span class="va">eligible</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">recalled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_recall.html">graft_recall</a></span><span class="op">(</span></span>
+<span>    <span class="va">store</span>,</span>
+<span>    stream <span class="op">=</span> <span class="va">hit_stream</span>,</span>
+<span>    purpose <span class="op">=</span> <span class="va">purpose</span>,</span>
+<span>    eligible <span class="op">=</span> <span class="fu">eligible</span><span class="op">(</span><span class="va">hit_stream</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">recalled</span><span class="op">@</span><span class="va">status</span>, <span class="st">"accepted"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span>  <span class="va">recalled</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="review-a-correction-and-keep-the-history">5. Review a correction and keep the history<a class="anchor" aria-label="anchor" href="#review-a-correction-and-keep-the-history"></a>
@@ -458,7 +506,7 @@ accepted content.</p>
 source and note under the same logical IDs to create new exact
 revisions. Accept the corrected selection with the previous decision as
 its expected predecessor:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">source_v2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  <span class="st">"Updated metrics handbook: active customers have a paid account and activity in the past 60 days. Exclude staff and test accounts."</span>,</span>
@@ -485,16 +533,16 @@ its expected predecessor:</p>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 60 days, excluding staff and test accounts."</span></span></code></pre>
 <p>A fresh conversation retrieves the 60-day definition. The original
 note and its source remain available at their exact references:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">note</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Count paid customers active in the past 30 days, excluding staff and test accounts."</span></span></code></pre>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/graft_read.html">graft_read</a></span><span class="op">(</span><span class="va">store</span>, <span class="va">source</span><span class="op">)</span><span class="op">@</span><span class="va">data</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Metrics handbook: active customers have a paid account and activity in the past 30 days. Exclude staff and test accounts."</span></span></code></pre>
 <p>The old acceptance is no longer current for reuse. If the note should
 no longer be used, record a withdrawal. The packaged app exposes that
 action as Stop using this note:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">withdrawn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_withdraw.html">graft_withdraw</a></span><span class="op">(</span></span>
 <span>  <span class="va">store</span>,</span>
 <span>  stream <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>

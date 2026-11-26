@@ -15,7 +15,18 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -38,21 +49,27 @@
     </div>
 
     <div class="section ">
-      <h3>Learn graft</h3>
+      <h3>Start here</h3>
       <div class="section-desc"></div>
 
-      <dl><dt><a href="getting-started.html">Give a chat agent project memory</a></dt>
-        <dd>
-        </dd><dt><a href="persistent-artifacts.html">Persistent artifacts and review history</a></dt>
-        <dd><p>Save immutable artifacts with exact dependencies, record host acceptance and withdrawal decisions, list streams, and persist to local directories or PostgreSQL scopes.</p>
-        </dd><dt><a href="shared-vocabulary.html">Shared concepts across workflows</a></dt>
-        <dd>
-        </dd><dt><a href="recall-evaluation.html">Evaluate agent recall of reviewed memory</a></dt>
-        <dd>
-        </dd><dt><a href="architecture.html">Graft in the ellmer ecosystem</a></dt>
+      <dl><dt><a href="getting-started.html">Add reviewed memory to an app</a></dt>
+        <dd><p>Save outputs with source evidence, record explicit host review, and wire graft_tool() and graft_tools() into ellmer, shinychat, deputy, mcptools, and ragnar.</p>
+        </dd><dt><a href="architecture.html">Integrate with the ellmer ecosystem</a></dt>
         <dd><p>How graft composes with ellmer, shinychat, ragnar, commons, data-dict, mcptools, vitals, deputy, and scans—and what its storage model guarantees.</p>
       </dd></dl></div>
-  </main></div>
+    <div class="section ">
+      <h3>Guides</h3>
+      <div class="section-desc"></div>
+
+      <dl><dt><a href="persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></dt>
+        <dd><p>Save immutable artifacts with exact dependencies, record host acceptance and withdrawal decisions, list streams, and persist to local directories or PostgreSQL scopes.</p>
+        </dd><dt><a href="shared-vocabulary.html">Share vocabulary across data-dict workflows</a></dt>
+        <dd><p>Publish pinned concepts, relationships, qualified data-dict bindings, and Commons-compatible Markdown context as immutable Graft releases.</p>
+        </dd><dt><a href="recall-evaluation.html">Evaluate recall with vitals and scans</a></dt>
+        <dd><p>Measure whether an ellmer agent uses accepted, corrected, withdrawn, instruction-like, and host-denied memory properly with a credential-free vitals::Task.</p>
+      </dd></dl></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

@@ -1,4 +1,4 @@
-# Persistent artifacts and review history
+# Persist artifacts and PostgreSQL scopes
 
 Saved work should remain verifiable after an R session ends. Graft keeps
 reports, tables, figures, and the exact evidence behind them as
@@ -11,7 +11,10 @@ A local store keeps content-addressed files on disk and verifies digests
 on every read. Several R processes can write to one store: content
 writes use atomic staged renames, and per-stream advisory file locks
 serialize decision recording (on file systems that honor advisory
-locks). Saving bytes never approves them for reuse.
+locks). Saving bytes never approves them for reuse. Local stores do not
+isolate multiple users inside one directory: multi-user isolation on
+disk requires separate store directories per user enforced by the file
+system and host application.
 
 ``` r
 

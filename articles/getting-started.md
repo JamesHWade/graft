@@ -1,28 +1,17 @@
-# Give a chat agent project memory
+# Add reviewed memory to an app
 
-An analytics assistant should answer “How do we count an active
-customer?” with the definition your team agreed on last week. It should
-show the source for that definition and use a correction after someone
+An analytics assistant should answer *“How do we count an active
+customer?”* with the definition your team agreed on last week, cite the
+exact source behind it, and switch cleanly to a correction once someone
 reviews it.
 
-Graft gives an R application a place to keep this knowledge. An ellmer
-agent can retrieve it through an ordinary R tool, and shinychat can
-provide the chat interface. A report, another agent, or a later R
-session can use the same saved knowledge.
+This guide walks through the core workflow in R—no API key required for
+the storage steps—and then connects the store to `ellmer`, `shinychat`,
+`deputy`, `mcptools`, and `ragnar`.
 
-This guide builds a small project notebook. It shows how to:
-
-1.  Save a definition with its source.
-2.  Record a person’s review for project assistance.
-3.  Reopen the notebook and retrieve the current reviewed definition.
-4.  Connect that retrieval to an ellmer agent in shinychat.
-5.  Review a correction while keeping the original evidence available.
-
-The storage walkthrough runs without a model or API key. The complete
-app also includes a scripted preview, so you can try the interaction
-before enabling a model.
-
-## Try the complete app first
+**Want to click through the finished app first?** Run the bundled Shiny
+notebook locally with scripted replies (or set `OPENAI_API_KEY` and
+`GRAFT_DEMO_LIVE=true` for a live model):
 
 ``` r
 
@@ -30,29 +19,6 @@ pak::pak(c("JamesHWade/graft", "ellmer", "shinychat", "shiny", "bslib"))
 Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
 shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
-
-Read the proposed definition and source in the notebook, choose Review
-and save, and ask “How do we count an active customer?” Start a New
-conversation and ask the same question. Then change the definition and
-source from 30 days to 60 days and review the correction. The next
-conversation should use the new definition. The prefilled handbook
-excerpt is fictional sample data. Replace it with your own project
-evidence when you adapt the app.
-
-The default preview uses real Graft files and deterministic replies. It
-does not call ellmer or present its replies as model-generated answers.
-For the live agent, configure `OPENAI_API_KEY`, set
-`Sys.setenv(GRAFT_DEMO_LIVE = "true")`, and restart the app. Live mode
-sends prompts and retrieved notes to the configured model provider. The
-example uses
-[`ellmer::chat_openai()`](https://ellmer.tidyverse.org/reference/chat_openai.html);
-you can substitute another ellmer provider in the app’s chat factory.
-
-Stop and restart the app with the same store path to see the notebook
-survive the R process. Chat messages live in the session, while the
-reviewed notebook is stored on disk. The [example’s source and run
-instructions](https://github.com/JamesHWade/graft/tree/main/inst/examples/project-memory)
-are included in the installed package.
 
 ## 1. Keep the definition and its source
 
@@ -431,6 +397,70 @@ server with `mcptools` 1.0.1, lists the tool through
 [`mcptools::mcp_tools()`](https://posit-dev.github.io/mcptools/reference/client.html),
 checks the `readOnlyHint`, and calls the tool to retrieve synthetic
 accepted content.
+
+### Recall across multiple streams and pair with ragnar
+
+When your notebook holds more than one reviewed topic, use
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+to give an agent a bounded listing tool (`list_project_memory`)
+alongside a parameterized recall tool (`recall_project_memory`). Every
+call checks the host’s `streams` allowlist (when supplied) and evaluates
+`eligible(stream)` afresh, so the model can never probe unlisted or
+withdrawn topics:
+
+``` r
+
+memory_tools <- graft_tools(
+  store,
+  purpose = "project-assistance",
+  eligible = function(stream) user_can_read(current_user, stream),
+  streams = c("metric:active-customer", "metric:churn-rate")
+)
+chat$set_tools(memory_tools)
+```
+
+For large notebooks where listing every stream is not enough, pair
+**ragnar** with **graft**: *ragnar finds, graft verifies.* Index only
+the currently accepted artifact revisions keyed by `stream` and
+`revision`, remove or update entries when a decision changes, and always
+pass a ragnar search hit through
+[`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
+before showing it to the model so a stale index entry for a withdrawn or
+superseded note never reaches the prompt:
+
+``` r
+
+# 1. Index currently accepted streams into ragnar keyed by stream + revision
+accepted_streams <- Filter(
+  \(d) identical(d@action, "accept"),
+  graft_streams(store, purpose = "project-assistance")
+)
+docs <- lapply(accepted_streams, function(d) {
+  recalled <- graft_recall(
+    store, d@stream, purpose = "project-assistance", eligible = TRUE
+  )
+  root <- recalled@roots[[1L]]
+  data.frame(
+    origin = d@stream,
+    revision = root@ref@revision,
+    text = root@data
+  )
+})
+
+# 2. On retrieval, verify every ragnar hit through graft_recall()
+verify_ragnar_hit <- function(store, hit_stream, purpose, eligible) {
+  recalled <- graft_recall(
+    store,
+    stream = hit_stream,
+    purpose = purpose,
+    eligible = eligible(hit_stream)
+  )
+  if (!identical(recalled@status, "accepted")) {
+    return(NULL)
+  }
+  recalled
+}
+```
 
 ## 5. Review a correction and keep the history
 

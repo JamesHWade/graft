@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Evaluate agent recall of reviewed memory • graft</title>
+<title>Evaluate recall with vitals and scans • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,7 +16,12 @@
 <link href="../deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Evaluate agent recall of reviewed memory">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Evaluate recall with vitals and scans">
+<meta name="description" content="Measure whether an ellmer agent uses accepted, corrected, withdrawn, instruction-like, and host-denied memory properly with a credential-free vitals::Task.
+">
+<meta property="og:description" content="Measure whether an ellmer agent uses accepted, corrected, withdrawn, instruction-like, and host-denied memory properly with a credential-free vitals::Task.
+">
+<meta property="og:image" content="https://jameshwade.github.io/graft/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -35,7 +40,20 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -64,7 +82,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Evaluate agent recall of reviewed memory</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Evaluate recall with vitals and scans</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/graft/blob/main/vignettes/recall-evaluation.Rmd" class="external-link"><code>vignettes/recall-evaluation.Rmd</code></a></small>
@@ -122,7 +140,7 @@ normalized, but extra claims are not accepted.</p>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Solving <span style="color: #B2B2B2;">[1.9s]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Scoring</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[273ms]</span></span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Scoring <span style="color: #B2B2B2;">[259ms]</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="va">samples</span> <span class="op">&lt;-</span> <span class="va">task</span><span class="op">$</span><span class="fu">get_samples</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">samples</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"case"</span>, <span class="st">"result"</span>, <span class="st">"score"</span><span class="op">)</span><span class="op">]</span></span>
@@ -253,6 +271,21 @@ chat in the same way.</p>
 <p>Each case uses its own chat and store. Inspect the linked recall
 request and result alongside the answer when interpreting a model’s
 score.</p>
+</div>
+<div class="section level2">
+<h2 id="pair-vitals-with-scans">Pair vitals with scans<a class="anchor" aria-label="anchor" href="#pair-vitals-with-scans"></a>
+</h2>
+<p>Use <code>vitals</code> to score <em>whether</em> the agent got the
+right answer and obeyed withdrawal or access boundaries. Use <a href="https://github.com/JamesHWade/scans" class="external-link">scans</a> to investigate
+<em>how</em> a run unfolded across tool calls and turns: every
+<code><a href="../reference/graft_tool.html">graft_tool()</a></code> and <code><a href="../reference/graft_tools.html">graft_tools()</a></code> result carries
+a plain-data <code>@extra$graft</code> record on its
+<code>ContentToolResult</code> (<code>status</code>,
+<code>stream</code>, <code>decision_id</code>,
+<code>selection_id</code>, <code>artifact_refs</code>,
+<code>truncated</code>, <code>omitted_count</code>) so recorded
+<code>solver_chat</code> objects retain machine-readable consultation
+metadata with no live store handles.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

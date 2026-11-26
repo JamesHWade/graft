@@ -21,7 +21,18 @@ eligible on every invocation before it looks up retained content."><meta propert
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -115,6 +126,13 @@ reference. The text bound covers UTF-8 artifact previews; retained
 reference and status metadata remains subject to the recall limits.
 Missing and withdrawn results have distinct messages and no artifact
 content.</p>
+<p>Each returned <a href="https://ellmer.tidyverse.org/reference/Content.html" class="external-link">ellmer::ContentToolResult</a> also carries a plain-data <code>graft</code>
+list under <code>@extra$graft</code> with <code>status</code>, <code>stream</code>, <code>purpose</code>, <code>decision_id</code>,
+<code>selection_id</code>, <code>root_refs</code>, <code>artifact_refs</code>, <code>artifact_count</code>, <code>text_bytes</code>,
+<code>truncated</code>, <code>omitted_refs</code>, and <code>omitted_count</code>. It contains no live store
+handle and no raw artifact content, so downstream trajectory analyzers such
+as scans can inspect memory consultations deterministically from recorded
+chats.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

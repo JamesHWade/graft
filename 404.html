@@ -36,7 +36,20 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="https://jameshwade.github.io/graft/articles/index.html">Articles</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="https://jameshwade.github.io/graft/articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="https://jameshwade.github.io/graft/articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="https://jameshwade.github.io/graft/articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="https://jameshwade.github.io/graft/articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="https://jameshwade.github.io/graft/articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="https://jameshwade.github.io/graft/reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="https://jameshwade.github.io/graft/news/index.html">Changelog</a></li>
       </ul>

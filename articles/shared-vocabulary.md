@@ -1,4 +1,4 @@
-# Shared concepts across workflows
+# Share vocabulary across data-dict workflows
 
 Graft publishes a shared vocabulary alongside persistent artifacts.
 Data-dict owns each workflow’s table contract. Commons can use the

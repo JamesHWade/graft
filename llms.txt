@@ -1,39 +1,210 @@
 # graft
 
-Reviewed project memory for the ellmer ecosystem
+Persistent, reviewed memory for R
 
-## Give your next agent the knowledge your team reviewed.
+## Reviewed memory and artifacts for R apps and agents.
 
-Save findings, metric definitions, and reports with the exact evidence
-behind them. Record human review and corrections, then let ellmer,
-shinychat, deputy, or MCP clients recall only what is currently
-accepted.
+Chat sessions reset when the window closes, and vector search returns
+whatever matches—drafts and outdated notes included. `graft` adds a
+review-gated memory store to your `ellmer`, `shinychat`, `deputy`, or
+`mcptools` workflow: save outputs with their source evidence, record
+accept/withdraw decisions from your app, and give models bounded,
+read-only recall.
 
-[Build a project memory
-assistant](https://jameshwade.github.io/graft/articles/getting-started.md)
-[See how graft fits the ellmer
+[Add graft to your
+app](https://jameshwade.github.io/graft/articles/getting-started.md)
+[Browse the
+reference](https://jameshwade.github.io/graft/reference/index.md)
+
+## The integration boundary
+
+`graft` stays small so it drops cleanly into applications you already
+own. It handles immutable storage, verification, and decision
+history—never LLM calls, UI, or user authentication.
+
+WRITE & REVIEW
+
+### Your app owns writes and approval
+
+[`graft_save()`](https://jameshwade.github.io/graft/reference/graft_save.md),
+[`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md),
+and
+[`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md)
+sit behind your UI button, review queue, or pipeline—never behind an
+unreviewed model write tool.
+
+AGENT READS
+
+### Models get bounded read-only recall
+
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+and
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+run your `eligible` callback on every call, cap UTF-8 previews, and
+attach `shinychat` cards plus `@extra$graft` metadata for `scans`.
+
+PERSISTENCE
+
+### Local files or PostgreSQL scopes
+
+Content-addressed SHA-256 revisions with per-stream advisory locks for
+multi-process Connect apps, or transaction-scoped
+[`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
+for multi-user isolation.
+
+## Plug into your stack
+
+Pick the tool you already use to see how `graft` wires in:
+
+- ellmer + shinychat
+- deputy
+- mcptools
+- ragnar
+- vitals + scans
+
+Register
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+on your session’s `ellmer` chat and keep
+[`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
+behind your Shiny review button:
+
+``` r
+
+library(graft)
+
+store <- graft_store("project-memory", create = TRUE)
+
+# In your app's review button handler:
+source_ref <- graft_save(
+  store, "Handbook: 30-day paid activity window.", "metrics.md"
+)
+note_ref <- graft_save(
+  store, "Active customers have paid activity in the past 30 days.",
+  id = "metric:active-customer", dependencies = source_ref
+)
+graft_accept(
+  store, note_ref, stream = "metric:active-customer", expected = NULL,
+  key = "review-1", actor = current_user, reason = "Verified", purpose = "chat"
+)
+
+# In each Shiny session's ellmer chat:
+chat <- ellmer::chat_openai()
+chat$set_tools(graft_tools(
+  store,
+  purpose = "chat",
+  eligible = function(stream) user_can_read(current_user, stream)
+))
+```
+
+Run read-only memory tools in `"readonly"` or `"plan"` mode, and capture
+agent drafts via
+[`deputy::TrustedResults()`](https://jameshwade.github.io/deputy/reference/TrustedResults.html)
+for human review:
+
+``` r
+
+memory_tools <- graft_tools(
+  store,
+  purpose = "project-assistance",
+  eligible = function(stream) TRUE
+)
+
+agent <- deputy::Agent$new(
+  chat = ellmer::chat_openai(),
+  tools = c(memory_tools, list(draft_tool)),
+  trusted_results = deputy::TrustedResults(
+    definition = "draft_definition",
+    on_result = function(event) {
+      # Saved as an unaccepted draft; never recalled until graft_accept()
+      graft_save(store, event$value, id = "draft:metric:active-customer")
+    }
+  )
+)
+```
+
+Expose reviewed project memory to Claude Code, Positron, or Posit
+Assistant over stdio MCP with `mcptools`:
+
+``` r
+
+library(graft)
+
+store <- graft_store("/absolute/path/to/project-memory")
+tools <- graft_tools(
+  store,
+  purpose = "project-assistance",
+  eligible = function(stream) TRUE
+)
+
+mcptools::mcp_server(tools = tools, session_tools = FALSE)
+```
+
+**ragnar finds, graft verifies:** index accepted notes by stream and
+revision, then verify every search hit through
+[`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md)
+so withdrawn or superseded entries never reach the prompt:
+
+``` r
+
+verify_ragnar_hit <- function(store, hit_stream, purpose, eligible) {
+  recalled <- graft_recall(
+    store,
+    stream = hit_stream,
+    purpose = purpose,
+    eligible = eligible(hit_stream)
+  )
+  if (!identical(recalled@status, "accepted")) return(NULL)
+  recalled
+}
+```
+
+Every
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+/
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+result attaches a plain-data `@extra$graft` record for trajectory
+analysis in `scans`, and promoted findings link back to the `scans`
+investigation snapshot as an immutable dependency:
+
+``` r
+
+investigation_ref <- graft_save_file(
+  store, "scans-investigation.json",
+  id = "scans:investigation:2026-11-26", media_type = "application/json"
+)
+note_ref <- graft_save(
+  store, "Count paid accounts active in the past 30 days.",
+  id = "metric:active-customer", dependencies = investigation_ref
+)
+graft_accept(
+  store, note_ref, stream = "metric:active-customer", expected = NULL,
+  key = "promote-1", actor = "reviewer",
+  reason = "Promoted recurring untrusted route from scans", purpose = "chat"
+)
+```
+
+## Where graft fits in the ellmer ecosystem
+
+| Package | Role | How it pairs with graft |
+|----|----|----|
+| **ellmer** & **shinychat** | Model calls, tools, and chat UI | Register [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) or [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md) so chats consult reviewed memory with tool cards |
+| **ragnar** | Similarity search (RAG) | **ragnar finds, graft verifies**: search broadly with ragnar, verify current acceptance via [`graft_recall()`](https://jameshwade.github.io/graft/reference/graft_recall.md) |
+| **commons** & **data-dict** | Trusted data analysis & data contracts | Commons runs live queries; graft preserves reviewed outputs and pinned shared vocabularies |
+| **deputy** | Governed agent runtime & `TrustedResults` | Enforce tool permissions and capture agent drafts for host-side review |
+| **mcptools** | Model Context Protocol servers | Serve reviewed memory to Claude Code, Positron, or Posit Assistant |
+| **vitals** & **scans** | LLM evals & trajectory analysis | Score recall accuracy with `vitals`; inspect `@extra$graft` consultations and promote findings from `scans` |
+
+See [Integrate with the ellmer
 ecosystem](https://jameshwade.github.io/graft/articles/architecture.md)
+for the full architecture diagram and ownership boundaries.
 
-## Why reviewed memory?
+## Copy a working Shiny template
 
-Language models start every session from scratch. Conversations live in
-a chat window; search indexes return whatever matches a query—even
-drafts, superseded definitions, or withdrawn results.
-
-Suppose your team agrees that an “active customer” has a paid account
-and used the product in the past 30 days. With graft, your app saves
-that definition alongside its source, records your review, and exposes a
-read-only tool to future chats. When the window changes to 60 days, you
-review the correction while keeping the original evidence and decision
-history intact.
-
-[TABLE]
-
-## Try the project notebook app
-
-The package includes a runnable Shiny app pairing a reviewable notebook
-with a shinychat conversation. By default it runs locally with real
-graft storage and scripted replies—no API key required.
+The package includes a minimal Shiny + `shinychat` app
+(`inst/examples/project-memory`) showing review controls, session reset
+on correction, and persistent local storage. Run it locally with
+scripted replies (no API key) or set `OPENAI_API_KEY` and
+`GRAFT_DEMO_LIVE=true` for a live `ellmer` chat:
 
 ``` r
 
@@ -42,118 +213,47 @@ Sys.setenv(GRAFT_DEMO_STORE = file.path(getwd(), "project-memory"))
 shiny::runApp(system.file("examples", "project-memory", package = "graft"))
 ```
 
-1.  Review and save the proposed definition and source.
-2.  Ask *“How do we count an active customer?”*
-3.  Start a **New conversation** and ask again—the reviewed definition
-    persists.
-4.  Update the definition to 60 days, review the correction, and ask in
-    a fresh chat to verify the updated answer while keeping history
-    intact.
+## Guides
 
-Set `OPENAI_API_KEY` and `Sys.setenv(GRAFT_DEMO_LIVE = "true")` to
-switch to a live ellmer agent. See the [getting-started
-guide](https://jameshwade.github.io/graft/articles/getting-started.md)
-for the step-by-step code, `deputy` runtime integration, and `mcptools`
-setup.
+### Add reviewed memory to an app
 
-## Where graft fits in the ellmer ecosystem
+Step-by-step integration for `ellmer`, `shinychat`, `deputy`,
+`mcptools`, and `ragnar`.
 
-graft stays small and composes cleanly with Posit’s ellmerverse and the
-wider ellmerverse+ stack:
+[Read the integration guide
+→](https://jameshwade.github.io/graft/articles/getting-started.md)
 
-| Package | Role | How it pairs with graft |
-|----|----|----|
-| **ellmer** & **shinychat** | Model calls, tools, and chat UI | Register [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) so chats consult reviewed memory with rich tool cards |
-| **ragnar** | Similarity search (RAG) over documents | **ragnar finds, graft verifies**: use ragnar to locate candidates, then recall only current accepted revisions through graft |
-| **commons** & **data-dict** | Trusted data analysis & dictionary contracts | Commons runs live analyses; graft retains reviewed reports, conclusions, and pinned shared vocabularies across sessions |
-| **deputy** | Governed agent runtime & `TrustedResults` | Run [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) in read-only/plan modes and capture agent drafts via `TrustedResults()` for human review |
-| **mcptools** | Model Context Protocol servers | Serve [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md) to Claude Code, Positron, or Posit Assistant |
-| **vitals** & **scans** | LLM evals & trajectory analysis | Evaluate memory recall with `vitals` and inspect completed agent runs and promotion candidates with `scans` |
+### Persist artifacts and PostgreSQL scopes
 
-Read [Graft in the ellmer
-ecosystem](https://jameshwade.github.io/graft/articles/architecture.md)
-for the full ownership map.
+Save reports, tables, and figures with dependency closures, list
+streams, and isolate multi-user stores in PostgreSQL.
 
-## Quick start in R
+[Read the storage guide
+→](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
 
-``` r
+### Evaluate recall with vitals and scans
 
-library(graft)
-
-store <- graft_store("analysis-memory", create = TRUE)
-
-source <- graft_save(store, "Handbook: use a 30-day activity window.", "handbook")
-note <- graft_save(
-  store,
-  "An active customer has a paid account and activity in the past 30 days.",
-  id = "metric:active-customer",
-  dependencies = source
-)
-
-decision <- graft_accept(
-  store,
-  note,
-  stream = "metric:active-customer",
-  expected = NULL,
-  key = "review-1",
-  actor = "analyst",
-  reason = "Matches the metrics handbook",
-  purpose = "project-assistance"
-)
-
-# Later session or fresh process
-recalled <- graft_recall(
-  graft_store("analysis-memory"),
-  stream = "metric:active-customer",
-  purpose = "project-assistance",
-  eligible = TRUE
-)
-recalled@roots[[1L]]@data
-```
-
-Saving a correction under the same ID creates a new immutable revision
-while leaving the original reference readable with
-[`graft_read()`](https://jameshwade.github.io/graft/reference/graft_read.md).
-
-## Explore the guides
-
-### Project memory for chat agents
-
-Wire reviewed notes into ellmer, shinychat, deputy, and local MCP
-servers with
-[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md).
-
-[Give a chat agent project
-memory](https://jameshwade.github.io/graft/articles/getting-started.md)
-
-### Artifacts, evidence, and history
-
-Save reports, tables, and figures with exact dependencies, list streams,
-and persist to local directories or PostgreSQL scopes.
-
-[Persistent artifacts and review
-history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md)
-
-### Shared vocabulary across workflows
-
-Pin concepts, relationships, and qualified data-dict bindings so agents
-share consistent terminology across releases.
-
-[Shared concepts across
-workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
-
-### Evaluate recall with vitals
-
-Test accepted, corrected, withdrawn, instruction-like, and host-denied
-memory with a credential-free
+Verify that an integrated agent respects corrections, withdrawals, and
+access denials using an offline
 [`vitals::Task`](https://vitals.tidyverse.org/reference/Task.html).
 
-[Evaluate agent
-recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
+[Read the evaluation guide
+→](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
+
+### Share vocabulary across data-dict workflows
+
+Pin concepts, relationships, and qualified `data-dict` bindings for R
+workflows and `commons`.
+
+[Read the vocabulary guide
+→](https://jameshwade.github.io/graft/articles/shared-vocabulary.md)
 
 # Package index
 
 ## Store and save
+
+Create local or PostgreSQL stores and save immutable artifacts and
+dependency selections.
 
 - [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
   : Create or reopen a local artifact store
@@ -172,6 +272,9 @@ recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
 
 ## Review and recall
 
+Record explicit host decisions, inspect history, and expose bounded
+recall tools to agents.
+
 - [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
   : Record acceptance of exact retained evidence
 - [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md)
@@ -184,8 +287,13 @@ recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
   : List decision streams and their current decisions
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
   : Create a fixed read-only ellmer tool for reviewed content
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  : Create read-only ellmer tools for multi-stream reviewed memory
 
 ## Shared vocabulary
+
+Pin concepts, relationships, and qualified data-dict bindings across
+workflows.
 
 - [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
   : Publish a validated shared vocabulary release
@@ -193,6 +301,8 @@ recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
   : Read a retained vocabulary release
 
 ## S7 classes
+
+Typed store handles and immutable return values.
 
 - [`ArtifactStore()`](https://jameshwade.github.io/graft/reference/ArtifactStore.md)
   : Abstract artifact store
@@ -215,27 +325,40 @@ recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)
 
 # Articles
 
-### Learn graft
+### Start here
 
-- [Give a chat agent project
-  memory](https://jameshwade.github.io/graft/articles/getting-started.md):
+- [Add reviewed memory to an
+  app](https://jameshwade.github.io/graft/articles/getting-started.md):
 
-- [Persistent artifacts and review
-  history](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
+  Save outputs with source evidence, record explicit host review, and
+  wire graft_tool() and graft_tools() into ellmer, shinychat, deputy,
+  mcptools, and ragnar.
 
-  Save immutable artifacts with exact dependencies, record host
-  acceptance and withdrawal decisions, list streams, and persist to
-  local directories or PostgreSQL scopes.
-
-- [Shared concepts across
-  workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
-
-- [Evaluate agent recall of reviewed
-  memory](https://jameshwade.github.io/graft/articles/recall-evaluation.md):
-
-- [Graft in the ellmer
+- [Integrate with the ellmer
   ecosystem](https://jameshwade.github.io/graft/articles/architecture.md):
 
   How graft composes with ellmer, shinychat, ragnar, commons, data-dict,
   mcptools, vitals, deputy, and scans—and what its storage model
   guarantees.
+
+### Guides
+
+- [Persist artifacts and PostgreSQL
+  scopes](https://jameshwade.github.io/graft/articles/persistent-artifacts.md):
+
+  Save immutable artifacts with exact dependencies, record host
+  acceptance and withdrawal decisions, list streams, and persist to
+  local directories or PostgreSQL scopes.
+
+- [Share vocabulary across data-dict
+  workflows](https://jameshwade.github.io/graft/articles/shared-vocabulary.md):
+
+  Publish pinned concepts, relationships, qualified data-dict bindings,
+  and Commons-compatible Markdown context as immutable Graft releases.
+
+- [Evaluate recall with vitals and
+  scans](https://jameshwade.github.io/graft/articles/recall-evaluation.md):
+
+  Measure whether an ellmer agent uses accepted, corrected, withdrawn,
+  instruction-like, and host-denied memory properly with a
+  credential-free vitals::Task.

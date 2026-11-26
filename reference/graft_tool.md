@@ -74,3 +74,13 @@ exact reference. The text bound covers UTF-8 artifact previews; retained
 reference and status metadata remains subject to the recall limits.
 Missing and withdrawn results have distinct messages and no artifact
 content.
+
+Each returned
+[ellmer::ContentToolResult](https://ellmer.tidyverse.org/reference/Content.html)
+also carries a plain-data `graft` list under `@extra$graft` with
+`status`, `stream`, `purpose`, `decision_id`, `selection_id`,
+`root_refs`, `artifact_refs`, `artifact_count`, `text_bytes`,
+`truncated`, `omitted_refs`, and `omitted_count`. It contains no live
+store handle and no raw artifact content, so downstream trajectory
+analyzers such as scans can inspect memory consultations
+deterministically from recorded chats.

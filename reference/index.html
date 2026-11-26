@@ -15,7 +15,18 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -40,7 +51,7 @@
     <div class="section level2">
       <h2 id="store-and-save">Store and save<a class="anchor" aria-label="anchor" href="#store-and-save"></a></h2>
 
-
+      <div class="section-desc"><p>Create local or PostgreSQL stores and save immutable artifacts and dependency selections.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -98,7 +109,7 @@
       </dl></div><div class="section level2">
       <h2 id="review-and-recall">Review and recall<a class="anchor" aria-label="anchor" href="#review-and-recall"></a></h2>
 
-
+      <div class="section-desc"><p>Record explicit host decisions, inspect history, and expose bounded recall tools to agents.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -146,10 +157,17 @@
 
         </dt>
         <dd>Create a fixed read-only ellmer tool for reviewed content</dd>
+
+        <dt>
+
+          <code><a href="graft_tools.html">graft_tools()</a></code>
+
+        </dt>
+        <dd>Create read-only ellmer tools for multi-stream reviewed memory</dd>
       </dl></div><div class="section level2">
       <h2 id="shared-vocabulary">Shared vocabulary<a class="anchor" aria-label="anchor" href="#shared-vocabulary"></a></h2>
 
-
+      <div class="section-desc"><p>Pin concepts, relationships, and qualified data-dict bindings across workflows.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -172,7 +190,7 @@
       </dl></div><div class="section level2">
       <h2 id="s-classes">S7 classes<a class="anchor" aria-label="anchor" href="#s-classes"></a></h2>
 
-
+      <div class="section-desc"><p>Typed store handles and immutable return values.</p></div>
 
       <dl></dl></div><div class="section level2">
 

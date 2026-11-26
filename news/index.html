@@ -15,7 +15,18 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -51,7 +62,9 @@
 <li>
 <code><a href="../reference/graft_store.html">graft_store()</a></code> and <code><a href="../reference/graft_store_postgres.html">graft_store_postgres()</a></code> create and reopen local file-backed and transaction-scoped PostgreSQL artifact stores as S7 <code>ArtifactStore</code> handles, with per-stream advisory file locks on local stores for multi-process Shiny deployments.</li>
 <li>
-<code><a href="../reference/graft_tool.html">graft_tool()</a></code> exposes bounded, read-only reviewed memory as an <code>ellmer</code> <code>ToolDef</code> with <code>shinychat</code> display metadata, compatible with <code>deputy</code> permission modes and local <code>mcptools</code> MCP servers (<a href="https://github.com/JamesHWade/graft/issues/110" class="external-link">#110</a>, <a href="https://github.com/JamesHWade/graft/issues/113" class="external-link">#113</a>).</li>
+<code><a href="../reference/graft_tool.html">graft_tool()</a></code> exposes bounded, read-only reviewed memory as an <code>ellmer</code> <code>ToolDef</code> with <code>shinychat</code> display metadata and plain-data <code>@extra$graft</code> consultation metadata for <code>scans</code>, compatible with <code>deputy</code> permission modes and local <code>mcptools</code> MCP servers (<a href="https://github.com/JamesHWade/graft/issues/110" class="external-link">#110</a>, <a href="https://github.com/JamesHWade/graft/issues/113" class="external-link">#113</a>, <a href="https://github.com/JamesHWade/graft/issues/128" class="external-link">#128</a>).</li>
+<li>
+<code><a href="../reference/graft_tools.html">graft_tools()</a></code> exposes bounded multi-stream discovery and recall tools (<code>list_project_memory</code> and <code>recall_project_memory</code>) with per-stream host eligibility and allowlist enforcement, alongside a <code>ragnar</code> composition recipe (<a href="https://github.com/JamesHWade/graft/issues/111" class="external-link">#111</a>).</li>
 </ul></div>
   </main></div>
 

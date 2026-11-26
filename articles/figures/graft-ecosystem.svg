@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 440" role="img" aria-labelledby="title desc">
+  <title id="title">Graft in the ellmer ecosystem</title>
+  <desc id="desc">Diagram showing producers and search tools feeding candidate artifacts into Graft's save, review, and recall lifecycle, which serves ellmer, shinychat, deputy, mcptools, vitals, and scans.</desc>
+  <defs>
+    <style>
+      .bg { fill: #fcfdfb; }
+      .panel { fill: #f3f8f5; stroke: #b8d8cc; stroke-width: 1.5; }
+      .center-panel { fill: #ddf3eb; stroke: #176b52; stroke-width: 2; }
+      .card { fill: #ffffff; stroke: #c5ded4; stroke-width: 1.25; }
+      .core-card { fill: #ffffff; stroke: #176b52; stroke-width: 1.5; }
+      .review-card { fill: #fffaf2; stroke: #c98224; stroke-width: 1.75; }
+      .eyebrow { font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; fill: #176b52; }
+      .eyebrow-amber { font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; fill: #9c6216; }
+      .label { font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13.5px; font-weight: 700; fill: #18211e; }
+      .sub { font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 11.5px; fill: #4d5c57; }
+      .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; font-size: 11px; fill: #176b52; }
+      .arrow { stroke: #176b52; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .arrow-dashed { stroke: #c98224; stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="head-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#176b52" />
+    </marker>
+    <marker id="head-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#c98224" />
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1040" height="440" rx="16" />
+
+  <!-- Left column: Propose & Discover (x=20..284, w=264) -->
+  <rect class="panel" x="20" y="24" width="264" height="336" rx="14" />
+  <text class="eyebrow" x="38" y="50">PRODUCE &amp; DISCOVER</text>
+
+  <rect class="card" x="36" y="66" width="232" height="60" rx="10" />
+  <text class="label" x="50" y="89">commons &amp; data-dict</text>
+  <text class="sub" x="50" y="108">Trusted queries &amp; table contracts</text>
+
+  <rect class="card" x="36" y="138" width="232" height="60" rx="10" />
+  <text class="label" x="50" y="161">deputy (TrustedResults)</text>
+  <text class="sub" x="50" y="180">Permissioned runs &amp; draft outputs</text>
+
+  <rect class="card" x="36" y="210" width="232" height="60" rx="10" />
+  <text class="label" x="50" y="233">ragnar</text>
+  <text class="sub" x="50" y="252">Similarity search finds candidates</text>
+
+  <rect class="card" x="36" y="282" width="232" height="60" rx="10" />
+  <text class="label" x="50" y="305">Host apps &amp; R workflows</text>
+  <text class="sub" x="50" y="324">Reports, tables, figures, definitions</text>
+
+  <!-- Center column: Graft (x=332..708, w=376) -->
+  <rect class="center-panel" x="332" y="24" width="376" height="336" rx="14" />
+  <text class="eyebrow" x="352" y="50">GRAFT · REVIEWED MEMORY</text>
+
+  <rect class="core-card" x="350" y="66" width="340" height="72" rx="10" />
+  <text class="label" x="366" y="88">1. Preserve immutable artifacts</text>
+  <text class="mono" x="366" y="106">graft_save() · graft_select()</text>
+  <text class="sub" x="366" y="124">Exact bytes, SHA-256 revisions &amp; dependencies</text>
+
+  <rect class="review-card" x="350" y="156" width="340" height="76" rx="10" />
+  <text class="eyebrow-amber" x="366" y="175">HOST APPROVAL BOUNDARY</text>
+  <text class="label" x="366" y="194">2. Record human review</text>
+  <text class="mono" x="366" y="212">graft_accept() · graft_withdraw()</text>
+  <text class="sub" x="366" y="226">Predecessor-checked streams; host-only</text>
+
+  <rect class="core-card" x="350" y="250" width="340" height="92" rx="10" />
+  <text class="label" x="366" y="272">3. Verify &amp; recall on demand</text>
+  <text class="mono" x="366" y="290">graft_recall() · graft_tool() · graft_tools()</text>
+  <text class="sub" x="366" y="309">Checks eligibility, purpose &amp; current head</text>
+  <text class="sub" x="366" y="327">Bounded previews + @extra$graft metadata</text>
+
+  <!-- Vertical arrows inside Graft -->
+  <path class="arrow" d="M 520 138 L 520 154" marker-end="url(#head-green)" />
+  <path class="arrow" d="M 520 232 L 520 248" marker-end="url(#head-green)" />
+
+  <!-- Right column: Consume, Eval & Inspect (x=756..1020, w=264) -->
+  <rect class="panel" x="756" y="24" width="264" height="336" rx="14" />
+  <text class="eyebrow" x="774" y="50">CONSUME, EVAL &amp; INSPECT</text>
+
+  <rect class="card" x="772" y="66" width="232" height="60" rx="10" />
+  <text class="label" x="786" y="89">ellmer &amp; shinychat</text>
+  <text class="sub" x="786" y="108">Fresh chats &amp; tool result cards</text>
+
+  <rect class="card" x="772" y="138" width="232" height="60" rx="10" />
+  <text class="label" x="786" y="161">mcptools &amp; shinymcp</text>
+  <text class="sub" x="786" y="180">Claude Code, Positron, MCP Apps</text>
+
+  <rect class="card" x="772" y="210" width="232" height="60" rx="10" />
+  <text class="label" x="786" y="233">vitals</text>
+  <text class="sub" x="786" y="252">Offline &amp; live recall evaluations</text>
+
+  <rect class="card" x="772" y="282" width="232" height="60" rx="10" />
+  <text class="label" x="786" y="305">scans</text>
+  <text class="sub" x="786" y="324">Trajectory diagnosis &amp; promotions</text>
+
+  <!-- Connecting arrows Left -> Center -->
+  <path class="arrow" d="M 284 102 L 330 102" marker-end="url(#head-green)" />
+  <path class="arrow" d="M 284 194 L 330 194" marker-end="url(#head-green)" />
+  <path class="arrow" d="M 284 296 L 330 296" marker-end="url(#head-green)" />
+
+  <!-- Connecting arrows Center -> Right -->
+  <path class="arrow" d="M 708 102 L 754 102" marker-end="url(#head-green)" />
+  <path class="arrow" d="M 708 194 L 754 194" marker-end="url(#head-green)" />
+  <path class="arrow" d="M 708 296 L 754 296" marker-end="url(#head-green)" />
+
+  <!-- Feedback loop: scans -> Graft review -->
+  <path class="arrow-dashed" d="M 888 342 L 888 398 L 520 398 L 520 362" marker-end="url(#head-amber)" />
+  <rect x="576" y="385" width="256" height="24" rx="12" fill="#fffaf2" stroke="#c98224" stroke-width="1.2" />
+  <text class="sub" x="704" y="401" text-anchor="middle" fill="#8c5510">Promote reviewed findings from scans</text>
+</svg>

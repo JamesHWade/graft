@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Graft in the ellmer ecosystem • graft</title>
+<title>Integrate with the ellmer ecosystem • graft</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,7 +16,7 @@
 <link href="../deps/IBM_Plex_Mono-0.5.0/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Graft in the ellmer ecosystem">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Integrate with the ellmer ecosystem">
 <meta name="description" content="How graft composes with ellmer, shinychat, ragnar, commons, data-dict, mcptools, vitals, deputy, and scans—and what its storage model guarantees.
 ">
 <meta property="og:description" content="How graft composes with ellmer, shinychat, ragnar, commons, data-dict, mcptools, vitals, deputy, and scans—and what its storage model guarantees.
@@ -40,7 +40,20 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Start here</h6></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Add reviewed memory to an app</a></li>
+    <li><a class="dropdown-item" href="../articles/architecture.html">Integrate with the ellmer ecosystem</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/persistent-artifacts.html">Persist artifacts and PostgreSQL scopes</a></li>
+    <li><a class="dropdown-item" href="../articles/shared-vocabulary.html">Share vocabulary across data-dict workflows</a></li>
+    <li><a class="dropdown-item" href="../articles/recall-evaluation.html">Evaluate recall with vitals and scans</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
@@ -69,7 +82,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Graft in the ellmer ecosystem</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Integrate with the ellmer ecosystem</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/JamesHWade/graft/blob/main/vignettes/architecture.Rmd" class="external-link"><code>vignettes/architecture.Rmd</code></a></small>
@@ -82,7 +95,11 @@
 vector database, a semantic calculation engine, or a chat UI, it
 provides the one piece most agent stacks leave out: <strong>durable,
 reviewed, evidence-linked memory</strong>.</p>
-<div class="section level2">
+<figure class="graft-figure"><img src="figures/graft-ecosystem.svg" alt="Graft in the ellmer ecosystem: producers and discovery tools feed candidate artifacts into Graft's save, review, and recall lifecycle, serving ellmer, shinychat, deputy, mcptools, vitals, and scans."><figcaption>
+Graft sits between live producers and future sessions: immutable
+artifacts, an explicit host review boundary, and verified recall tools
+with a promotion loop back from <code>scans</code>.
+</figcaption></figure><div class="section level2">
 <h2 id="ecosystem-ownership">Ecosystem ownership<a class="anchor" aria-label="anchor" href="#ecosystem-ownership"></a>
 </h2>
 <table class="table">
@@ -238,15 +255,46 @@ and respects corrections, withdrawals, and access denials (see <a href="recall-e
 <strong>scans</strong> inspects completed <code>ellmer</code>,
 <code>deputy</code>, <code>commons</code>, and <code>tempest</code>
 trajectories to diagnose tool failures, unexpected routes, and promotion
-candidates. Because <code><a href="../reference/graft_tool.html">graft_tool()</a></code> returns structured JSON
-containing <code>status</code>, <code>stream</code>,
-<code>purpose</code>, <code>decision_id</code>,
-<code>selection_id</code>, and exact artifact references, completed
-chats carry machine-readable recall evidence without exposing live store
-handles. When a reviewer promotes a recurring finding from scans into
-project memory, graft stores the reviewed note and its supporting
-evidence for future sessions.</li>
+candidates.</li>
 </ul>
+<p>Every <code><a href="../reference/graft_tool.html">graft_tool()</a></code> result carries a plain-data
+<code>@extra$graft</code> record on its
+<code><a href="https://ellmer.tidyverse.org/reference/Content.html" class="external-link">ellmer::ContentToolResult</a></code> (<code>status</code>,
+<code>stream</code>, <code>purpose</code>, <code>decision_id</code>,
+<code>selection_id</code>, <code>root_refs</code>,
+<code>artifact_refs</code>, <code>artifact_count</code>,
+<code>text_bytes</code>, <code>truncated</code>,
+<code>omitted_refs</code>, and <code>omitted_count</code>) with no live
+store handle and no raw payloads. That lets <code>scans</code> classify
+Graft memory consultations deterministically across recorded
+trajectories.</p>
+<p>In the other direction, when a reviewer promotes a recurring finding
+or untrusted route surfaced by <code>scans</code>, save the
+<code>scans</code> investigation snapshot JSON as an immutable artifact
+and declare it as a dependency of the reviewed note:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">investigation_ref</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save_file.html">graft_save_file</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="st">"scans-investigation.json"</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"scans:investigation:2026-11-26"</span>,</span>
+<span>  media_type <span class="op">=</span> <span class="st">"application/json"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">note_ref</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/graft_save.html">graft_save</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="st">"Count paid accounts active in the past 30 days."</span>,</span>
+<span>  id <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>
+<span>  dependencies <span class="op">=</span> <span class="va">investigation_ref</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/graft_accept.html">graft_accept</a></span><span class="op">(</span></span>
+<span>  <span class="va">store</span>,</span>
+<span>  <span class="va">note_ref</span>,</span>
+<span>  stream <span class="op">=</span> <span class="st">"metric:active-customer"</span>,</span>
+<span>  expected <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  key <span class="op">=</span> <span class="st">"promote-1"</span>,</span>
+<span>  actor <span class="op">=</span> <span class="st">"reviewer"</span>,</span>
+<span>  reason <span class="op">=</span> <span class="st">"Promoted recurring untrusted route identified in scans"</span>,</span>
+<span>  purpose <span class="op">=</span> <span class="st">"project-assistance"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="graft-and-mcptools">Graft and mcptools<a class="anchor" aria-label="anchor" href="#graft-and-mcptools"></a>

@@ -2,6 +2,9 @@
 
 ## Store and save
 
+Create local or PostgreSQL stores and save immutable artifacts and
+dependency selections.
+
 - [`graft_store()`](https://jameshwade.github.io/graft/reference/graft_store.md)
   : Create or reopen a local artifact store
 - [`graft_store_postgres()`](https://jameshwade.github.io/graft/reference/graft_store_postgres.md)
@@ -19,6 +22,9 @@
 
 ## Review and recall
 
+Record explicit host decisions, inspect history, and expose bounded
+recall tools to agents.
+
 - [`graft_accept()`](https://jameshwade.github.io/graft/reference/graft_accept.md)
   : Record acceptance of exact retained evidence
 - [`graft_withdraw()`](https://jameshwade.github.io/graft/reference/graft_withdraw.md)
@@ -31,8 +37,13 @@
   : List decision streams and their current decisions
 - [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
   : Create a fixed read-only ellmer tool for reviewed content
+- [`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+  : Create read-only ellmer tools for multi-stream reviewed memory
 
 ## Shared vocabulary
+
+Pin concepts, relationships, and qualified data-dict bindings across
+workflows.
 
 - [`graft_publish_vocabulary()`](https://jameshwade.github.io/graft/reference/graft_publish_vocabulary.md)
   : Publish a validated shared vocabulary release
@@ -40,6 +51,8 @@
   : Read a retained vocabulary release
 
 ## S7 classes
+
+Typed store handles and immutable return values.
 
 - [`ArtifactStore()`](https://jameshwade.github.io/graft/reference/ArtifactStore.md)
   : Abstract artifact store

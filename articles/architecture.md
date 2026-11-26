@@ -1,9 +1,18 @@
-# Graft in the ellmer ecosystem
+# Integrate with the ellmer ecosystem
 
 Graft is intentionally small. Rather than bundling an LLM client, a
 vector database, a semantic calculation engine, or a chat UI, it
 provides the one piece most agent stacks leave out: **durable, reviewed,
 evidence-linked memory**.
+
+![Graft in the ellmer ecosystem: producers and discovery tools feed
+candidate artifacts into Graft's save, review, and recall lifecycle,
+serving ellmer, shinychat, deputy, mcptools, vitals, and
+scans.](figures/graft-ecosystem.svg)
+
+Graft sits between live producers and future sessions: immutable
+artifacts, an explicit host review boundary, and verified recall tools
+with a promotion loop back from `scans`.
 
 ## Ecosystem ownership
 
@@ -79,14 +88,48 @@ to an explicit review control.
   recall](https://jameshwade.github.io/graft/articles/recall-evaluation.md)).
 - **scans** inspects completed `ellmer`, `deputy`, `commons`, and
   `tempest` trajectories to diagnose tool failures, unexpected routes,
-  and promotion candidates. Because
-  [`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
-  returns structured JSON containing `status`, `stream`, `purpose`,
-  `decision_id`, `selection_id`, and exact artifact references,
-  completed chats carry machine-readable recall evidence without
-  exposing live store handles. When a reviewer promotes a recurring
-  finding from scans into project memory, graft stores the reviewed note
-  and its supporting evidence for future sessions.
+  and promotion candidates.
+
+Every
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+result carries a plain-data `@extra$graft` record on its
+[`ellmer::ContentToolResult`](https://ellmer.tidyverse.org/reference/Content.html)
+(`status`, `stream`, `purpose`, `decision_id`, `selection_id`,
+`root_refs`, `artifact_refs`, `artifact_count`, `text_bytes`,
+`truncated`, `omitted_refs`, and `omitted_count`) with no live store
+handle and no raw payloads. That lets `scans` classify Graft memory
+consultations deterministically across recorded trajectories.
+
+In the other direction, when a reviewer promotes a recurring finding or
+untrusted route surfaced by `scans`, save the `scans` investigation
+snapshot JSON as an immutable artifact and declare it as a dependency of
+the reviewed note:
+
+``` r
+
+investigation_ref <- graft_save_file(
+  store,
+  "scans-investigation.json",
+  id = "scans:investigation:2026-11-26",
+  media_type = "application/json"
+)
+note_ref <- graft_save(
+  store,
+  "Count paid accounts active in the past 30 days.",
+  id = "metric:active-customer",
+  dependencies = investigation_ref
+)
+graft_accept(
+  store,
+  note_ref,
+  stream = "metric:active-customer",
+  expected = NULL,
+  key = "promote-1",
+  actor = "reviewer",
+  reason = "Promoted recurring untrusted route identified in scans",
+  purpose = "project-assistance"
+)
+```
 
 ### Graft and mcptools
 

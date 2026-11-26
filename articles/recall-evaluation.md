@@ -1,4 +1,4 @@
-# Evaluate agent recall of reviewed memory
+# Evaluate recall with vitals and scans
 
 An agent can call a memory tool and still answer from the wrong
 revision, treat retained text as instructions, or invent an answer when
@@ -61,7 +61,7 @@ task$eval(view = FALSE)
 #> ✔ Solving [1.9s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [273ms]
+#> ✔ Scoring [259ms]
 #> 
 samples <- task$get_samples()
 samples[, c("case", "result", "score")]
@@ -205,3 +205,18 @@ live$get_samples()[, c("case", "result", "score")]
 
 Each case uses its own chat and store. Inspect the linked recall request
 and result alongside the answer when interpreting a model’s score.
+
+## Pair vitals with scans
+
+Use `vitals` to score *whether* the agent got the right answer and
+obeyed withdrawal or access boundaries. Use
+[scans](https://github.com/JamesHWade/scans) to investigate *how* a run
+unfolded across tool calls and turns: every
+[`graft_tool()`](https://jameshwade.github.io/graft/reference/graft_tool.md)
+and
+[`graft_tools()`](https://jameshwade.github.io/graft/reference/graft_tools.md)
+result carries a plain-data `@extra$graft` record on its
+`ContentToolResult` (`status`, `stream`, `decision_id`, `selection_id`,
+`artifact_refs`, `truncated`, `omitted_count`) so recorded `solver_chat`
+objects retain machine-readable consultation metadata with no live store
+handles.
