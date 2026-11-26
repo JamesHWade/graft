@@ -42,6 +42,7 @@ reference:
       - graft_history
       - graft_streams
       - graft_tool
+      - graft_tools
   - title: Shared vocabulary
     contents:
       - graft_publish_vocabulary
