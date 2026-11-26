@@ -456,6 +456,70 @@ h1, h2, h3 {
   text-align: center;
 }
 
+.graft-tabs {
+  margin: 1.25rem 0 2rem;
+  border: 1px solid var(--graft-border);
+  border-radius: 0.9rem;
+  background: var(--graft-surface);
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(18, 54, 45, 0.05);
+}
+
+.graft-tabs .nav-tabs {
+  padding: 0.5rem 0.65rem 0;
+  gap: 0.25rem;
+  background: var(--graft-surface-soft);
+  border-bottom: 1px solid var(--graft-border);
+}
+
+.graft-tabs .nav-link {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 0.55rem 0.55rem 0 0;
+  color: var(--graft-slate);
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+}
+
+.graft-tabs .nav-link:hover {
+  color: var(--graft-forest);
+}
+
+.graft-tabs .nav-link.active {
+  background: var(--graft-surface);
+  border-color: var(--graft-border);
+  color: var(--graft-forest-deep);
+}
+
+[data-bs-theme="dark"] .graft-tabs .nav-link:hover {
+  color: #79d6b5;
+}
+
+[data-bs-theme="dark"] .graft-tabs .nav-link.active {
+  background: var(--graft-surface);
+  border-color: var(--graft-border);
+  color: #edf7f3;
+}
+
+.graft-tabs .tab-content {
+  padding: 1.15rem 1.25rem 0.4rem;
+}
+
+.graft-tabs .tab-pane > p:first-child {
+  margin-bottom: 0.85rem;
+  color: var(--graft-slate);
+  font-size: 0.96rem;
+}
+
+[data-bs-theme="dark"] .graft-tabs .tab-pane > p:first-child {
+  color: #c5d7d0;
+}
+
+.graft-tabs pre {
+  margin-bottom: 0.85rem;
+}
+
 :focus-visible {
   outline: 3px solid var(--bs-link-color);
   outline-offset: 3px;

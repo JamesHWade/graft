@@ -1,12 +1,12 @@
 ---
-title: "Persistent artifacts and review history"
+title: "Persist artifacts and PostgreSQL scopes"
 description: >
   Save immutable artifacts with exact dependencies, record host acceptance and
   withdrawal decisions, list streams, and persist to local directories or
   PostgreSQL scopes.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Persistent artifacts and review history}
+  %\VignetteIndexEntry{Persist artifacts and PostgreSQL scopes}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -1,12 +1,12 @@
 ---
-title: "Evaluate agent recall of reviewed memory"
+title: "Evaluate recall with vitals and scans"
 description: >
   Measure whether an ellmer agent uses accepted, corrected, withdrawn,
   instruction-like, and host-denied memory properly with a credential-free
   vitals::Task.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Evaluate agent recall of reviewed memory}
+  %\VignetteIndexEntry{Evaluate recall with vitals and scans}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

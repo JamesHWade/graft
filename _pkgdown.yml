@@ -8,10 +8,10 @@ template:
 development:
   mode: auto
 home:
-  title: "graft: Reviewed project memory for R apps and agents"
+  title: "graft: Persistent, reviewed memory for R apps and agents"
   description: >
-    Keep reviewed findings, metric definitions, and exact evidence for the next
-    ellmer conversation, deputy agent, or MCP client.
+    Add a review-gated memory and artifact store to ellmer, shinychat, deputy,
+    or mcptools apps and agents.
 navbar:
   structure:
     left: [intro, articles, reference, news]

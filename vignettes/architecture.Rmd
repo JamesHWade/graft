@@ -1,11 +1,11 @@
 ---
-title: "Graft in the ellmer ecosystem"
+title: "Integrate with the ellmer ecosystem"
 description: >
   How graft composes with ellmer, shinychat, ragnar, commons, data-dict,
   mcptools, vitals, deputy, and scans—and what its storage model guarantees.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Graft in the ellmer ecosystem}
+  %\VignetteIndexEntry{Integrate with the ellmer ecosystem}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -1,12 +1,12 @@
 ---
-title: "Give a chat agent project memory"
+title: "Add reviewed memory to an app"
 description: >
-  Save a metric definition with its source, record human review, recall it in a
-  later session, and connect graft_tool() and graft_tools() to ellmer,
-  shinychat, deputy, mcptools, and ragnar.
+  Save outputs with source evidence, record explicit host review, and wire
+  graft_tool() and graft_tools() into ellmer, shinychat, deputy, mcptools, and
+  ragnar.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Give a chat agent project memory}
+  %\VignetteIndexEntry{Add reviewed memory to an app}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
