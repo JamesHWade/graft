@@ -231,7 +231,22 @@ test_that("malformed packets fail before any draft write", {
   )
   limits <- c(10L, 1024L, 1024L, 1024L, 8L)
 
-  before <- length(graft_manifest(store)$objects)
+  handoff_store_objects <- function(store) {
+    dirs <- file.path(
+      store@path,
+      c("content", "revisions", "selections", "decisions")
+    )
+    existing <- dirs[dir.exists(dirs)]
+    if (!length(existing)) {
+      return(0L)
+    }
+    length(unlist(
+      lapply(existing, list.files, recursive = TRUE, all.files = TRUE),
+      use.names = FALSE
+    ))
+  }
+
+  before <- handoff_store_objects(store)
   for (index in seq_along(malformed)) {
     expect_error(
       retain_completed_output(
@@ -298,7 +313,7 @@ test_that("malformed packets fail before any draft write", {
     ),
     class = "handoff_error"
   )
-  after <- length(graft_manifest(store)$objects)
+  after <- handoff_store_objects(store)
   expect_identical(after, before)
 })
 
@@ -321,7 +336,22 @@ test_that("eligibility is checked before writes and while saving", {
     )
   )
 
-  before <- length(graft_manifest(store)$objects)
+  handoff_store_objects <- function(store) {
+    dirs <- file.path(
+      store@path,
+      c("content", "revisions", "selections", "decisions")
+    )
+    existing <- dirs[dir.exists(dirs)]
+    if (!length(existing)) {
+      return(0L)
+    }
+    length(unlist(
+      lapply(existing, list.files, recursive = TRUE, all.files = TRUE),
+      use.names = FALSE
+    ))
+  }
+
+  before <- handoff_store_objects(store)
   expect_error(
     retain_completed_output(
       store,
@@ -332,10 +362,10 @@ test_that("eligibility is checked before writes and while saving", {
     ),
     class = "handoff_error"
   )
-  expect_identical(length(graft_manifest(store)$objects), before)
+  expect_identical(handoff_store_objects(store), before)
 
   calls <- 0L
-  before <- length(graft_manifest(store)$objects)
+  before <- handoff_store_objects(store)
   expect_error(
     retain_completed_output(
       store,
@@ -350,7 +380,7 @@ test_that("eligibility is checked before writes and while saving", {
     class = "handoff_error"
   )
   expect_identical(calls >= 3L, TRUE)
-  expect_identical(length(graft_manifest(store)$objects) > before, TRUE)
+  expect_identical(handoff_store_objects(store) > before, TRUE)
 })
 
 test_that("closure bounds reject a root that would exceed the store", {
@@ -371,7 +401,22 @@ test_that("closure bounds reject a root that would exceed the store", {
       handoff_output("figure", as.raw(1:4), "image/png")
     )
   )
-  before <- length(graft_manifest(store)$objects)
+  handoff_store_objects <- function(store) {
+    dirs <- file.path(
+      store@path,
+      c("content", "revisions", "selections", "decisions")
+    )
+    existing <- dirs[dir.exists(dirs)]
+    if (!length(existing)) {
+      return(0L)
+    }
+    length(unlist(
+      lapply(existing, list.files, recursive = TRUE, all.files = TRUE),
+      use.names = FALSE
+    ))
+  }
+
+  before <- handoff_store_objects(store)
   expect_error(
     retain_completed_output(
       store,
@@ -382,5 +427,5 @@ test_that("closure bounds reject a root that would exceed the store", {
     ),
     class = "handoff_error"
   )
-  expect_identical(length(graft_manifest(store)$objects), before)
+  expect_identical(handoff_store_objects(store), before)
 })

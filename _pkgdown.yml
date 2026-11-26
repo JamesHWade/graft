@@ -8,9 +8,10 @@ template:
 development:
   mode: auto
 home:
-  title: "graft: Project memory for R apps and agents"
+  title: "graft: Reviewed project memory for R apps and agents"
   description: >
-    Keep reviewed findings, definitions, and evidence for the next conversation or workflow.
+    Keep reviewed findings, definitions, and exact evidence for the next
+    conversation, agent, or workflow.
 navbar:
   structure:
     left: [intro, articles, reference, news]
@@ -20,14 +21,11 @@ articles:
     contents:
       - getting-started
       - persistent-artifacts
-      - artifact-recovery
-      - artifact-backups
       - shared-vocabulary
       - recall-evaluation
       - architecture
-      - compatibility
 reference:
-  - title: Everyday workflow
+  - title: Store and save
     contents:
       - graft_store
       - graft_store_postgres
@@ -36,24 +34,19 @@ reference:
       - graft_read
       - graft_select
       - graft_read_selection
+  - title: Review and recall
+    contents:
       - graft_accept
       - graft_withdraw
       - graft_recall
       - graft_history
       - graft_streams
       - graft_tool
-  - title: Vocabulary and operations
+  - title: Shared vocabulary
     contents:
       - graft_publish_vocabulary
       - graft_read_vocabulary
-      - graft_backup
-      - graft_verify_backup
-      - graft_restore
-      - graft_manifest
-      - graft_plan_replacement
-      - graft_replace
-      - graft_with_store_lock
-  - title: Public S7 classes
+  - title: S7 classes
     contents:
       - ArtifactStore
       - LocalArtifactStore
@@ -64,6 +57,3 @@ reference:
       - Decision
       - Recall
       - VocabularyRelease
-  - title: Contract
-    contents:
-      - graft_contract_version
