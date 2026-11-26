@@ -296,7 +296,11 @@ graft_tool_metadata <- function(payload) {
     root_refs = root_refs,
     artifact_refs = artifact_refs,
     artifact_count = length(artifact_refs),
-    text_bytes = as.integer(payload$text_bytes %||% 0L),
+    text_bytes = if (is.null(payload$text_bytes)) {
+      0L
+    } else {
+      as.integer(payload$text_bytes)
+    },
     truncated = isTRUE(payload$truncated),
     omitted_refs = omitted_refs,
     omitted_count = length(omitted_refs)
