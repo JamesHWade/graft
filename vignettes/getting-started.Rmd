@@ -388,6 +388,64 @@ response, including `readOnlyHint: true`, `openWorldHint: false`, and
 with `mcptools` 1.0.1, lists the tool through `mcptools::mcp_tools()`, checks
 the `readOnlyHint`, and calls the tool to retrieve synthetic accepted content.
 
+### Recall across multiple streams and pair with ragnar
+
+When your notebook holds more than one reviewed topic, use `graft_tools()` to
+give an agent a bounded listing tool (`list_project_memory`) alongside a
+parameterized recall tool (`recall_project_memory`). Every call checks the
+host's `streams` allowlist (when supplied) and evaluates `eligible(stream)`
+afresh, so the model can never probe unlisted or withdrawn topics:
+
+```{r multi-stream, eval=FALSE}
+memory_tools <- graft_tools(
+  store,
+  purpose = "project-assistance",
+  eligible = function(stream) user_can_read(current_user, stream),
+  streams = c("metric:active-customer", "metric:churn-rate")
+)
+chat$set_tools(memory_tools)
+```
+
+For large notebooks where listing every stream is not enough, pair **ragnar**
+with **graft**: *ragnar finds, graft verifies.* Index only the currently
+accepted artifact revisions keyed by `stream` and `revision`, remove or update
+entries when a decision changes, and always pass a ragnar search hit through
+`graft_recall()` before showing it to the model so a stale index entry for a
+withdrawn or superseded note never reaches the prompt:
+
+```{r ragnar-recipe, eval=FALSE}
+# 1. Index currently accepted streams into ragnar keyed by stream + revision
+accepted_streams <- Filter(
+  \(d) identical(d@action, "accept"),
+  graft_streams(store, purpose = "project-assistance")
+)
+docs <- lapply(accepted_streams, function(d) {
+  recalled <- graft_recall(
+    store, d@stream, purpose = "project-assistance", eligible = TRUE
+  )
+  root <- recalled@roots[[1L]]
+  data.frame(
+    origin = d@stream,
+    revision = root@ref@revision,
+    text = root@data
+  )
+})
+
+# 2. On retrieval, verify every ragnar hit through graft_recall()
+verify_ragnar_hit <- function(store, hit_stream, purpose, eligible) {
+  recalled <- graft_recall(
+    store,
+    stream = hit_stream,
+    purpose = purpose,
+    eligible = eligible(hit_stream)
+  )
+  if (!identical(recalled@status, "accepted")) {
+    return(NULL)
+  }
+  recalled
+}
+```
+
 ## 5. Review a correction and keep the history
 
 The team now changes the activity window to 60 days. Save the new source and
