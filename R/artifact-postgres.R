@@ -35,8 +35,7 @@
 #' access other scopes directly. The host must authorize every operation,
 #' including historical inspection, and keep connections away from untrusted
 #' code.
-#' PostgreSQL controls durability configuration and backups. This interface
-#' supplies no permanent Forget or backup admission protocol.
+#' PostgreSQL controls durability configuration and backups.
 #'
 #' @returns A Graft artifact store handle bound to the supplied connection and
 #'   scope. The host remains responsible for closing the connection.
@@ -193,14 +192,6 @@ S7::method(artifact_storage_put, PostgresArtifactStore) <- function(
 S7::method(artifact_with_stream_lock, PostgresArtifactStore) <- function(
   store,
   stream,
-  code
-) {
-  code()
-}
-
-S7::method(artifact_with_store_lock, PostgresArtifactStore) <- function(
-  store,
-  exclusive,
   code
 ) {
   code()

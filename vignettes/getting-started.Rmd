@@ -284,7 +284,7 @@ list in `tool_allowlist`:
 
 ```{r agent-runtime, eval=FALSE}
 agent <- deputy::Agent$new(
-  chat = ellmer::chat("openai/gpt-6-luna"),
+  chat = ellmer::chat_openai(),
   tools = list(memory_tool),
   permissions = deputy::Permissions(
     mode = "readonly",
@@ -318,7 +318,7 @@ draft_tool <- ellmer::tool(
 )
 drafts <- list()
 agent <- deputy::Agent$new(
-  chat = ellmer::chat("openai/gpt-6-luna"),
+  chat = ellmer::chat_openai(),
   tools = list(memory_tool, draft_tool),
   trusted_results = deputy::TrustedResults(
     definition = "draft_definition",
@@ -444,8 +444,7 @@ withdrawn <- graft_withdraw(
 graft_history(store, "metric:active-customer")
 ```
 
-Withdrawal retains history. Permanent deletion and backup retirement require a
-separate retention workflow.
+Withdrawal stops future recall while keeping the decision history inspectable.
 
 ## Make it yours
 
@@ -457,13 +456,15 @@ Adapt these choices to your project:
 | Evidence | A text excerpt | Source documents, analysis inputs, tables, or figures declared as dependencies |
 | Review subject | `metric:active-customer` | A stable identifier from your application's catalog |
 | Review action | A local person clicks save | Your approval workflow and authenticated reviewer identity |
-| Retrieval | One fixed read-only tool | A catalog or search step selects relevant streams, then Graft verifies the chosen selections |
+| Retrieval | One fixed read-only tool | A catalog or search step (such as ragnar) selects relevant streams, then graft verifies the chosen selections |
 | Storage and access | One trusted local user's directory | Application-scoped local storage or PostgreSQL transactions, with current authorization on every access path |
 
-If several agents need the same terminology, see [publish shared vocabulary](shared-vocabulary.html),
-which starts from a data-dict dictionary. For reports and review histories, read
-[persistent artifacts](persistent-artifacts.html).
-When you need to move the notebook, use [verified backups](artifact-backups.html).
+Next steps:
+
+- Save multi-artifact selections and use PostgreSQL scopes in [Persistent artifacts and review history](persistent-artifacts.html).
+- Share consistent terminology across workflows in [Shared concepts across workflows](shared-vocabulary.html).
+- Measure recall behavior offline in [Evaluate agent recall](recall-evaluation.html).
+- See how graft pairs with ragnar, commons, deputy, and scans in [Graft in the ellmer ecosystem](architecture.html).
 
 ```{r cleanup, include=FALSE}
 unlink(file.path(example_dir, "graft-walkthrough"), recursive = TRUE)

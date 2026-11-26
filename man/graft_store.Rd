@@ -13,9 +13,9 @@ graft_store(
 )
 }
 \arguments{
-\item{path}{Directory for a Graft artifact store, distinct from a native
-graph store. Creation requires a missing or empty directory. Filesystem
-paths follow platform limits, independently of artifact identity byte limits.}
+\item{path}{Directory for a Graft artifact store. Creation requires a
+missing or empty directory. Filesystem paths follow platform limits,
+independently of artifact identity byte limits.}
 
 \item{create}{Whether to create a new store. Defaults to \code{FALSE}, which
 reopens an existing store.}
@@ -55,19 +55,10 @@ reference, while corrections retain earlier revisions. There is no mutable
 latest pointer.
 
 Payloads are published before immutable revision metadata, using staged files
-in the destination directory. A killed writer can leave a staged file;
-writable local inventories remove recognized abandoned staging while holding
-the exclusive store lock. A valid empty decision directory has no committed
-journal and is treated as no stream during recovery. A failed save can also
-leave unreferenced bytes; retries reuse verified content. Content orphans are
-retained rather than deleted automatically; a replacement planned with
-nothing to forget (\code{\link[=graft_plan_replacement]{graft_plan_replacement()}}) copies everything but them.
-Every write also holds the store's lock shared; see
-\code{\link[=graft_with_store_lock]{graft_with_store_lock()}}. Successful
-reads verify metadata, payload size, and digest. Interrupted writes cannot
-produce a successful incomplete reference. The interface does not promise
-power-loss durability, authorization, erasure, or backup recovery.
-Applications control access and policy.
+in the destination directory. Successful reads verify metadata, payload size,
+and digest. Interrupted writes cannot produce a successful incomplete
+reference; retries reuse verified content. Applications control access and
+policy.
 Local handles have no open connections, so callers do not need to close them.
 For transaction-scoped database persistence, use
 \code{\link[=graft_store_postgres]{graft_store_postgres()}} with the same artifact APIs.

@@ -1,87 +1,134 @@
 ---
-title: "Architecture"
+title: "Graft in the ellmer ecosystem"
+description: >
+  How graft composes with ellmer, shinychat, ragnar, commons, data-dict,
+  mcptools, vitals, deputy, and scans—and what its storage model guarantees.
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Architecture}
+  %\VignetteIndexEntry{Graft in the ellmer ecosystem}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-## Ownership
+Graft is intentionally small. Rather than bundling an LLM client, a vector
+database, a semantic calculation engine, or a chat UI, it provides the one piece
+most agent stacks leave out: **durable, reviewed, evidence-linked memory**.
 
-| Component | Owns |
-|---|---|
-| Commons | Live analysis and tools supplied by the application |
-| Data-dict | Data description and dictionary semantics |
-| ellmer | Model conversations and tool execution |
-| shinychat | Chat interface and tool-result presentation |
-| Graft | Exact artifacts, selections, decision history, vocabulary releases |
-| Tempest | Research evidence, verification, reports, and research admission |
-| Rill | Reader experience, access, approval, and retention policy |
+## Ecosystem ownership
 
-## Graft and Commons
+| Package | Owns | Boundary with graft |
+|---|---|---|
+| **ellmer** | Model calls, tool calling, structured outputs | `graft_tool()` returns a standard `ellmer::ToolDef` and `ContentToolResult`. Graft never holds a chat or calls a model. |
+| **shinychat** | Streaming chat UI and tool result cards | `graft_tool()` attaches `shinychat::tool_result_display()` metadata when shinychat is installed. |
+| **ragnar** | Document chunking and similarity search (RAG) | ragnar locates candidate passages; graft verifies whether a specific revision is currently accepted for use. |
+| **commons** | Live data analysis, trusted calculations, calculation provenance | Commons executes analyses and tracks how an answer was computed; graft retains reviewed conclusions, reports, and evidence across sessions. |
+| **data-dict** | Table schemas, constraints, and expression semantics | data-dict validates individual dictionaries; graft pins validated dictionaries alongside cross-workflow concepts and bindings. |
+| **mcptools** | Model Context Protocol transport | Serve `graft_tool()` through `mcptools::mcp_server()` so external clients (Claude Code, Positron, Posit Assistant) can read reviewed memory. |
+| **vitals** | Outcome evaluation for LLM tasks | Graft ships an offline `vitals::Task` for testing accepted, corrected, withdrawn, and host-denied memory recall. |
+| **deputy** | Governed agent runtime, permissions, `TrustedResults` | deputy enforces read-only/plan permissions against `graft_tool()` annotations and passes tool outputs to the host for draft capture. |
+| **scans** | Post-run trajectory diagnosis and review | scans inspects completed runs (including tool calls and promotion candidates); graft persists reviewed findings and memory for later runs. |
+| **shinymcp** | Interactive Shiny UIs as MCP Apps | Applications can present a candidate artifact in a read-only MCP App card while keeping `graft_accept()` behind a host control. |
+| **Host apps** (`tempest`, `rill`, `crucible`, your app) | User identity, authorization, approval UX, retention | Applications choose what to save, who may accept or recall it, and when a session must reset after a correction. |
 
-Use Commons to run an analysis and record how it arrived at an answer. Use
-Graft when a host needs to retain the exact report, table, or figure and record
-a decision about reusing it. For example, a Trusted marker describes the
-calculation behind a Commons answer. A reviewer can still withdraw the report
-from use in a project. Graft records that decision for the project’s purpose.
+## How graft composes with adjacent tools
 
-## Stored contracts
+### Graft and ragnar
 
-Each artifact revision records its identity, media type, bytes, and exact
-dependencies. `ArtifactRef`, `Artifact`, and `ArtifactSelection` expose those
-values. Their S7 properties describe stored data; they do not grant
-authorization. A decision stream records the application's explicit acceptance
-and withdrawal decisions for one subject and purpose. `Decision` and `Recall`
-values expose the predecessor, current head, purpose, and materialized artifacts.
-A review can add a decision while leaving the selection unchanged.
+**ragnar** is a mutable DuckDB retrieval index: great for finding relevant
+chunks across many documents, with no built-in concept of human review,
+immutable evidence lineage, or withdrawal. **Graft** is the opposite: it checks
+exact revisions and current acceptance, without running embeddings or
+approximate search.
 
-Reading a historical artifact and reading currently accepted content use different
-paths. `graft_read()` can read an exact old artifact after a correction.
-`graft_recall()` also requires the exact current accepted event, a
-matching purpose, and current eligibility from the application.
+They pair naturally: **ragnar finds, graft verifies.** Index accepted artifacts
+in ragnar keyed by exact stream or artifact reference, then pass any search hit
+through `graft_recall()` before showing it to a model so stale or withdrawn
+entries never re-enter a prompt as current memory.
 
-Vocabulary releases are stored as artifacts. Each release keeps concepts,
-relationships, field bindings, dictionary source bytes, canonical exports, and
-literal context together. It provides a shared vocabulary; it does not run an
-ontology reasoner.
+### Graft and Commons
 
-## Persistence boundary
+Use **Commons** to run an analysis against live data and record how it arrived
+at an answer. Use **Graft** when your application needs to keep the resulting
+report, table, figure, or agreed definition and record a team decision about
+reusing it later.
 
-The public `ArtifactStore` S7 class has `LocalArtifactStore` and
-`PostgresArtifactStore` implementations. Graft supports bounded immutable local
-files; a per-stream file lock serializes decisions from several processes, as an
-advisory lock does for a PostgreSQL scope. Its PostgreSQL scopes run inside transactions owned by the
-application. Normal reads verify digests and predecessor identity, ignore
-abandoned staging, and allow identical retries. A complete manifest must account
-for every entry, so abandoned staging and unknown objects are rejected.
-Replacement plans copy the exact artifacts remaining after exclusions into empty
-quarantine stores and verify the full image. The store does not provide
-distributed transactions, power-loss guarantees, authentication, or permanent
-deletion.
+A Commons *Trusted* marker describes how a calculation ran; a reviewer can still
+withdraw or supersede a conclusion for a project's purpose. Graft records that
+review lifecycle separately from calculation execution. When sharing vocabulary
+across workflows, pass a published release's `@context` to
+`commons::context_layer()` alongside a validated dictionary in
+`commons::data_source()`.
 
-A closed directory backup retains the complete logical image, including orphan
-content and every historical decision. Verification compares the canonical
-bundle descriptor and all stored objects with an externally retained identity
-receipt. Restore copies into an empty quarantine target and checks both images
-again.
-See [Back up and restore an artifact store](artifact-backups.html).
+### Graft and deputy
 
-Applications retire generations and use an independent durable journal to decide
-whether a backup may be restored. A valid content checksum does not authorize an
-old backup. See [Verify a replacement artifact store](artifact-recovery.html).
+`graft_tool()` is a plain `ellmer::ToolDef` annotated as read-only,
+closed-world, idempotent, and non-destructive. **deputy** respects those
+annotations in `"standard"` and `"plan"` modes (and in `"readonly"` mode when
+allowlisted).
 
-Applications depend on these artifact semantics rather than graph tables or a
-compiler, so the persistence layer can be replaced. Any future engine must
-preserve exact retained identities and history. Graft has no public
-pluggable-backend interface today.
+On the write side, agents should propose rather than accept. With deputy's
+`TrustedResults()`, the host application receives a designated tool's exact
+output without parsing model prose, saves it as an unaccepted draft with
+`graft_save()`, and leaves `graft_accept()` to an explicit review control.
 
-## Native graph retirement
+### Graft, vitals, and scans
 
-The graph/compiler APIs and their DuckDB, Python, LinkML, and graph-adapter
-dependencies are retired. Consumer contract 4 uses S7 stores and values through
-a task-oriented public API. Graft has no compatibility layer, and the retained
-artifact formats are unchanged. Source history, earlier ADRs, and experiment
-observations describe the previous architecture. Their native examples are
-historical context, not supported recipes for current Graft.
+- **vitals** measures whether an agent answers accurately and respects
+  corrections, withdrawals, and access denials (see
+  [Evaluate agent recall](recall-evaluation.html)).
+- **scans** inspects completed `ellmer`, `deputy`, `commons`, and `tempest`
+  trajectories to diagnose tool failures, unexpected routes, and promotion
+  candidates. Because `graft_tool()` returns structured JSON containing
+  `status`, `stream`, `purpose`, `decision_id`, `selection_id`, and exact
+  artifact references, completed chats carry machine-readable recall evidence
+  without exposing live store handles. When a reviewer promotes a recurring
+  finding from scans into project memory, graft stores the reviewed note and
+  its supporting evidence for future sessions.
+
+### Graft and mcptools
+
+Because `graft_tool()` has no model-controlled store or stream arguments, you
+can pass it straight to `mcptools::mcp_server(tools = list(memory_tool))` to
+give Claude Code, Positron, or Posit Assistant bounded read-only access to
+reviewed project memory. See [Serve it over MCP](getting-started.html#serve-it-over-mcp).
+
+## Core data model
+
+Graft is built around four small, composable primitives exposed as S7 values:
+
+1. **Artifacts (`ArtifactRef`, `Artifact`)**: Immutable bytes identified by a
+   logical `id` and content-addressed `revision` (SHA-256 of canonical metadata
+   plus payload digest). Saving updated content under the same `id` creates a
+   new revision without overwriting the earlier one.
+2. **Selections (`ArtifactSelection`)**: Explicit root references together with
+   their complete verified dependency closure. Reading a selection re-verifies
+   every referenced artifact and digest.
+3. **Decision streams (`Decision`, `Recall`)**: Append-only journals recording
+   explicit host `accept` and `withdraw` events for a named subject and
+   `purpose`, protected by expected-predecessor checks and idempotent request
+   keys.
+   - `graft_read()` reads an exact historical artifact by reference.
+   - `graft_recall()` checks current host eligibility, purpose match, the
+     stream's current accepted head, and intact selected bytes.
+   - `graft_streams()` and `graft_history()` inspect decisions without loading
+     artifact payloads.
+4. **Vocabulary releases (`VocabularyRelease`)**: Immutable selections bundling
+   shared concepts, relationships, qualified data-dict bindings, source bytes,
+   and generated Markdown context so readers do not need the publishing CLI.
+
+## Persistence model
+
+The abstract `ArtifactStore` S7 class has two built-in implementations:
+
+- **`LocalArtifactStore` (`graft_store()`)**: Stores content-addressed objects
+  and append-only decision journals in a local directory. Several R processes
+  can safely write to one store on a file system that honors advisory file
+  locks—content writes are atomic staged renames and decisions take a
+  per-stream file lock.
+- **`PostgresArtifactStore` (`graft_store_postgres()`)**: Stores the exact same
+  bytes and digests in `graft_artifact_objects` inside a DBI transaction owned
+  by your application, isolated by a host-selected `scope` key and serialized
+  with a transaction-scoped advisory lock.
+
+Neither store serializes live connections, ellmer chats, or R environments.
+Every object is plain canonical JSON or raw bytes, verified on read.

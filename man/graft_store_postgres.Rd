@@ -62,8 +62,7 @@ does not isolate database roles or arbitrary code: the database role can
 access other scopes directly. The host must authorize every operation,
 including historical inspection, and keep connections away from untrusted
 code.
-PostgreSQL controls durability configuration and backups. This interface
-supplies no permanent Forget or backup admission protocol.
+PostgreSQL controls durability configuration and backups.
 }
 \examples{
 \dontshow{if (identical(Sys.getenv("GRAFT_TEST_POSTGRES"), "true")) withAutoprint(\{ # examplesIf}

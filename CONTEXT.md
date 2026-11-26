@@ -1,104 +1,67 @@
 # Graft
 
-Graft governs knowledge proposed, reviewed, and accepted for use by people and
-agents.
+Graft governs reviewed knowledge and persistent artifacts for R applications
+and agents. Applications own domain semantics, authentication, authorization,
+and approval policy; Graft preserves exact immutable artifacts, selections,
+decision history, and shared vocabulary releases.
 
-## Shared artifact direction
+## Language
 
-ADR 0008 places shared artifact infrastructure in Graft. Tempest and Rill are
-applications consuming it; they own domain semantics and product policy.
+**Artifact**:
+Preserved opaque content and its descriptive metadata, stored immutably at a
+content-addressed revision.
+_Avoid_: Mutable record, chat memory
 
-**Artifact**: Preserved opaque content and its descriptive metadata.
+**Artifact reference**:
+A stable logical artifact identity paired with an exact immutable revision. A
+reference is neither an approval nor a mutable latest pointer.
+_Avoid_: Latest pointer, approved link
 
-**Artifact reference**: A stable artifact identity paired with an exact immutable
-revision. A reference is not an approval or a mutable latest pointer.
+**Artifact selection**:
+Explicit root references and their complete verified closure of exact artifact
+dependencies, retained together for inspection and reuse under host policy.
+_Avoid_: Folder, bundle
 
-**Artifact selection**: Explicit roots and their complete bounded closure of exact
-artifact dependencies, retained for later inspection and reuse under host policy.
+**Candidate**:
+A host-owned proposal represented by exact artifact references. Preserving a
+candidate or selecting its dependencies does not accept it.
+_Avoid_: Accepted artifact, approved draft
 
-**Decision record**: A retained record of an explicit host decision. Graft supplies
-shared recording mechanisms; the application supplies approval, purpose, actor
-and access policy. Recording a decision is not authentication or factual proof.
-
-**Candidate**: A host-owned proposal represented by exact artifact references.
-Preserving a candidate or selecting its dependencies does not accept it.
-
-**Output handoff**: A producer's explicit delivery of completed content and
-producer evidence to a host for preservation as a candidate. Producer completion,
-evidence labels, and preservation do not establish host acceptance or permission
-to reuse the content.
+**Output handoff**:
+A producer's explicit delivery of completed content and producer evidence to a
+host for preservation as a candidate. Producer completion, evidence labels, and
+preservation do not establish host acceptance or permission to reuse.
 _Avoid_: Trusted artifact, automatic acceptance
 
-**Decision stream**: A host-chosen subject identity with one ordered decision
-history and one current head. A stream is independent of an artifact identity.
+**Decision stream**:
+A host-chosen subject identity with one ordered decision history and one
+current head. A stream is independent of an artifact identity.
+_Avoid_: Artifact history, channel
 
-**Acceptance event**: A decision record with action `accept`, identifying an exact
-selection, predecessor, request key, actor, reason and purpose. New unchanged
-reviews retain distinct event identities. Keys bind committed requests, not
-consultation eligibility.
+**Decision record**:
+A retained record of an explicit host decision (`accept` or `withdraw`) binding
+an exact selection, predecessor, request key, actor, reason, and purpose.
+Recording a decision is neither authentication nor factual proof.
+_Avoid_: Permission token, fact check
 
-**Current artifact consultation**: The host currently permits the requested
-purpose, the recorded acceptance is still the stream's current head, and Graft
-has verified and materialized the complete selection. The result is a point-in-time check, not an
-access token. History remains inspectable after correction or withdrawal.
+**Acceptance event**:
+A decision record with action `accept`. Re-reviewing an unchanged selection
+under a new request key records a distinct event identity.
+_Avoid_: Approval badge
 
-## Shared vocabulary
+**Withdrawal**:
+A decision record with action `withdraw` that stops current consultation of a
+stream while leaving historical decisions and artifacts inspectable.
+_Avoid_: Erasure, deletion
 
-A vocabulary release binds concepts and relationships to exact data-dict fields.
-Its retained selection includes original sources, canonical dictionary exports,
-validated bindings, and literal data context. Reading a release is independent
-of the publishing CLI. Relationship semantics do not grant executable authority.
+**Current consultation**:
+A point-in-time check confirming that the host currently permits the requested
+purpose, the stream's current head is an acceptance for that purpose, and every
+selected artifact verifies intact. It is not a reusable access token.
+_Avoid_: Read permission, cached memory
 
-The resolved-export ingestion work in #65 is an upstream proposal and source-only
-conformance fixture. Commons still compiles authored dictionaries independently
-of data-dict. Neither retained exports nor the proposed fixture add a Graft
-expression compiler or an implemented resolved-export constructor.
-
-## Current implementation
-
-Consumer contract 4 uses task-oriented verbs and S7 stores and values while
-retaining artifact formats 1 and vocabulary release format 1. Exact reading is
-separate from current accepted recall; see ADR 0014.
-Native graph stores, compiler manifests, commit plans, snapshots, calculations,
-and managed OKF working trees are retired. Earlier ADRs remain historical.
-See ADR 0010 for the current cut and consumer responsibilities.
-
-## Persistence scopes
-
-Local artifact stores support trusted files, and several R processes can write
-one store: a file lock per stream serializes decisions, and content objects are
-content-addressed, so same-byte writers agree. The lock needs a file system that
-honours advisory locks, which some network file systems do not. Every write
-also shares a store lock that manifests, backups, restores, and replacements
-hold exclusively, so they run on a live store, and `graft_with_store_lock()`
-lets a host hold it across its own switch to a replacement. PostgreSQL stores
-use the same bytes and digests inside a host-owned transaction, with a host-bound
-scope and a transaction lock per scope. Every retained object belongs to its
-scope; equal content in different scopes does not share a retained row.
-
-The scope is not authentication. Rill binds it from the active authenticated
-Reader and rechecks authority for inspection and reuse. Graft does not own
-Reader identities, Document access, approval meaning, or permanent Forget.
-See ADR 0011 for the PostgreSQL boundary.
-
-## Artifact replacement and Forget
-
-Graft provides complete bounded artifact manifests and non-destructive
-replacement plans for local stores and PostgreSQL scopes. Exclusions follow exact
-reverse dependencies, affected selections, and whole historical decision streams.
-Survivors retain their exact bytes and identities. Failed targets remain quarantined;
-retry with a fresh empty target. ADR 0012 supersedes the native graph recovery recipe.
-
-Hosts supply additional private-copy and metadata roots, authorize Forget, retire
-generations in an independent durable journal, reject old backups, invalidate
-contexts/caches, and arrange disposal. No source deletion or production restore
-admission ships with these mechanics. Graft #48 remains the rollout gate.
-
-Versioned directory backups contain a complete
-artifact image and canonical descriptor. An independently retained receipt binds
-scope, generation, descriptor digest, and manifest digest. Verification and
-restore enforce caller limits and require exact identity; they do not establish
-registry freshness or admission. Backup staging is renamed only after complete
-verification. Local power-loss durability, PostgreSQL commit, atomic generation
-publication, and independent journal recovery remain open under #86 and #48.
-See ADR 0013 and the artifact-backups guide.
+**Vocabulary release**:
+An immutable artifact selection binding shared concepts and relationships to
+exact data-dict fields, together with pinned dictionary sources, canonical
+exports, and generated Markdown context.
+_Avoid_: Ontology reasoner, live schema
