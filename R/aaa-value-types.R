@@ -1,20 +1,7 @@
 # Public S7 values -----------------------------------------------------------
 
-graft_value_abort <- function(message) {
-  graft_abort("graft_value_error", message)
-}
-
 graft_value_text <- function(value, name) {
-  if (
-    !is.character(value) ||
-      length(value) != 1L ||
-      is.na(value) ||
-      !validUTF8(enc2utf8(value)) ||
-      !nzchar(value) ||
-      !identical(trimws(value), value) ||
-      grepl("[[:cntrl:]]", value) ||
-      nchar(enc2utf8(value), type = "bytes") > 1024L
-  ) {
+  if (!graft_is_text(value)) {
     graft_value_abort(paste0(
       "`",
       name,
@@ -29,12 +16,7 @@ graft_value_digest <- function(value, name, allow_null = FALSE) {
   if (allow_null && is.null(value)) {
     return(NULL)
   }
-  if (
-    !is.character(value) ||
-      length(value) != 1L ||
-      is.na(value) ||
-      !grepl("^[0-9a-f]{64}$", value)
-  ) {
+  if (!graft_is_digest(value)) {
     graft_value_abort(paste0(
       "`",
       name,
@@ -422,10 +404,7 @@ artifact_ref_value <- function(record) {
   if (!is.list(record) || is.object(record)) {
     graft_value_abort("An artifact reference record must be a plain list.")
   }
-  record <- tryCatch(
-    artifact_check_ref(record),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  record <- artifact_check_ref(record, class = "graft_value_error")
   ArtifactRef(id = record$id, revision = record$revision)
 }
 
@@ -434,10 +413,7 @@ artifact_ref_record <- function(ref) {
     graft_value_abort("`ref` must be an ArtifactRef value.")
   }
   record <- list(id = ref@id, revision = ref@revision)
-  tryCatch(
-    artifact_check_ref(record),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  artifact_check_ref(record, class = "graft_value_error")
 }
 
 artifact_refs_records <- function(refs) {
@@ -465,10 +441,7 @@ artifact_selection_value <- function(record) {
       "An artifact selection record must contain id, roots, and artifacts."
     )
   }
-  id <- tryCatch(
-    artifact_check_digest(record$id),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  id <- artifact_check_digest(record$id, class = "graft_value_error")
   roots <- unname(lapply(record$roots, artifact_ref_value))
   artifacts <- unname(lapply(record$artifacts, artifact_ref_value))
   ArtifactSelection(id = id, roots = roots, artifacts = artifacts)
@@ -479,10 +452,7 @@ artifact_selection_record <- function(selection) {
     graft_value_abort("`selection` must be an ArtifactSelection value.")
   }
   list(
-    id = tryCatch(
-      artifact_check_digest(selection@id),
-      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-    ),
+    id = artifact_check_digest(selection@id, class = "graft_value_error"),
     roots = artifact_refs_records(selection@roots),
     artifacts = artifact_refs_records(selection@artifacts)
   )
@@ -513,44 +483,50 @@ artifact_decision_value <- function(record) {
   ) {
     graft_value_abort("A decision record has an unsupported shape.")
   }
-  id <- tryCatch(
-    artifact_check_digest(record$id),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  id <- artifact_check_digest(record$id, class = "graft_value_error")
   previous <- record$previous
   if (!is.null(previous)) {
-    previous <- tryCatch(
-      artifact_check_digest(previous),
-      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-    )
+    previous <- artifact_check_digest(previous, class = "graft_value_error")
   }
-  selection <- tryCatch(
-    artifact_check_digest(record$selection),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+  selection <- artifact_check_digest(
+    record$selection,
+    class = "graft_value_error"
   )
   sequence <- record$sequence
-  if (
-    !is.numeric(sequence) ||
-      length(sequence) != 1L ||
-      is.na(sequence) ||
-      !is.finite(sequence) ||
-      sequence < 1 ||
-      sequence != floor(sequence) ||
-      sequence > .Machine$integer.max
-  ) {
+  if (!graft_is_whole_number(sequence)) {
     graft_value_abort("`sequence` must be one positive integer.")
   }
   Decision(
     id = id,
     sequence = as.integer(sequence),
-    stream = artifact_check_text(record$stream, "stream"),
-    key = artifact_check_text(record$key, "key"),
+    stream = artifact_check_text(
+      record$stream,
+      "stream",
+      class = "graft_value_error"
+    ),
+    key = artifact_check_text(record$key, "key", class = "graft_value_error"),
     previous = previous,
-    action = artifact_check_text(record$action, "action"),
+    action = artifact_check_text(
+      record$action,
+      "action",
+      class = "graft_value_error"
+    ),
     selection = selection,
-    actor = artifact_check_text(record$actor, "actor"),
-    reason = artifact_check_text(record$reason, "reason"),
-    purpose = artifact_check_text(record$purpose, "purpose")
+    actor = artifact_check_text(
+      record$actor,
+      "actor",
+      class = "graft_value_error"
+    ),
+    reason = artifact_check_text(
+      record$reason,
+      "reason",
+      class = "graft_value_error"
+    ),
+    purpose = artifact_check_text(
+      record$purpose,
+      "purpose",
+      class = "graft_value_error"
+    )
   )
 }
 
@@ -609,10 +585,7 @@ artifact_value <- function(record) {
   if (!is.raw(bytes)) {
     graft_value_abort("An artifact record must contain raw bytes.")
   }
-  tryCatch(
-    artifact_check_metadata(metadata),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  artifact_check_metadata(metadata, class = "graft_value_error")
   if (
     !identical(metadata$id, ref@id) ||
       as.numeric(metadata$size) != length(bytes) ||

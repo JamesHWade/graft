@@ -1,4 +1,11 @@
 # Validation and rendering of explicit vocabulary releases; no inferred semantics.
+
+VOCABULARY_MAX_SOURCE_BYTES <- 1024L * 1024L
+VOCABULARY_MAX_SELECTION_BYTES <- 1024L * 1024L
+# Two artifacts per dictionary, three shared artifacts, and one root must fit
+# the public artifact API's default traversal bound of 1,000 artifacts.
+VOCABULARY_MAX_DICTIONARIES <- 498L
+
 vocabulary_binding_error <- function(message) {
   graft_abort("graft_vocabulary_error", message, call = NULL)
 }
@@ -47,7 +54,7 @@ vocabulary_check_pinned_reference <- function(ref) {
   vocabulary_check_text(ref$path, "path")
   vocabulary_check_text(ref$sha256, "sha256")
   if (
-    !grepl("^[a-f0-9]{64}$", ref$sha256) ||
+    !graft_is_digest(ref$sha256) ||
       basename(ref$path) != ref$path ||
       ref$path %in% c(".", "..") ||
       grepl("[\\\\/:]", ref$path)
@@ -63,7 +70,7 @@ vocabulary_check_pinned_file <- function(root, ref) {
   vocabulary_check_pinned_reference(ref)
   path <- file.path(root, ref$path)
   bytes <- vocabulary_source_bytes(path)
-  if (!identical(vocabulary_hash(bytes), ref$sha256)) {
+  if (!identical(artifact_sha(bytes), ref$sha256)) {
     vocabulary_binding_error(paste(
       "Missing or changed pinned content:",
       ref$path
@@ -72,36 +79,22 @@ vocabulary_check_pinned_file <- function(root, ref) {
   bytes
 }
 
-vocabulary_hash <- function(bytes) {
-  digest::digest(bytes, algo = "sha256", serialize = FALSE)
-}
-
 vocabulary_source_bytes <- function(path) {
   vocabulary_check_text(path, "path")
-  size <- file.info(path)$size
-  if (
-    !file.exists(path) ||
-      dir.exists(path) ||
-      is.na(size) ||
-      size < 1 ||
-      size > 1024^2
-  ) {
-    vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
-  }
-  bytes <- tryCatch(
-    readBin(path, "raw", n = 1024^2 + 1L),
-    error = function(error) {
-      vocabulary_binding_error("Could not read source file")
-    }
+  graft_read_regular_file(
+    path,
+    max_bytes = VOCABULARY_MAX_SOURCE_BYTES,
+    min_bytes = 1L,
+    class = "graft_vocabulary_error",
+    missing_message = "Each source file must contain 1 byte to 1 MiB",
+    read_message = "Could not read source file",
+    changed_message = "Each source file must contain 1 byte to 1 MiB",
+    call = NULL
   )
-  if (length(bytes) < 1L || length(bytes) > 1024^2) {
-    vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
-  }
-  bytes
 }
 
 vocabulary_check_source_budget <- function(sizes, max_bytes) {
-  if (anyNA(sizes) || any(sizes < 1L | sizes > 1024^2)) {
+  if (anyNA(sizes) || any(sizes < 1L | sizes > VOCABULARY_MAX_SOURCE_BYTES)) {
     vocabulary_binding_error("Each source file must contain 1 byte to 1 MiB")
   }
   if (sum(sizes) > max_bytes) {
@@ -206,16 +199,14 @@ vocabulary_companion <- function(b) {
   lapply(b$vocabulary, vocabulary_check_text, label = "vocabulary reference")
   vocabulary_check_pinned_reference(b$vocabulary)
   vocabulary_check_array(b$dictionaries, "dictionaries")
-  # Two artifacts per dictionary, three shared artifacts and one root must fit
-  # the public artifact API's default traversal bound of 1,000 artifacts.
-  if (length(b$dictionaries) > 498L) {
+  if (length(b$dictionaries) > VOCABULARY_MAX_DICTIONARIES) {
     vocabulary_binding_error(
       "A vocabulary release supports at most 498 dictionaries"
     )
   }
   vocabulary_check_array(b$bindings, "bindings")
   vocabulary_check_array(b$assertions, "assertions", empty = TRUE)
-  ids <- character()
+  seen_ids <- new.env(hash = TRUE, parent = emptyenv())
   for (ref in b$dictionaries) {
     vocabulary_check_record(
       ref,
@@ -224,20 +215,30 @@ vocabulary_companion <- function(b) {
     )
     lapply(ref, vocabulary_check_text, label = "dictionary reference")
     vocabulary_check_pinned_reference(ref)
-    if (ref$id %in% ids) {
+    if (exists(ref$id, envir = seen_ids, inherits = FALSE)) {
       vocabulary_binding_error("Duplicate dictionary ID")
     }
-    ids <- c(ids, ref$id)
+    seen_ids[[ref$id]] <- TRUE
   }
   invisible(NULL)
 }
 
-vocabulary_validate <- function(b, v, dictionaries) {
-  vocabulary_companion(b)
+vocabulary_validate <- function(b, v, dictionaries, check_companion = TRUE) {
+  if (isTRUE(check_companion)) {
+    vocabulary_companion(b)
+  }
+  terms <- vocabulary_validate_terms(v, b$vocabulary$release)
+  vocabulary_validate_dictionaries(b, dictionaries)
+  vocabulary_validate_bindings(b, terms, dictionaries)
+  vocabulary_validate_assertions(b, terms)
+  invisible(TRUE)
+}
+
+vocabulary_validate_terms <- function(v, expected_release) {
   vocabulary_check_record(v, c("format", "release", "terms"), "vocabulary")
   if (
     !identical(v$format, "graft-vocabulary/1") ||
-      !identical(v$release, b$vocabulary$release)
+      !identical(v$release, expected_release)
   ) {
     vocabulary_binding_error("Vocabulary format or release mismatch")
   }
@@ -283,18 +284,11 @@ vocabulary_validate <- function(b, v, dictionaries) {
       }
     }
   }
-  dictionary_ids <- character()
+  terms
+}
+
+vocabulary_validate_dictionaries <- function(b, dictionaries) {
   for (ref in b$dictionaries) {
-    vocabulary_check_record(
-      ref,
-      c("id", "workflow", "path", "sha256"),
-      "dictionary reference"
-    )
-    lapply(ref, vocabulary_check_text, label = "dictionary reference")
-    if (ref$id %in% dictionary_ids) {
-      vocabulary_binding_error("Duplicate dictionary ID")
-    }
-    dictionary_ids <- c(dictionary_ids, ref$id)
     vocabulary_check_object(dictionaries[[ref$id]], "dictionary export")
     vocabulary_check_object(dictionaries[[ref$id]]$model, "dictionary model")
     if (is.null(dictionaries[[ref$id]]$model$tables)) {
@@ -313,26 +307,39 @@ vocabulary_validate <- function(b, v, dictionaries) {
       }
     }
   }
-  locate <- function(binding, field) {
-    dict <- dictionaries[[binding$dictionary]]$model
-    if (is.null(dict)) {
-      vocabulary_binding_error("Unknown dictionary")
-    }
-    tables <- Filter(\(x) identical(x$name, binding$table), dict$tables)
-    if (length(tables) != 1L) {
-      vocabulary_binding_error("Missing or ambiguous bound table")
-    }
-    cols <- Filter(\(x) identical(x$name, field), tables[[1]]$columns)
-    if (length(cols) != 1L) {
-      vocabulary_binding_error(paste(
-        "Missing or ambiguous bound field:",
-        field
-      ))
-    }
-    cols[[1]]
+  invisible(NULL)
+}
+
+vocabulary_locate_field <- function(dictionaries, binding, field) {
+  dict <- dictionaries[[binding$dictionary]]$model
+  if (is.null(dict)) {
+    vocabulary_binding_error("Unknown dictionary")
   }
-  ids <- character()
-  concept_keys <- character()
+  tables <- Filter(\(x) identical(x$name, binding$table), dict$tables)
+  if (length(tables) != 1L) {
+    vocabulary_binding_error("Missing or ambiguous bound table")
+  }
+  cols <- Filter(\(x) identical(x$name, field), tables[[1]]$columns)
+  if (length(cols) != 1L) {
+    vocabulary_binding_error(paste(
+      "Missing or ambiguous bound field:",
+      field
+    ))
+  }
+  cols[[1]]
+}
+
+vocabulary_field_key <- function(dictionary, table, field) {
+  as.character(jsonlite::toJSON(
+    list(dictionary = dictionary, table = table, field = field),
+    auto_unbox = TRUE
+  ))
+}
+
+vocabulary_validate_bindings <- function(b, terms, dictionaries) {
+  seen_ids <- new.env(hash = TRUE, parent = emptyenv())
+  concept_index <- new.env(hash = TRUE, parent = emptyenv())
+  relationships <- list()
   for (binding in b$bindings) {
     vocabulary_check_object(binding, "binding")
     fields <- c(
@@ -351,10 +358,10 @@ vocabulary_validate <- function(b, v, dictionaries) {
     )
     vocabulary_check_record(binding, fields, "binding")
     lapply(binding, vocabulary_check_text, label = "binding field")
-    if (binding$id %in% ids) {
+    if (exists(binding$id, envir = seen_ids, inherits = FALSE)) {
       vocabulary_binding_error("Duplicate binding ID")
     }
-    ids <- c(ids, binding$id)
+    seen_ids[[binding$id]] <- TRUE
     term <- terms[[binding$term]]
     if (is.null(term)) {
       vocabulary_binding_error("Unknown term")
@@ -363,45 +370,50 @@ vocabulary_validate <- function(b, v, dictionaries) {
       vocabulary_binding_error("Wrong binding kind")
     }
     if (binding$kind == "concept") {
-      locate(binding, binding$field)
-      key <- as.character(jsonlite::toJSON(
-        binding[c("dictionary", "table", "field")],
-        auto_unbox = TRUE
-      ))
-      if (key %in% concept_keys) {
+      vocabulary_locate_field(dictionaries, binding, binding$field)
+      key <- vocabulary_field_key(
+        binding$dictionary,
+        binding$table,
+        binding$field
+      )
+      if (exists(key, envir = concept_index, inherits = FALSE)) {
         vocabulary_binding_error(
           "Ambiguous equivalence: multiple concepts for one field"
         )
       }
-      concept_keys <- c(concept_keys, key)
+      concept_index[[key]] <- binding
     } else {
-      locate(binding, binding$from)
-      locate(binding, binding$to)
+      vocabulary_locate_field(dictionaries, binding, binding$from)
+      vocabulary_locate_field(dictionaries, binding, binding$to)
+      relationships[[length(relationships) + 1L]] <- binding
     }
   }
-  for (binding in Filter(\(x) x$kind == "relationship", b$bindings)) {
+  for (binding in relationships) {
     term <- terms[[binding$term]]
     for (endpoint in c("from", "to")) {
       expected <- if (endpoint == "from") term$domain else term$range
-      hits <- Filter(
-        function(x) {
-          x$kind == "concept" &&
-            x$dictionary == binding$dictionary &&
-            x$table == binding$table &&
-            x$field == binding[[endpoint]] &&
-            x$term == expected &&
-            x$scope == binding$scope &&
-            x$grain == binding$grain &&
-            x$condition == binding$condition
-        },
-        b$bindings
+      key <- vocabulary_field_key(
+        binding$dictionary,
+        binding$table,
+        binding[[endpoint]]
       )
-      if (length(hits) != 1L) {
+      hit <- concept_index[[key]]
+      if (
+        is.null(hit) ||
+          !identical(hit$term, expected) ||
+          !identical(hit$scope, binding$scope) ||
+          !identical(hit$grain, binding$grain) ||
+          !identical(hit$condition, binding$condition)
+      ) {
         vocabulary_binding_error("Relationship direction/domain/range mismatch")
       }
     }
   }
-  assertion_ids <- character()
+  invisible(NULL)
+}
+
+vocabulary_validate_assertions <- function(b, terms) {
+  seen_ids <- new.env(hash = TRUE, parent = emptyenv())
   for (assertion in b$assertions) {
     vocabulary_check_record(
       assertion,
@@ -418,10 +430,10 @@ vocabulary_validate <- function(b, v, dictionaries) {
       ),
       "assertion"
     )
-    if (assertion$id %in% assertion_ids) {
+    if (exists(assertion$id, envir = seen_ids, inherits = FALSE)) {
       vocabulary_binding_error("Duplicate assertion ID")
     }
-    assertion_ids <- c(assertion_ids, assertion$id)
+    seen_ids[[assertion$id]] <- TRUE
     lapply(
       assertion[setdiff(names(assertion), "negated")],
       vocabulary_check_text,
@@ -437,7 +449,7 @@ vocabulary_validate <- function(b, v, dictionaries) {
       vocabulary_binding_error("Invalid assertion predicate or qualifiers")
     }
   }
-  invisible(TRUE)
+  invisible(NULL)
 }
 
 # Quote release-controlled values as JSON code so Markdown treats them as data.

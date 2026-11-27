@@ -2,9 +2,28 @@ artifact_select <- function(
   store,
   roots,
   max_artifacts = 1000L,
-  max_metadata_bytes = 1024^2
+  max_metadata_bytes = 1024^2,
+  check_store = TRUE
 ) {
-  artifact_check_store(store)
+  artifact_select_record(
+    store,
+    roots,
+    max_artifacts = max_artifacts,
+    max_metadata_bytes = max_metadata_bytes,
+    check_store = check_store
+  )$id
+}
+
+artifact_select_record <- function(
+  store,
+  roots,
+  max_artifacts = 1000L,
+  max_metadata_bytes = 1024^2,
+  check_store = TRUE
+) {
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
   roots <- artifact_refs(roots, max_artifacts)
@@ -29,18 +48,22 @@ artifact_select <- function(
     store,
     selection,
     max_artifacts,
-    max_metadata_bytes
+    max_metadata_bytes,
+    check_store = FALSE
   )
-  selection
 }
 
 artifact_read_selection <- function(
   store,
   selection,
   max_artifacts = 1000L,
-  max_metadata_bytes = 1024^2
+  max_metadata_bytes = 1024^2,
+  check_store = TRUE,
+  include_items = FALSE
 ) {
-  artifact_check_store(store)
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   selection <- artifact_check_digest(selection)
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
@@ -63,32 +86,49 @@ artifact_read_selection <- function(
   }
   roots <- artifact_refs(value$roots, max_artifacts)
   artifacts <- artifact_refs(value$artifacts, max_artifacts)
+  closure <- artifact_dependency_closure(
+    store,
+    roots,
+    max_artifacts,
+    include_items = include_items
+  )
+  closure_refs <- if (isTRUE(include_items)) closure$refs else closure
   if (
     !length(roots) ||
       !identical(roots, value$roots) ||
       !identical(artifacts, value$artifacts) ||
-      !identical(
-        artifact_dependency_closure(store, roots, max_artifacts),
-        artifacts
-      )
+      !identical(closure_refs, artifacts)
   ) {
     artifact_abort("Artifact selection is incomplete or altered.")
   }
-  list(id = selection, roots = roots, artifacts = artifacts)
+  record <- list(id = selection, roots = roots, artifacts = artifacts)
+  if (isTRUE(include_items)) {
+    record$items <- closure$items
+  }
+  record
 }
 
-artifact_refs <- function(refs, limit) {
+artifact_refs <- function(
+  refs,
+  limit,
+  class = "graft_artifact_error",
+  call = rlang::caller_env()
+) {
   if (!is.list(refs) || is.object(refs)) {
-    artifact_abort(
-      "Artifact references must be a list within the artifact bound."
+    graft_abort(
+      class,
+      "Artifact references must be a list within the artifact bound.",
+      call = call
     )
   }
-  refs <- lapply(refs, artifact_check_ref)
+  refs <- lapply(refs, artifact_check_ref, class = class, call = call)
   refs <- unname(refs)
   refs <- refs[!duplicated(vapply(refs, artifact_ref_key, character(1)))]
   if (length(refs) > limit) {
-    artifact_abort(
-      "Artifact references must be a list within the artifact bound."
+    graft_abort(
+      class,
+      "Artifact references must be a list within the artifact bound.",
+      call = call
     )
   }
   refs
@@ -96,15 +136,24 @@ artifact_refs <- function(refs, limit) {
 
 artifact_ref_key <- function(ref) paste(ref$id, ref$revision, sep = "\n")
 
-artifact_dependency_closure <- function(store, roots, max_artifacts) {
+artifact_dependency_closure <- function(
+  store,
+  roots,
+  max_artifacts,
+  include_items = FALSE
+) {
   pending <- roots
-  keys <- vapply(roots, artifact_ref_key, character(1))
+  seen <- new.env(hash = TRUE, parent = emptyenv())
+  for (ref in roots) {
+    seen[[artifact_ref_key(ref)]] <- TRUE
+  }
   result <- list()
+  items <- if (isTRUE(include_items)) list() else NULL
   size <- 0
   cursor <- 1L
   while (cursor <= length(pending)) {
     ref <- pending[[cursor]]
-    item <- artifact_read(store, ref)
+    item <- artifact_read(store, ref, check_store = FALSE)
     size <- size + length(item$bytes)
     if (size > store@max_bytes) {
       artifact_abort(
@@ -112,19 +161,25 @@ artifact_dependency_closure <- function(store, roots, max_artifacts) {
       )
     }
     result[[cursor]] <- ref
+    if (isTRUE(include_items)) {
+      items[[cursor]] <- item
+    }
     for (dependency in item$metadata$dependencies) {
       key <- artifact_ref_key(dependency)
-      if (!key %in% keys) {
+      if (!exists(key, envir = seen, inherits = FALSE)) {
         if (length(pending) >= max_artifacts) {
           artifact_abort(
             "Artifact dependency closure exceeds the artifact bound."
           )
         }
         pending[[length(pending) + 1L]] <- dependency
-        keys <- c(keys, key)
+        seen[[key]] <- TRUE
       }
     }
     cursor <- cursor + 1L
+  }
+  if (isTRUE(include_items)) {
+    return(list(refs = result, items = items))
   }
   result
 }

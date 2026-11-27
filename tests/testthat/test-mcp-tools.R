@@ -3,10 +3,9 @@ test_that("mcptools stdio exposes read-only recall and synthetic content", {
   skip_if_not_installed("callr")
   skip_if_not_installed("pkgload")
 
-  source_root <- if (pkgload::is_dev_package("graft")) {
-    getNamespaceInfo(asNamespace("graft"), "path")
-  } else {
-    ""
+  source_root <- graft_checkout()
+  if (is.null(source_root)) {
+    source_root <- ""
   }
   work_dir <- withr::local_tempdir("graft-mcp-")
   store_path <- file.path(work_dir, "store")

@@ -82,7 +82,7 @@ test_that("public vocabulary reads reject a corrupted release closure", {
   altered <- artifact_save(
     fixture$store,
     "corrupt-release",
-    vocabulary_encode(value),
+    artifact_encode(value),
     "application/json",
     vocabulary_dependencies(value$references)
   )
@@ -91,6 +91,60 @@ test_that("public vocabulary reads reject a corrupted release closure", {
   expect_error(
     graft_read_vocabulary(fixture$store, altered),
     "context differs",
+    class = "graft_vocabulary_error"
+  )
+})
+
+test_that("vocabulary publish, read, and validation work offline with mocked dictionary exports", {
+  path <- withr::local_tempdir()
+  source_dir <- system.file("examples", "vocabulary", "v1", package = "graft")
+  file.copy(list.files(source_dir, full.names = TRUE), path)
+  store <- graft_store(file.path(path, "artifacts"), create = TRUE)
+
+  mock_export <- function(table_name, cols) {
+    list(
+      model = list(
+        tables = list(list(
+          name = table_name,
+          columns = lapply(cols, \(col) list(name = col))
+        ))
+      ),
+      evidence = list(command = "validate-spec", status = 0L),
+      package_version = "0.1.0",
+      binary_sha256 = strrep("a", 64L)
+    )
+  }
+  local_mocked_bindings(vocabulary_read_dictionary = function(bytes) {
+    text <- rawToChar(bytes)
+    if (grepl("readings", text, fixed = TRUE)) {
+      mock_export("readings", c("reading_id", "sample_id", "temperature_c"))
+    } else {
+      mock_export("assays", c("assay_id", "specimen", "temperature_f"))
+    }
+  })
+
+  release <- graft_publish_vocabulary(store, file.path(path, "bindings.json"))
+  expect_s7_class(release, VocabularyRelease)
+  expect_match(
+    capture.output(print(release)),
+    "VocabularyRelease urn:example:bindings:v1"
+  )
+
+  selection_reads <- 0L
+  real_read_selection <- artifact_read_selection
+  local_mocked_bindings(artifact_read_selection = function(...) {
+    selection_reads <<- selection_reads + 1L
+    real_read_selection(...)
+  })
+  reread <- graft_read_vocabulary(store, release)
+  expect_identical(reread, release)
+  expect_identical(selection_reads, 1L)
+
+  bad_bindings <- release@bindings
+  bad_bindings$bindings[[4L]]$from <- "sample_id"
+  expect_error(
+    vocabulary_validate(bad_bindings, release@vocabulary, release@dictionaries),
+    "direction/domain/range",
     class = "graft_vocabulary_error"
   )
 })

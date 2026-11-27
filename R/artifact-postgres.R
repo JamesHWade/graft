@@ -54,15 +54,7 @@ graft_store_postgres <- function(
   max_bytes = 64 * 1024^2,
   max_revision_bytes = 1024^2
 ) {
-  if (
-    !requireNamespace("DBI", quietly = TRUE) ||
-      !requireNamespace("RPostgres", quietly = TRUE)
-  ) {
-    artifact_abort("PostgreSQL stores require DBI and RPostgres.")
-  }
-  if (!inherits(connection, "PqConnection") || !DBI::dbIsValid(connection)) {
-    artifact_abort("`connection` must be an open RPostgres connection.")
-  }
+  artifact_postgres_check_connection(connection)
   scope <- artifact_check_text(scope, "scope")
   if (!rlang::is_bool(create)) {
     artifact_abort("`create` must be TRUE or FALSE.")
@@ -91,16 +83,31 @@ graft_store_postgres <- function(
     max_bytes = max_bytes,
     max_revision_bytes = max_revision_bytes
   )
-  marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   if (create) {
-    artifact_postgres_put(store, "store", "format", marker, 1024)
+    artifact_postgres_put(store, "store", "format", ARTIFACT_STORE_MARKER, 1024)
   }
   if (
-    !identical(artifact_postgres_read(store, "store", "format", 1024), marker)
+    !identical(
+      artifact_postgres_read(store, "store", "format", 1024),
+      ARTIFACT_STORE_MARKER
+    )
   ) {
     artifact_abort("Unsupported artifact store marker.")
   }
   store
+}
+
+artifact_postgres_check_connection <- function(connection) {
+  if (
+    !requireNamespace("DBI", quietly = TRUE) ||
+      !requireNamespace("RPostgres", quietly = TRUE)
+  ) {
+    artifact_abort("PostgreSQL stores require DBI and RPostgres.")
+  }
+  if (!inherits(connection, "PqConnection") || !DBI::dbIsValid(connection)) {
+    artifact_abort("`connection` must be an open RPostgres connection.")
+  }
+  invisible(NULL)
 }
 
 artifact_postgres_lock <- function(connection, scope) {
@@ -170,6 +177,20 @@ artifact_postgres_put <- function(store, kind, key, bytes, limit) {
   invisible(NULL)
 }
 
+S7::method(artifact_storage_check, PostgresArtifactStore) <- function(store) {
+  artifact_postgres_check_connection(store@connection)
+  artifact_postgres_lock(store@connection, store@scope)
+  if (
+    !identical(
+      artifact_postgres_read(store, "store", "format", 1024),
+      ARTIFACT_STORE_MARKER
+    )
+  ) {
+    artifact_abort("Unsupported artifact store marker.")
+  }
+  invisible(NULL)
+}
+
 S7::method(artifact_storage_read, PostgresArtifactStore) <- function(
   store,
   kind,
@@ -195,64 +216,6 @@ S7::method(artifact_with_stream_lock, PostgresArtifactStore) <- function(
   code
 ) {
   code()
-}
-
-S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
-  store,
-  hash,
-  max_decisions
-) {
-  path <- artifact_path(store, "decisions", hash)
-  if (!file.exists(path)) {
-    return(data.frame(name = character(), size = numeric()))
-  }
-  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
-    artifact_abort("Decision journal is not a readable directory.")
-  }
-  files <- list.files(path, all.files = TRUE, no.. = TRUE)
-  files <- sort(files[!grepl("^staged-", files)])
-  paths <- file.path(path, files)
-  if (any(dir.exists(paths))) {
-    artifact_abort("Decision journal has invalid entries.")
-  }
-  data.frame(name = files, size = file.info(paths)$size)
-}
-
-S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
-  store,
-  max_streams
-) {
-  path <- file.path(store@path, "decisions")
-  if (!file.exists(path)) {
-    return(character())
-  }
-  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
-    artifact_abort("Decision directory is not readable.")
-  }
-  hashes <- sort(
-    list.files(path, all.files = TRUE, no.. = TRUE),
-    method = "radix"
-  )
-  if (
-    !all(grepl("^[0-9a-f]{64}$", hashes)) ||
-      !all(dir.exists(file.path(path, hashes)))
-  ) {
-    artifact_abort("Decision directory has invalid entries.")
-  }
-  # A failed first publication can leave a journal with no committed record,
-  # which artifact_decision_entries() treats as empty; it is not a stream, so
-  # it does not count against the bound.
-  committed <- character()
-  for (hash in hashes) {
-    files <- list.files(file.path(path, hash), all.files = TRUE, no.. = TRUE)
-    if (!all(grepl("^staged-", files))) {
-      committed <- c(committed, hash)
-      if (length(committed) > max_streams) {
-        break
-      }
-    }
-  }
-  committed
 }
 
 S7::method(artifact_decision_entries, PostgresArtifactStore) <- function(

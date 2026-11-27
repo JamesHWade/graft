@@ -35,10 +35,10 @@ graft_publish_vocabulary <- function(store, path) {
 #' @return A freshly reconstructed [VocabularyRelease].
 #' @export
 graft_read_vocabulary <- function(store, release) {
-  selection <- vocabulary_selection(store, release)
-  value <- vocabulary_read(store, selection@id)
+  id <- vocabulary_release_id(release)
+  value <- vocabulary_read(store, id, include_selection = TRUE)
   VocabularyRelease(
-    selection = selection,
+    selection = artifact_selection_value(value$selection),
     vocabulary = value$vocabulary,
     bindings = value$bindings,
     dictionaries = value$dictionaries,
@@ -47,7 +47,7 @@ graft_read_vocabulary <- function(store, release) {
   )
 }
 
-vocabulary_selection <- function(store, release) {
+vocabulary_release_id <- function(release) {
   id <- if (S7::S7_inherits(release, VocabularyRelease)) {
     selection <- release@selection
     if (!S7::S7_inherits(selection, ArtifactSelection)) {
@@ -65,7 +65,7 @@ vocabulary_selection <- function(store, release) {
       "`release` must be a VocabularyRelease, ArtifactSelection, or selection digest"
     )
   }
-  graft_read_selection(store, id)
+  artifact_check_digest(id, class = "graft_value_error")
 }
 
 vocabulary_publish <- function(store, path) {
@@ -73,15 +73,19 @@ vocabulary_publish <- function(store, path) {
   source <- vocabulary_source_bytes(path)
   b <- vocabulary_json(source)
   vocabulary_companion(b)
-  files <- file.info(file.path(
-    dirname(path),
-    c(
-      b$vocabulary$path,
-      vapply(b$dictionaries, \(ref) ref$path, character(1))
-    )
-  ))
-  sizes <- files$size
-  sizes[files$isdir %in% TRUE] <- NA_real_
+  files <- fs::file_info(
+    file.path(
+      dirname(path),
+      c(
+        b$vocabulary$path,
+        vapply(b$dictionaries, \(ref) ref$path, character(1))
+      )
+    ),
+    fail = FALSE,
+    follow = FALSE
+  )
+  sizes <- as.numeric(files$size)
+  sizes[as.character(files$type) != "file"] <- NA_real_
   vocabulary_check_source_budget(c(length(source), sizes), store@max_bytes)
   vocabulary_bytes <- vocabulary_check_pinned_file(dirname(path), b$vocabulary)
   dictionary_bytes <- lapply(b$dictionaries, \(ref) {
@@ -91,23 +95,13 @@ vocabulary_publish <- function(store, path) {
     c(length(source), length(vocabulary_bytes), lengths(dictionary_bytes)),
     store@max_bytes
   )
-  ids <- vapply(
-    b$dictionaries,
-    function(ref) {
-      vocabulary_check_text(ref$id, "dictionary id")
-      ref$id
-    },
-    character(1)
-  )
-  if (anyDuplicated(ids)) {
-    vocabulary_binding_error("Duplicate dictionary ID")
-  }
+  ids <- vapply(b$dictionaries, \(ref) ref$id, character(1))
   dictionaries <- stats::setNames(
     lapply(dictionary_bytes, vocabulary_read_dictionary),
     ids
   )
   v <- vocabulary_json(vocabulary_bytes)
-  vocabulary_validate(b, v, dictionaries)
+  vocabulary_validate(b, v, dictionaries, check_companion = FALSE)
   refs <- list()
   records <- list()
   prepare <- function(id, bytes, media_type, dependencies = list()) {
@@ -147,12 +141,12 @@ vocabulary_publish <- function(store, path) {
       ),
       export = prepare_named(
         paste0("export:", i),
-        vocabulary_encode(dictionaries[[i]]),
+        artifact_encode(dictionaries[[i]]),
         "application/json"
       )
     )
   })
-  published <- vocabulary_release(b, v, dictionaries, vocabulary_hash(source))
+  published <- vocabulary_release(b, v, dictionaries, artifact_sha(source))
   refs$context <- prepare_named(
     "context",
     charToRaw(enc2utf8(paste(published$context, collapse = "\n"))),
@@ -160,7 +154,7 @@ vocabulary_publish <- function(store, path) {
   )
   root <- prepare(
     b$release,
-    vocabulary_encode(list(
+    artifact_encode(list(
       format = "graft-vocabulary-release/1",
       references = refs
     )),
@@ -180,23 +174,26 @@ vocabulary_publish <- function(store, path) {
     roots = list(root),
     artifacts = c(list(root), vocabulary_dependencies(refs))
   ))
-  if (length(selection_bytes) > 1024^2) {
+  if (length(selection_bytes) > VOCABULARY_MAX_SELECTION_BYTES) {
     vocabulary_binding_error(
       "Release exceeds the artifact selection metadata limit"
     )
   }
   for (record in records) {
-    do.call(artifact_save, c(list(store = store), record))
+    do.call(
+      artifact_save,
+      c(list(store = store, check_store = FALSE), record)
+    )
   }
-  artifact_select(store, list(root))
+  artifact_select(store, list(root), check_store = FALSE)
 }
 
-vocabulary_read <- function(store, selection) {
+vocabulary_read <- function(store, selection, include_selection = FALSE) {
   selected <- artifact_read_selection(store, selection)
   if (length(selected$roots) != 1L) {
     vocabulary_binding_error("A vocabulary selection requires one release root")
   }
-  root <- artifact_read(store, selected$roots[[1L]])
+  root <- artifact_read(store, selected$roots[[1L]], check_store = FALSE)
   value <- vocabulary_json(root$bytes)
   vocabulary_check_record(value, c("format", "references"), "release")
   if (!identical(value$format, "graft-vocabulary-release/1")) {
@@ -225,24 +222,20 @@ vocabulary_read <- function(store, selection) {
   # Selection validation already verifies the entire closure; require the root
   # to bind exactly the sources and generated outputs named by its payload.
   keys <- function(x) {
-    sort(vapply(
-      x,
-      \(ref) paste(ref$id, ref$revision, sep = "\n"),
-      character(1)
-    ))
+    sort(vapply(x, artifact_ref_key, character(1)))
   }
   if (!identical(keys(root$metadata$dependencies), keys(dependencies))) {
     vocabulary_binding_error(
       "Vocabulary root dependencies differ from its contents"
     )
   }
-  read <- function(ref) artifact_read(store, ref)$bytes
+  read <- function(ref) artifact_read(store, ref, check_store = FALSE)$bytes
   bindings_bytes <- read(refs$bindings)
   vocabulary_bytes <- read(refs$vocabulary)
   b <- vocabulary_json(bindings_bytes)
   vocabulary_companion(b)
   v <- vocabulary_json(vocabulary_bytes)
-  if (!identical(vocabulary_hash(vocabulary_bytes), b$vocabulary$sha256)) {
+  if (!identical(artifact_sha(vocabulary_bytes), b$vocabulary$sha256)) {
     vocabulary_binding_error(
       "Vocabulary source digest differs from its binding"
     )
@@ -259,7 +252,7 @@ vocabulary_read <- function(store, selection) {
       ref <- refs$dictionaries[[i]]
       if (
         !identical(
-          vocabulary_hash(read(ref$source)),
+          artifact_sha(read(ref$source)),
           b$dictionaries[[i]]$sha256
         )
       ) {
@@ -277,7 +270,7 @@ vocabulary_read <- function(store, selection) {
       vocabulary_check_text(export$binary_sha256, "data-dict binary digest")
       if (
         !grepl("^[0-9]+([.-][0-9]+)*$", export$package_version) ||
-          !grepl("^[a-f0-9]{64}$", export$binary_sha256)
+          !graft_is_digest(export$binary_sha256)
       ) {
         vocabulary_binding_error("Malformed data-dict validation provenance")
       }
@@ -293,12 +286,12 @@ vocabulary_read <- function(store, selection) {
     }),
     ids
   )
-  vocabulary_validate(b, v, dictionaries)
+  vocabulary_validate(b, v, dictionaries, check_companion = FALSE)
   published <- vocabulary_release(
     b,
     v,
     dictionaries,
-    vocabulary_hash(bindings_bytes)
+    artifact_sha(bindings_bytes)
   )
   if (
     !identical(
@@ -308,16 +301,10 @@ vocabulary_read <- function(store, selection) {
   ) {
     vocabulary_binding_error("Vocabulary context differs from its release")
   }
+  if (isTRUE(include_selection)) {
+    published$selection <- selected
+  }
   published
-}
-
-vocabulary_encode <- function(value) {
-  charToRaw(enc2utf8(as.character(jsonlite::toJSON(
-    value,
-    auto_unbox = TRUE,
-    null = "null",
-    digits = NA
-  ))))
 }
 
 vocabulary_dependencies <- function(refs) {

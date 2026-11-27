@@ -5,15 +5,13 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
   expect_identical(accepted$sequence, 1L)
   expect_null(accepted$previous)
   expect_identical(decision_submit(f$request), accepted)
-  current <- artifact_reuse(
-    f$store,
-    "topic",
-    accepted$id,
-    "research",
-    TRUE
+  current <- graft_recall(f$store, "topic", "research", TRUE)
+  expect_identical(current@status, "accepted")
+  expect_identical(current@decision@id, accepted$id)
+  expect_identical(
+    vapply(current@artifacts, \(x) x@ref@revision, character(1)),
+    c(f$first$revision, f$source$revision)
   )
-  expect_identical(current$decision, accepted)
-  expect_identical(current$selection$artifacts, list(f$first, f$source))
 
   reviewed <- decision_submit(
     f$request,
@@ -35,9 +33,9 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
     artifact_read_decision(f$store, "topic", accepted$id),
     accepted
   )
-  expect_error(
-    artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
-    class = "graft_artifact_error"
+  expect_identical(
+    graft_recall(f$store, "topic", "research", TRUE)@decision@id,
+    corrected$id
   )
   withdrawn <- decision_submit(
     f$request,
@@ -50,28 +48,18 @@ test_that("decisions separate reviews, corrections, withdrawal and consultation"
   expect_identical(withdrawn$action, "withdraw")
   expect_identical(decision_submit(f$request), accepted)
   expect_identical(artifact_read_decision(f$store, "topic"), withdrawn)
-  expect_error(
-    artifact_reuse(f$store, "topic", corrected$id, "research", TRUE),
-    class = "graft_artifact_error"
-  )
-  expect_error(
-    artifact_reuse(f$store, "topic", withdrawn$id, "research", TRUE),
-    class = "graft_artifact_error"
-  )
+  withdrawn_recall <- graft_recall(f$store, "topic", "research", TRUE)
+  expect_identical(withdrawn_recall@status, "withdrawn")
+  expect_identical(withdrawn_recall@decision@id, withdrawn$id)
+  expect_length(withdrawn_recall@artifacts, 0L)
   reaccepted <- decision_submit(
     f$request,
     key = "fresh-review",
     expected = withdrawn$id
   )
   expect_identical(
-    artifact_reuse(
-      f$store,
-      "topic",
-      reaccepted$id,
-      "research",
-      TRUE
-    )$decision,
-    reaccepted
+    graft_recall(f$store, "topic", "research", TRUE)@decision@id,
+    reaccepted$id
   )
 })
 
@@ -158,13 +146,13 @@ test_that("malformed decisions fail before publishing and eligibility is explici
   accepted <- decision_submit(f$request)
   for (eligible in list(FALSE, NA, NULL, 1, c(TRUE, TRUE))) {
     expect_error(
-      artifact_reuse(f$store, "topic", accepted$id, "research", eligible),
-      class = "graft_artifact_error"
+      graft_recall(f$store, "topic", "research", eligible),
+      class = "graft_ineligible_error"
     )
   }
   expect_error(
-    artifact_reuse(f$store, "topic", accepted$id, "other", TRUE),
-    class = "graft_artifact_error"
+    graft_recall(f$store, "topic", "other", TRUE),
+    class = "graft_purpose_error"
   )
   expect_error(
     decision_submit(
@@ -199,7 +187,7 @@ test_that("corrupt content blocks acceptance and reuse but permits withdrawal", 
     class = "graft_artifact_error"
   )
   expect_error(
-    artifact_reuse(f$store, "topic", accepted$id, "research", TRUE),
+    graft_recall(f$store, "topic", "research", TRUE),
     class = "graft_artifact_error"
   )
   expect_identical(
@@ -319,7 +307,9 @@ test_that("staging is never promoted and failed publication can be retried", {
   expect_error(decision_submit(f$request), class = "graft_artifact_error")
   expect_null(artifact_read_decision(f$store, "topic"))
   staging <- file.path(
-    artifact_decision_path(f$store, "topic"),
+    f$store@path,
+    "decisions",
+    artifact_sha(charToRaw("topic")),
     "staged-interrupted"
   )
   writeBin(charToRaw("incomplete"), staging)
@@ -360,25 +350,30 @@ test_that("decisions and guarded consultation survive a fresh R process", {
   f <- local_decision_fixture()
   accepted <- decision_submit(f$request)
   result <- callr::r(
-    function(path, id, checkout) {
+    function(path, checkout) {
       if (!is.null(checkout)) {
         pkgload::load_all(checkout, quiet = TRUE)
       }
       store <- graft::graft_store(path)
-      graft:::artifact_reuse(store, "topic", id, "research", TRUE)
+      recalled <- graft::graft_recall(store, "topic", "research", TRUE)
+      list(
+        status = recalled@status,
+        decision_id = recalled@decision@id,
+        revisions = vapply(
+          recalled@artifacts,
+          \(x) x@ref@revision,
+          character(1)
+        )
+      )
     },
     list(
       path = (f$store)@path,
-      id = accepted$id,
-      checkout = if (pkgload::is_dev_package("graft")) {
-        normalizePath("../..")
-      } else {
-        NULL
-      }
+      checkout = graft_checkout()
     )
   )
-  expect_identical(result$decision, accepted)
-  expect_identical(result$selection$artifacts, list(f$first, f$source))
+  expect_identical(result$status, "accepted")
+  expect_identical(result$decision_id, accepted$id)
+  expect_identical(result$revisions, c(f$first$revision, f$source$revision))
 })
 
 test_that("decisions from two processes in one stream never fork the journal", {
@@ -470,8 +465,8 @@ test_that("head changes during verification cannot silently authorize new work",
     result
   })
   expect_error(
-    artifact_reuse(f$store, "topic", head$id, "research", TRUE),
-    class = "graft_artifact_error"
+    graft_recall(f$store, "topic", "research", TRUE),
+    class = "graft_stale_review_error"
   )
   expect_identical(
     artifact_read_decision(f$store, "topic")$action,
@@ -532,4 +527,60 @@ test_that("an accept that times out on the lock writes no selection", {
     class = "graft_store_busy_error"
   )
   expect_identical(selections(), before)
+})
+
+test_that("graft_withdraw waits for the stream lock before reading the predecessor", {
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE, lock_timeout = 0.2)
+  ref <- graft_save(store, "kept", "note")
+  accepted <- graft_accept(
+    store,
+    ref,
+    stream = "topic",
+    expected = NULL,
+    key = "keep-1",
+    actor = "reviewer",
+    reason = "kept",
+    purpose = "research"
+  )
+  lock_path <- file.path(
+    path,
+    "locks",
+    paste0(artifact_sha(charToRaw("topic")), ".lock")
+  )
+  held <- file.path(dirname(path), "held-withdraw")
+  holder <- callr::r_bg(
+    function(lock_path, held) {
+      lock <- filelock::lock(lock_path)
+      file.create(held)
+      Sys.sleep(5)
+      filelock::unlock(lock)
+    },
+    list(lock_path = lock_path, held = held)
+  )
+  withr::defer(holder$kill())
+  while (!file.exists(held)) {
+    Sys.sleep(0.01)
+  }
+  expect_error(
+    graft_withdraw(
+      store,
+      stream = "topic",
+      expected = accepted,
+      key = "withdraw-1",
+      actor = "reviewer",
+      reason = "withdrawn"
+    ),
+    class = "graft_store_busy_error"
+  )
+  holder$kill()
+  withdrawn <- graft_withdraw(
+    store,
+    stream = "topic",
+    expected = accepted,
+    key = "withdraw-1",
+    actor = "reviewer",
+    reason = "withdrawn"
+  )
+  expect_identical(withdrawn@action, "withdraw")
 })

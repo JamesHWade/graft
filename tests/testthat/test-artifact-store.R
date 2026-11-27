@@ -34,11 +34,7 @@ test_that("artifacts survive correction and process restart", {
     list(
       path = path,
       ref = ref,
-      checkout = if (pkgload::is_dev_package("graft")) {
-        normalizePath("../..")
-      } else {
-        NULL
-      }
+      checkout = graft_checkout()
     )
   )
   expect_identical(result$bytes, bytes)
@@ -394,11 +390,7 @@ test_that("opening a store rejects a FIFO marker without blocking", {
     },
     list(
       path = path,
-      checkout = if (pkgload::is_dev_package("graft")) {
-        normalizePath("../..")
-      } else {
-        NULL
-      }
+      checkout = graft_checkout()
     ),
     timeout = 10
   )

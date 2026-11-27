@@ -63,11 +63,7 @@ test_that("selections pin complete evidence and meaning across corrections and r
     list(
       path = store@path,
       selection = selection,
-      checkout = if (pkgload::is_dev_package("graft")) {
-        normalizePath("../..")
-      } else {
-        NULL
-      }
+      checkout = graft_checkout()
     )
   )
   expect_identical(result$basis$roots, list(report))

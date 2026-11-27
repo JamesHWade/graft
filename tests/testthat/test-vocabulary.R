@@ -46,11 +46,7 @@ test_that("vocabulary releases preserve exact sources, exports and context", {
       graft:::vocabulary_read(graft::graft_store(path), selection)
     },
     args = list(
-      checkout = if (pkgload::is_dev_package("graft")) {
-        normalizePath(test_path("../.."))
-      } else {
-        NULL
-      },
+      checkout = graft_checkout(),
       path = file.path(dirname(fixture$path), "artifacts"),
       selection = selection
     )
@@ -121,7 +117,7 @@ test_that("vocabulary reads verify the source and generated context closure", {
   altered <- artifact_save(
     fixture$store,
     "altered-release",
-    vocabulary_encode(value),
+    artifact_encode(value),
     "application/json",
     vocabulary_dependencies(value$references)
   )
@@ -246,7 +242,7 @@ test_that("historical vocabulary reads reject malformed artifact references", {
       ref <- artifact_save(
         fixture$store,
         "malformed-release",
-        vocabulary_encode(candidate),
+        artifact_encode(candidate),
         "application/json",
         root$metadata$dependencies
       )
@@ -304,13 +300,13 @@ test_that("retained validation provenance requires a version and exact binary di
       value$references$dictionaries[[1L]]$export <- artifact_save(
         fixture$store,
         "invalid-export",
-        vocabulary_encode(candidate),
+        artifact_encode(candidate),
         "application/json"
       )
       ref <- artifact_save(
         fixture$store,
         "invalid-provenance",
-        vocabulary_encode(value),
+        artifact_encode(value),
         "application/json",
         vocabulary_dependencies(value$references)
       )
@@ -344,13 +340,13 @@ test_that("historical companion references require sibling paths", {
     value$references$bindings <- artifact_save(
       fixture$store,
       "invalid-companion",
-      vocabulary_encode(candidate),
+      artifact_encode(candidate),
       "application/json"
     )
     ref <- artifact_save(
       fixture$store,
       "invalid-path",
-      vocabulary_encode(value),
+      artifact_encode(value),
       "application/json",
       vocabulary_dependencies(value$references)
     )
@@ -379,6 +375,17 @@ test_that("vocabulary failures retain the package error boundary and source boun
     writeBin(bytes, path)
     expect_error(
       vocabulary_source_bytes(path),
+      "1 byte to 1 MiB",
+      class = "graft_vocabulary_error"
+    )
+  }
+  if (!identical(.Platform$OS.type, "windows")) {
+    target <- withr::local_tempfile()
+    writeBin(charToRaw("{}"), target)
+    link <- file.path(withr::local_tempdir(), "link.json")
+    file.symlink(target, link)
+    expect_error(
+      vocabulary_source_bytes(link),
       "1 byte to 1 MiB",
       class = "graft_vocabulary_error"
     )

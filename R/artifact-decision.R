@@ -12,9 +12,13 @@ artifact_decide <- function(
   max_metadata_bytes = 1024^2,
   max_artifacts = 1000L,
   max_selection_bytes = 1024^2,
-  locked = FALSE
+  locked = FALSE,
+  require_head = FALSE,
+  check_store = TRUE
 ) {
-  artifact_check_store(store)
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   request <- artifact_decision_request(
     stream,
     key,
@@ -28,12 +32,13 @@ artifact_decide <- function(
   artifact_check_limit(max_artifacts, "max_artifacts")
   artifact_check_limit(max_selection_bytes, "max_selection_bytes")
   decide <- function() {
-    records <- artifact_decisions(
+    journal <- artifact_decisions_read(
       store,
       request$stream,
       max_decisions,
       max_metadata_bytes
     )
+    records <- journal$records
     matched <- which(vapply(
       records,
       \(x) identical(x$key, request$key),
@@ -44,6 +49,12 @@ artifact_decide <- function(
       if (!identical(previous[names(request)], request)) {
         artifact_abort(
           "Decision key was already committed for a different request."
+        )
+      }
+      if (isTRUE(require_head) && !identical(matched, length(records))) {
+        graft_abort(
+          "graft_stale_review_error",
+          "The decision request refers to a historical event, not the current head."
         )
       }
       return(previous)
@@ -58,7 +69,8 @@ artifact_decide <- function(
         store,
         request$selection,
         max_artifacts,
-        max_selection_bytes
+        max_selection_bytes,
+        check_store = FALSE
       )
     }
     value <- list(
@@ -67,40 +79,48 @@ artifact_decide <- function(
       request = request
     )
     bytes <- artifact_encode(value)
-    retained <- sum(vapply(records, artifact_decision_size, numeric(1)))
-    if (retained + length(bytes) > max_metadata_bytes) {
+    if (journal$bytes + length(bytes) > max_metadata_bytes) {
       artifact_abort(
         "Decision journal exceeds the aggregate metadata byte bound."
       )
     }
-    current <- artifact_decisions(
-      store,
-      request$stream,
-      max_decisions,
-      max_metadata_bytes
-    )
-    if (!identical(artifact_decision_head(current), head)) {
-      artifact_abort(
-        "Decision head changed before publication; review it again."
-      )
+    if (request$action == "accept") {
+      current <- artifact_decisions_read(
+        store,
+        request$stream,
+        max_decisions,
+        max_metadata_bytes
+      )$records
+      if (!identical(artifact_decision_head(current), head)) {
+        artifact_abort(
+          "Decision head changed before publication; review it again."
+        )
+      }
     }
     id <- artifact_sha(bytes)
-    key <- paste0(
+    entry_key <- paste0(
       artifact_sha(charToRaw(request$stream)),
       "/",
       sprintf("%010d-%s.json", value$sequence, id)
     )
-    artifact_storage_put(store, "decisions", key, bytes, max_metadata_bytes)
+    artifact_storage_put(
+      store,
+      "decisions",
+      entry_key,
+      bytes,
+      max_metadata_bytes
+    )
     artifact_read_decision(
       store,
       request$stream,
       id,
       max_decisions,
-      max_metadata_bytes
+      max_metadata_bytes,
+      check_store = FALSE
     )
   }
-  # graft_accept() takes the lock itself so the selection it creates is
-  # covered too.
+  # graft_accept() and graft_withdraw() take the lock themselves so surrounding
+  # reads and selection writes stay covered too.
   if (isTRUE(locked)) {
     return(decide())
   }
@@ -112,19 +132,22 @@ artifact_read_decision <- function(
   stream,
   decision = NULL,
   max_decisions = 1000L,
-  max_metadata_bytes = 1024^2
+  max_metadata_bytes = 1024^2,
+  check_store = TRUE
 ) {
-  artifact_check_store(store)
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   stream <- artifact_check_text(stream, "stream")
   if (!is.null(decision)) {
     decision <- artifact_check_digest(decision)
   }
-  records <- artifact_decisions(
+  records <- artifact_decisions_read(
     store,
     stream,
     max_decisions,
     max_metadata_bytes
-  )
+  )$records
   if (is.null(decision)) {
     return(artifact_decision_head(records))
   }
@@ -133,61 +156,6 @@ artifact_read_decision <- function(
     artifact_abort("No committed decision has that identity in this stream.")
   }
   records[[matched]]
-}
-
-artifact_reuse <- function(
-  store,
-  stream,
-  decision,
-  purpose,
-  eligible,
-  max_decisions = 1000L,
-  max_metadata_bytes = 1024^2,
-  max_artifacts = 1000L,
-  max_selection_bytes = 1024^2
-) {
-  stream <- artifact_check_text(stream, "stream")
-  decision <- artifact_check_digest(decision)
-  purpose <- artifact_check_text(purpose, "purpose")
-  if (!rlang::is_bool(eligible) || !eligible) {
-    artifact_abort(
-      "Current consultation requires an explicit TRUE host eligibility decision."
-    )
-  }
-  artifact_check_limit(max_artifacts, "max_artifacts")
-  artifact_check_limit(max_selection_bytes, "max_selection_bytes")
-  head <- artifact_read_decision(
-    store,
-    stream,
-    max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes
-  )
-  if (
-    is.null(head) ||
-      !identical(head$id, decision) ||
-      head$action != "accept" ||
-      !identical(head$purpose, purpose)
-  ) {
-    artifact_abort("Decision is not the current acceptance for this purpose.")
-  }
-  selection <- artifact_read_selection(
-    store,
-    head$selection,
-    max_artifacts,
-    max_selection_bytes
-  )
-  current <- artifact_read_decision(
-    store,
-    stream,
-    max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes
-  )
-  if (!identical(current, head)) {
-    artifact_abort(
-      "Decision head changed during consultation; review it again."
-    )
-  }
-  list(decision = head, selection = selection)
 }
 
 artifact_decision_request <- function(
@@ -239,20 +207,8 @@ artifact_decision_transition <- function(request, head) {
   }
 }
 
-artifact_decision_path <- function(store, stream) {
-  artifact_path(store, "decisions", artifact_sha(charToRaw(stream)))
-}
-
 artifact_decision_head <- function(records) {
   if (length(records)) records[[length(records)]] else NULL
-}
-
-artifact_decision_size <- function(record) {
-  length(artifact_encode(list(
-    format = 1L,
-    sequence = record$sequence,
-    request = record[setdiff(names(record), c("id", "sequence"))]
-  )))
 }
 
 artifact_decisions <- function(
@@ -261,16 +217,61 @@ artifact_decisions <- function(
   max_decisions,
   max_metadata_bytes
 ) {
+  artifact_decisions_read(
+    store,
+    stream,
+    max_decisions,
+    max_metadata_bytes
+  )$records
+}
+
+artifact_decisions_read <- function(
+  store,
+  stream,
+  max_decisions,
+  max_metadata_bytes
+) {
+  artifact_decisions_verify(
+    store = store,
+    stream = stream,
+    hash = artifact_sha(charToRaw(stream)),
+    max_decisions = max_decisions,
+    max_metadata_bytes = max_metadata_bytes
+  )
+}
+
+artifact_decision_stream_read <- function(
+  store,
+  hash,
+  max_decisions,
+  max_metadata_bytes
+) {
+  artifact_decisions_verify(
+    store = store,
+    stream = NULL,
+    hash = hash,
+    max_decisions = max_decisions,
+    max_metadata_bytes = max_metadata_bytes
+  )
+}
+
+artifact_decisions_verify <- function(
+  store,
+  stream,
+  hash,
+  max_decisions,
+  max_metadata_bytes
+) {
   artifact_check_limit(max_decisions, "max_decisions")
   artifact_check_limit(max_metadata_bytes, "max_metadata_bytes")
-  entries <- artifact_decision_entries(
-    store,
-    artifact_sha(charToRaw(stream)),
-    max_decisions
-  )
+  entries <- artifact_decision_entries(store, hash, max_decisions)
   files <- entries$name
+  n <- length(files)
+  if (!n) {
+    return(list(records = list(), bytes = 0))
+  }
   if (
-    length(files) > max_decisions ||
+    n > max_decisions ||
       !all(grepl("^[0-9]{10}-[0-9a-f]{64}\\.json$", files))
   ) {
     artifact_abort(
@@ -278,16 +279,23 @@ artifact_decisions <- function(
     )
   }
   sizes <- entries$size
-  if (anyNA(sizes) || sum(sizes) > max_metadata_bytes) {
+  total_bytes <- sum(sizes)
+  if (anyNA(sizes) || total_bytes > max_metadata_bytes) {
     artifact_abort(
       "Decision journal exceeds its metadata bound or has invalid entries."
     )
   }
-  records <- list()
-  keys <- character()
-  for (i in seq_along(files)) {
-    key <- paste0(artifact_sha(charToRaw(stream)), "/", files[[i]])
-    bytes <- artifact_storage_read(store, "decisions", key, max_metadata_bytes)
+  records <- vector("list", n)
+  seen_keys <- new.env(hash = TRUE, parent = emptyenv())
+  previous <- NULL
+  for (i in seq_len(n)) {
+    entry_key <- paste0(hash, "/", files[[i]])
+    bytes <- artifact_storage_read(
+      store,
+      "decisions",
+      entry_key,
+      max_metadata_bytes
+    )
     id <- substr(files[[i]], 12L, 75L)
     if (
       !startsWith(files[[i]], sprintf("%010d-", i)) ||
@@ -320,12 +328,18 @@ artifact_decisions <- function(
     ) {
       artifact_abort("Unsupported decision record metadata.")
     }
+    if (is.null(stream)) {
+      stream <- artifact_check_text(value$request$stream, "stream")
+      if (!identical(artifact_sha(charToRaw(stream)), hash)) {
+        artifact_abort("Decision journal is filed under a different stream.")
+      }
+    }
     args <- value$request
     names(args)[names(args) == "previous"] <- "expected"
     request <- do.call(artifact_decision_request, args)
     if (
       !identical(request$stream, stream) ||
-        request$key %in% keys ||
+        exists(request$key, envir = seen_keys, inherits = FALSE) ||
         !identical(request, value$request) ||
         !identical(artifact_encode(value), bytes)
     ) {
@@ -333,35 +347,11 @@ artifact_decisions <- function(
         "Decision record has inconsistent identity, key or encoding."
       )
     }
-    artifact_decision_transition(request, artifact_decision_head(records))
-    records[[i]] <- c(list(id = id, sequence = i), request)
-    keys <- c(keys, request$key)
+    artifact_decision_transition(request, previous)
+    record <- c(list(id = id, sequence = i), request)
+    records[[i]] <- record
+    seen_keys[[request$key]] <- TRUE
+    previous <- record
   }
-  records
-}
-
-artifact_decision_stream_name <- function(store, hash, max_metadata_bytes) {
-  entries <- artifact_decision_entries(store, hash, 1L)
-  if (!nrow(entries)) {
-    return(NULL)
-  }
-  first <- entries$name[[1L]]
-  if (!grepl("^0000000001-[0-9a-f]{64}\\.json$", first)) {
-    artifact_abort("Decision journal has a sequence gap or invalid entries.")
-  }
-  bytes <- artifact_storage_read(
-    store,
-    "decisions",
-    paste0(hash, "/", first),
-    max_metadata_bytes
-  )
-  value <- artifact_decode(bytes)
-  stream <- if (is.list(value) && is.list(value$request)) {
-    value$request$stream
-  }
-  stream <- artifact_check_text(stream, "stream")
-  if (!identical(artifact_sha(charToRaw(stream)), hash)) {
-    artifact_abort("Decision journal is filed under a different stream.")
-  }
-  stream
+  list(records = records, bytes = total_bytes)
 }

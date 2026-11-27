@@ -23,7 +23,4 @@
 ^agents$
 ^adr$
 ^CONTEXT[.]md$
-^tools/hex-sticker$
-^tools/s7-compatibility$
-^tools/output-handoff$
-^tools/resolved-export$
+^tools$

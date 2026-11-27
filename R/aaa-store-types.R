@@ -15,7 +15,7 @@ ArtifactStore <- S7::new_class(
     max_bytes = S7::new_property(
       S7::class_numeric,
       validator = function(value) {
-        if (!artifact_store_valid_limit(value)) {
+        if (!graft_is_whole_number(value)) {
           "must be a positive whole number no greater than the R integer limit"
         }
       }
@@ -23,7 +23,7 @@ ArtifactStore <- S7::new_class(
     max_revision_bytes = S7::new_property(
       S7::class_numeric,
       validator = function(value) {
-        if (!artifact_store_valid_limit(value)) {
+        if (!graft_is_whole_number(value)) {
           "must be a positive whole number no greater than the R integer limit"
         }
       }
@@ -59,7 +59,7 @@ LocalArtifactStore <- S7::new_class(
     path = S7::new_property(
       S7::class_character,
       validator = function(value) {
-        if (!artifact_store_valid_path(value)) {
+        if (!graft_is_path(value)) {
           "must be a nonempty UTF-8 filesystem path"
         }
       }
@@ -91,7 +91,7 @@ PostgresArtifactStore <- S7::new_class(
     scope = S7::new_property(
       S7::class_character,
       validator = function(value) {
-        if (!artifact_store_valid_text(value)) {
+        if (!graft_is_text(value)) {
           "must be a nonempty UTF-8 string"
         }
       }
@@ -99,41 +99,13 @@ PostgresArtifactStore <- S7::new_class(
   )
 )
 
-artifact_store_valid_limit <- function(value) {
-  is.numeric(value) &&
-    length(value) == 1L &&
-    !is.na(value) &&
-    is.finite(value) &&
-    value >= 1 &&
-    value <= .Machine$integer.max &&
-    value == floor(value)
-}
-
-artifact_store_valid_text <- function(value) {
-  is.character(value) &&
-    length(value) == 1L &&
-    !is.na(value) &&
-    validUTF8(enc2utf8(value)) &&
-    nzchar(value) &&
-    identical(trimws(value), value) &&
-    nchar(enc2utf8(value), type = "bytes") <= 1024 &&
-    !grepl("[[:cntrl:]]", value)
-}
-
-artifact_store_valid_path <- function(value) {
-  is.character(value) &&
-    length(value) == 1L &&
-    !is.na(value) &&
-    validUTF8(enc2utf8(value)) &&
-    nzchar(value)
-}
-
 artifact_store_valid_connection <- function(value) {
   inherits(value, "PqConnection") &&
     requireNamespace("DBI", quietly = TRUE) &&
     isTRUE(tryCatch(DBI::dbIsValid(value), error = function(...) FALSE))
 }
 
+artifact_storage_check <- S7::new_generic("artifact_storage_check", "store")
 artifact_storage_read <- S7::new_generic("artifact_storage_read", "store")
 artifact_storage_put <- S7::new_generic("artifact_storage_put", "store")
 artifact_with_stream_lock <- S7::new_generic(
