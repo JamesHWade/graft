@@ -216,8 +216,8 @@ test_that("recall rejects a head that changes after materialization", {
   )
   original_materialize <- graft:::artifact_materialize
   local_mocked_bindings(
-    artifact_materialize = function(store, refs) {
-      values <- original_materialize(store, refs)
+    artifact_materialize = function(store, refs, ...) {
+      values <- original_materialize(store, refs, ...)
       graft_withdraw(
         store,
         "changing-stream",
@@ -463,4 +463,62 @@ test_that("a successor committed after the lock is released does not make a deci
     purpose = "research"
   )
   expect_identical(again, first)
+})
+
+test_that("stream validation raises graft_value_error consistently and recall reads each artifact once", {
+  store <- graft_store(withr::local_tempdir(), create = TRUE)
+  source <- graft_save(store, "source", "source")
+  note <- graft_save(store, "note", "note", dependencies = source)
+  accepted <- graft_accept(
+    store,
+    note,
+    stream = "topic",
+    expected = NULL,
+    key = "review-1",
+    actor = "reviewer",
+    reason = "reviewed",
+    purpose = "research"
+  )
+  expect_error(
+    graft_withdraw(
+      store,
+      stream = "",
+      expected = accepted,
+      key = "withdraw-1",
+      actor = "reviewer",
+      reason = "bad stream"
+    ),
+    class = "graft_value_error"
+  )
+  expect_error(
+    graft_history(store, stream = ""),
+    class = "graft_value_error"
+  )
+
+  real_read <- artifact_read
+  real_check <- artifact_check_store
+  read_count <- 0L
+  check_count <- 0L
+  local_mocked_bindings(
+    artifact_read = function(...) {
+      read_count <<- read_count + 1L
+      real_read(...)
+    },
+    artifact_check_store = function(...) {
+      check_count <<- check_count + 1L
+      real_check(...)
+    }
+  )
+  recalled <- graft_recall(store, "topic", "research", TRUE)
+  expect_identical(recalled@status, "accepted")
+  expect_identical(read_count, 2L)
+  expect_identical(check_count, 1L)
+
+  read_count <- 0L
+  check_count <- 0L
+  selected <- graft_select(store, note)
+  expect_s7_class(selected, ArtifactSelection)
+  # Once for initial closure traversal and once for read-back verification.
+  expect_identical(read_count, 4L)
+  expect_identical(check_count, 1L)
 })

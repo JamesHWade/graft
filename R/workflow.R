@@ -1,49 +1,24 @@
 # Public workflow API --------------------------------------------------------
 
-graft_workflow_abort <- function(.subclass, message) {
-  graft_abort(.subclass, message)
-}
-
 artifact_expected_id <- function(expected) {
   if (is.null(expected)) {
     return(NULL)
   }
   if (S7::S7_inherits(expected, Decision)) {
-    return(tryCatch(
-      artifact_check_digest(expected@id),
-      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-    ))
+    return(artifact_check_digest(expected@id, class = "graft_value_error"))
   }
   if (is.character(expected)) {
-    return(tryCatch(
-      artifact_check_digest(expected),
-      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-    ))
+    return(artifact_check_digest(expected, class = "graft_value_error"))
   }
   graft_value_abort("`expected` must be NULL, a Decision, or an exact digest.")
-}
-
-artifact_retry_head <- function(store, stream, expected_record, limits) {
-  current <- artifact_read_decision(
-    store,
-    stream,
-    max_decisions = limits$max_decisions,
-    max_metadata_bytes = limits$max_metadata_bytes
-  )
-  if (is.null(current) || !identical(current, expected_record)) {
-    graft_workflow_abort(
-      "graft_stale_review_error",
-      "The decision request refers to a historical event, not the current head."
-    )
-  }
-  current
 }
 
 artifact_selection_id <- function(
   store,
   x,
   max_artifacts,
-  max_metadata_bytes
+  max_metadata_bytes,
+  check_store = TRUE
 ) {
   if (S7::S7_inherits(x, ArtifactSelection)) {
     supplied <- artifact_selection_record(x)
@@ -51,10 +26,11 @@ artifact_selection_id <- function(
       store,
       supplied$id,
       max_artifacts,
-      max_metadata_bytes
+      max_metadata_bytes,
+      check_store = check_store
     )
     if (!identical(stored, supplied)) {
-      graft_workflow_abort(
+      graft_abort(
         "graft_selection_error",
         "The supplied ArtifactSelection does not match its retained selection."
       )
@@ -64,14 +40,14 @@ artifact_selection_id <- function(
   refs <- tryCatch(
     artifact_refs_records(x),
     graft_value_error = function(e) {
-      graft_workflow_abort(
+      graft_abort(
         "graft_input_error",
         conditionMessage(e)
       )
     }
   )
   if (!length(refs)) {
-    graft_workflow_abort(
+    graft_abort(
       "graft_input_error",
       "`x` must contain at least one ArtifactRef or an ArtifactSelection."
     )
@@ -80,12 +56,18 @@ artifact_selection_id <- function(
     store,
     refs,
     max_artifacts,
-    max_metadata_bytes
+    max_metadata_bytes,
+    check_store = check_store
   )
 }
 
-artifact_materialize <- function(store, refs) {
-  lapply(refs, function(ref) artifact_value(artifact_read(store, ref)))
+artifact_materialize <- function(store, refs, items = NULL) {
+  if (!is.null(items)) {
+    return(lapply(items, artifact_value))
+  }
+  lapply(refs, function(ref) {
+    artifact_value(artifact_read(store, ref, check_store = FALSE))
+  })
 }
 
 #' Save text or raw bytes as an immutable artifact
@@ -112,6 +94,26 @@ graft_save <- function(
   dependencies = list(),
   max_artifacts = 1000L
 ) {
+  graft_save_impl(
+    store = store,
+    x = x,
+    id = id,
+    media_type = media_type,
+    dependencies = dependencies,
+    max_artifacts = max_artifacts,
+    check_store = TRUE
+  )
+}
+
+graft_save_impl <- function(
+  store,
+  x,
+  id,
+  media_type = NULL,
+  dependencies = list(),
+  max_artifacts = 1000L,
+  check_store = TRUE
+) {
   if (is.raw(x)) {
     bytes <- x
     default_media_type <- "application/octet-stream"
@@ -124,7 +126,7 @@ graft_save <- function(
     bytes <- charToRaw(enc2utf8(x))
     default_media_type <- "text/plain"
   } else {
-    graft_workflow_abort(
+    graft_abort(
       "graft_input_error",
       "`x` must be one nonmissing UTF-8 string or a raw vector."
     )
@@ -132,14 +134,15 @@ graft_save <- function(
   if (is.null(media_type)) {
     media_type <- default_media_type
   }
-  media_type <- tryCatch(
-    artifact_check_text(media_type, "media_type"),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+  media_type <- artifact_check_text(
+    media_type,
+    "media_type",
+    class = "graft_value_error"
   )
   records <- tryCatch(
     artifact_refs_records(dependencies),
     graft_value_error = function(e) {
-      graft_workflow_abort(
+      graft_abort(
         "graft_input_error",
         conditionMessage(e)
       )
@@ -151,7 +154,8 @@ graft_save <- function(
     bytes = bytes,
     media_type = media_type,
     dependencies = records,
-    max_artifacts = max_artifacts
+    max_artifacts = max_artifacts,
+    check_store = check_store
   )
   artifact_ref_value(ref)
 }
@@ -178,54 +182,31 @@ graft_save_file <- function(
   dependencies = list(),
   max_artifacts = 1000L
 ) {
-  if (
-    !is.character(path) ||
-      length(path) != 1L ||
-      is.na(path) ||
-      !nzchar(path)
-  ) {
-    graft_workflow_abort(
+  if (!graft_is_path(path)) {
+    graft_abort(
       "graft_input_error",
-      "`path` must be one nonempty filesystem path string."
+      "`path` must be one nonempty UTF-8 filesystem path string."
     )
   }
   artifact_check_store(store)
   limit <- store@max_bytes
   artifact_check_limit(limit, "store@max_bytes")
-  info <- fs::file_info(path, fail = FALSE, follow = FALSE)
-  size <- as.numeric(info$size)
-  if (
-    !identical(as.character(info$type), "file") ||
-      is.na(size) ||
-      size > limit
-  ) {
-    graft_workflow_abort(
-      "graft_input_error",
-      "`path` must identify a readable regular file within the store byte bound."
-    )
-  }
-  bytes <- tryCatch(
-    readBin(path, "raw", n = size),
-    error = function(e) {
-      graft_workflow_abort(
-        "graft_input_error",
-        "The regular file could not be read."
-      )
-    }
+  bytes <- graft_read_regular_file(
+    path,
+    max_bytes = limit,
+    class = "graft_input_error",
+    missing_message = "`path` must identify a readable regular file within the store byte bound.",
+    read_message = "The regular file could not be read.",
+    changed_message = "The regular file changed while it was being read."
   )
-  if (length(bytes) != size) {
-    graft_workflow_abort(
-      "graft_input_error",
-      "The regular file changed while it was being read."
-    )
-  }
-  graft_save(
+  graft_save_impl(
     store,
     bytes,
     id = id,
     media_type = media_type,
     dependencies = dependencies,
-    max_artifacts = max_artifacts
+    max_artifacts = max_artifacts,
+    check_store = FALSE
   )
 }
 
@@ -263,27 +244,21 @@ graft_select <- function(
   records <- tryCatch(
     artifact_refs_records(roots),
     graft_value_error = function(e) {
-      graft_workflow_abort(
+      graft_abort(
         "graft_input_error",
         conditionMessage(e)
       )
     }
   )
   if (!length(records)) {
-    graft_workflow_abort(
+    graft_abort(
       "graft_input_error",
       "`roots` must contain at least one ArtifactRef."
     )
   }
-  id <- artifact_select(
+  artifact_selection_value(artifact_select_record(
     store,
     records,
-    max_artifacts,
-    max_metadata_bytes
-  )
-  artifact_selection_value(artifact_read_selection(
-    store,
-    id,
     max_artifacts,
     max_metadata_bytes
   ))
@@ -304,10 +279,7 @@ graft_read_selection <- function(
   max_artifacts = 1000L,
   max_metadata_bytes = 1024^2
 ) {
-  id <- tryCatch(
-    artifact_check_digest(id),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
+  id <- artifact_check_digest(id, class = "graft_value_error")
   artifact_selection_value(artifact_read_selection(
     store,
     id,
@@ -356,9 +328,10 @@ graft_accept <- function(
 ) {
   artifact_check_store(store)
   expected <- artifact_expected_id(expected)
-  locked_stream <- tryCatch(
-    artifact_check_text(stream, "stream"),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+  locked_stream <- artifact_check_text(
+    stream,
+    "stream",
+    class = "graft_value_error"
   )
   # The stream lock covers the selection, the decision, and the check that
   # the decision is the head, so a call that times out has written nothing
@@ -369,11 +342,12 @@ graft_accept <- function(
       store,
       x,
       max_artifacts,
-      max_selection_bytes
+      max_selection_bytes,
+      check_store = FALSE
     )
-    record <- artifact_decide(
+    artifact_decide(
       store,
-      stream = stream,
+      stream = locked_stream,
       key = key,
       expected = expected,
       selection = selection,
@@ -385,16 +359,9 @@ graft_accept <- function(
       max_metadata_bytes = max_metadata_bytes,
       max_artifacts = max_artifacts,
       max_selection_bytes = max_selection_bytes,
-      locked = TRUE
-    )
-    artifact_retry_head(
-      store,
-      stream,
-      record,
-      list(
-        max_decisions = max_decisions,
-        max_metadata_bytes = max_metadata_bytes
-      )
+      locked = TRUE,
+      require_head = TRUE,
+      check_store = FALSE
     )
   })
   artifact_decision_value(current)
@@ -431,22 +398,26 @@ graft_withdraw <- function(
       "`expected` must identify the exact accepted predecessor for withdrawal."
     )
   }
-  predecessor <- artifact_read_decision(
-    store,
+  locked_stream <- artifact_check_text(
     stream,
-    expected_id,
-    max_decisions,
-    max_metadata_bytes
+    "stream",
+    class = "graft_value_error"
   )
-  locked_stream <- tryCatch(
-    artifact_check_text(stream, "stream"),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
-  # As in graft_accept(), the head check runs inside the stream lock.
+  artifact_check_store(store)
+  # Acquire the stream lock before reading the predecessor and committing
+  # the withdrawal so concurrent stream writes are serialized.
   current <- artifact_with_stream_lock(store, locked_stream, function() {
-    record <- artifact_decide(
+    predecessor <- artifact_read_decision(
       store,
-      stream = stream,
+      locked_stream,
+      expected_id,
+      max_decisions,
+      max_metadata_bytes,
+      check_store = FALSE
+    )
+    artifact_decide(
+      store,
+      stream = locked_stream,
       key = key,
       expected = expected_id,
       selection = predecessor$selection,
@@ -456,16 +427,9 @@ graft_withdraw <- function(
       purpose = predecessor$purpose,
       max_decisions = max_decisions,
       max_metadata_bytes = max_metadata_bytes,
-      locked = TRUE
-    )
-    artifact_retry_head(
-      store,
-      stream,
-      record,
-      list(
-        max_decisions = max_decisions,
-        max_metadata_bytes = max_metadata_bytes
-      )
+      locked = TRUE,
+      require_head = TRUE,
+      check_store = FALSE
     )
   })
   artifact_decision_value(current)
@@ -503,25 +467,25 @@ graft_recall <- function(
   max_artifacts = 1000L,
   max_selection_bytes = 1024^2
 ) {
-  stream <- tryCatch(
-    artifact_check_text(stream, "stream"),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
-  )
-  purpose <- tryCatch(
-    artifact_check_text(purpose, "purpose"),
-    graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+  stream <- artifact_check_text(stream, "stream", class = "graft_value_error")
+  purpose <- artifact_check_text(
+    purpose,
+    "purpose",
+    class = "graft_value_error"
   )
   if (!rlang::is_bool(eligible) || !isTRUE(eligible)) {
-    graft_workflow_abort(
+    graft_abort(
       "graft_ineligible_error",
       "Current consultation requires an explicit TRUE host eligibility decision."
     )
   }
+  artifact_check_store(store)
   head <- artifact_read_decision(
     store,
     stream,
     max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes
+    max_metadata_bytes = max_metadata_bytes,
+    check_store = FALSE
   )
   if (is.null(head)) {
     return(Recall(
@@ -533,7 +497,7 @@ graft_recall <- function(
     ))
   }
   if (!identical(head$purpose, purpose)) {
-    graft_workflow_abort(
+    graft_abort(
       "graft_purpose_error",
       "The current decision was recorded for a different purpose."
     )
@@ -549,19 +513,24 @@ graft_recall <- function(
     ))
   }
   if (!identical(head$action, "accept")) {
-    graft_workflow_abort(
-      "graft_artifact_error",
-      "The current decision has an unsupported action."
-    )
+    artifact_abort("The current decision has an unsupported action.")
   }
   selected_record <- artifact_read_selection(
     store,
     head$selection,
     max_artifacts,
-    max_selection_bytes
+    max_selection_bytes,
+    check_store = FALSE,
+    include_items = TRUE
   )
-  selection <- artifact_selection_value(selected_record)
-  all_artifacts <- artifact_materialize(store, selected_record$artifacts)
+  selection <- artifact_selection_value(
+    selected_record[c("id", "roots", "artifacts")]
+  )
+  all_artifacts <- artifact_materialize(
+    store,
+    selected_record$artifacts,
+    items = selected_record$items
+  )
   roots <- vector("list", length(selected_record$roots))
   keys <- vapply(
     selected_record$artifacts,
@@ -576,10 +545,11 @@ graft_recall <- function(
     store,
     stream,
     max_decisions = max_decisions,
-    max_metadata_bytes = max_metadata_bytes
+    max_metadata_bytes = max_metadata_bytes,
+    check_store = FALSE
   )
   if (!identical(current, head)) {
-    graft_workflow_abort(
+    graft_abort(
       "graft_stale_review_error",
       "The decision head changed while the accepted evidence was read."
     )
@@ -610,13 +580,13 @@ graft_history <- function(
   max_metadata_bytes = 1024^2
 ) {
   artifact_check_store(store)
-  stream <- artifact_check_text(stream, "stream")
-  records <- artifact_decisions(
+  stream <- artifact_check_text(stream, "stream", class = "graft_value_error")
+  records <- artifact_decisions_read(
     store,
     stream,
     max_decisions,
     max_metadata_bytes
-  )
+  )$records
   lapply(records, artifact_decision_value)
 }
 
@@ -654,9 +624,10 @@ graft_streams <- function(
 ) {
   artifact_check_store(store)
   if (!is.null(purpose)) {
-    purpose <- tryCatch(
-      artifact_check_text(purpose, "purpose"),
-      graft_artifact_error = function(e) graft_value_abort(conditionMessage(e))
+    purpose <- artifact_check_text(
+      purpose,
+      "purpose",
+      class = "graft_value_error"
     )
   }
   artifact_check_limit(max_streams, "max_streams")
@@ -675,13 +646,14 @@ graft_streams <- function(
         "Decision streams exceed the aggregate metadata byte bound."
       )
     }
-    stream <- artifact_decision_stream_name(store, hash, remaining)
-    if (is.null(stream)) {
-      next
-    }
-    records <- artifact_decisions(store, stream, max_decisions, remaining)
-    used <- used + sum(vapply(records, artifact_decision_size, numeric(1)))
-    head <- artifact_decision_head(records)
+    journal <- artifact_decision_stream_read(
+      store,
+      hash,
+      max_decisions,
+      remaining
+    )
+    used <- used + journal$bytes
+    head <- artifact_decision_head(journal$records)
     if (
       is.null(head) || (!is.null(purpose) && !identical(head$purpose, purpose))
     ) {

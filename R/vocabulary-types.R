@@ -25,3 +25,25 @@ VocabularyRelease <- S7::new_class(
     context = S7::class_character
   )
 )
+
+S7::method(print, VocabularyRelease) <- function(x, ...) {
+  release <- x@bindings$release
+  label <- if (
+    is.character(release) && length(release) == 1L && !is.na(release)
+  ) {
+    release
+  } else {
+    x@selection@id
+  }
+  cat(
+    "<VocabularyRelease ",
+    label,
+    " selection=",
+    x@selection@id,
+    " dictionaries=",
+    length(x@dictionaries),
+    ">\n",
+    sep = ""
+  )
+  invisible(x)
+}

@@ -33,11 +33,21 @@ test_that("public workflow values are S7 objects", {
     artifacts = list(artifact)
   )
 
+  release <- VocabularyRelease(
+    selection = selection,
+    vocabulary = list(release = "urn:example:vocab:v1", terms = list()),
+    bindings = list(release = "urn:example:bindings:v1"),
+    dictionaries = list(lab_a = list()),
+    references = list(),
+    context = "# Shared vocabulary"
+  )
+
   expect_identical(S7::S7_inherits(ref, ArtifactRef), TRUE)
   expect_identical(S7::S7_inherits(artifact, Artifact), TRUE)
   expect_identical(S7::S7_inherits(selection, ArtifactSelection), TRUE)
   expect_identical(S7::S7_inherits(decision, Decision), TRUE)
   expect_identical(S7::S7_inherits(recall, Recall), TRUE)
+  expect_identical(S7::S7_inherits(release, VocabularyRelease), TRUE)
   expect_identical(artifact@data, "hello")
   expect_identical(artifact@bytes, charToRaw("hello"))
   expect_identical(decision@selection, digest)
@@ -46,6 +56,10 @@ test_that("public workflow values are S7 objects", {
   expect_match(capture.output(print(selection)), "ArtifactSelection")
   expect_match(capture.output(print(decision)), "Decision")
   expect_match(capture.output(print(recall)), "accepted")
+  expect_match(
+    capture.output(print(release)),
+    "VocabularyRelease urn:example:bindings:v1"
+  )
 })
 
 test_that("store constructors remain valid across supported S7 releases", {

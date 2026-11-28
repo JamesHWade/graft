@@ -58,13 +58,7 @@ test_that("PostgreSQL isolates exact artifacts and all selected dependencies", {
       class = "graft_artifact_error"
     )
     expect_length(
-      artifact_reuse(
-        first,
-        "subject",
-        decision$id,
-        "context",
-        TRUE
-      )$selection$artifacts,
+      graft_recall(first, "subject", "context", TRUE)@artifacts,
       2L
     )
     expect_identical(artifact_read(first, ref)$bytes, bytes)
@@ -173,10 +167,9 @@ test_that("PostgreSQL acceptance is atomic and retries retain historical identit
       ),
       first
     )
-    expect_error(
-      artifact_reuse(store, "memory", first$id, "context", TRUE),
-      class = "graft_artifact_error"
-    )
+    recalled <- graft_recall(store, "memory", "context", TRUE)
+    expect_identical(recalled@status, "withdrawn")
+    expect_identical(recalled@decision@id, withdrawal$id)
     expect_identical(artifact_read_decision(store, "memory"), withdrawal)
     expect_identical(artifact_read(store, ref)$bytes, charToRaw("first"))
   })

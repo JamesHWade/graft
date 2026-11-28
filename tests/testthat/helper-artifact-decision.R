@@ -57,10 +57,6 @@ decision_journal_files <- function(store) {
   )
 }
 
-graft_checkout <- function() {
-  if (pkgload::is_dev_package("graft")) normalizePath("../..") else NULL
-}
-
 # Records `rounds` accepts in `stream`, each naming the head it read, and
 # retries when another process moved the head first.
 decision_race_worker <- function(

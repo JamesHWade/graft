@@ -412,3 +412,25 @@ test_that("graft_tools validates arguments cleanly", {
     class = "graft_artifact_error"
   )
 })
+
+test_that("graft_tools validates store on empty allowlist and formats recall description cleanly", {
+  skip_if_not_installed("ellmer")
+
+  path <- withr::local_tempdir()
+  store <- graft_store(path, create = TRUE)
+  tools <- graft_tools(
+    store,
+    purpose = "assist",
+    eligible = function(stream) TRUE,
+    streams = character()
+  )
+  expect_identical(
+    grepl(" . ", tools$recall_project_memory@description, fixed = TRUE),
+    FALSE
+  )
+  unlink(file.path(path, "store.json"))
+  expect_error(
+    tools$list_project_memory(),
+    class = "graft_artifact_error"
+  )
+})

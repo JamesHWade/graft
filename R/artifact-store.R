@@ -74,7 +74,6 @@ graft_store <- function(
   ) {
     artifact_abort("`lock_timeout` must be one non-negative number of seconds.")
   }
-  marker <- charToRaw('{"format":"graft-artifacts","version":1}')
   if (create) {
     if (file.exists(path) && !dir.exists(path)) {
       artifact_abort("`path` must be a missing or empty directory.")
@@ -95,9 +94,14 @@ graft_store <- function(
     if (!dir.exists(path) && !dir.create(path, recursive = TRUE)) {
       artifact_abort("Could not create the artifact directory.")
     }
-    artifact_put(marker, file.path(path, "store.json"), 1024)
+    artifact_put(ARTIFACT_STORE_MARKER, file.path(path, "store.json"), 1024)
   }
-  if (!identical(artifact_bytes(file.path(path, "store.json"), 1024), marker)) {
+  if (
+    !identical(
+      artifact_bytes(file.path(path, "store.json"), 1024),
+      ARTIFACT_STORE_MARKER
+    )
+  ) {
     artifact_abort("Unsupported artifact store marker.")
   }
   LocalArtifactStore(
@@ -114,9 +118,12 @@ artifact_save <- function(
   bytes,
   media_type,
   dependencies = list(),
-  max_artifacts = 1000L
+  max_artifacts = 1000L,
+  check_store = TRUE
 ) {
-  artifact_check_store(store)
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   id <- artifact_check_text(id, "id")
   media_type <- artifact_check_text(media_type, "media_type")
   if (!is.raw(bytes)) {
@@ -146,12 +153,14 @@ artifact_save <- function(
     manifest,
     store@max_revision_bytes
   )
-  artifact_read(store, ref)
+  artifact_read(store, ref, check_store = FALSE)
   ref
 }
 
-artifact_read <- function(store, ref) {
-  artifact_check_store(store)
+artifact_read <- function(store, ref, check_store = TRUE) {
+  if (isTRUE(check_store)) {
+    artifact_check_store(store)
+  }
   ref <- artifact_check_ref(ref)
   manifest <- artifact_storage_read(
     store,
@@ -182,60 +191,6 @@ artifact_read <- function(store, ref) {
   list(ref = ref, metadata = metadata, bytes = bytes)
 }
 
-artifact_abort <- function(message) {
-  graft_abort("graft_artifact_error", message)
-}
-
-artifact_check_path <- function(path) {
-  if (
-    !rlang::is_string(path) ||
-      !validUTF8(enc2utf8(path)) ||
-      !nzchar(path)
-  ) {
-    artifact_abort("`path` must be a nonempty UTF-8 string.")
-  }
-}
-
-artifact_check_text <- function(x, arg) {
-  if (rlang::is_string(x)) {
-    attributes(x) <- NULL
-    x <- enc2utf8(x)
-  }
-  if (
-    !rlang::is_string(x) ||
-      !validUTF8(enc2utf8(x)) ||
-      !nzchar(x) ||
-      !identical(trimws(x), x) ||
-      nchar(enc2utf8(x), type = "bytes") > 1024 ||
-      grepl("[[:cntrl:]]", x)
-  ) {
-    artifact_abort(paste0(
-      "`",
-      arg,
-      "` must be a nonempty, unpadded string of at most 1024 UTF-8 bytes without control characters."
-    ))
-  }
-  x
-}
-
-artifact_check_limit <- function(x, arg) {
-  if (
-    !is.numeric(x) ||
-      length(x) != 1L ||
-      is.na(x) ||
-      !is.finite(x) ||
-      x < 1 ||
-      x > .Machine$integer.max ||
-      x != floor(x)
-  ) {
-    artifact_abort(paste0(
-      "`",
-      arg,
-      "` must be a positive whole number no greater than the R integer limit."
-    ))
-  }
-}
-
 artifact_check_store <- function(store) {
   if (!S7::S7_inherits(store, ArtifactStore)) {
     artifact_abort("`store` must be a Graft artifact store handle.")
@@ -243,54 +198,36 @@ artifact_check_store <- function(store) {
   tryCatch(S7::validate(store), error = function(...) {
     artifact_abort("`store` must be a valid Graft artifact store handle.")
   })
-  if (S7::S7_inherits(store, PostgresArtifactStore)) {
-    graft_store_postgres(
-      store@connection,
-      store@scope,
-      max_bytes = store@max_bytes,
-      max_revision_bytes = store@max_revision_bytes
-    )
-    return(invisible(NULL))
-  }
-  if (!S7::S7_inherits(store, LocalArtifactStore)) {
-    artifact_abort("`store` must be a Graft artifact store handle.")
-  }
-  graft_store(
-    store@path,
-    max_bytes = store@max_bytes,
-    max_revision_bytes = store@max_revision_bytes
-  )
+  artifact_storage_check(store)
   invisible(NULL)
 }
 
-artifact_check_digest <- function(x) {
-  if (rlang::is_string(x)) {
-    attributes(x) <- NULL
-  }
-  if (!rlang::is_string(x) || !grepl("^[0-9a-f]{64}$", x)) {
-    artifact_abort(
-      "An artifact digest must contain 64 lowercase hexadecimal characters."
-    )
-  }
-  x
-}
-
-artifact_check_ref <- function(ref) {
+artifact_check_ref <- function(
+  ref,
+  class = "graft_artifact_error",
+  call = rlang::caller_env()
+) {
   if (S7::S7_inherits(ref, ArtifactRef)) {
     ref <- artifact_ref_record(ref)
   }
   if (!is.list(ref) || !identical(names(ref), c("id", "revision"))) {
-    artifact_abort(
-      "An artifact reference must contain exactly `id` and `revision`."
+    graft_abort(
+      class,
+      "An artifact reference must contain exactly `id` and `revision`.",
+      call = call
     )
   }
   list(
-    id = artifact_check_text(ref$id, "ref$id"),
-    revision = artifact_check_digest(ref$revision)
+    id = artifact_check_text(ref$id, "ref$id", class = class, call = call),
+    revision = artifact_check_digest(ref$revision, class = class, call = call)
   )
 }
 
-artifact_check_metadata <- function(metadata) {
+artifact_check_metadata <- function(
+  metadata,
+  class = "graft_artifact_error",
+  call = rlang::caller_env()
+) {
   if (
     !is.list(metadata) ||
       !identical(
@@ -299,26 +236,31 @@ artifact_check_metadata <- function(metadata) {
       ) ||
       !identical(metadata$format, 1L)
   ) {
-    artifact_abort("Unsupported artifact metadata.")
+    graft_abort(class, "Unsupported artifact metadata.", call = call)
   }
-  artifact_check_text(metadata$id, "metadata$id")
-  artifact_check_text(metadata$media_type, "metadata$media_type")
-  artifact_check_digest(metadata$payload)
-  size <- metadata$size
-  if (
-    !is.numeric(size) ||
-      length(size) != 1L ||
-      is.na(size) ||
-      !is.finite(size) ||
-      size < 0 ||
-      size > .Machine$integer.max ||
-      size != floor(size)
-  ) {
-    artifact_abort("Invalid artifact payload size.")
+  artifact_check_text(metadata$id, "metadata$id", class = class, call = call)
+  artifact_check_text(
+    metadata$media_type,
+    "metadata$media_type",
+    class = class,
+    call = call
+  )
+  artifact_check_digest(metadata$payload, class = class, call = call)
+  if (!graft_is_whole_number(metadata$size, min = 0)) {
+    graft_abort(class, "Invalid artifact payload size.", call = call)
   }
-  dependencies <- artifact_refs(metadata$dependencies, .Machine$integer.max)
+  dependencies <- artifact_refs(
+    metadata$dependencies,
+    .Machine$integer.max,
+    class = class,
+    call = call
+  )
   if (!identical(dependencies, metadata$dependencies)) {
-    artifact_abort("Artifact dependencies must be distinct unnamed references.")
+    graft_abort(
+      class,
+      "Artifact dependencies must be distinct unnamed references.",
+      call = call
+    )
   }
 }
 
@@ -355,6 +297,18 @@ artifact_decode <- function(bytes) {
 
 artifact_path <- function(store, kind, digest) {
   file.path(store@path, kind, digest)
+}
+
+S7::method(artifact_storage_check, LocalArtifactStore) <- function(store) {
+  if (
+    !identical(
+      artifact_bytes(file.path(store@path, "store.json"), 1024),
+      ARTIFACT_STORE_MARKER
+    )
+  ) {
+    artifact_abort("Unsupported artifact store marker.")
+  }
+  invisible(NULL)
 }
 
 S7::method(artifact_storage_read, LocalArtifactStore) <- function(
@@ -415,6 +369,70 @@ S7::method(artifact_with_stream_lock, LocalArtifactStore) <- function(
   code()
 }
 
+S7::method(artifact_decision_entries, LocalArtifactStore) <- function(
+  store,
+  hash,
+  max_decisions
+) {
+  path <- artifact_path(store, "decisions", hash)
+  if (!file.exists(path)) {
+    return(data.frame(name = character(), size = numeric()))
+  }
+  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
+    artifact_abort("Decision journal is not a readable directory.")
+  }
+  files <- list.files(path, all.files = TRUE, no.. = TRUE)
+  files <- sort(files[!grepl("^staged-", files)], method = "radix")
+  if (!length(files)) {
+    return(data.frame(name = character(), size = numeric()))
+  }
+  paths <- file.path(path, files)
+  info <- fs::file_info(paths, fail = FALSE, follow = FALSE)
+  if (!all(as.character(info$type) == "file")) {
+    artifact_abort("Decision journal has invalid entries.")
+  }
+  data.frame(name = files, size = as.numeric(info$size))
+}
+
+S7::method(artifact_decision_streams, LocalArtifactStore) <- function(
+  store,
+  max_streams
+) {
+  path <- file.path(store@path, "decisions")
+  if (!file.exists(path)) {
+    return(character())
+  }
+  if (!dir.exists(path) || file.access(path, 4L) != 0L) {
+    artifact_abort("Decision directory is not readable.")
+  }
+  hashes <- sort(
+    list.files(path, all.files = TRUE, no.. = TRUE),
+    method = "radix"
+  )
+  if (
+    !all(grepl("^[0-9a-f]{64}$", hashes)) ||
+      !all(dir.exists(file.path(path, hashes)))
+  ) {
+    artifact_abort("Decision directory has invalid entries.")
+  }
+  # A failed first publication can leave a journal with no committed record,
+  # which artifact_decision_entries() treats as empty; it is not a stream, so
+  # it does not count against the bound.
+  committed <- character(length(hashes))
+  count <- 0L
+  for (hash in hashes) {
+    files <- list.files(file.path(path, hash), all.files = TRUE, no.. = TRUE)
+    if (!all(grepl("^staged-", files))) {
+      count <- count + 1L
+      committed[[count]] <- hash
+      if (count > max_streams) {
+        break
+      }
+    }
+  }
+  committed[seq_len(count)]
+}
+
 artifact_lock_path <- function(store, name) {
   dir <- file.path(store@path, "locks")
   if (!dir.exists(dir) && !artifact_create_dir(dir) && !dir.exists(dir)) {
@@ -428,23 +446,7 @@ artifact_lock <- function(path, timeout) {
 }
 
 artifact_bytes <- function(path, limit) {
-  info <- fs::file_info(path, fail = FALSE, follow = FALSE)
-  size <- as.numeric(info$size)
-  if (
-    !identical(as.character(info$type), "file") ||
-      is.na(size) ||
-      size > limit
-  ) {
-    artifact_abort("Artifact file is missing or exceeds the byte bound.")
-  }
-  bytes <- tryCatch(
-    readBin(path, "raw", n = size),
-    error = function(e) artifact_abort("Could not read artifact bytes.")
-  )
-  if (length(bytes) != size) {
-    artifact_abort("Artifact file changed during read.")
-  }
-  bytes
+  graft_read_regular_file(path, max_bytes = limit)
 }
 
 artifact_rename_file <- function(from, to) file.rename(from, to)
@@ -464,6 +466,7 @@ artifact_settled_bytes <- function(path, limit, attempts = 20L, wait = 0.05) {
   }
   artifact_bytes(path, limit)
 }
+
 artifact_create_dir <- function(path) {
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
 }
