@@ -58,10 +58,10 @@ extra claims are not accepted.
 task <- graft_recall_eval_task(fixture)
 task$eval(view = FALSE)
 #> ℹ Solving
-#> ✔ Solving [1.9s]
+#> ✔ Solving [2s]
 #> 
 #> ℹ Scoring
-#> ✔ Scoring [259ms]
+#> ✔ Scoring [323ms]
 #> 
 samples <- task$get_samples()
 samples[, c("case", "result", "score")]
